@@ -123,9 +123,10 @@ export class CartesianAxis extends Axis {
     updateGrid() {
 
         var g = this.canvas
-        let xAxis = d3.axisBottom(this.xScale).ticks(5)
+        let xAxis = d3.axisBottom(this.xScale)
+        xAxis.ticks(8)
         let horizontalAxis = this.canvas.select(".x-axis").call(xAxis)
-        let xticks = this.xScale.ticks(5).map(this.xScale); 
+        let xticks = this.xScale.ticks(8).map(this.xScale) 
         let xGrid = this.canvas.select(".x-grid").selectAll("line")
             .data(xticks)
             .enter()
@@ -284,13 +285,12 @@ export abstract class Chart {
 
 export class ChartRange extends Chart {
 
-
-
     plotterCartesian(axis: CartesianAxis, options: any) {
         var canvas = axis.canvas
         var colorScale = this.colorScale
         let xkey = options.xkey ? options.xkey : 'x'
         let ykey = options.ykey ? options.ykey : 'y'
+        let colorkey = options.colorkey ? options.colorkey : ykey
 
         axis.xScale.domain([0, 360])
         axis.yScale.domain([0, 1])
@@ -300,7 +300,7 @@ export class ChartRange extends Chart {
                 return {
                     x: d[xkey].map(axis.xScale),
                     y: d[ykey].map(axis.yScale),
-                    color: colorScale(mean(d[ykey]))
+                    color: colorScale(mean(d[colorkey]))
                 }
             }
         )
@@ -321,21 +321,27 @@ export class ChartRange extends Chart {
         var canvas = axis.canvas;
         var colorScale = this.colorScale
         
+        let tkey = options.tkey ? options.tkey : 't'
+        let rkey = options.rkey ? options.rkey : 'r'
+        let colorkey = options.colorkey ? options.colorkey : rkey
+
+        console.log(this.data)
+        console.log(options)
         let mappedData: any = this.data.map(
             function (d: any) {
                 return {
-                    x: d.x.map(axis.radialScale),
-                    y: d.y.map(axis.angularScale),
-                    color: colorScale(mean(d.x))
+                    r: d[rkey].map(axis.radialScale),
+                    t: d[tkey].map(axis.angularScale),
+                    color: colorScale(mean(d[colorkey]))
                 }
             }
         )
 
         var arcgenerator = d3.arc()
-            .innerRadius(function (d: any, i) { return d.x[0] })
-            .outerRadius(function (d: any, i) { return d.x[1] })
-            .startAngle(function (d: any, i) { return d.y[0] })
-            .endAngle(function (d: any, i) { return d.y[1] })
+            .innerRadius(function (d: any, i) { return d.r[0] })
+            .outerRadius(function (d: any, i) { return d.r[1] })
+            .startAngle(function (d: any, i) { return d.t[0] })
+            .endAngle(function (d: any, i) { return d.t[1] })
 
         this.group = canvas.append("g").attr("class", "plot-1")
         var elements = this.group.selectAll("path")
