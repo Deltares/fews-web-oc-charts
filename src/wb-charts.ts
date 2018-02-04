@@ -10,12 +10,12 @@ export interface data {
     y: number[]
 }
 
-function mean(x : number[])  { 
-    var sum: number = 0
-    for (var i = 0; i < x.length; i++) {
-        sum += x[i]
+function mean(x : number[] | number )  { 
+    
+    if (x instanceof Array )  {
+        return d3.mean(x)
     }
-    return sum/ x.length
+    return x
 }
 
 export interface axisOptions {
@@ -259,12 +259,13 @@ export abstract class Chart {
     data: any
     style: any
     group: any
-    colorScale: any
+    colorMap: any
 
     constructor(data: any, style: any) {
         this.data = data
         this.style =style
-        this.colorScale = d3.scaleSequential(d3.interpolateWarm);
+        // https://github.com/d3/d3-scale-chromatic
+        this.colorMap = d3.scaleSequential(d3.interpolateWarm);
     }  
 
     addTo(axis: Axis, options: any) {       
@@ -287,7 +288,6 @@ export class ChartRange extends Chart {
 
     plotterCartesian(axis: CartesianAxis, options: any) {
         var canvas = axis.canvas
-        var colorScale = this.colorScale
         let xkey = options.xkey ? options.xkey : 'x'
         let ykey = options.ykey ? options.ykey : 'y'
         let colorkey = options.colorkey ? options.colorkey : ykey
@@ -295,15 +295,20 @@ export class ChartRange extends Chart {
         axis.xScale.domain([0, 360])
         axis.yScale.domain([0, 1])
 
+        var colorScale = d3.scaleLinear().domain([0, 4])
+        var colorMap = this.colorMap
+
+        console.log()
         let mappedData: any = this.data.map(
             function (d: any) {
                 return {
                     x: d[xkey].map(axis.xScale),
                     y: d[ykey].map(axis.yScale),
-                    color: colorScale(mean(d[colorkey]))
+                    color: colorMap(colorScale(mean(d[colorkey])) )
                 }
             }
         )
+        console.log(mappedData)
 
         this.group = canvas.append("g").attr("class", "plot-1")
         var elements = this.group.selectAll("rect")
@@ -319,11 +324,13 @@ export class ChartRange extends Chart {
 
     plotterPolar(axis: PolarAxis, options: any) {
         var canvas = axis.canvas;
-        var colorScale = this.colorScale
         
         let tkey = options.tkey ? options.tkey : 't'
         let rkey = options.rkey ? options.rkey : 'r'
         let colorkey = options.colorkey ? options.colorkey : rkey
+
+        var colorScale = d3.scaleLinear().domain([0, 4])
+        var colorMap = this.colorMap
 
         console.log(this.data)
         console.log(options)
@@ -332,7 +339,7 @@ export class ChartRange extends Chart {
                 return {
                     r: d[rkey].map(axis.radialScale),
                     t: d[tkey].map(axis.angularScale),
-                    color: colorScale(mean(d[colorkey]))
+                    color: colorMap(colorScale(mean(d[colorkey])))
                 }
             }
         )
