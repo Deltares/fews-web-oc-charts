@@ -210,7 +210,7 @@ export class PolarAxis extends Axis {
         this.updateGrid()
     }
 
-    private radToDegrees(value: number) {
+    radToDegrees(value: number) {
         return value * 180 / Math.PI
     }
 
@@ -283,6 +283,66 @@ export abstract class Chart {
     plotterPolar(axis: Axis, options: any) { }
 
 }
+
+
+export class ChartMarker extends Chart {
+
+    plotterCartesian(axis: CartesianAxis, options: any) {
+        var canvas = axis.canvas
+        let xkey = options.xkey ? options.xkey : 'x'
+        let ykey = options.ykey ? options.ykey : 'y'
+
+        axis.xScale.domain([0, 360])
+        axis.yScale.domain([0, 1])
+
+
+        let mappedData: any = this.data.map(
+            function (d: any) {
+                return {
+                    x: axis.xScale(d[xkey]),
+                    y: axis.yScale(d[ykey]),
+                }
+            }
+        )
+
+        this.group = canvas.append("g").attr("class", "plot-2")
+        var elements = this.group.selectAll('.symbol')
+            .data(mappedData)
+            .enter()
+            .append('path')
+            .attr('transform', function (d: any, i: number) { return 'translate(' + d.x + ',' + d.y + ')'; })
+            .attr('d', d3.symbol().type(function (d, i) { return d3.symbols[i % 7];}));
+    }
+
+    plotterPolar(axis: PolarAxis, options: any) {
+        var canvas = axis.canvas;
+
+        let tkey = options.tkey ? options.tkey : 't'
+        let rkey = options.rkey ? options.rkey : 'r'
+
+        let mappedData: any = this.data.map(
+            function (d: any) {
+                return {
+                    r: axis.radialScale(d[rkey]),
+                    t: axis.angularScale(d[tkey]) 
+                }
+            }
+        )
+
+        this.group = canvas.append("g").attr("class", "plot-2")
+        var elements = this.group.selectAll('.symbol')
+            .data(mappedData)
+            .enter()
+            .append('path')
+            .attr('transform', function (d: any, i: number) { return 'translate(' + d.r * Math.cos(d.t) + ',' + d.r * Math.sin(d.t) + ')'; })
+            .attr('d', d3.symbol().type(function (d, i) { return d3.symbols[i % 7]; }) );
+
+        elements.on('mouseover', function (d: any) { axis.showTooltip(d) })
+        elements.on('mouseout', function (d: any) { axis.hideTooltip(d) })
+    }
+
+}
+
 
 export class ChartRange extends Chart {
 

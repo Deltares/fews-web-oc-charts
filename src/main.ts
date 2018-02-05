@@ -1,6 +1,10 @@
 import * as d3 from "d3"
 import * as wb from "./wb-charts"
 
+function randomFromInterval(min: number, max: number) {
+    return (Math.random() * (max - min ) + min);
+}
+
 // set constants
 let height = 400
 let width = 400
@@ -17,6 +21,17 @@ let plot = new wb.ChartRange( [
     { x: [.6, .7], y: [40, 95], v: 0 }
 ], {}).addTo(polaraxis, { rkey: "x", tkey: "y", colorkey: 'v' })
 
+
+var random = []
+for (var i = 0; i < 100; i++) {
+    random.push({ x: randomFromInterval(0, 1), y: randomFromInterval(0, 360) }  )
+}
+
+console.log(random)
+
+let plot2 =  new wb.ChartMarker( random, {}).addTo(polaraxis, { rkey: "x", tkey: "y" })
+
 let container2 = document.getElementById("chart-container-2")
 let axis = new wb.CartesianAxis(container2, 800, height )
-plot.addTo(axis, {xkey : "y", ykey: "x", colorkey: 'v' });
+plot.addTo(axis, {xkey : "y", ykey: "x", colorkey: 'v' })
+plot2.addTo(axis, { xkey: "y", ykey: "x"})
