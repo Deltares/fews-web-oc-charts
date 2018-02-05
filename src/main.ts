@@ -29,9 +29,9 @@ for (var i = 0; i < 100; i++) {
 
 console.log(random)
 
-let plot2 =  new wb.ChartMarker( random, {}).addTo(polaraxis, { rkey: "x", tkey: "y" })
+let plot2 = new wb.ChartMarker(random, {}).addTo(polaraxis, { rkey: "x", tkey: "y" }, 'polar-dot')
 
 let container2 = document.getElementById("chart-container-2")
 let axis = new wb.CartesianAxis(container2, 800, height )
 plot.addTo(axis, {xkey : "y", ykey: "x", colorkey: 'v' })
-plot2.addTo(axis, { xkey: "y", ykey: "x"})
+plot2.addTo(axis, { xkey: "y", ykey: "x"}, 'cartesian-dot')

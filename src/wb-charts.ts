@@ -260,16 +260,18 @@ export abstract class Chart {
     style: any
     group: any
     colorMap: any
+    id: string
 
     constructor(data: any, style: any) {
         this.data = data
-        this.style =style
+        this.style = style
         // https://github.com/d3/d3-scale-chromatic
         this.colorMap = d3.scaleSequential(d3.interpolateWarm);
     }  
 
-    addTo(axis: Axis, options: any) {       
+    addTo(axis: Axis, options: any, id?: string) {       
 
+        this.id = id ? id : ''
         if (axis instanceof CartesianAxis) {
             this.plotterCartesian(axis, options)
         } else if (axis instanceof PolarAxis) {
@@ -305,7 +307,7 @@ export class ChartMarker extends Chart {
             }
         )
 
-        this.group = canvas.append("g").attr("class", "plot-2")
+        this.group = canvas.append("g").attr("class", "chart-marker").attr("id",this.id)
         var elements = this.group.selectAll('.symbol')
             .data(mappedData)
             .enter()
@@ -329,7 +331,7 @@ export class ChartMarker extends Chart {
             }
         )
 
-        this.group = canvas.append("g").attr("class", "plot-2")
+        this.group = canvas.append("g").attr("class", "chart-marker").attr("id",this.id)
         var elements = this.group.selectAll('.symbol')
             .data(mappedData)
             .enter()
@@ -370,7 +372,7 @@ export class ChartRange extends Chart {
         )
         console.log(mappedData)
 
-        this.group = canvas.append("g").attr("class", "plot-1")
+        this.group = canvas.append("g").attr("class", "chart-range").attr("id",this.id)
         var elements = this.group.selectAll("rect")
             .data(mappedData)
             .enter()
@@ -410,7 +412,7 @@ export class ChartRange extends Chart {
             .startAngle(function (d: any, i) { return d.t[0] })
             .endAngle(function (d: any, i) { return d.t[1] })
 
-        this.group = canvas.append("g").attr("class", "plot-1")
+        this.group = canvas.append("g").attr("class", "chart-range").attr("id", this.id)
         var elements = this.group.selectAll("path")
             .data(mappedData)
             .enter()
