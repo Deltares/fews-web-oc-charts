@@ -326,7 +326,7 @@ export class ChartMarker extends Chart {
             function (d: any) {
                 return {
                     r: axis.radialScale(d[rkey]),
-                    t: axis.angularScale(d[tkey]) 
+                    t: axis.angularScale(d[tkey])
                 }
             }
         )
@@ -345,6 +345,63 @@ export class ChartMarker extends Chart {
 
 }
 
+
+export class ChartLine extends Chart {
+
+    plotterCartesian(axis: CartesianAxis, options: any) {
+        var canvas = axis.canvas
+        let xkey = options.xkey ? options.xkey : 'x'
+        let ykey = options.ykey ? options.ykey : 'y'
+
+        axis.xScale.domain([0, 360])
+        axis.yScale.domain([0, 1])
+
+        let mappedData: any = this.data.map(
+            function (d: any) {
+                return {
+                    x: axis.xScale(d[xkey]),
+                    y: axis.yScale(d[ykey]),
+                }
+            }
+        )
+
+        var line = d3.line()
+            .x(function (d: any) { return d.x; })
+            .y(function (d: any) { return d.y; })
+            .defined(function (d: any) { return d.y != null })
+
+        this.group = canvas.append("g").attr("class", "chart-line").attr("id", this.id)
+        var elements = this.group.append('path')
+            .attr('d', line(mappedData))
+    }
+
+    plotterPolar(axis: PolarAxis, options: any) {
+        var canvas = axis.canvas;
+
+        let tkey = options.tkey ? options.tkey : 't'
+        let rkey = options.rkey ? options.rkey : 'r'
+
+        let mappedData: any = this.data.map(
+            function (d: any) {
+                return {
+                    r: axis.radialScale(d[rkey]),
+                    t: axis.angularScale(d[tkey])
+                }
+            }
+        )
+
+        var line = d3.lineRadial()
+            .angle(function (d: any) { return d.t; })
+            .radius(function (d: any) { return d.r; })
+        this.group = canvas.append("g").attr("class", "chart-line").attr("id", this.id)
+        var elements = this.group.append('path')
+            .attr('d', line(mappedData))
+
+        elements.on('mouseover', function (d: any) { axis.showTooltip(d) })
+        elements.on('mouseout', function (d: any) { axis.hideTooltip(d) })
+    }
+
+}
 
 export class ChartRange extends Chart {
 

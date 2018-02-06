@@ -19,7 +19,7 @@ let plot = new wb.ChartRange( [
     { x: [.4, .5], y: [50, 95], v: 2 },
     { x: [.5, .6], y: [45, 90], v: 0.5},
     { x: [.6, .7], y: [40, 95], v: 0 }
-], {}).addTo(polaraxis, { rkey: "x", tkey: "y", colorkey: 'v' })
+], {})
 
 
 var random = []
@@ -27,11 +27,23 @@ for (var i = 0; i < 100; i++) {
     random.push({ x: randomFromInterval(0, 1), y: randomFromInterval(0, 360) }  )
 }
 
-console.log(random)
+let a = 0
+let b =  1 / 1440 
+var archimedeanSpiral = []
+for (var i = 0; i < 1440; i+= 5) {
+    archimedeanSpiral.push({ x: a + b * i, y: i % 360 })
+}
 
-let plot2 = new wb.ChartMarker(random, {}).addTo(polaraxis, { rkey: "x", tkey: "y" }, 'polar-dot')
+console.log(random)
+let plot2 = new wb.ChartMarker(random, {})
+let plot3 = new wb.ChartLine(archimedeanSpiral, {})
+
+// plot.addTo(polaraxis, { rkey: "x", tkey: "y", colorkey: 'v' })
+// plot2.addTo(polaraxis, { rkey: "x", tkey: "y" }, 'polar-dot')
+plot3.addTo(polaraxis, { rkey: "x", tkey: "y" }, 'polar-line')
 
 let container2 = document.getElementById("chart-container-2")
 let axis = new wb.CartesianAxis(container2, 800, height )
-plot.addTo(axis, {xkey : "y", ykey: "x", colorkey: 'v' })
-plot2.addTo(axis, { xkey: "y", ykey: "x"}, 'cartesian-dot')
+// plot.addTo(axis, {xkey : "y", ykey: "x", colorkey: 'v' })
+// plot2.addTo(axis, { xkey: "y", ykey: "x"}, 'cartesian-dot')
+plot3.addTo(axis, { xkey: "y", ykey: "x" }, 'cartesian-line')
