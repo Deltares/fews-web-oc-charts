@@ -267,7 +267,42 @@ export abstract class Chart {
         this.style = style
         // https://github.com/d3/d3-scale-chromatic
         this.colorMap = d3.scaleSequential(d3.interpolateWarm);
-    }  
+    }
+
+
+    protected mapDataCartesian(axis: CartesianAxis, options: any) {
+
+        let xkey = options.xkey ? options.xkey : 'x'
+        let ykey = options.ykey ? options.ykey : 'y'
+
+        axis.xScale.domain([0, 360])
+        axis.yScale.domain([0, 1])
+
+        let mappedData : any = this.data.map(
+            function (d: any) {
+                return {
+                    x: axis.xScale(d[xkey]),
+                    y: axis.yScale(d[ykey]),
+                }
+            }
+        )
+        return mappedData
+    }
+
+    protected mapDataPolar(axis: PolarAxis, options: any) {
+        let tkey = options.tkey ? options.tkey : 't'
+        let rkey = options.rkey ? options.rkey : 'r'
+
+        let mappedData: any = this.data.map(
+            function (d: any) {
+                return {
+                    r: axis.radialScale(d[rkey]),
+                    t: axis.angularScale(d[tkey])
+                }
+            }
+        )
+        return mappedData
+    }
 
     addTo(axis: Axis, options: any, id?: string) {       
 
@@ -291,21 +326,7 @@ export class ChartMarker extends Chart {
 
     plotterCartesian(axis: CartesianAxis, options: any) {
         var canvas = axis.canvas
-        let xkey = options.xkey ? options.xkey : 'x'
-        let ykey = options.ykey ? options.ykey : 'y'
-
-        axis.xScale.domain([0, 360])
-        axis.yScale.domain([0, 1])
-
-
-        let mappedData: any = this.data.map(
-            function (d: any) {
-                return {
-                    x: axis.xScale(d[xkey]),
-                    y: axis.yScale(d[ykey]),
-                }
-            }
-        )
+        let mappedData = this.mapDataCartesian(axis, options)
 
         this.group = canvas.append("g").attr("class", "chart-marker").attr("id",this.id)
         var elements = this.group.selectAll('.symbol')
@@ -319,17 +340,7 @@ export class ChartMarker extends Chart {
     plotterPolar(axis: PolarAxis, options: any) {
         var canvas = axis.canvas;
 
-        let tkey = options.tkey ? options.tkey : 't'
-        let rkey = options.rkey ? options.rkey : 'r'
-
-        let mappedData: any = this.data.map(
-            function (d: any) {
-                return {
-                    r: axis.radialScale(d[rkey]),
-                    t: axis.angularScale(d[tkey])
-                }
-            }
-        )
+        let mappedData = this.mapDataPolar(axis, options)
 
         this.group = canvas.append("g").attr("class", "chart-marker").attr("id",this.id)
         var elements = this.group.selectAll('.symbol')
@@ -345,25 +356,11 @@ export class ChartMarker extends Chart {
 
 }
 
-
 export class ChartLine extends Chart {
 
     plotterCartesian(axis: CartesianAxis, options: any) {
         var canvas = axis.canvas
-        let xkey = options.xkey ? options.xkey : 'x'
-        let ykey = options.ykey ? options.ykey : 'y'
-
-        axis.xScale.domain([0, 360])
-        axis.yScale.domain([0, 1])
-
-        let mappedData: any = this.data.map(
-            function (d: any) {
-                return {
-                    x: axis.xScale(d[xkey]),
-                    y: axis.yScale(d[ykey]),
-                }
-            }
-        )
+        let mappedData = this.mapDataCartesian(axis, options)
 
         var line = d3.line()
             .x(function (d: any) { return d.x; })
@@ -377,19 +374,7 @@ export class ChartLine extends Chart {
 
     plotterPolar(axis: PolarAxis, options: any) {
         var canvas = axis.canvas;
-
-        let tkey = options.tkey ? options.tkey : 't'
-        let rkey = options.rkey ? options.rkey : 'r'
-
-        let mappedData: any = this.data.map(
-            function (d: any) {
-                return {
-                    r: axis.radialScale(d[rkey]),
-                    t: axis.angularScale(d[tkey])
-                }
-            }
-        )
-
+        let mappedData = this.mapDataPolar(axis, options)
         var line = d3.lineRadial()
             .angle(function (d: any) { return d.t; })
             .radius(function (d: any) { return d.r; })
