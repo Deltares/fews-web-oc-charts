@@ -10,7 +10,7 @@ let height = 400
 let width = 400
 let container1 = document.getElementById("chart-container-1")
 
-let polaraxis = new wb.PolarAxis(container1, width, height, 
+let polaraxis = new wb.PolarAxis(container1, width, height,
     {direction: wb.CLOCKWISE, innerRadius: 40, angularRange: [0, 2* Math.PI]} )
 let plot = new wb.ChartRange( [
     { x: [.1, .2], y: [35, 85] , v: 0},
@@ -28,7 +28,7 @@ for (var i = 0; i < 100; i++) {
 }
 
 let a = 0
-let b =  1 / 1440 
+let b =  1 / 1440
 var archimedeanSpiral = []
 for (var i = 0; i <= 1440; i+= 5) {
     archimedeanSpiral.push({ x: a + b * i, y: i % 360 })

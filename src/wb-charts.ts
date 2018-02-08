@@ -10,8 +10,8 @@ export interface data {
     y: number[]
 }
 
-function mean(x : number[] | number )  { 
-    
+function mean(x : number[] | number )  {
+
     if (x instanceof Array )  {
         return d3.mean(x)
     }
@@ -39,7 +39,7 @@ export abstract class Axis {
     constructor(container: HTMLElement, width: number, height: number, options: axisOptions) {
         this.container = container
         this.options = options
-        let margin = this.margin = { 
+        let margin = this.margin = {
             top: 40,
             right: 40,
             bottom: 40,
@@ -61,14 +61,14 @@ export abstract class Axis {
     updateGrid() {}
 
     createTooltip() {
-        this.tooltip = this.canvas.append('div')                 
-            .attr('class', 'tooltip')     
+        this.tooltip = this.canvas.append('div')
+            .attr('class', 'tooltip')
 
-        this.tooltip.append('div')            
-            .attr('class', 'label')       
+        this.tooltip.append('div')
+            .attr('class', 'label')
 
-        this.tooltip.append('div')            
-            .attr('class', 'value')       
+        this.tooltip.append('div')
+            .attr('class', 'value')
     }
 
     showTooltip(d: any) {
@@ -126,7 +126,7 @@ export class CartesianAxis extends Axis {
         let xAxis = d3.axisBottom(this.xScale)
         xAxis.ticks(8)
         let horizontalAxis = this.canvas.select(".x-axis").call(xAxis)
-        let xticks = this.xScale.ticks(8).map(this.xScale) 
+        let xticks = this.xScale.ticks(8).map(this.xScale)
         let xGrid = this.canvas.select(".x-grid").selectAll("line")
             .data(xticks)
             .enter()
@@ -138,7 +138,7 @@ export class CartesianAxis extends Axis {
 
         let yAxis = d3.axisLeft(this.yScale).ticks(5)
         let verticalAxis = this.canvas.select(".y-axis").call(yAxis)
-        let yticks = this.yScale.ticks(5).map(this.yScale); 
+        let yticks = this.yScale.ticks(5).map(this.yScale);
 
         let yGrid = this.canvas.select(".y-grid").selectAll("line")
             .data(yticks)
@@ -162,13 +162,13 @@ export class PolarAxis extends Axis {
     innerRadius: number
     angularRange: number[]
 
-    constructor(container: HTMLElement, width: number, height: number, options?: axisOptions) { 
+    constructor(container: HTMLElement, width: number, height: number, options?: axisOptions) {
         super(container , width, height, options );
         this.canvas = this.canvas.
             append("g")
             .attr("transform", "translate(" + this.width / 2 + "," + this.height / 2 + " )")
 
-            
+
         this.direction = options.direction ? options.direction : ANTICLOCKWISE
         this.innerRadius = options.innerRadius ? options.innerRadius : 0
         this.outerRadius = Math.min(this.width, this.height) / 2
@@ -177,7 +177,7 @@ export class PolarAxis extends Axis {
         } else {
             this.angularRange = [0, 2 * Math.PI]
         }
-        
+
         this.canvas.append("g")
             .attr("class", "axis-canvas")
             .append("path")
@@ -189,7 +189,7 @@ export class PolarAxis extends Axis {
             )
 
         this.setScale()
-        this.initGrid()     
+        this.initGrid()
     }
 
     protected setScale(){
@@ -220,7 +220,7 @@ export class PolarAxis extends Axis {
         var g = this.canvas
         //draw the radial axis
         let rAxis = d3.axisBottom(this.radialScale).ticks(5)
-        
+
         let radialAxis = this.canvas.select(".r-axis")
             .call(rAxis)
 
@@ -255,7 +255,7 @@ export class PolarAxis extends Axis {
 export const RANGE = 13
 
 export abstract class Chart {
- 
+
     data: any
     style: any
     group: any
@@ -304,7 +304,7 @@ export abstract class Chart {
         return mappedData
     }
 
-    addTo(axis: Axis, options: any, id?: string) {       
+    addTo(axis: Axis, options: any, id?: string) {
 
         this.id = id ? id : ''
         if (axis instanceof CartesianAxis) {
@@ -428,7 +428,7 @@ export class ChartRange extends Chart {
 
     plotterPolar(axis: PolarAxis, options: any) {
         var canvas = axis.canvas;
-        
+
         let tkey = options.tkey ? options.tkey : 't'
         let rkey = options.rkey ? options.rkey : 'r'
         let colorkey = options.colorkey ? options.colorkey : rkey
