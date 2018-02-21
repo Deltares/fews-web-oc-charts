@@ -1,9 +1,6 @@
 import * as d3 from "d3"
 import * as wb from "./wb-charts"
 
-function randomFromInterval(min: number, max: number) {
-    return (Math.random() * (max - min ) + min);
-}
 
 // set constants
 let height = 400
@@ -24,7 +21,7 @@ let plot = new wb.ChartRange( [
 
 var random = []
 for (var i = 0; i < 100; i++) {
-    random.push({ x: randomFromInterval(0, 1), y: randomFromInterval(0, 360) }  )
+    random.push({ x: d3.randomUniform(0, 1)(), y: d3.randomUniform(0, 360)() }  )
 }
 
 let a = 0
@@ -34,9 +31,16 @@ for (var i = 0; i <= 1440; i+= 5) {
     archimedeanSpiral.push({ x: a + b * i, y: i % 360 })
 }
 
-console.log(random)
 let plot2 = new wb.ChartMarker(random, {})
 let plot3 = new wb.ChartLine(archimedeanSpiral, {})
+
+var spectra =[]
+for (var i = 0; i < 50; i++) {
+    spectra.push({ x: 50 + i * 100, y: d3.randomUniform()() })
+}
+console.log(spectra)
+let plot4 = new wb.ChartHistogram( spectra, {})
+
 
 plot.addTo(polaraxis, { rkey: "x", tkey: "y", colorkey: 'v' })
 // plot2.addTo(polaraxis, { rkey: "x", tkey: "y" }, 'polar-dot')
@@ -46,4 +50,6 @@ let container2 = document.getElementById("chart-container-2")
 let axis = new wb.CartesianAxis(container2, 400, height )
 // plot.addTo(axis, {xkey : "y", ykey: "x", colorkey: 'v' })
 // plot2.addTo(axis, { xkey: "y", ykey: "x"}, 'cartesian-dot')
-plot3.addTo(axis, { xkey: "y", ykey: "x" }, 'cartesian-line')
+// plot3.addTo(axis, { xkey: "y", ykey: "x" }, 'cartesian-line')
+plot4.addTo(axis, { xkey: "x", ykey: "y", colorkey: "y"},'cartesian-histogram' )
+

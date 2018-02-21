@@ -402,7 +402,6 @@ export class ChartRange extends Chart {
         var colorScale = d3.scaleLinear().domain([0, 4])
         var colorMap = this.colorMap
 
-        console.log()
         let mappedData: any = this.data.map(
             function (d: any) {
                 return {
@@ -412,7 +411,6 @@ export class ChartRange extends Chart {
                 }
             }
         )
-        console.log(mappedData)
 
         this.group = canvas.append("g").attr("class", "chart-range").attr("id",this.id)
         var elements = this.group.selectAll("rect")
@@ -436,8 +434,6 @@ export class ChartRange extends Chart {
         var colorScale = d3.scaleLinear().domain([0, 4])
         var colorMap = this.colorMap
 
-        console.log(this.data)
-        console.log(options)
         let mappedData: any = this.data.map(
             function (d: any) {
                 return {
@@ -465,7 +461,50 @@ export class ChartRange extends Chart {
         elements.on('mouseover', function (d: any) { axis.showTooltip(d) })
         elements.on('mouseout', function (d: any) { axis.hideTooltip(d) })
     }
+}
 
+export class ChartHistogram extends Chart {
 
+    plotterCartesian(axis: CartesianAxis, options: any) {
+        var canvas = axis.canvas
+        let xkey = options.xkey ? options.xkey : 'x'
+        let ykey = options.ykey ? options.ykey : 'y'
+        let colorkey = options.colorkey ? options.colorkey : ykey
+        let data = <any[]> this.data
+
+        axis.yScale.domain([0, 1])
+        let x0 = ( 3 * data[0][xkey] - data[1][xkey]) /2
+        let x1 = ( - data[data.length-2][xkey] + 3 * data[data.length-1][xkey]) / 2
+        axis.xScale.domain([x0, x1])
+
+        let histScale = d3.scaleBand().domain(data.map(function (d:any) {return d[xkey]} ))
+        histScale.range([0, axis.width ]);
+        histScale.padding(.1)
+
+        let colorextent = <number[]>d3.extent(data.map(function (d: any) { return d[colorkey] }))
+        var colorScale = d3.scaleLinear().domain([0, 2])
+        
+        var colorMap = this.colorMap
+        let mappedData: any = this.data.map(
+            function (d: any) {
+                return {
+                    x: d[xkey],
+                    y: d[ykey],
+                    color: colorMap(colorScale(d[colorkey]))
+                }
+            }
+        )
+
+        this.group = canvas.append("g").attr("class", "chart-range").attr("id", this.id)
+        var elements = this.group.selectAll("rect")
+            .data(mappedData)
+            .enter()
+            .append("rect")
+            .attr("x", function (d: any) { return histScale(d.x) })
+            .attr("y", function (d: any) { return axis.yScale(d.y) })
+            .attr("width", histScale.bandwidth())
+            .attr("height", function (d: any) { return axis.height - axis.yScale(d.y)})
+            .style("fill", function (d: any) { return d.color })
+    }
 
 }
