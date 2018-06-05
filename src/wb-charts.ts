@@ -26,15 +26,15 @@ export interface axisOptions {
 
 
 export abstract class Axis {
+    tooltip: any = null;
     type: string
     canvas: any
     container: HTMLElement
     width: number
     height: number
     margin: any
-    tooltip: any;
     options: any
-
+    charts: Chart[]
 
     constructor(container: HTMLElement, width: number, height: number, options: axisOptions) {
         this.container = container
@@ -53,31 +53,40 @@ export abstract class Axis {
             .append("g")
             .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
         this.createTooltip()
+        this.charts = []
 
     }
 
-    protected setScale() {}
+    protected setRange() {}
     protected initGrid() {}
+
+    redraw(){}
+
     updateGrid() {}
 
     createTooltip() {
-        this.tooltip = this.canvas.append('div')
-            .attr('class', 'tooltip')
+        this.tooltip = d3.select("body").append("div")
+            .attr("class", "tooltip")
+            .style("opacity", 0);
 
-        this.tooltip.append('div')
-            .attr('class', 'label')
 
-        this.tooltip.append('div')
-            .attr('class', 'value')
+        // this.tooltip = this.canvas.append('div')
+        //     .attr('class', 'tooltip')
+
+        // this.tooltip.append('div')
+        //     .attr('class', 'label')
+
+        // this.tooltip.append('div')
+        //     .attr('class', 'value')
     }
 
     showTooltip(d: any) {
-        this.tooltip.select('.label').html("test");
-        this.tooltip.style('display', 'block');
     }
 
     hideTooltip(d: any) {
-        this.tooltip.style('display', 'hide');
+        this.tooltip.transition()
+            .duration(50)
+            .style("opacity", 0);
     }
 
 }
@@ -97,11 +106,28 @@ export class CartesianAxis extends Axis {
                 .attr("width",this.width)
                 .attr("height",this.height)
 
-        this.setScale()
+        this.setRange()
         this.initGrid()
     }
 
-    protected setScale(){
+    public setxDomain(domain: Array<number | { valueOf(): number }> ) {
+        let currentDomain = this.xScale.domain()
+        this.xScale.domain([
+            d3.min([domain[0], currentDomain[0]]),
+            d3.max([domain[1], currentDomain[1]])
+         ] )
+    }
+
+    showTooltip(d: any) {
+        this.tooltip.transition()
+            .duration(50)
+            .style("opacity", .9);
+        this.tooltip.html("x: " + d.x + "<br/>" + "y: " + d.y.toFixed(2))
+            .style("left", (d3.event.pageX) + "px")
+            .style("top", (d3.event.pageY) + "px");
+    }
+
+    protected setRange(){
         this.xScale = d3.scaleLinear().range([0, this.width])
         this.yScale = d3.scaleLinear().range([this.height, 0])
     }
@@ -119,6 +145,13 @@ export class CartesianAxis extends Axis {
             .attr("class", "y-axis")
         this.updateGrid()
     }
+
+    redraw() {
+        for( let chart of this.charts ) {
+            chart.plotterCartesian(this, chart.options)
+        }
+    }
+
 
     updateGrid() {
 
@@ -188,11 +221,20 @@ export class PolarAxis extends Axis {
                 .endAngle(this.angularRange[1])
             )
 
-        this.setScale()
+        this.setRange()
         this.initGrid()
     }
 
-    protected setScale(){
+    showTooltip(d: any) {
+        this.tooltip.transition()
+            .duration(50)
+            .style("opacity", .9);
+        this.tooltip.html("t: " + d.t[0].toFixed(2) + "<br/>" + "r: " + d.r[0].toFixed(2))
+            .style("left", (d3.event.pageX) + "px")
+            .style("top", (d3.event.pageY) + "px");
+    }
+
+    protected setRange(){
         this.radialScale = d3.scaleLinear().domain([0, 1]).range([this.innerRadius, this.outerRadius])
         this.angularScale = d3.scaleLinear().domain([0, 360]).range(this.angularRange)
     }
@@ -208,6 +250,12 @@ export class PolarAxis extends Axis {
         let angularAxis = this.canvas.append("g")
             .attr("class", "t-axis")
         this.updateGrid()
+    }
+
+    redraw() {
+        for (let chart of this.charts) {
+            chart.plotterPolar(this, chart.options)
+        }
     }
 
     radToDegrees(value: number) {
@@ -261,6 +309,7 @@ export abstract class Chart {
     group: any
     colorMap: any
     id: string
+    options: any
 
     constructor(data: any, style: any) {
         this.data = data
@@ -269,14 +318,18 @@ export abstract class Chart {
         this.colorMap = d3.scaleSequential(d3.interpolateWarm);
     }
 
+    protected selectGroup(axis: Axis, cssClass: string) {
+        this.group = this.group != null ? this.group : axis.canvas.append("g").attr("class", cssClass ).attr("id", this.id)
+        return this.group
+    }
 
     protected mapDataCartesian(axis: CartesianAxis, options: any) {
 
         let xkey = options.xkey ? options.xkey : 'x'
         let ykey = options.ykey ? options.ykey : 'y'
 
-        axis.xScale.domain([0, 360])
-        axis.yScale.domain([0, 1])
+        // axis.setxDomain(d3.extent(this.data, function (d: any) { return d[xkey]})  )
+        axis.yScale.domain(d3.extent(this.data, function (d: any) { return d[ykey]} ))
 
         let mappedData : any = this.data.map(
             function (d: any) {
@@ -307,6 +360,8 @@ export abstract class Chart {
     addTo(axis: Axis, options: any, id?: string) {
 
         this.id = id ? id : ''
+        this.options = options
+        axis.charts.push(this)
         if (axis instanceof CartesianAxis) {
             this.plotterCartesian(axis, options)
         } else if (axis instanceof PolarAxis) {
@@ -325,10 +380,9 @@ export abstract class Chart {
 export class ChartMarker extends Chart {
 
     plotterCartesian(axis: CartesianAxis, options: any) {
-        var canvas = axis.canvas
-        let mappedData = this.mapDataCartesian(axis, options)
 
-        this.group = canvas.append("g").attr("class", "chart-marker").attr("id",this.id)
+        let mappedData = this.mapDataCartesian(axis, options)
+        this.group = this.selectGroup(axis, "chart-marker")
         var elements = this.group.selectAll('.symbol')
             .data(mappedData)
             .enter()
@@ -338,20 +392,17 @@ export class ChartMarker extends Chart {
     }
 
     plotterPolar(axis: PolarAxis, options: any) {
-        var canvas = axis.canvas;
 
         let mappedData = this.mapDataPolar(axis, options)
-
-        this.group = canvas.append("g").attr("class", "chart-marker").attr("id",this.id)
+        this.group = this.selectGroup(axis, "chart-marker")
         var elements = this.group.selectAll('.symbol')
             .data(mappedData)
             .enter()
             .append('path')
             .attr('transform', function (d: any, i: number) { return 'translate(' + d.r * Math.cos(d.t) + ',' + d.r * Math.sin(d.t) + ')'; })
-            .attr('d', d3.symbol().type(function (d, i) { return d3.symbols[i % 7]; }) );
-
-        elements.on('mouseover', function (d: any) { axis.showTooltip(d) })
-        elements.on('mouseout', function (d: any) { axis.hideTooltip(d) })
+            .attr('d', d3.symbol().type(function (d, i) { return d3.symbols[i % 7]; }) )
+            .on('mouseover', function (d: any) { axis.showTooltip(d) })
+            .on('mouseout', function (d: any) { axis.hideTooltip(d) })
     }
 
 }
@@ -359,31 +410,27 @@ export class ChartMarker extends Chart {
 export class ChartLine extends Chart {
 
     plotterCartesian(axis: CartesianAxis, options: any) {
-        var canvas = axis.canvas
         let mappedData = this.mapDataCartesian(axis, options)
-
         var line = d3.line()
             .x(function (d: any) { return d.x; })
             .y(function (d: any) { return d.y; })
             .defined(function (d: any) { return d.y != null })
 
-        this.group = canvas.append("g").attr("class", "chart-line").attr("id", this.id)
+        this.group = this.selectGroup(axis, "chart-line")
         var elements = this.group.append('path')
             .attr('d', line(mappedData))
     }
 
     plotterPolar(axis: PolarAxis, options: any) {
-        var canvas = axis.canvas;
         let mappedData = this.mapDataPolar(axis, options)
         var line = d3.lineRadial()
             .angle(function (d: any) { return d.t; })
             .radius(function (d: any) { return d.r; })
-        this.group = canvas.append("g").attr("class", "chart-line").attr("id", this.id)
+        this.group = this.selectGroup(axis, "chart-line")
         var elements = this.group.append('path')
             .attr('d', line(mappedData))
-
-        elements.on('mouseover', function (d: any) { axis.showTooltip(d) })
-        elements.on('mouseout', function (d: any) { axis.hideTooltip(d) })
+            .on('mouseover', function (d: any) { axis.showTooltip(d) })
+            .on('mouseout', function (d: any) { axis.hideTooltip(d) })
     }
 
 }
@@ -412,16 +459,31 @@ export class ChartRange extends Chart {
             }
         )
 
-        this.group = canvas.append("g").attr("class", "chart-range").attr("id",this.id)
-        var elements = this.group.selectAll("rect")
+        this.group = this.selectGroup(axis,'chart-range')
+        var elements: any  = this.group.selectAll("rect")
             .data(mappedData)
+
+        var t = d3.transition()
+            .duration(750)
+            .ease(d3.easeLinear);
+
+
+        // exit
+        elements.exit().remove()
+        // update + enter 
+        elements
             .enter()
-            .append("rect")
+                .append("rect")
+            .merge(elements)
             .attr("x", function (d: any) { return d.x[0] })
             .attr("y", function (d: any) { return d.y[1] })
             .attr("width", function (d: any) { return d.x[1] - d.x[0] })
             .attr("height", function (d: any) { return d.y[0] - d.y[1] })
             .style("fill", function (d: any) { return d.color })
+
+        elements
+            .transition(t)
+
     }
 
     plotterPolar(axis: PolarAxis, options: any) {
@@ -444,23 +506,60 @@ export class ChartRange extends Chart {
             }
         )
 
+        var t = d3.transition()
+            .duration(750)
+            .ease(d3.easeLinear);
+
         var arcgenerator = d3.arc()
             .innerRadius(function (d: any, i) { return d.r[0] })
             .outerRadius(function (d: any, i) { return d.r[1] })
             .startAngle(function (d: any, i) { return d.t[0] })
             .endAngle(function (d: any, i) { return d.t[1] })
 
-        this.group = canvas.append("g").attr("class", "chart-range").attr("id", this.id)
+        this.group = this.selectGroup(axis, 'chart-range')
+
+        var previousData:any[] =[];
+        var temp = this.group.selectAll("path")
+        temp.each(function (p:any) {
+            previousData.push(p)
+        })
+
         var elements = this.group.selectAll("path")
             .data(mappedData)
-            .enter()
-            .append("path")
-            .style("fill", function (d: any) { return d.color })
-            .attr("d", arcgenerator)
 
-        elements.on('mouseover', function (d: any) { axis.showTooltip(d) })
-        elements.on('mouseout', function (d: any) { axis.hideTooltip(d) })
+        elements.exit().remove()
+
+        elements
+            .enter()
+                .append("path")
+                .attr("d", arcgenerator)
+                .style("fill", function (d: any) { return d.color })
+                .on('mouseover', function (d: any) { axis.showTooltip(d) })
+                .on('mouseout', function (d: any) { axis.hideTooltip(d) })
+
+            .merge(elements)
+                // .attr("d", arcgenerator)
+        
+        elements.transition(t)
+            .style("fill", function (d: any) { return d.color })
+            .call(arcTween, previousData)
+
+        function arcTween(transition:any, p:any) {
+
+            transition.attrTween("d", function (d:any, i:number, a:any) {
+                var tInterpolate = d3.interpolateArray(p[i].t,d.t);
+                var rInterpolate = d3.interpolateArray(p[i].r, d.r);
+                return function (t:any) {
+                    d.t = tInterpolate(t)
+                    d.r = rInterpolate(t)
+                    return arcgenerator(d);
+                }
+             })
+        }
+
+
     }
+    
 }
 
 export class ChartHistogram extends Chart {
@@ -473,19 +572,20 @@ export class ChartHistogram extends Chart {
         let data = <any[]> this.data
 
         axis.yScale.domain([0, 1])
-        let x0 = ( 3 * data[0][xkey] - data[1][xkey]) /2
-        let x1 = ( - data[data.length-2][xkey] + 3 * data[data.length-1][xkey]) / 2
+        let x0 = (3 * data[0][xkey] - data[1][xkey]) / 2
+        let x1 = (- data[data.length - 2][xkey] + 3 * data[data.length - 1][xkey]) / 2
         axis.xScale.domain([x0, x1])
+        axis.setxDomain([x0, x1])
 
         let histScale = d3.scaleBand().domain(data.map(function (d:any) {return d[xkey]} ))
         histScale.range([0, axis.width ]);
-        histScale.padding(.1)
+        histScale.padding(.05)
 
         let colorextent = <number[]>d3.extent(data.map(function (d: any) { return d[colorkey] }))
-        var colorScale = d3.scaleLinear().domain([0, 2])
+        var colorScale = d3.scaleLinear().domain([0, 1])
         
         var colorMap = this.colorMap
-        let mappedData: any = this.data.map(
+        var mappedData: any = this.data.map(
             function (d: any) {
                 return {
                     x: d[xkey],
@@ -494,17 +594,43 @@ export class ChartHistogram extends Chart {
                 }
             }
         )
-
-        this.group = canvas.append("g").attr("class", "chart-range").attr("id", this.id)
-        var elements = this.group.selectAll("rect")
+        // var div = d3.select("body").append("div")
+        //     .attr("class", "tooltip")
+        //     .style("opacity", 0);
+        this.group = this.selectGroup(axis, "chart-range" )
+        var t = d3.transition()
+            .duration(750)
+            .ease(d3.easeLinear);
+        
+        var elements: any = this.group.selectAll("rect")
             .data(mappedData)
+            
+        // remove
+        elements.exit().remove()
+        // enter + update
+        elements
             .enter()
-            .append("rect")
-            .attr("x", function (d: any) { return histScale(d.x) })
-            .attr("y", function (d: any) { return axis.yScale(d.y) })
-            .attr("width", histScale.bandwidth())
-            .attr("height", function (d: any) { return axis.height - axis.yScale(d.y)})
+                .append("rect")
+                .style("fill", function (d: any) { return d.color })
+                .attr("y", function (d: any) { return axis.yScale(d.y) })
+                .attr("height", function (d: any) { return axis.height - axis.yScale(d.y) })
+
+            .merge(elements)
+                .attr("x", function (d: any) { return histScale(d.x) })
+                .on("mouseover", function (d: any) {
+                    axis.showTooltip(d)
+                })
+                .on("mouseout", function (d: any) {
+                    axis.hideTooltip(d)
+                })
+                .attr("width", histScale.bandwidth())
+        
+        elements                
+            .transition(t)
             .style("fill", function (d: any) { return d.color })
+            .attr("y", function (d: any) { return axis.yScale(d.y) })
+            .attr("height", function (d: any) { return axis.height - axis.yScale(d.y) })
+
     }
 
 }
