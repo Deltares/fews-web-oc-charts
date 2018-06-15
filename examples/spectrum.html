@@ -18,37 +18,6 @@
                 fill:rgb(89, 89, 89);
             }
 
-            .t-axis path { stroke-width: 1px; stroke: white;}
-            .t-axis .tick line { stroke-width: 1px; stroke: white;}
-            .t-axis .tick text { stroke-width: 1px; fill: white;}
-            .t-grid {
-                fill: none;
-                stroke-width: 1px;
-                stroke: black;
-                stroke-dasharray: 2px;
-            }
-
-            .r-axis path { stroke-width: 1px; stroke: white;}
-            .r-axis .tick line { stroke-width: 1px; stroke: white;}
-            .r-axis .tick text { stroke-width: 1px; fill: white;}
-            .r-grid {
-                fill: none;
-                stroke-width: 1px;
-                stroke: black;
-                stroke-dasharray: 2px;
-            }
-
-            .x-axis path { stroke-width: 1px; stroke: white;}
-            .x-axis .tick line { stroke-width: 1px; stroke: white;}
-            .x-axis .tick text { stroke-width: 1px; fill: white;}
-
-            .x-grid { fill: none; stroke-width: 1px; stroke: black; stroke-dasharray: 2px; }
-
-            .y-axis path { stroke-width: 1px; stroke: white;}
-            .y-axis .tick line { stroke-width: 1px; stroke: white;}
-            .y-axis .tick text { stroke-width: 1px; fill: white;}
-            .y-grid { fill: none; stroke-width: 1px; stroke: black; stroke-dasharray: 2px; }
-
             #chart-container-1 {
                 display: inline;
             }
@@ -84,14 +53,15 @@ lightgray; border: 0px; border-radius: 8px; pointer-events: none; }
 
         </style>
         <script src="https://d3js.org/d3.v4.min.js"></script>
-
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+        <link rel="stylesheet" href="/dist/wb-charts.css">
     </head>
     <body>
 
         <div id="chart-container-1"></div>
         <div id="chart-container-2"></div>
+        <div>
         <input id="slider" type="range" name="points" min="0" max="10">
+        </div>
         <script src="/dist/wb-charts.umd.js"></script>
         <script type="text/javascript">
         function randomSpectrum(a) {

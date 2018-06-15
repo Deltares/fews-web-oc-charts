@@ -4,6 +4,7 @@ import sourceMaps from 'rollup-plugin-sourcemaps'
 import camelCase from 'lodash.camelcase'
 import typescript from 'rollup-plugin-typescript2'
 import json from 'rollup-plugin-json'
+import copy from 'rollup-plugin-copy-assets'
 
 const pkg = require('./package.json')
 const external = Object.keys(pkg.dependencies || {});
@@ -35,5 +36,12 @@ export default {
 
     // Resolve source maps to the original source
     sourceMaps(),
+
+    copy({
+      assets: [
+        `./src/${libraryName}.css`,
+      ],
+    }),
+
   ],
 }
