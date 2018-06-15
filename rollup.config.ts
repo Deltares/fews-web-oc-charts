@@ -6,6 +6,7 @@ import typescript from 'rollup-plugin-typescript2'
 import json from 'rollup-plugin-json'
 
 const pkg = require('./package.json')
+const external = Object.keys(pkg.dependencies || {});
 
 const libraryName = 'wb-charts'
 
@@ -16,7 +17,7 @@ export default {
     { file: pkg.module, format: 'es', sourcemap: true },
   ],
   // Indicate here external modules you don't wanna include in your bundle (i.e.: 'lodash')
-  external: [],
+  external,
   watch: {
     include: 'src/**',
   },
