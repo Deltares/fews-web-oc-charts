@@ -517,6 +517,8 @@ export class ChartLine extends Chart {
 }
 
 export class ChartRange extends Chart {
+  private previousData: any[] = []
+
   plotterCartesian(axis: CartesianAxis, datakeys: any) {
     let xkey = datakeys.xkey ? datakeys.xkey : 'x'
     let ykey = datakeys.ykey ? datakeys.ykey : 'y'
@@ -637,7 +639,7 @@ export class ChartRange extends Chart {
       .duration(this.options.transitionTime)
       .ease(d3.easeLinear)
 
-    let arcgenerator = d3
+    let arcGenerator = d3
       .arc()
       .innerRadius(function(d: any, i) {
         return axis.radialScale(d.r[0])
@@ -654,11 +656,11 @@ export class ChartRange extends Chart {
 
     this.group = this.selectGroup(axis, 'chart-range')
 
-    let previousData: any[] = []
-    let temp = this.group.selectAll('path')
-    temp.each(function(p: any) {
-      previousData.push(p)
-    })
+    // let previousData: any[] = []
+    // let temp = this.group.selectAll('path')
+    // temp.each(function(p: any) {
+    //   previousData.push(p)
+    // })
 
     let elements = this.group.selectAll('path').data(mappedData)
 
@@ -667,7 +669,7 @@ export class ChartRange extends Chart {
     elements
       .enter()
       .append('path')
-      .attr('d', arcgenerator)
+      .attr('d', arcGenerator)
       .style('fill', function(d: any) {
         return d.color
       })
@@ -686,16 +688,29 @@ export class ChartRange extends Chart {
       .style('fill', function(d: any) {
         return d.color
       })
-      .call(arcTween, previousData)
+      .call(arcTween, this.previousData)
+
+    this.previousData = mappedData
 
     function arcTween(transition: any, p: any) {
       transition.attrTween('d', function(d: any, i: number, a: any) {
-        let tInterpolate = d3.interpolateArray(axis.angularScale.invert(p[i].t), d.t)
-        let rInterpolate = d3.interpolateArray(axis.radialScale.invert(p[i].r), d.r)
+        let old = p[i]
+        if (mean(old.t) - mean(d.t) > 180) {
+          old.t = old.t.map(function(x) {
+            return x - 360
+          })
+        } else if (mean(old.t) - mean(d.t) < -180) {
+          old.t = old.t.map(function(x) {
+            return x + 360
+          })
+        }
+
+        let tInterpolate = d3.interpolateArray(old.t, d.t)
+        let rInterpolate = d3.interpolateArray(old.r, d.r)
         return function(t: any) {
           d.t = tInterpolate(t)
           d.r = rInterpolate(t)
-          return arcgenerator(d)
+          return arcGenerator(d)
         }
       })
     }
