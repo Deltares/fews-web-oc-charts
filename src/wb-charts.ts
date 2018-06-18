@@ -543,7 +543,7 @@ export class ChartRange extends Chart {
       ])
     }
 
-    let colorScale = d3.scaleLinear().domain([0, 4])
+    let colorScale = d3.scaleLinear().domain([0, 1])
     if (this.options.colorScale === AUTO_SCALE) {
       colorScale.domain(
         d3.extent(this.data, function(d: any): number {
@@ -616,9 +616,15 @@ export class ChartRange extends Chart {
       axis.updateGrid()
     }
 
-    let colorScale = d3.scaleLinear().domain([0, 4])
+    let colorScale = d3.scaleLinear().domain([0, 1])
+    if (this.options.colorScale === AUTO_SCALE) {
+      colorScale.domain(
+        d3.extent(this.data, function(d: any): number {
+          return d[colorkey]
+        })
+      )
+    }
     let colorMap = this.colorMap
-
     let mappedData: any = this.data.map(function(d: any) {
       return {
         r: d[rkey].map(axis.radialScale),
