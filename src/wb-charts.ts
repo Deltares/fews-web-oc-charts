@@ -606,7 +606,6 @@ export class ChartRange extends Chart {
     if (axis.options.radialScale === AUTO_SCALE) {
       axis.radialScale.domain([
         d3.min(this.data, function(d: any) {
-          console.log(d[rkey])
           return d[rkey][0]
         }),
         d3.max(this.data, function(d: any) {
@@ -627,8 +626,8 @@ export class ChartRange extends Chart {
     let colorMap = this.colorMap
     let mappedData: any = this.data.map(function(d: any) {
       return {
-        r: d[rkey].map(axis.radialScale),
-        t: d[tkey].map(axis.angularScale),
+        r: d[rkey],
+        t: d[tkey],
         color: colorMap(colorScale(mean(d[colorkey])))
       }
     })
@@ -641,16 +640,16 @@ export class ChartRange extends Chart {
     let arcgenerator = d3
       .arc()
       .innerRadius(function(d: any, i) {
-        return d.r[0]
+        return axis.radialScale(d.r[0])
       })
       .outerRadius(function(d: any, i) {
-        return d.r[1]
+        return axis.radialScale(d.r[1])
       })
       .startAngle(function(d: any, i) {
-        return d.t[0]
+        return axis.angularScale(d.t[0])
       })
       .endAngle(function(d: any, i) {
-        return d.t[1]
+        return axis.angularScale(d.t[1])
       })
 
     this.group = this.selectGroup(axis, 'chart-range')
@@ -691,8 +690,8 @@ export class ChartRange extends Chart {
 
     function arcTween(transition: any, p: any) {
       transition.attrTween('d', function(d: any, i: number, a: any) {
-        let tInterpolate = d3.interpolateArray(p[i].t, d.t)
-        let rInterpolate = d3.interpolateArray(p[i].r, d.r)
+        let tInterpolate = d3.interpolateArray(axis.angularScale.invert(p[i].t), d.t)
+        let rInterpolate = d3.interpolateArray(axis.radialScale.invert(p[i].r), d.r)
         return function(t: any) {
           d.t = tInterpolate(t)
           d.r = rInterpolate(t)
