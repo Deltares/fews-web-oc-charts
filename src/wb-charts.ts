@@ -310,7 +310,7 @@ export class PolarAxis extends Axis {
       .duration(50)
       .style('opacity', 0.9)
     this.tooltip
-      .html('t: ' + d.t[0].toFixed(2) + '<br/>' + 'r: ' + d.r[0].toFixed(2))
+      .html('t: ' + mean(d.t).toFixed(2) + '<br/>' + 'r: ' + mean(d.r).toFixed(2))
       .style('left', d3.event.pageX + 'px')
       .style('top', d3.event.pageY + 'px')
   }
