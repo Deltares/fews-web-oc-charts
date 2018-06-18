@@ -349,6 +349,9 @@ export abstract class Chart {
   constructor(data: any, options: any) {
     this.data = data
     this.options = options
+    if (!('transitionTime' in this.options)) {
+      this.options.transitionTime = 100
+    }
     // https://github.com/d3/d3-scale-chromatic
     this.colorMap = d3.scaleSequential(d3.interpolateWarm)
   }
@@ -564,7 +567,7 @@ export class ChartRange extends Chart {
 
     let t = d3
       .transition()
-      .duration(750)
+      .duration(this.options.transitionTime)
       .ease(d3.easeLinear)
 
     // exit
@@ -626,7 +629,7 @@ export class ChartRange extends Chart {
 
     let t = d3
       .transition()
-      .duration(750)
+      .duration(this.options.transitionTime)
       .ease(d3.easeLinear)
 
     let arcgenerator = d3
@@ -744,7 +747,7 @@ export class ChartHistogram extends Chart {
     this.group = this.selectGroup(axis, 'chart-range')
     let t = d3
       .transition()
-      .duration(750)
+      .duration(this.options.transitionTime)
       .ease(d3.easeLinear)
 
     let elements: any = this.group.selectAll('rect').data(mappedData)
