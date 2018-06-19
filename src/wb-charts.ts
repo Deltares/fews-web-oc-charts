@@ -1,8 +1,8 @@
 import * as d3 from 'd3'
-import { scaleLinear } from 'd3-scale'
+// import { scaleLinear } from 'd3-scale'
 
-export const CLOCKWISE = 1
-export const ANTICLOCKWISE = -1
+export const CLOCKWISE = -1
+export const ANTICLOCKWISE = 1
 export const AUTO_SCALE = 1
 
 export interface Data {
@@ -24,6 +24,7 @@ export interface PolarAxisOptions extends AxisOptions {
   angularRange?: number[]
   radialScale?: number | number[]
   innerRadius?: number
+  intercept?: number
 }
 
 export interface CartesianAxisOptions extends AxisOptions {
@@ -207,10 +208,11 @@ export class CartesianAxis extends Axis {
 export class PolarAxis extends Axis {
   radialScale: any
   angularScale: any
-  direction: number
   outerRadius: number
   innerRadius: number
-  angularRange: number[]
+  intercept: number
+  direction: number
+  private angularRange: number[]
 
   constructor(container: HTMLElement, width: number, height: number, options?: PolarAxisOptions) {
     super(container, width, height, options)
@@ -219,6 +221,7 @@ export class PolarAxis extends Axis {
       .attr('transform', 'translate(' + this.width / 2 + ',' + this.height / 2 + ' )')
 
     this.direction = options.direction ? options.direction : ANTICLOCKWISE
+    this.intercept = options.intercept ? options.intercept : 0
     this.innerRadius = options.innerRadius ? options.innerRadius : 0
     this.outerRadius = Math.min(this.width, this.height) / 2
     if (options.angularRange) {
@@ -251,7 +254,7 @@ export class PolarAxis extends Axis {
     }
   }
 
-  radToDegrees(value: number) {
+  radToDegrees(value: number): number {
     return (value * 180) / Math.PI
   }
 
@@ -302,6 +305,59 @@ export class PolarAxis extends Axis {
       .attr('transform', function(d: number) {
         return 'rotate(' + d + ')'
       })
+
+    let groupRotate = function(d: number) {
+      return 'rotate(' + -this.direction * d + ')'
+    }.bind(this)
+    let drawTicks = this.canvas
+      .select('.t-axis')
+      .selectAll('g')
+      .data(angularTicks)
+      .enter()
+      .append('g')
+      .attr('class', 'tick')
+      .attr('transform', groupRotate)
+    //   .attr('opacity',1)
+
+    drawTicks
+      .append('line')
+      .attr('x1', this.outerRadius)
+      .attr('y1', 0)
+      .attr('x2', this.outerRadius + 6)
+      .attr('y2', 0)
+
+    let textRotate = function(d: number) {
+      return (
+        'rotate(' +
+        (this.direction * d + this.intercept) +
+        ',' +
+        (this.outerRadius + 15) +
+        ',0' +
+        ')'
+      )
+    }.bind(this)
+    let anchor = function(d: number) {
+      let dNorthCW = (((90 - this.intercept - this.direction * d) % 360) + 360) % 360
+      console.log([d, dNorthCW])
+      if (dNorthCW > 0 && dNorthCW < 180) {
+        return 'start'
+      } else if (dNorthCW > 180 && dNorthCW < 360) {
+        return 'end'
+      } else {
+        return 'middle'
+      }
+    }.bind(this)
+
+    drawTicks
+      .append('text')
+      .attr('text-anchor', anchor)
+      .attr('alignment-baseline', 'middle')
+      .attr('x', this.outerRadius + 15)
+      .attr('y', 0)
+      .text(function(d: number) {
+        return d
+      })
+      .attr('transform', textRotate)
   }
 
   showTooltip(d: any) {
@@ -330,7 +386,12 @@ export class PolarAxis extends Axis {
     let radialGrid = this.canvas.append('g').attr('class', 'r-grid')
     let angularGrid = this.canvas.append('g').attr('class', 't-grid')
     let radialAxis = this.canvas.append('g').attr('class', 'r-axis')
-    let angularAxis = this.canvas.append('g').attr('class', 't-axis')
+    let angularAxis = this.canvas
+      .append('g')
+      .attr('class', 't-axis')
+      .attr('font-size', '10')
+      .attr('font-family', 'sans-serif')
+      .attr('transform', 'rotate(' + -this.intercept + ')')
     this.updateGrid()
   }
 }
@@ -373,6 +434,12 @@ export abstract class Chart {
   abstract plotterPolar(axis: PolarAxis, datakeys: any)
 
   protected selectGroup(axis: Axis, cssClass: string) {
+    let direction = 1
+    let intercept = 0
+    if (axis instanceof PolarAxis) {
+      direction = -axis.direction
+      intercept = 90 - axis.intercept
+    }
     this.group =
       this.group != null
         ? this.group
@@ -380,6 +447,7 @@ export abstract class Chart {
             .append('g')
             .attr('class', cssClass)
             .attr('id', this.id)
+            .attr('transform', 'rotate(' + intercept + ')scale(' + direction + ' ,1)')
     return this.group
   }
 
