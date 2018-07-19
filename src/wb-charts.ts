@@ -25,10 +25,14 @@ export interface PolarAxisOptions extends AxisOptions {
   radialScale?: number | number[]
   innerRadius?: number
   intercept?: number
+  yLabel?: string
+  xLabel?: string
 }
 
 export interface CartesianAxisOptions extends AxisOptions {
   yScale?: number | number[]
+  yLabel?: string
+  xLabel?: string
 }
 
 export abstract class Axis {
@@ -190,6 +194,22 @@ export class CartesianAxis extends Axis {
   protected setRange() {
     this.xScale = d3.scaleLinear().range([0, this.width])
     this.yScale = d3.scaleLinear().range([this.height, 0])
+    this.canvas
+      .append('text')
+      .attr('x', -40)
+      .attr('y', -10)
+      .style('fill', 'white')
+      .style('text-anchor', 'start')
+      .style('font-size', '11px')
+      .text(this.options.yLabel)
+    this.canvas
+      .append('text')
+      .attr('x', this.width / 2)
+      .attr('y', this.height + 30)
+      .style('fill', 'white')
+      .style('text-anchor', 'middle')
+      .style('font-size', '11px')
+      .text(this.options.xLabel)
   }
 
   protected initGrid() {
