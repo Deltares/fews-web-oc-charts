@@ -23,6 +23,7 @@ export interface PolarAxisOptions extends AxisOptions {
   direction?: number
   angularRange?: number[]
   radialScale?: number | number[]
+  targetMax?: number
   innerRadius?: number
   intercept?: number
   yLabel?: string
@@ -698,9 +699,12 @@ export class ChartRange extends Chart {
         d3.min(this.data, function(d: any) {
           return d[rkey][0]
         }),
-        d3.max(this.data, function(d: any) {
-          return d[rkey][1]
-        })
+        d3.max([
+          axis.options.targetMax,
+          d3.max(this.data, function(d: any) {
+            return d[rkey][1]
+          })
+        ])
       ])
       axis.updateGrid()
     }
@@ -894,10 +898,10 @@ export class ChartHistogram extends Chart {
         return d.color
       })
       .attr('y', function(d: any) {
-        return axis.yScale(d.y)
+        return isNaN(axis.yScale(d.y)) ? axis.height : axis.yScale(d.y)
       })
       .attr('height', function(d: any) {
-        return axis.height - axis.yScale(d.y)
+        return isNaN(axis.yScale(d.y)) ? 0 : axis.height - axis.yScale(d.y)
       })
   }
 
