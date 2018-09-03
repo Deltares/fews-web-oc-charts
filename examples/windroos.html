@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <title>Wind Rose Tech Demo</title>
+        <style>
+
+
+            body {
+                background-color : rgb(44,44,44);
+            }
+
+            title {
+                stroke: black;
+            }
+
+            .axis-canvas {
+                fill:rgb(89, 89, 89);
+            }
+
+            #chart-container-1 {
+                display: inline;
+            }
+
+            #chart-container-2 { display: inline; }
+
+            #polar-dot {
+                fill: #999999;
+                stroke: white;
+            }
+
+            #polar-range {
+            fill: #999999;
+            stroke: white;
+            }
+
+            #polar-line { fill: none; stroke: red; stroke-width: 3px; }
+
+            #cartesian-dot { fill: #999999; stroke: white; }
+
+            #cartesian-line { fill: none; stroke: white; }
+
+            /* .tooltip { background: #eee;
+            box-shadow: 0 0 5px #999999;
+            color: #333;
+            display: none;
+            font-size: 12px;
+            left: 130px;
+            padding: 10px;
+            position: absolute;
+            text-align: center;
+            top: 95px;
+            width: 80px;
+            z-index: 10; } */
+
+            div.tooltip { position: absolute; text-align: center; min-width: 10px; height: 28px; padding: 2px; font: 12px sans-serif; background:
+lightgray; border: 0px; border-radius: 8px; pointer-events: none; }
+
+        </style>
+        <script src="https://d3js.org/d3.v4.min.js"></script>
+        <link rel="stylesheet" href="/dist/wb-charts.css">
+    </head>
+    <body>
+
+        <div id="chart-container-1"></div>
+        <div id="chart-container-2"></div>
+        <div>
+        <input id="slider" type="range" name="points" min="0" max="10">
+        </div>
+        <script src="/dist/wb-charts.umd.js"></script>
+        <script type="text/javascript">
+        function randomSpectrum(a) {
+    var spectrum = [];
+    for (var i = 0; i < 50; i++) {
+        spectrum.push({ x: 50 + i * 100, y: a * d3.randomUniform()() });
+    }
+    return spectrum;
+}
+// set constants
+var height = 400;
+var width = 400;
+var container1 = document.getElementById("chart-container-1");
+var polarAxis = new wbCharts.PolarAxis(container1, width, height, { direction: wbCharts.ANTICLOCKWISE, innerRadius: 20, angularRange: [0, 2 * Math.PI], radialScale: wbCharts.AUTO_SCALE });
+var polarData = [
+    [
+        { x: 0, y: 45, v: 1 },
+        { x: 1, y: 45, v: 1 },
+    ],
+    [
+        { x: 0, y: 60, v: 1 },
+        { x: 1, y: 60, v: 1 },
+    ]
+];
+
+var rangeData = [
+    [
+      // { x: [0, .1] , y: [30, 50 ], v: 1 },
+      { x: [0.9, 1] , y: [30, 50 ]},
+    ],
+    [
+        // { x: [0, .1] , y: [50, 65 ], v: 1 },
+        { x: [0.9, 1] , y: [50, 65 ]},
+    ]
+];
+var plot = new wbCharts.ChartLine(polarData[0], {});
+var plot1 = new wbCharts.ChartMarker(polarData[0], {});
+var plot2 = new wbCharts.ChartRange(rangeData[0], {colorScale: wbCharts.AUTO_SCALE});
+
+plot2.addTo(polarAxis, { rkey: "x", tkey: "y" }, 'polar-range');
+plot.addTo(polarAxis, { rkey: "x", tkey: "y"}, 'polar-line');
+// plot1.addTo(polarAxis, { rkey: "x", tkey: "y", colorkey: 'v' }, 'polar-dot');
+
+var count = 0;
+var updateCharts = function (event) {
+    count++;
+    plot.data = polarData[count % 2];
+    plot1.data = polarData[count % 2];
+    plot2.data = rangeData[count % 2];
+    polarAxis.redraw();
+};
+var input = document.getElementById("slider");
+input.onchange = function (event) { updateCharts(event); };
+
+
+        </script>
+
+    </body>
+</html>

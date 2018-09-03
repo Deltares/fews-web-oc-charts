@@ -118,18 +118,26 @@ export class CartesianAxis extends Axis {
     this.initGrid()
   }
 
-  public setxDomain(domain: Array<number | { valueOf(): number }>) {
-    let currentDomain = this.xScale.domain()
-    this.xScale.domain([
-      d3.min([domain[0], currentDomain[0]]),
-      d3.max([domain[1], currentDomain[1]])
-    ])
-  }
-
   redraw() {
+    let xExtent = new Array(2)
+    let yExtent = new Array(2)
+    for (let chart of this.charts) {
+      let chartXExtent = d3.extent(chart.data, function(d: any) {
+        return d[chart.datakeys.xkey]
+      })
+      let chartYExtent = d3.extent(chart.data, function(d: any) {
+        return d[chart.datakeys.ykey]
+      })
+      xExtent = d3.extent(d3.merge([xExtent, [].concat(...chartXExtent)]))
+      yExtent = d3.extent(d3.merge([yExtent, [].concat(...chartYExtent)]))
+    }
+    this.xScale.domain(xExtent).nice()
+    this.yScale.domain(yExtent).nice()
+
     for (let chart of this.charts) {
       chart.plotterCartesian(this, chart.options)
     }
+    this.updateGrid()
   }
 
   updateGrid() {
@@ -270,9 +278,18 @@ export class PolarAxis extends Axis {
   }
 
   redraw() {
+    let radialExtent = new Array(2)
+    for (let chart of this.charts) {
+      let chartRadialExtent = d3.extent(chart.data, function(d: any) {
+        return d[chart.datakeys.rkey]
+      })
+      radialExtent = d3.extent(d3.merge([radialExtent, [].concat(...chartRadialExtent)]))
+    }
+    this.radialScale.domain(radialExtent).nice()
     for (let chart of this.charts) {
       chart.plotterPolar(this, chart.datakeys)
     }
+    this.updateGrid()
   }
 
   radToDegrees(value: number): number {
@@ -359,7 +376,6 @@ export class PolarAxis extends Axis {
     }.bind(this)
     let anchor = function(d: number) {
       let dNorthCW = (((90 - this.intercept - this.direction * d) % 360) + 360) % 360
-      console.log([d, dNorthCW])
       if (dNorthCW > 0 && dNorthCW < 180) {
         return 'start'
       } else if (dNorthCW > 180 && dNorthCW < 360) {
@@ -393,10 +409,7 @@ export class PolarAxis extends Axis {
   }
 
   protected setRange() {
-    this.radialScale = d3
-      .scaleLinear()
-      .domain([0, 1])
-      .range([this.innerRadius, this.outerRadius])
+    this.radialScale = d3.scaleLinear().range([this.innerRadius, this.outerRadius])
     this.angularScale = d3
       .scaleLinear()
       .domain([0, 360])
@@ -442,12 +455,7 @@ export abstract class Chart {
     this.id = id ? id : ''
     this.datakeys = datakeys
     axis.charts.push(this)
-    if (axis instanceof CartesianAxis) {
-      this.plotterCartesian(axis, datakeys)
-    } else if (axis instanceof PolarAxis) {
-      this.plotterPolar(axis, datakeys)
-    }
-    axis.updateGrid()
+    axis.redraw()
     return this
   }
 
@@ -475,14 +483,6 @@ export abstract class Chart {
   protected mapDataCartesian(axis: CartesianAxis, datakeys: any) {
     let xkey = datakeys.xkey ? datakeys.xkey : 'x'
     let ykey = datakeys.ykey ? datakeys.ykey : 'y'
-
-    // axis.setxDomain(d3.extent(this.data, function (d: any) { return d[xkey]})  )
-    axis.yScale.domain(
-      d3.extent(this.data, function(d: any) {
-        return d[ykey]
-      })
-    )
-
     let mappedData: any = this.data.map(function(d: any) {
       return {
         x: axis.xScale(d[xkey]),
@@ -495,17 +495,6 @@ export abstract class Chart {
   protected mapDataPolar(axis: PolarAxis, datakeys: any) {
     let tkey = datakeys.tkey ? datakeys.tkey : 't'
     let rkey = datakeys.rkey ? datakeys.rkey : 'r'
-
-    axis.angularScale.domain(
-      d3.extent(this.data, function(d: any) {
-        return d[tkey]
-      })
-    )
-    axis.radialScale.domain(
-      d3.extent(this.data, function(d: any) {
-        return d[rkey]
-      })
-    )
 
     let mappedData: any = this.data.map(function(d: any) {
       return {
@@ -521,11 +510,16 @@ export class ChartMarker extends Chart {
   plotterCartesian(axis: CartesianAxis, datakeys: any) {
     let mappedData = this.mapDataCartesian(axis, datakeys)
     this.group = this.selectGroup(axis, 'chart-marker')
-    let elements = this.group
-      .selectAll('.symbol')
-      .data(mappedData)
+    let elements = this.group.selectAll('.symbol').data(mappedData)
+
+    // exit selection
+    elements.exit().remove()
+
+    // enter + update selection
+    elements
       .enter()
       .append('path')
+      .merge(elements)
       .attr('transform', function(d: any, i: number) {
         return 'translate(' + d.x + ',' + d.y + ')'
       })
@@ -540,13 +534,19 @@ export class ChartMarker extends Chart {
   plotterPolar(axis: PolarAxis, datakeys: any) {
     let mappedData = this.mapDataPolar(axis, datakeys)
     this.group = this.selectGroup(axis, 'chart-marker')
-    let elements = this.group
-      .selectAll('.symbol')
-      .data(mappedData)
+
+    let elements = this.group.selectAll('path').data(mappedData)
+
+    // exit selection
+    elements.exit().remove()
+
+    // enter + update selection
+    elements
       .enter()
       .append('path')
+      .merge(elements)
       .attr('transform', function(d: any, i: number) {
-        return 'translate(' + d.r * Math.cos(d.t) + ',' + d.r * Math.sin(d.t) + ')'
+        return 'translate(' + -d.r * Math.sin(-d.t) + ',' + -d.r * Math.cos(-d.t) + ')'
       })
       .attr(
         'd',
@@ -579,7 +579,17 @@ export class ChartLine extends Chart {
       })
 
     this.group = this.selectGroup(axis, 'chart-line')
-    let elements = this.group.append('path').attr('d', line(mappedData))
+    let elements = this.group.selectAll('path').data(mappedData)
+
+    // exit selection
+    elements.exit().remove()
+
+    // enter + update selection
+    elements
+      .enter()
+      .append('path')
+      .merge(elements)
+      .attr('d', line(mappedData))
   }
 
   plotterPolar(axis: PolarAxis, datakeys: any) {
@@ -593,8 +603,16 @@ export class ChartLine extends Chart {
         return d.r
       })
     this.group = this.selectGroup(axis, 'chart-line')
-    let elements = this.group
+    let elements = this.group.selectAll('path').data(mappedData)
+
+    // exit selection
+    elements.exit().remove()
+
+    // enter + update selection
+    elements
+      .enter()
       .append('path')
+      .merge(elements)
       .attr('d', line(mappedData))
       .on('mouseover', function(d: any) {
         axis.showTooltip(d)
@@ -602,6 +620,11 @@ export class ChartLine extends Chart {
       .on('mouseout', function(d: any) {
         axis.hideTooltip(d)
       })
+
+    let t = d3
+      .transition()
+      .duration(this.options.transitionTime)
+      .ease(d3.easeLinear)
   }
 }
 
@@ -612,27 +635,6 @@ export class ChartRange extends Chart {
     let xkey = datakeys.xkey ? datakeys.xkey : 'x'
     let ykey = datakeys.ykey ? datakeys.ykey : 'y'
     let colorkey = datakeys.colorkey ? datakeys.colorkey : ykey
-
-    if (axis.options.xScale === AUTO_SCALE) {
-      axis.yScale.domain([
-        d3.min(this.data, function(d: any) {
-          return d[ykey][0]
-        }),
-        d3.max(this.data, function(d: any) {
-          return d[ykey][1]
-        })
-      ])
-    }
-    if (axis.options.yScale === AUTO_SCALE) {
-      axis.yScale.domain([
-        d3.min(this.data, function(d: any) {
-          return d[ykey][0]
-        }),
-        d3.max(this.data, function(d: any) {
-          return d[ykey][1]
-        })
-      ])
-    }
 
     let colorScale = d3.scaleLinear().domain([0, 1])
     if (this.options.colorScale === AUTO_SCALE) {
@@ -694,21 +696,6 @@ export class ChartRange extends Chart {
     let rkey = datakeys.rkey ? datakeys.rkey : 'r'
     let colorkey = datakeys.colorkey ? datakeys.colorkey : rkey
 
-    if (axis.options.radialScale === AUTO_SCALE) {
-      axis.radialScale.domain([
-        d3.min(this.data, function(d: any) {
-          return d[rkey][0]
-        }),
-        d3.max([
-          axis.options.targetMax,
-          d3.max(this.data, function(d: any) {
-            return d[rkey][1]
-          })
-        ])
-      ])
-      axis.updateGrid()
-    }
-
     let colorScale = d3.scaleLinear().domain([0, 1])
     if (this.options.colorScale === AUTO_SCALE) {
       colorScale.domain(
@@ -748,12 +735,6 @@ export class ChartRange extends Chart {
 
     this.group = this.selectGroup(axis, 'chart-range')
 
-    // let previousData: any[] = []
-    // let temp = this.group.selectAll('path')
-    // temp.each(function(p: any) {
-    //   previousData.push(p)
-    // })
-
     let elements = this.group.selectAll('path').data(mappedData)
 
     elements.exit().remove()
@@ -771,7 +752,6 @@ export class ChartRange extends Chart {
       .on('mouseout', function(d: any) {
         axis.hideTooltip(d)
       })
-
       .merge(elements)
     // .attr("d", arcgenerator)
 
@@ -819,24 +799,14 @@ export class ChartHistogram extends Chart {
 
     let x0 = (3 * data[0][xkey] - data[1][xkey]) / 2
     let x1 = (-data[data.length - 2][xkey] + 3 * data[data.length - 1][xkey]) / 2
-    axis.xScale.domain([x0, x1])
-    axis.setxDomain([x0, x1])
-
-    if (axis.options.yScale === AUTO_SCALE) {
-      axis.yScale.domain(
-        d3.extent(this.data, function(d: any) {
-          return d[ykey]
-        })
-      )
-      axis.updateGrid()
-    }
+    // axis.xScale.domain([x0, x1])
 
     let histScale = d3.scaleBand().domain(
       data.map(function(d: any) {
         return d[xkey]
       })
     )
-    histScale.range([0, axis.width])
+    histScale.range(axis.xScale.range())
     histScale.padding(0.05)
 
     let colorScale = d3.scaleLinear().domain([0, 1])
