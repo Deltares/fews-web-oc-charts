@@ -612,7 +612,6 @@ export class ChartLine extends Chart {
     elements
       .enter()
       .append('path')
-      .merge(elements)
       .attr('d', line(mappedData))
       .on('mouseover', function(d: any) {
         axis.showTooltip(d)
@@ -620,11 +619,14 @@ export class ChartLine extends Chart {
       .on('mouseout', function(d: any) {
         axis.hideTooltip(d)
       })
+      .merge(elements)
 
     let t = d3
       .transition()
       .duration(this.options.transitionTime)
       .ease(d3.easeLinear)
+
+    elements.transition(t).attr('d', line(mappedData))
   }
 }
 
