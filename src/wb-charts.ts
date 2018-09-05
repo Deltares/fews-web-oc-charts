@@ -542,7 +542,6 @@ export class ChartMarker extends Chart {
     elements
       .enter()
       .append('path')
-      .merge(elements)
       .attr('transform', function(d: any, i: number) {
         const r: number = axis.radialScale(d[rkey])
         const t: number = axis.angularScale(d[tkey])
@@ -556,6 +555,18 @@ export class ChartMarker extends Chart {
       .on('mouseout', function(d: any) {
         axis.hideTooltip(d)
       })
+      .merge(elements)
+
+    let t = d3
+      .transition()
+      .duration(this.options.transitionTime)
+      .ease(d3.easeLinear)
+
+    elements.transition(t).attr('transform', function(d: any, i: number) {
+      const r: number = axis.radialScale(d[rkey])
+      const t: number = axis.angularScale(d[tkey])
+      return 'translate(' + -r * Math.sin(-t) + ',' + -r * Math.cos(-t) + ')'
+    })
   }
 }
 
