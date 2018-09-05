@@ -507,6 +507,8 @@ export abstract class Chart {
 }
 
 export class ChartMarker extends Chart {
+  private previousData: any[] = []
+
   plotterCartesian(axis: CartesianAxis, dataKeys: any) {
     let mappedData = this.mapDataCartesian(axis, dataKeys)
     this.group = this.selectGroup(axis, 'chart-marker')
@@ -535,6 +537,26 @@ export class ChartMarker extends Chart {
 
     let elements = this.group.selectAll('path').data(this.data)
 
+    function arcTranslation(p) {
+      // We only use 'd', but list d,i,a as params just to show can have them as params.
+      // Code only really uses d and t.
+      return function(d, i, a) {
+        let old = p[i]
+        if (mean(old[tkey]) - mean(d[tkey]) > 180) {
+          old[tkey] = old[tkey] - 360
+        } else if (mean(old[tkey]) - mean(d[tkey]) < -180) {
+          old[tkey] = old[tkey] + 360
+        }
+        let tInterpolate = d3.interpolate(old[tkey], d[tkey])
+        let rInterpolate = d3.interpolate(old[rkey], d[rkey])
+        return function(t) {
+          const theta = axis.angularScale(tInterpolate(t))
+          const radius = axis.radialScale(rInterpolate(t))
+          return 'translate(' + -radius * Math.sin(-theta) + ',' + -radius * Math.cos(-theta) + ')'
+        }
+      }
+    }
+
     // exit selection
     elements.exit().remove()
 
@@ -562,11 +584,9 @@ export class ChartMarker extends Chart {
       .duration(this.options.transitionTime)
       .ease(d3.easeLinear)
 
-    elements.transition(t).attr('transform', function(d: any, i: number) {
-      const r: number = axis.radialScale(d[rkey])
-      const t: number = axis.angularScale(d[tkey])
-      return 'translate(' + -r * Math.sin(-t) + ',' + -r * Math.cos(-t) + ')'
-    })
+    elements.transition(t).attrTween('transform', arcTranslation(this.previousData))
+
+    this.previousData = this.data
   }
 }
 
