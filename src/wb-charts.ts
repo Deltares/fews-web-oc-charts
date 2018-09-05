@@ -528,11 +528,12 @@ export class ChartMarker extends Chart {
   }
 
   plotterPolar(axis: PolarAxis, dataKeys: any) {
-    let mappedData = this.mapDataPolar(axis, dataKeys)
     this.group = this.selectGroup(axis, 'chart-marker')
     let symbolId = this.options.symbolId ? this.options.symbolId : 0
+    const tkey = dataKeys.tkey ? dataKeys.tkey : 't'
+    const rkey = dataKeys.rkey ? dataKeys.rkey : 'r'
 
-    let elements = this.group.selectAll('path').data(mappedData)
+    let elements = this.group.selectAll('path').data(this.data)
 
     // exit selection
     elements.exit().remove()
@@ -543,11 +544,14 @@ export class ChartMarker extends Chart {
       .append('path')
       .merge(elements)
       .attr('transform', function(d: any, i: number) {
-        return 'translate(' + -d.r * Math.sin(-d.t) + ',' + -d.r * Math.cos(-d.t) + ')'
+        const r: number = axis.radialScale(d[rkey])
+        const t: number = axis.angularScale(d[tkey])
+        return 'translate(' + -r * Math.sin(-t) + ',' + -r * Math.cos(-t) + ')'
       })
       .attr('d', d3.symbol().type(d3.symbols[symbolId]))
       .on('mouseover', function(d: any) {
-        axis.showTooltip(d)
+        const v = { r: d[rkey], t: d[tkey] }
+        axis.showTooltip(v)
       })
       .on('mouseout', function(d: any) {
         axis.hideTooltip(d)
@@ -586,6 +590,8 @@ export class ChartLine extends Chart {
 
   plotterPolar(axis: PolarAxis, dataKeys: any) {
     let mappedData = this.mapDataPolar(axis, dataKeys)
+    const tkey = dataKeys.tkey ? dataKeys.tkey : 't'
+    const rkey = dataKeys.rkey ? dataKeys.rkey : 'r'
     let line = d3
       .lineRadial()
       .angle(function(d: any) {
@@ -595,7 +601,7 @@ export class ChartLine extends Chart {
         return d.r
       })
     this.group = this.selectGroup(axis, 'chart-line')
-    let elements = this.group.selectAll('path').data(mappedData)
+    let elements = this.group.selectAll('path').data(this.data)
 
     // exit selection
     elements.exit().remove()
@@ -606,7 +612,8 @@ export class ChartLine extends Chart {
       .append('path')
       .attr('d', line(mappedData))
       .on('mouseover', function(d: any) {
-        axis.showTooltip(d)
+        const v = { r: d[rkey], t: d[tkey] }
+        axis.showTooltip(v)
       })
       .on('mouseout', function(d: any) {
         axis.hideTooltip(d)
