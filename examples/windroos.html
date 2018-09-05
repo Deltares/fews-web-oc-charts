@@ -25,7 +25,7 @@
             #chart-container-2 { display: inline; }
 
             #polar-dot {
-                fill: #999999;
+                fill: greenyellow;
                 stroke: white;
             }
 
@@ -92,6 +92,15 @@ var polarData = [
     ]
 ];
 
+var polarData1 = [
+    [
+        { x: 0.6, y: 45, v: 1 },
+    ],
+    [
+        { x: 0.7, y: 60, v: 1 },
+    ]
+];
+
 var rangeData = [
     [
       // { x: [0, .1] , y: [30, 50 ], v: 1 },
@@ -103,18 +112,18 @@ var rangeData = [
     ]
 ];
 var plot = new wbCharts.ChartLine(polarData[0], {});
-var plot1 = new wbCharts.ChartMarker(polarData[0], {});
+var plot1 = new wbCharts.ChartMarker(polarData1[0], {});
 var plot2 = new wbCharts.ChartRange(rangeData[0], {colorScale: wbCharts.AUTO_SCALE});
 
 plot2.addTo(polarAxis, { rkey: "x", tkey: "y" }, 'polar-range');
 plot.addTo(polarAxis, { rkey: "x", tkey: "y"}, 'polar-line');
-// plot1.addTo(polarAxis, { rkey: "x", tkey: "y", colorkey: 'v' }, 'polar-dot');
+plot1.addTo(polarAxis, { rkey: "x", tkey: "y", colorkey: 'v' }, 'polar-dot');
 
 var count = 0;
 var updateCharts = function (event) {
     count++;
     plot.data = polarData[count % 2];
-    plot1.data = polarData[count % 2];
+    plot1.data = polarData1[count % 2];
     plot2.data = rangeData[count % 2];
     polarAxis.redraw();
 };

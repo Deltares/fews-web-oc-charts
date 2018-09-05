@@ -511,6 +511,7 @@ export class ChartMarker extends Chart {
     let mappedData = this.mapDataCartesian(axis, dataKeys)
     this.group = this.selectGroup(axis, 'chart-marker')
     let elements = this.group.selectAll('.symbol').data(mappedData)
+    let symbolId = this.options.symbolId ? this.options.symbolId : 0
 
     // exit selection
     elements.exit().remove()
@@ -523,17 +524,13 @@ export class ChartMarker extends Chart {
       .attr('transform', function(d: any, i: number) {
         return 'translate(' + d.x + ',' + d.y + ')'
       })
-      .attr(
-        'd',
-        d3.symbol().type(function(d, i) {
-          return d3.symbols[i % 7]
-        })
-      )
+      .attr('d', d3.symbol().type(d3.symbols[symbolId]))
   }
 
   plotterPolar(axis: PolarAxis, dataKeys: any) {
     let mappedData = this.mapDataPolar(axis, dataKeys)
     this.group = this.selectGroup(axis, 'chart-marker')
+    let symbolId = this.options.symbolId ? this.options.symbolId : 0
 
     let elements = this.group.selectAll('path').data(mappedData)
 
@@ -548,12 +545,7 @@ export class ChartMarker extends Chart {
       .attr('transform', function(d: any, i: number) {
         return 'translate(' + -d.r * Math.sin(-d.t) + ',' + -d.r * Math.cos(-d.t) + ')'
       })
-      .attr(
-        'd',
-        d3.symbol().type(function(d, i) {
-          return d3.symbols[i % 7]
-        })
-      )
+      .attr('d', d3.symbol().type(d3.symbols[symbolId]))
       .on('mouseover', function(d: any) {
         axis.showTooltip(d)
       })
