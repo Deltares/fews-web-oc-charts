@@ -606,8 +606,15 @@ export class ChartLine extends Chart {
     elements
       .enter()
       .append('path')
-      .merge(elements)
       .attr('d', line(mappedData))
+      .merge(elements)
+
+    let t = d3
+      .transition()
+      .duration(this.options.transitionTime)
+      .ease(d3.easeLinear)
+
+    elements.transition(t).attr('d', line(mappedData))
   }
 
   plotterPolar(axis: PolarAxis, dataKeys: any) {
@@ -692,7 +699,6 @@ export class ChartRange extends Chart {
     elements
       .enter()
       .append('rect')
-      .merge(elements)
       .attr('x', function(d: any) {
         return d.x[0]
       })
@@ -708,8 +714,25 @@ export class ChartRange extends Chart {
       .style('fill', function(d: any) {
         return d.color
       })
+      .merge(elements)
 
-    elements.transition(t)
+    elements
+      .transition(t)
+      .style('fill', function(d: any) {
+        return d.color
+      })
+      .attr('x', function(d: any) {
+        return d.x[0]
+      })
+      .attr('y', function(d: any) {
+        return d.y[1]
+      })
+      .attr('width', function(d: any) {
+        return d.x[1] - d.x[0]
+      })
+      .attr('height', function(d: any) {
+        return d.y[0] - d.y[1]
+      })
   }
 
   plotterPolar(axis: PolarAxis, dataKeys: any) {
