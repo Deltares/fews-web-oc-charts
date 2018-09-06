@@ -447,7 +447,6 @@ export abstract class Chart {
     this.id = id ? id : ''
     this.dataKeys = dataKeys
     axis.charts.push(this)
-    axis.redraw()
     return this
   }
 
