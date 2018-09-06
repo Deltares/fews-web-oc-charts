@@ -135,7 +135,7 @@ export class CartesianAxis extends Axis {
     this.yScale.domain(yExtent).nice()
 
     for (let chart of this.charts) {
-      chart.plotterCartesian(this, chart.options)
+      chart.plotterCartesian(this, chart.dataKeys)
     }
     this.updateGrid()
   }
