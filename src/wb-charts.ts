@@ -46,6 +46,7 @@ export abstract class Axis {
   margin: any
   options: any
   charts: Chart[]
+  initialDraw: boolean = true
 
   constructor(container: HTMLElement, width: number, height: number, options: AxisOptions) {
     this.container = container
@@ -141,52 +142,44 @@ export class CartesianAxis extends Axis {
   }
 
   updateGrid() {
-    let g = this.canvas
-    let xAxis = d3.axisBottom(this.xScale)
-    xAxis.ticks(5)
-    let horizontalAxis = this.canvas.select('.x-axis').call(xAxis)
-    let xticks = this.xScale.ticks().map(this.xScale)
-    let xGrid: any = this.canvas
-      .select('.x-grid')
-      .selectAll('line')
-      .data(xticks)
-
-    xGrid.exit().remove()
-
-    xGrid
-      .enter()
-      .append('line')
-      .merge(xGrid)
-      .attr('x1', function(d: number) {
-        return d
-      })
-      .attr('y1', this.height)
-      .attr('x2', function(d: number) {
-        return d
-      })
-      .attr('y2', 0)
-
+    let xAxis = d3.axisBottom(this.xScale).ticks(5)
+    let xGrid = d3
+      .axisBottom(this.xScale)
+      .ticks(5)
+      .tickSize(this.height)
     let yAxis = d3.axisLeft(this.yScale).ticks(5)
-    let verticalAxis = this.canvas.select('.y-axis').call(yAxis)
-    let yTicks = this.yScale.ticks(5).map(this.yScale)
-
-    let yGrid: any = this.canvas
-      .select('.y-grid')
-      .selectAll('line')
-      .data(yTicks)
-    yGrid.exit().remove()
-    yGrid
-      .enter()
-      .append('line')
-      .merge(yGrid)
-      .attr('x1', 0)
-      .attr('y1', function(d: number) {
-        return d
-      })
-      .attr('x2', this.width)
-      .attr('y2', function(d: number) {
-        return d
-      })
+    let yGrid = d3
+      .axisRight(this.yScale)
+      .ticks(5)
+      .tickSize(this.width)
+    if (this.options.transitionTime > 0 && !this.initialDraw) {
+      let t = d3
+        .transition()
+        .duration(this.options.transitionTime)
+        .ease(d3.easeLinear)
+      this.canvas
+        .select('.x-axis')
+        .transition(t)
+        .call(xAxis)
+      this.canvas
+        .select('.x-grid')
+        .transition(t)
+        .call(xGrid)
+      this.canvas
+        .select('.y-axis')
+        .transition(t)
+        .call(yAxis)
+      this.canvas
+        .select('.y-grid')
+        .transition(t)
+        .call(yGrid)
+    } else {
+      this.canvas.select('.x-axis').call(xAxis)
+      this.canvas.select('.x-grid').call(xGrid)
+      this.canvas.select('.y-axis').call(yAxis)
+      this.canvas.select('.y-grid').call(yGrid)
+    }
+    this.initialDraw = false
   }
 
   showTooltip(d: any) {
@@ -230,7 +223,6 @@ export class CartesianAxis extends Axis {
       .attr('class', 'x-axis')
       .attr('transform', 'translate(' + 0 + ',' + this.height + ')')
     let yAxis = g.append('g').attr('class', 'y-axis')
-    this.updateGrid()
   }
 }
 
