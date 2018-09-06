@@ -18,6 +18,14 @@
                 fill:rgb(89, 89, 89);
             }
 
+            .r-axis{
+              display: none;
+            }
+
+            .x-axis{
+              display: none;
+            }
+
             #chart-container-1 {
                 display: inline;
             }
@@ -34,11 +42,18 @@
             stroke: white;
             }
 
+            #cartesian-range {
+            fill: #999999;
+            stroke: white;
+            }
+
             #polar-line { fill: none; stroke: red; stroke-width: 3px; }
 
             #cartesian-dot { fill: #999999; stroke: white; }
 
-            #cartesian-line { fill: none; stroke: white; }
+            #cartesian-line { fill: none; stroke: red; stroke-width: 3px;}
+
+            #cartesian-zero { fill: none; stroke: none; }
 
             /* .tooltip { background: #eee;
             box-shadow: 0 0 5px #999999;
@@ -81,6 +96,10 @@ var height = 400;
 var width = 400;
 var container1 = document.getElementById("chart-container-1");
 var polarAxis = new wbCharts.PolarAxis(container1, width, height, { direction: wbCharts.ANTICLOCKWISE, innerRadius: 20, angularRange: [0, 2 * Math.PI], radialScale: wbCharts.AUTO_SCALE });
+
+var container2 = document.getElementById("chart-container-2");
+var axis = new wbCharts.CartesianAxis(container2, 200, height, { yScale: wbCharts.AUTO_SCALE });
+
 var polarData = [
     [
         { x: 0, y: 45, v: 1 },
@@ -104,16 +123,52 @@ var polarData1 = [
 var rangeData = [
     [
       // { x: [0, .1] , y: [30, 50 ], v: 1 },
-      { x: [0.9, 1] , y: [30, 50 ]},
+      { x: [0, 1] , y: [30, 50 ]},
     ],
     [
         // { x: [0, .1] , y: [50, 65 ], v: 1 },
-        { x: [0.9, 1] , y: [50, 65 ]},
+        { x: [0, 1] , y: [50, 65 ]},
     ]
 ];
+
+var rangeData2 = [
+[
+// { x: [0, .1] , y: [30, 50 ], v: 1 },
+{ x: [0.1, 0.9] , y: [30, 50 ]},
+],
+[
+// { x: [0, .1] , y: [50, 65 ], v: 1 },
+{ x: [0.1, 0.9] , y: [50, 65 ]},
+]
+];
+
+var windAmpl = [
+[
+{ x: 0, y: 45, v: 1 },
+{ x: 1, y: 45, v: 1 },
+],
+[
+{ x: 0, y: 55, v: 1 },
+{ x: 1, y: 55, v: 1 },
+]
+];
+
 var plot = new wbCharts.ChartLine(polarData[0], {});
 var plot1 = new wbCharts.ChartMarker(polarData1[0], {});
 var plot2 = new wbCharts.ChartRange(rangeData[0], {colorScale: wbCharts.AUTO_SCALE});
+
+var plot3 = new wbCharts.ChartRange(rangeData2[0], {colorScale: wbCharts.AUTO_SCALE});
+var plot4 = new wbCharts.ChartLine( [
+{ x: 0, y: 0},
+{ x: 1, y: 0},
+], {colorScale: wbCharts.AUTO_SCALE});
+
+var plot5 = new wbCharts.ChartLine( windAmpl[0], {colorScale: wbCharts.AUTO_SCALE});
+
+
+plot3.addTo(axis,{ xkey: "x", ykey: "y"}, 'cartesian-range');
+plot4.addTo(axis,{ xkey: "x", ykey: "y"}, 'cartesian-zero');
+plot5.addTo(axis,{ xkey: "x", ykey: "y"}, 'cartesian-line');
 
 plot2.addTo(polarAxis, { rkey: "x", tkey: "y" }, 'polar-range');
 plot.addTo(polarAxis, { rkey: "x", tkey: "y"}, 'polar-line');
@@ -126,6 +181,11 @@ var updateCharts = function (event) {
     plot1.data = polarData1[count % 2];
     plot2.data = rangeData[count % 2];
     polarAxis.redraw();
+
+    plot3.data = rangeData2[count % 2];
+    plot5.data = windAmpl[count % 2];
+    axis.redraw();
+
 };
 var input = document.getElementById("slider");
 input.onchange = function (event) { updateCharts(event); };
