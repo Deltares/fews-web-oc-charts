@@ -664,7 +664,7 @@ export class ChartRange extends Chart {
   plotterCartesian(axis: CartesianAxis, dataKeys: any) {
     let xkey = dataKeys.xkey ? dataKeys.xkey : 'x'
     let ykey = dataKeys.ykey ? dataKeys.ykey : 'y'
-    let colorkey = dataKeys.colorkey ? dataKeys.colorkey : ykey
+    let colorkey = dataKeys.colorkey
 
     let colorScale = d3.scaleLinear().domain([0, 1])
     if (this.options.colorScale === AUTO_SCALE) {
@@ -696,7 +696,7 @@ export class ChartRange extends Chart {
     // exit
     elements.exit().remove()
     // update + enter
-    elements
+    let update = elements
       .enter()
       .append('rect')
       .attr('x', function(d: any) {
@@ -711,16 +711,15 @@ export class ChartRange extends Chart {
       .attr('height', function(d: any) {
         return d.y[0] - d.y[1]
       })
-      .style('fill', function(d: any) {
-        return d.color
-      })
-      .merge(elements)
 
-    elements
-      .transition(t)
-      .style('fill', function(d: any) {
+    if (colorkey) {
+      update.style('fill', function(d: any) {
         return d.color
       })
+    }
+
+    let enter = elements
+      .transition(t)
       .attr('x', function(d: any) {
         return d.x[0]
       })
@@ -733,6 +732,12 @@ export class ChartRange extends Chart {
       .attr('height', function(d: any) {
         return d.y[0] - d.y[1]
       })
+
+    if (colorkey) {
+      enter.style('fill', function(d: any) {
+        return d.color
+      })
+    }
   }
 
   plotterPolar(axis: PolarAxis, dataKeys: any) {
@@ -740,7 +745,7 @@ export class ChartRange extends Chart {
 
     let tkey = dataKeys.tkey ? dataKeys.tkey : 't'
     let rkey = dataKeys.rkey ? dataKeys.rkey : 'r'
-    let colorkey = dataKeys.colorkey ? dataKeys.colorkey : rkey
+    let colorkey = dataKeys.colorkey
 
     let colorScale = d3.scaleLinear().domain([0, 1])
     if (this.options.colorScale === AUTO_SCALE) {
@@ -785,28 +790,30 @@ export class ChartRange extends Chart {
 
     elements.exit().remove()
 
-    elements
+    let enter = elements
       .enter()
       .append('path')
       .attr('d', arcGenerator)
-      .style('fill', function(d: any) {
-        return d.color
-      })
       .on('mouseover', function(d: any) {
         axis.showTooltip(d)
       })
       .on('mouseout', function(d: any) {
         axis.hideTooltip(d)
       })
-      .merge(elements)
-    // .attr("d", arcgenerator)
 
-    elements
-      .transition(t)
-      .style('fill', function(d: any) {
+    if (colorkey) {
+      enter.style('fill', function(d: any) {
         return d.color
       })
-      .call(arcTween, this.previousData)
+    }
+
+    let update = elements.transition(t).call(arcTween, this.previousData)
+
+    if (colorkey) {
+      update.style('fill', function(d: any) {
+        return d.color
+      })
+    }
 
     this.previousData = mappedData
 
