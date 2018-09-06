@@ -501,9 +501,12 @@ export class ChartMarker extends Chart {
   private previousData: any[] = []
 
   plotterCartesian(axis: CartesianAxis, dataKeys: any) {
+    const xkey = dataKeys.xkey ? dataKeys.xkey : 'x'
+    const ykey = dataKeys.ykey ? dataKeys.ykey : 'y'
+
     let mappedData = this.mapDataCartesian(axis, dataKeys)
     this.group = this.selectGroup(axis, 'chart-marker')
-    let elements = this.group.selectAll('.symbol').data(mappedData)
+    let elements = this.group.selectAll('.symbol').data(this.data)
     let symbolId = this.options.symbolId ? this.options.symbolId : 0
 
     // exit selection
@@ -513,6 +516,13 @@ export class ChartMarker extends Chart {
     elements
       .enter()
       .append('path')
+      .on('mouseover', function(d: any) {
+        const v = { x: d[xkey], y: d[ykey] }
+        axis.showTooltip(v)
+      })
+      .on('mouseout', function(d: any) {
+        axis.hideTooltip(d)
+      })
       .merge(elements)
       .attr('transform', function(d: any, i: number) {
         return 'translate(' + d.x + ',' + d.y + ')'
@@ -583,6 +593,9 @@ export class ChartMarker extends Chart {
 
 export class ChartLine extends Chart {
   plotterCartesian(axis: CartesianAxis, dataKeys: any) {
+    const xkey = dataKeys.xkey ? dataKeys.xkey : 'x'
+    const ykey = dataKeys.ykey ? dataKeys.ykey : 'y'
+
     let mappedData = this.mapDataCartesian(axis, dataKeys)
     let line = d3
       .line()
@@ -597,7 +610,7 @@ export class ChartLine extends Chart {
       })
 
     this.group = this.selectGroup(axis, 'chart-line')
-    let elements = this.group.selectAll('path').data(mappedData)
+    let elements = this.group.selectAll('path').data(this.data)
 
     // exit selection
     elements.exit().remove()
@@ -607,6 +620,13 @@ export class ChartLine extends Chart {
       .enter()
       .append('path')
       .attr('d', line(mappedData))
+      .on('mouseover', function(d: any) {
+        const v = { x: d[xkey], y: d[ykey] }
+        axis.showTooltip(v)
+      })
+      .on('mouseout', function(d: any) {
+        axis.hideTooltip(d)
+      })
       .merge(elements)
 
     let t = d3
