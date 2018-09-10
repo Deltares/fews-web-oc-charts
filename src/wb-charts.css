@@ -1,32 +1,11 @@
-.t-axis path { stroke-width: 1px; stroke: white;}
-.t-axis .tick line { stroke-width: 1px; stroke: white;}
-.t-axis .tick text { stroke-width: 1px; fill: white;}
-.t-grid {
+.axis path { stroke-width: 1px; stroke: white;}
+.axis .tick line { stroke-width: 1px; stroke: white;}
+.axis .tick text { stroke-width: 1px; fill: white;}
+.grid {
     fill: none;
     stroke-width: 1px;
     stroke: black;
     stroke-dasharray: 2px;
 }
 
-.r-axis path { stroke-width: 1px; stroke: white;}
-.r-axis .tick line { stroke-width: 1px; stroke: white;}
-.r-axis .tick text { stroke-width: 1px; fill: white;}
-.r-grid {
-    fill: none;
-    stroke-width: 1px;
-    stroke: black;
-    stroke-dasharray: 2px;
-}
-
-.x-axis path { stroke-width: 1px; stroke: white;}
-.x-axis .tick line { stroke-width: 1px; stroke: white;}
-.x-axis .tick text { stroke-width: 1px; fill: white;}
-
-.x-grid { fill: none; stroke-width: 1px; stroke: black; stroke-dasharray: 2px; }
-.x-grid text { display: none; }
-
-.y-axis path { stroke-width: 1px; stroke: white;}
-.y-axis .tick line { stroke-width: 1px; stroke: white;}
-.y-axis .tick text { stroke-width: 1px; fill: white;}
-.y-grid { fill: none; stroke-width: 1px; stroke: black; stroke-dasharray: 2px; }
-.y-grid text { display: none; }
+.grid text { display: none; }

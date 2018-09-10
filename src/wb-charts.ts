@@ -216,13 +216,13 @@ export class CartesianAxis extends Axis {
 
   protected initGrid() {
     let g = this.canvas
-    let yGrid = g.append('g').attr('class', 'y-grid')
-    let xGrid = g.append('g').attr('class', 'x-grid')
+    let yGrid = g.append('g').attr('class', 'grid y-grid')
+    let xGrid = g.append('g').attr('class', 'grid x-grid')
     let horizontalAxis = g
       .append('g')
-      .attr('class', 'x-axis')
+      .attr('class', 'axis x-axis')
       .attr('transform', 'translate(' + 0 + ',' + this.height + ')')
-    let yAxis = g.append('g').attr('class', 'y-axis')
+    let yAxis = g.append('g').attr('class', 'axis y-axis')
   }
 }
 
@@ -409,12 +409,12 @@ export class PolarAxis extends Axis {
   }
 
   protected initGrid() {
-    let radialGrid = this.canvas.append('g').attr('class', 'r-grid')
-    let angularGrid = this.canvas.append('g').attr('class', 't-grid')
-    let radialAxis = this.canvas.append('g').attr('class', 'r-axis')
+    let radialGrid = this.canvas.append('g').attr('class', 'grid r-grid')
+    let angularGrid = this.canvas.append('g').attr('class', 'grid t-grid')
+    let radialAxis = this.canvas.append('g').attr('class', 'axis r-axis')
     let angularAxis = this.canvas
       .append('g')
-      .attr('class', 't-axis')
+      .attr('class', 'axis t-axis')
       .attr('font-size', '10')
       .attr('font-family', 'sans-serif')
       .attr('transform', 'rotate(' + -this.intercept + ')')
