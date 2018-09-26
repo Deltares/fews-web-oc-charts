@@ -51,6 +51,7 @@
             }
 
             #polar-line { fill: none; stroke: rgb(0, 128, 255); stroke-width: 3px; }
+            #polar-line-verwachting { fill: none; stroke: rgb(255, 128, 255); stroke-width: 3px; }
 
             #cartesian-dot { fill: #999999; stroke: white; }
 
@@ -79,7 +80,7 @@ lightgray; border: 0px; border-radius: 8px; pointer-events: none; }
 
         </style>
         <script src="https://d3js.org/d3.v5.js"></script>
-        <link rel="stylesheet" href="/dist/wb-charts.css">
+        <link rel="stylesheet" href="../dist/wb-charts.css">
     </head>
     <body>
 
@@ -88,7 +89,7 @@ lightgray; border: 0px; border-radius: 8px; pointer-events: none; }
         <div>
         <input id="slider" type="range" name="points" min="0" max="10">
         </div>
-        <script src="/dist/wb-charts.umd.js"></script>
+        <script src="../dist/wb-charts.umd.js"></script>
         <script type="text/javascript">
         function randomSpectrum(a) {
     var spectrum = [];
@@ -107,14 +108,25 @@ var polarAxis = new wbCharts.PolarAxis(container1, width, height, { direction: w
 var container2 = document.getElementById("chart-container-2");
 var axis = new wbCharts.CartesianAxis(container2, 150, height, { yScale: wbCharts.AUTO_SCALE, transitionTime: transitionTime, yLabel: "windsnelheid [m/s]" });
 
-var polarData = [
+var polarDataMeting = [
     [
         { x: 0, y: 45, v: 1 },
         { x: 1, y: 45, v: 1 },
     ],
     [
-        { x: 0, y: 55, v: 1 },
-        { x: 1, y: 55, v: 1 },
+        { x: 0, y: 55, v: 0.1 },
+        { x: 1, y: 55, v: 0.1 },
+    ]
+];
+
+var polarDataVerwachting = [
+    [
+        { x: 0, y: 15, v: 1 },
+        { x: 1, y: 15, v: 1 },
+    ],
+    [
+        { x: 0, y: 05, v: 0.1 },
+        { x: 1, y: 05, v: 0.1 },
     ]
 ];
 
@@ -126,7 +138,7 @@ var rangeData = [
     ],
     [
         // { x: [0, .1] , y: [50, 65 ], v: 1 },
-        { x: [0, 1] , y: [50, 65 ], v :0.5},
+        { x: [0, 1] , y: [50, 88 ], v :0.5},
     ]
 ];
 
@@ -163,7 +175,8 @@ var stoot = [
 ]
 ];
 
-var plot = new wbCharts.ChartLine(polarData[0], {transitionTime: transitionTime});
+var plot = new wbCharts.ChartLine(polarDataMeting[0], {transitionTime: transitionTime});
+var plotv = new wbCharts.ChartLine(polarDataVerwachting[0], {transitionTime: transitionTime});
 var plot2 = new wbCharts.ChartRange(rangeData[0], {transitionTime: transitionTime});
 var plot3 = new wbCharts.ChartRange(rangeData2[0], {transitionTime: transitionTime});
 target = 16;
@@ -217,13 +230,15 @@ var beaufortAxis = d3.axisRight(beaufortScale);
 axis.canvas.select(".y2-axis").call(beaufortAxis);
 
 plot2.addTo(polarAxis, { rkey: "x", tkey: "y" }, 'polar-range');
-plot.addTo(polarAxis, { rkey: "x", tkey: "y"}, 'polar-line');
+plot.addTo(polarAxis, { rkey: "x", tkey: "y", colorkey: "v"}, 'polar-line');
+plotv.addTo(polarAxis, { rkey: "x", tkey: "y", colorkey: "v"}, 'polar-line-verwachting');
 polarAxis.redraw();
 
 var count = 0;
 var updateCharts = function (event) {
     count++;
-    plot.data = polarData[count % 2];
+    plot.data = polarDataMeting[count % 2];
+    plotv.data = polarDataVerwachting[count%2];
     plot2.data = rangeData[count % 2];
     polarAxis.redraw();
     if ( count % 2 == 1) {
