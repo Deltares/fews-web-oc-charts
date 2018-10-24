@@ -917,10 +917,10 @@ export class ChartHistogram extends Chart {
         return d.color
       })
       .attr('y', function(d: any) {
-        return axis.yScale(d.y)
+        return d.y === null ? axis.height : axis.yScale(d.y)
       })
       .attr('height', function(d: any) {
-        return axis.height - axis.yScale(d.y)
+        return d.y === null ? 0 : axis.height - axis.yScale(d.y)
       })
 
       .merge(elements)
@@ -941,10 +941,10 @@ export class ChartHistogram extends Chart {
         return d.color
       })
       .attr('y', function(d: any) {
-        return isNaN(axis.yScale(d.y)) ? axis.height : axis.yScale(d.y)
+        return d.y === null ? axis.height : axis.yScale(d.y)
       })
       .attr('height', function(d: any) {
-        return isNaN(axis.yScale(d.y)) ? 0 : axis.height - axis.yScale(d.y)
+        return d.y === null ? 0 : axis.height - axis.yScale(d.y)
       })
   }
 
