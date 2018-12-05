@@ -25,16 +25,41 @@ export class Legend implements Visitor {
   createLegend(axis: Axis) {
     this.svg.attr('width', axis.margin.left + axis.width + axis.margin.right).attr('height', 20)
     this.group = this.svg.append('g').attr('transform', 'translate(' + axis.margin.left + ', 0)')
-    let dx = Math.round(axis.width / axis.charts.length)
-    for (let i = 0; i < axis.charts.length; i++) {
-      let chart = axis.charts[i]
-      let group = d3.select(chart.id)
-      let style = window.getComputedStyle(group.select('path').node() as Element)
+    let dx = Math.round(axis.width / Object.keys(this.labels).length)
+    let i = 0
+    for (let selector in this.labels) {
+      let style
+      let group
       let element = this.group
         .append('g')
         .attr('transform', 'translate(' + i * dx + ',10)')
         .attr('class', 'legend-entry')
-      if (chart instanceof ChartLine) {
+      if (selector.startsWith('#')) {
+        group = d3.select(selector)
+        style = window.getComputedStyle(group.select('path').node() as Element)
+        let chart = axis.charts.find(x => x.id === selector)
+        if (chart instanceof ChartLine) {
+          element
+            .append('line')
+            .attr('x1', 0)
+            .attr('x2', 20)
+            .attr('y1', 0)
+            .attr('y2', 0)
+            .style('stroke', style.getPropertyValue('stroke'))
+        } else if (chart instanceof ChartArea) {
+          element
+            .append('rect')
+            .attr('x', 0)
+            .attr('y', -4)
+            .attr('width', 20)
+            .attr('height', 10)
+            .style('fill', style.getPropertyValue('stroke'))
+        }
+      } else if (selector.startsWith('.')) {
+        group = d3.selectAll(selector)
+        let charts = axis.charts.filter(x => x.id === selector)
+        let groupElement = d3.select(selector)
+        style = window.getComputedStyle(groupElement.select('path').node() as Element)
         element
           .append('line')
           .attr('x1', 0)
@@ -42,19 +67,11 @@ export class Legend implements Visitor {
           .attr('y1', 0)
           .attr('y2', 0)
           .style('stroke', style.getPropertyValue('stroke'))
-      } else if (chart instanceof ChartArea) {
-        element
-          .append('rect')
-          .attr('x', 0)
-          .attr('y', -4)
-          .attr('width', 20)
-          .attr('height', 10)
-          .style('fill', style.getPropertyValue('stroke'))
       }
       element
         .append('text')
-        .text(this.labels[chart.id])
-        .attr('x', 22)
+        .text(this.labels[selector])
+        .attr('x', 25)
         .attr('y', 0)
         .style('dominant-baseline', 'middle')
       element.on('click', function() {
@@ -66,8 +83,8 @@ export class Legend implements Visitor {
           group.style('visibility', 'visible')
           element.style('opacity', 1.0)
         }
-        console.log(display)
       })
+      i++
     }
   }
 }
