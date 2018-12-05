@@ -1,6 +1,6 @@
 import * as d3 from 'd3'
 import { CartesianAxis, PolarAxis } from '../Axis'
-import { Chart } from './charts'
+import { Chart } from './chart'
 
 function mean(x: number[] | number) {
   if (x instanceof Array) {

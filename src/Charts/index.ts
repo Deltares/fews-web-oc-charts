@@ -1,4 +1,4 @@
-export * from './charts'
+export * from './chart'
 export * from './chartArea'
 export * from './chartMarker'
 export * from './chartLine'
