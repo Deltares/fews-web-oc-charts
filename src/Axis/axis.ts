@@ -1,5 +1,6 @@
 import * as d3 from 'd3'
 import { Chart } from '../Charts'
+import { Visitor } from '../Visitors'
 // import { scaleLinear } from 'd3-scale'
 
 export interface AxisOptions {
@@ -46,6 +47,10 @@ export abstract class Axis {
   abstract redraw()
 
   abstract updateGrid()
+
+  accept(v: Visitor) {
+    v.visit(this)
+  }
 
   createChartGroup() {
     this.chartGroup = this.canvas.append('g').attr('class', 'charts')
