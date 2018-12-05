@@ -112,10 +112,10 @@ var height = 400;
 var width = 800;
 
 var container2 = document.getElementById("chart-container-2");
-var axis =  new wbCharts.CartesianAxis(container2, width, height, { x : {time: true,label: 'datum tijd in MET'}, y : {label: 'Waterstand [m]'} });
+var axis =  new wbCharts.CartesianAxis(container2, width, height, { x : {time: true }, y : {label: 'Waterstand [cm]'} });
 var legend = new wbCharts.Legend( {
-    '#median-line': 'Middelste (P50)', 
-    '#control-line': 'Controle', 
+    '#median-line': 'Middelste (P50)',
+    '#control-line': 'Controle',
     '#percent90': '90% interval' ,
     '#percent50': '50% interval' }
     ,document.getElementById("chart-legend-2"));
@@ -181,14 +181,16 @@ d3.json("ensemble.json", function (error, data) {
     var plotPercentile50 = new wbCharts.ChartArea(percentiles[1], {});
     var plotPercentile90 = new wbCharts.ChartArea(percentiles[2], {});
 
-    plotPercentile90.addTo(axis, { xkey: "x", ykey: "y" }, 'percent90');
-    plotPercentile50.addTo(axis, { xkey: "x", ykey: "y" }, 'percent50');
+    plotPercentile90.addTo(axis, { xkey: "x", ykey: "y" }, '#percent90');
+    plotPercentile50.addTo(axis, { xkey: "x", ykey: "y" }, '#percent50');
 
-// for (i = 1; i< nEnsemble; i++) { var plotEnsemble=new wbCharts.ChartLine(members[i], {});
-//   plotEnsemble.addTo(axis, { xkey: "x" , ykey: "y" }, 'ensemble-line' ); }
+    for (i = 1; i< nEnsemble; i++) {
+      var plotEnsemble=new wbCharts.ChartLine(members[i], {});
+      // plotEnsemble.addTo(axis, { xkey: "x" , ykey: "y" }, '.ensemble-line' );
+    }
 
-    plotControl1.addTo(axis, { xkey: "x", ykey: "y" }, 'control-line');
-    plotMedian1.addTo(axis, { xkey: "x", ykey: "y" }, 'median-line');
+    plotControl1.addTo(axis, { xkey: "x", ykey: "y" }, '#control-line');
+    plotMedian1.addTo(axis, { xkey: "x", ykey: "y" }, '#median-line');
     axis.redraw();
     axis.accept(legend);
 
@@ -278,7 +280,7 @@ this.parentNode.appendChild(this);
     var trace = ['#control-line','#median-line'];
 
 
-    
+
 
 
     var mousePerLine = mouseG.selectAll('.mouse-per-line')
@@ -358,7 +360,7 @@ this.parentNode.appendChild(this);
                         posy = posy[0]
                     } else {
                         yLabel = axis.yScale.invert(posy).toFixed(2)
-                    }  
+                    }
 
                     popupData[d]= { 'x': axis.xScale.invert(datum[idx].x), 'y': yLabel, 'color': stroke};
                     return "translate(" + posx + "," + posy +")";

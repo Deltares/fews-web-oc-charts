@@ -202,15 +202,15 @@ var plot5 = new wbCharts.ChartLine( windAmpl[0], {transitionTime: transitionTime
 var plot5a = new wbCharts.ChartLine( stoot[0], {transitionTime: transitionTime});
 
 
-plot3.addTo(axis,{ xkey: "x", ykey: "y"}, 'cartesian-range');
-plot4.addTo(axis,{ xkey: "x", ykey: "y"},  'wind-zoom');
-plot5.addTo(axis,{ xkey: "x", ykey: "y"}, 'wind-line');
-plot5a.addTo(axis,{ xkey: "x", ykey: "y"}, 'stoot-line');
+plot3.addTo(axis,{ xkey: "x", ykey: "y"}, '#cartesian-range');
+plot4.addTo(axis,{ xkey: "x", ykey: "y"},  '#wind-zoom');
+plot5.addTo(axis,{ xkey: "x", ykey: "y"}, '#wind-line');
+plot5a.addTo(axis,{ xkey: "x", ykey: "y"}, '#stoot-line');
 
 axis.redraw();
 var beaufort= axis.canvas
     .append('g')
-    .attr("transform", "translate(" + axis.width + " ,0)")	
+    .attr("transform", "translate(" + axis.width + " ,0)")
     .attr('class', 'axis y2-axis');
 
 var limits;
@@ -218,7 +218,7 @@ var beaufortScale = d3.scaleLinear();
 
 function updateBeaufortScale(target) {
     const beaufortLimits = [0, .3, 1.6, 3.4, 5.5, 8.0, 10.8, 13.9, 17.2, 20.8, 24.5, 28.5, 32.7 ];
-    limits = beaufortLimits.filter( function(x) {return x<= target }); 
+    limits = beaufortLimits.filter( function(x) {return x<= target });
     beaufortScale.domain(Object.keys(limits))
     beaufortScale.range( limits.map(function(x) {return ( 1- x / target) * axis.height }) )
     return beaufortScale;
@@ -229,9 +229,9 @@ var beaufortScale = updateBeaufortScale(zoomLimit);
 var beaufortAxis = d3.axisRight(beaufortScale);
 axis.canvas.select(".y2-axis").call(beaufortAxis);
 
-plot2.addTo(polarAxis, { rkey: "x", tkey: "y" }, 'polar-range');
-plot.addTo(polarAxis, { rkey: "x", tkey: "y", colorkey: "v"}, 'polar-line');
-plotv.addTo(polarAxis, { rkey: "x", tkey: "y", colorkey: "v"}, 'polar-line-verwachting');
+plot2.addTo(polarAxis, { rkey: "x", tkey: "y" }, '#polar-range');
+plot.addTo(polarAxis, { rkey: "x", tkey: "y", colorkey: "v"}, '#polar-line');
+plotv.addTo(polarAxis, { rkey: "x", tkey: "y", colorkey: "v"}, '#polar-line-verwachting');
 polarAxis.redraw();
 
 var count = 0;
@@ -245,12 +245,12 @@ var updateCharts = function (event) {
         target = 48
         zoomLimit = getZoomLimit(target);
         beaufortScale = updateBeaufortScale(zoomLimit);
-        plot4.data = [{x:0,y:0}, {x:0, y:zoomLimit}] 
+        plot4.data = [{x:0,y:0}, {x:0, y:zoomLimit}]
     } else {
         target = 16
         zoomLimit = getZoomLimit(target);
         beaufortScale = updateBeaufortScale(zoomLimit);
-        plot4.data = [{x:0,y:0}, {x:0, y:zoomLimit}] 
+        plot4.data = [{x:0,y:0}, {x:0, y:zoomLimit}]
     }
     plot3.data = rangeData2[count % 2];
     plot5.data = windAmpl[count % 2];

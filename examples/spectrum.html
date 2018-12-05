@@ -117,7 +117,7 @@ var axis = new wbCharts.CartesianAxis(container2, 400, height, {});
 // plot.addTo(axis, {xkey : "y", ykey: "x", colorkey: 'v' })
 // plot2.addTo(axis, { xkey: "y", ykey: "x"}, 'cartesian-dot')
 // plot3.addTo(axis, { xkey: "y", ykey: "x" }, 'cartesian-line')
-plot4.addTo(axis, { xkey: "x", ykey: "y", colorkey: "y" }, 'cartesian-histogram');
+plot4.addTo(axis, { xkey: "x", ykey: "y", colorkey: "y" }, '#cartesian-histogram');
 // plot5.addTo(axis, { xkey: "x", ykey: "y", colorkey: "y" }, 'cartesian-line')
 axis.redraw()
 polarAxis.redraw()
@@ -133,7 +133,7 @@ var updateCharts = function (event) {
 var input = document.getElementById("slider");
 input.onchange = function (event) { updateCharts(event); };
 
-        
+
         </script>
 
     </body>

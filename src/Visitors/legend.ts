@@ -2,7 +2,6 @@ import * as d3 from 'd3'
 import { Axis } from '../Axis'
 import { Visitor } from './visitor'
 import { ChartLine, ChartArea } from '../Charts'
-import { style } from 'd3'
 
 export class Legend implements Visitor {
   private container: HTMLElement
@@ -29,8 +28,8 @@ export class Legend implements Visitor {
     let dx = Math.round(axis.width / axis.charts.length)
     for (let i = 0; i < axis.charts.length; i++) {
       let chart = axis.charts[i]
-      let group = d3.select('#' + chart.id)
-      let style = window.getComputedStyle(<Element>group.select('path').node())
+      let group = d3.select(chart.id)
+      let style = window.getComputedStyle(group.select('path').node() as Element)
       let element = this.group
         .append('g')
         .attr('transform', 'translate(' + i * dx + ',10)')
@@ -54,13 +53,13 @@ export class Legend implements Visitor {
       }
       element
         .append('text')
-        .text(this.labels['#' + chart.id])
+        .text(this.labels[chart.id])
         .attr('x', 22)
         .attr('y', 0)
         .style('dominant-baseline', 'middle')
       element.on('click', function() {
         let display = style.getPropertyValue('visibility')
-        if (display == 'visible') {
+        if (display === 'visible') {
           group.style('visibility', 'hidden')
           element.style('opacity', 0.5)
         } else {

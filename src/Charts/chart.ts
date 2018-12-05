@@ -51,14 +51,17 @@ export abstract class Chart {
       direction = -axis.direction
       intercept = 90 - axis.intercept
     }
-    this.group =
-      this.group != null
-        ? this.group
-        : axis.chartGroup
-            .append('g')
-            .attr('class', cssClass)
-            .attr('id', this.id)
-            .attr('transform', 'rotate(' + intercept + ')scale(' + direction + ' ,1)')
+    if (this.group == null) {
+      this.group = axis.chartGroup
+        .append('g')
+        .attr('transform', 'rotate(' + intercept + ')scale(' + direction + ' ,1)')
+      if (this.id.startsWith('#')) this.group.attr('id', this.id.substr(1))
+      if (this.id.startsWith('.')) {
+        this.group.attr('class', cssClass + ' ' + this.id.substr(1))
+      } else {
+        this.group.attr('class', cssClass)
+      }
+    }
     return this.group
   }
 

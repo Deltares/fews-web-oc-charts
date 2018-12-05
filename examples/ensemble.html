@@ -31,9 +31,9 @@
                 fill: #999999;
                 stroke: white;
             }
-            
+
             .chart-line { fill: none; stroke: skyblue; }
-            #control-line { fill: none; stroke: red; stroke-dasharray : 4,2; stroke-width: 2px; } 
+            #control-line { fill: none; stroke: red; stroke-dasharray : 4,2; stroke-width: 2px; }
 
             #median-line { fill: none; stroke: white; stroke-width: 2px; }
 
@@ -114,7 +114,7 @@ var escalations= axis.canvas
 d3.json("ensemble.json", function (error, data) {
     var nEnsemble = data.values[0].length;
     var members = Array(nEnsemble);
-    var percentiles = [[],[],[]]; 
+    var percentiles = [[],[],[]];
 
     for (s = 0; s< nEnsemble ; s++) {
         members[s]= Array();
@@ -123,7 +123,7 @@ d3.json("ensemble.json", function (error, data) {
     data.times.forEach( function(time, index) {
         var dateTime = new Date(time * 1000);
         if (dateTime.getTime() > refDate.getTime()) return;
-        
+
         for (i = 0; i < nEnsemble; i++) {
             members[i].push({ x: dateTime , y: data.values[index][i] })
         }
@@ -136,12 +136,12 @@ d3.json("ensemble.json", function (error, data) {
 
     for (i = 1; i< nEnsemble; i++) {
         var plotEnsemble = new wbCharts.ChartLine(members[i], {});
-        plotEnsemble.addTo(axis1, { xkey: "x", ykey: "y" }, 'ensemble-line');
+        plotEnsemble.addTo(axis1, { xkey: "x", ykey: "y" }, '.ensemble-line');
     }
     var plotMedian = new wbCharts.ChartLine(percentiles[0], {});
     var plotControl = new wbCharts.ChartLine(members[0], {});
-    plotControl.addTo(axis1, { xkey: "x", ykey: "y" }, 'control-line');
-    plotMedian.addTo(axis1, { xkey: "x", ykey: "y" }, 'median-line');
+    plotControl.addTo(axis1, { xkey: "x", ykey: "y" }, '#control-line');
+    plotMedian.addTo(axis1, { xkey: "x", ykey: "y" }, '#median-line');
     axis1.redraw();
 
     var plotControl1 = new wbCharts.ChartLine(members[0], {});
@@ -149,10 +149,10 @@ d3.json("ensemble.json", function (error, data) {
     var plotPercentile50 = new wbCharts.ChartArea(percentiles[1], {});
     var plotPercentile90 = new wbCharts.ChartArea(percentiles[2], {});
 
-    plotPercentile90.addTo(axis, { xkey: "x", ykey: "y" }, 'percent90');
-    plotPercentile50.addTo(axis, { xkey: "x", ykey: "y" }, 'percent50');
-    plotControl1.addTo(axis, { xkey: "x", ykey: "y" }, 'control-line');
-    plotMedian1.addTo(axis, { xkey: "x", ykey: "y" }, 'median-line');
+    plotPercentile90.addTo(axis, { xkey: "x", ykey: "y" }, '#percent90');
+    plotPercentile50.addTo(axis, { xkey: "x", ykey: "y" }, '#percent50');
+    plotControl1.addTo(axis, { xkey: "x", ykey: "y" }, '#control-line');
+    plotMedian1.addTo(axis, { xkey: "x", ykey: "y" }, '#median-line');
     axis.redraw();
 
 
@@ -169,7 +169,7 @@ d3.json("ensemble.json", function (error, data) {
     axis.canvas.select(".y2-axis").call(escalationsAxis);
 
     var sections = axis.canvas.select(".axis-canvas").append("g").selectAll('rect').data(escalationsAxis.tickValues())
-    
+
     // sections.exit().remove();
 
     var escY = function(d,i) {
