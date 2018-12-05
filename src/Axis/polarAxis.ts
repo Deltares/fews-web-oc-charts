@@ -6,22 +6,29 @@ import { Axis, AxisOptions } from './axis'
 export const CLOCKWISE = -1
 export const ANTICLOCKWISE = 1
 
+interface RadialAxisOptions {
+  label?: string
+  scale?: number | number[]
+}
+
+interface AngularAxisOptions {
+  label?: string
+  direction?: number
+  intercept?: number
+  range?: number[]
+}
+
+export interface PolarAxisOptions extends AxisOptions {
+  innerRadius?: number
+  radial?: RadialAxisOptions
+  angular?: AngularAxisOptions
+}
+
 function mean(x: number[] | number) {
   if (x instanceof Array) {
     return d3.mean(x)
   }
   return x
-}
-
-export interface PolarAxisOptions extends AxisOptions {
-  direction?: number
-  angularRange?: number[]
-  radialScale?: number | number[]
-  targetMax?: number
-  innerRadius?: number
-  intercept?: number
-  yLabel?: string
-  xLabel?: string
 }
 
 export class PolarAxis extends Axis {
@@ -39,15 +46,13 @@ export class PolarAxis extends Axis {
       .append('g')
       .attr('transform', 'translate(' + this.width / 2 + ',' + this.height / 2 + ' )')
 
-    this.direction = options.direction ? options.direction : ANTICLOCKWISE
-    this.intercept = options.intercept ? options.intercept : 0
+    this.direction =
+      options.angular && options.angular.direction ? options.angular.direction : ANTICLOCKWISE
+    this.intercept = options.angular && options.angular.intercept ? options.angular.intercept : 0
     this.innerRadius = options.innerRadius ? options.innerRadius : 0
     this.outerRadius = Math.min(this.width, this.height) / 2
-    if (options.angularRange) {
-      this.angularRange = [options.angularRange[0], options.angularRange[1]]
-    } else {
-      this.angularRange = [0, 2 * Math.PI]
-    }
+    this.angularRange =
+      options.angular && options.angular.range ? options.angular.range : [0, 2 * Math.PI]
 
     this.canvas
       .append('g')

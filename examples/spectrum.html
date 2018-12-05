@@ -75,7 +75,7 @@ lightgray; border: 0px; border-radius: 8px; pointer-events: none; }
 var height = 400;
 var width = 400;
 var container1 = document.getElementById("chart-container-1");
-var polarAxis = new wbCharts.PolarAxis(container1, width, height, { direction: wbCharts.CLOCKWISE, innerRadius: 40, angularRange: [0, 2 * Math.PI], radialScale: wbCharts.AUTO_SCALE });
+var polarAxis = new wbCharts.PolarAxis(container1, width, height,  { angular: { direction: wbCharts.CLOCKWISE, }, innerRadius: 40 });
 var polarData = [
     [
         { x: [1, 2], y: [35, 85], v: 0 },
@@ -113,7 +113,7 @@ plot.addTo(polarAxis, { rkey: "x", tkey: "y", colorkey: 'v' });
 // plot2.addTo(polaraxis, { rkey: "x", tkey: "y" }, 'polar-dot')
 // plot3.addTo(polaraxis, { rkey: "x", tkey: "y" }, 'polar-line')
 var container2 = document.getElementById("chart-container-2");
-var axis = new wbCharts.CartesianAxis(container2, 400, height, { yScale: wbCharts.AUTO_SCALE });
+var axis = new wbCharts.CartesianAxis(container2, 400, height, {});
 // plot.addTo(axis, {xkey : "y", ykey: "x", colorkey: 'v' })
 // plot2.addTo(axis, { xkey: "y", ykey: "x"}, 'cartesian-dot')
 // plot3.addTo(axis, { xkey: "y", ykey: "x" }, 'cartesian-line')

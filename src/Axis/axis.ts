@@ -2,7 +2,9 @@ import * as d3 from 'd3'
 import { Chart } from '../Charts'
 // import { scaleLinear } from 'd3-scale'
 
-export interface AxisOptions {}
+export interface AxisOptions {
+  transitionTime?: number
+}
 
 export abstract class Axis {
   tooltip: any = null

@@ -9,10 +9,18 @@ function mean(x: number[] | number) {
   }
   return x
 }
+
+interface XAxisOptions {
+  label?: string
+}
+
+interface YAxisOptions {
+  label?: string
+}
+
 export interface CartesianAxisOptions extends AxisOptions {
-  yScale?: number | number[]
-  yLabel?: string
-  xLabel?: string
+  x?: XAxisOptions
+  y?: YAxisOptions
 }
 
 export class CartesianAxis extends Axis {
@@ -116,22 +124,6 @@ export class CartesianAxis extends Axis {
   protected setRange() {
     this.xScale = d3.scaleLinear().range([0, this.width])
     this.yScale = d3.scaleLinear().range([this.height, 0])
-    this.canvas
-      .append('text')
-      .attr('x', -40)
-      .attr('y', -10)
-      .style('fill', 'white')
-      .style('text-anchor', 'start')
-      .style('font-size', '11px')
-      .text(this.options.yLabel)
-    this.canvas
-      .append('text')
-      .attr('x', this.width / 2)
-      .attr('y', this.height + 30)
-      .style('fill', 'white')
-      .style('text-anchor', 'middle')
-      .style('font-size', '11px')
-      .text(this.options.xLabel)
   }
 
   protected initGrid() {
@@ -143,5 +135,23 @@ export class CartesianAxis extends Axis {
       .attr('class', 'axis x-axis')
       .attr('transform', 'translate(' + 0 + ',' + this.height + ')')
     let yAxis = g.append('g').attr('class', 'axis y-axis')
+    if (this.options.y && this.options.y.label) {
+      g.append('text')
+        .attr('x', -40)
+        .attr('y', -10)
+        .style('fill', 'white')
+        .style('text-anchor', 'start')
+        .style('font-size', '11px')
+        .text(this.options.y.label)
+    }
+    if (this.options.x && this.options.x.label) {
+      g.append('text')
+        .attr('x', this.width / 2)
+        .attr('y', this.height + 30)
+        .style('fill', 'white')
+        .style('text-anchor', 'middle')
+        .style('font-size', '11px')
+        .text(this.options.x.label)
+    }
   }
 }
