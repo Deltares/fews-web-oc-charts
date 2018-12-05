@@ -20,16 +20,11 @@ export class ChartLine extends Chart {
         return d.y != null
       })
 
-    this.group = this.selectGroup(axis, 'chart-line')
-    let elements = this.group.selectAll('path').data(this.data)
+    this.group = this.selectGroup(axis, 'chart-line').append('path')
 
-    // exit selection
-    elements.exit().remove()
+    let elements = this.group.datum(mappedData)
 
-    // enter + update selection
     elements
-      .enter()
-      .append('path')
       .attr('d', line(mappedData))
       .on('mouseover', function(d: any) {
         const v = { x: d[xkey], y: d[ykey] }
