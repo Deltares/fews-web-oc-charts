@@ -283,14 +283,10 @@ this.parentNode.appendChild(this);
      .attr("transform", "translate(" + 0 + "," + axis.height + ")")
      .append("text")
      .style("fill","white")
-     .text("hello");
+     .text("");
 
     // var trace = ['#median-line'];
     var trace = ['#control-line','#median-line'];
-
-
-
-
 
     var mousePerLine = mouseG.selectAll('.mouse-per-line')
     .data(trace)
@@ -350,11 +346,15 @@ this.parentNode.appendChild(this);
 
             var bisect = d3.bisector(function(d) { return d.x; }).right;
             var popupData = {};
-            var posx;
+            var posx = mouse[0];
+            var allHidden = true;
             axis.canvas.selectAll(".mouse-per-line")
                 .attr("transform", function(d, i) {
                     var element = d3.select(d).select('path');
-                    var stroke = window.getComputedStyle(element.node()).getPropertyValue("stroke");
+                    var style =window.getComputedStyle(element.node());
+                    if ( style.getPropertyValue("visibility") === 'hidden' ) return;
+                    allHidden = false;
+                    var stroke = style.getPropertyValue("stroke");
                     var datum = element.datum();
                     var idx = bisect(datum, mouse[0]);
                     var posy = datum[idx].y;
@@ -370,10 +370,19 @@ this.parentNode.appendChild(this);
                     } else {
                         yLabel = axis.yScale.invert(posy).toFixed(2)
                     }
-
                     popupData[d]= { 'x': axis.xScale.invert(datum[idx].x), 'y': yLabel, 'color': stroke};
                     return "translate(" + posx + "," + posy +")";
                 })
+
+            d3.select(".mouse-x")
+            .attr("transform", "translate("+ (mouse[0] + 2) + "," + (axis.height -5) + ")")
+            .select("text")
+            .text(xFormat(axis.xScale.invert(posx)));
+
+            if (allHidden) {
+              axis.hideTooltip();
+              return;
+            }
             var htmlContent ='';
             for (var label in popupData) {
                 var v = popupData[label];
@@ -389,10 +398,6 @@ this.parentNode.appendChild(this);
             .style('top', (d3.event.pageY  - h )+ 'px')
 
 
-            d3.select(".mouse-x")
-            .attr("transform", "translate("+ (mouse[0] + 2) + "," + (axis.height -5) + ")")
-            .select("text")
-            .text(xFormat(axis.xScale.invert(posx)));
 
         });
         </script>
