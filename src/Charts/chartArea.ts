@@ -28,7 +28,7 @@ export class ChartArea extends Chart {
 
     let mappedData: any = this.data.map(function(d: any) {
       return {
-        x: d[xkey],
+        x: axis.xScale(d[xkey]),
         y: d[ykey].map(axis.yScale),
         color: colorMap(colorScale(mean(d[colorkey])))
       }
@@ -39,7 +39,7 @@ export class ChartArea extends Chart {
     let areaGenerator = d3
       .area()
       .x(function(d: any) {
-        return axis.xScale(d.x)
+        return d.x
       })
       .y0(function(d: any) {
         return d.y[0]
