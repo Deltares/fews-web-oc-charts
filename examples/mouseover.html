@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <title>Ensemble Tech Demo</title>
+        <style>
+
+
+            body {
+                background-color : rgb(44,44,44);
+                font: 10px sans-serif;
+            }
+
+            .axis-canvas {
+                fill:rgb(89, 89, 89);
+            }
+
+            #chart-container-1 {
+                display: block;
+            }
+
+            #chart-container-2 {
+            display: block;
+            }
+
+/* .mouse-over-effects { cursor:ew-resize; } */
+
+
+            #polar-dot {
+                fill: #999999;
+                stroke: white;
+            }
+
+            .mouse-line {
+                stroke: white;
+                stroke-width: 1px;
+                stroke-dasharray: 5,2,2,2;
+            }
+
+            .mouse-per-line {
+                fill: white;
+            }
+
+
+            .chart-line { fill: none; stroke: skyblue; }
+            #control-line { fill: none; stroke: red; stroke-dasharray : 4,2; stroke-width: 2px; }
+
+            #median-line { fill: none; stroke: white; stroke-width: 2px; }
+
+            #cartesian-line { fill: none; stroke: white; }
+            #percent90 { fill: skyblue; stroke: skyblue; }
+            #percent50 { fill: deepskyblue; stroke: deepskyblue; }
+
+            /* div.tooltip { position: absolute; text-align: left; min-width: 60px; min-height: 28px; padding: 2px; font: 12px sans-serif; background:
+rgba(0, 0, 0,.8); border: 0px;
+border-top-right-radius: 4px;
+border-bottom-right-radius: 4px; pointer-events: none; } */
+
+            /* Tooltip text */
+            .tooltip {
+/* visibility: hidden; */
+position: absolute;
+margin-left: 5px;
+min-width: 50px;
+background-color: black;
+color: #fff;
+text-align: center;
+padding: 5px 0;
+border-radius: 6px;
+z-index: 1;
+opacity: 0;
+transition: opacity 0.3s;
+/* top: -50%;
+left: 125%; */
+pointer-events: none;
+
+}
+
+.tooltip::after {
+content: "";
+position: absolute;
+top: 50%;
+right: 100%;
+margin-top: -5px;
+border-width: 5px;
+border-style: solid;
+border-color: transparent black transparent transparent;
+}
+
+
+        </style>
+        <script src="https://d3js.org/d3.v4.min.js"></script>
+        <link rel="stylesheet" href="/dist/wb-charts.css">
+    </head>
+    <body>
+
+
+        <div id="chart-container-2"></div>
+        <script src="/dist/wb-charts.umd.js"></script>
+        <script type="text/javascript">
+
+// set constants
+var height = 400;
+var width = 800;
+
+var container2 = document.getElementById("chart-container-2");
+var axis = new wbCharts.CartesianAxis(container2, width, height, { x : {time: true} });
+
+percentile = function(p, data) {
+    var points = data;
+    points.sort(function (a, b) { return a - b });
+    if (Array.isArray(p)) {
+        var result = [];
+        for (i = 0; i < p.length; ++i) {
+            var x = p[i] * (points.length + 1);
+            var x1 = Math.floor(x);
+            var frac = x - x1;
+            result.push(points[x1 - 1] + frac * (points[x1] - points[x1 - 1]));
+        }
+        return result;
+    } else {
+        var x = p * (points.length + 1);
+        var x1 = Math.floor(x);
+        var frac = x - x1;
+        return points[x1 - 1] + frac * (points[x1] - points[x1 - 1]);
+    }
+};
+
+var refDate = new Date(2018,10,1);
+
+
+var escalations= axis.canvas
+.append('g')
+.attr("transform", "translate(" + axis.width + " ,0)")
+.attr('class', 'axis y2-axis');
+
+
+
+d3.json("ensemble.json", function (error, data) {
+    var nEnsemble = data.values[0].length;
+    var members = Array(nEnsemble);
+    var percentiles = [[],[],[]];
+
+    for (s = 0; s< nEnsemble ; s++) {
+        members[s]= Array();
+    }
+    var plotEnsemble = [];
+    data.times.forEach( function(time, index) {
+        var dateTime = new Date(time * 1000);
+        if (dateTime.getTime() > refDate.getTime()) return;
+
+        for (i = 0; i < nEnsemble; i++) {
+            members[i].push({ x: dateTime , y: data.values[index][i] })
+        }
+        var points = data.values[index]
+        percentiles[0].push({ x: dateTime, y: percentile(.5,points)  });
+        percentiles[1].push({ x: dateTime, y: percentile([0.25, 0.75], points) });
+        percentiles[2].push({ x: dateTime, y: percentile([0.05, 0.95], points) });
+    })
+
+
+    var plotMedian = new wbCharts.ChartLine(percentiles[0], {});
+    var plotControl = new wbCharts.ChartLine(members[0], {});
+
+    var plotControl1 = new wbCharts.ChartLine(members[0], {});
+    var plotMedian1 = new wbCharts.ChartLine(percentiles[0], {});
+    var plotPercentile50 = new wbCharts.ChartArea(percentiles[1], {});
+    var plotPercentile90 = new wbCharts.ChartArea(percentiles[2], {});
+
+    // plotPercentile90.addTo(axis, { xkey: "x", ykey: "y" }, 'percent90');
+    // plotPercentile50.addTo(axis, { xkey: "x", ykey: "y" }, 'percent50');
+    plotControl1.addTo(axis, { xkey: "x", ykey: "y" }, 'control-line');
+    plotMedian1.addTo(axis, { xkey: "x", ykey: "y" }, 'median-line');
+    axis.redraw();
+
+    var escalationLevels= [
+        {id: 'extralow', val : -110, color: "rgba(139, 69, 19,.5)", c: '<'},
+        {id: 'low', val : -100, color: "rgba(205, 133, 63,.5)", c: '<'},
+        {id: 'warn', val: 100, color: "rgba(255, 215, 0,.5)", c: '>'},
+        {id: 'alert', val: 120, color: "rgba(255, 0, 0,.5)", c: '>' }
+    ];
+    var escalationsScale = d3.scaleLinear().domain(axis.yScale.domain()).range(axis.yScale.range())
+    var escalationsAxis = d3.axisRight(escalationsScale).tickValues([-110,-100,100,120]).tickFormat( function(d,i){return escalationLevels[i].id});
+    var axisHandle = axis.canvas.select(".y2-axis").call(escalationsAxis);
+
+    axisHandle.selectAll('.tick text')
+      .append('title')
+      .attr("class","tooltip")
+      .text(function(d,i) {
+        return "waarschuwing waardes" +  escalationLevels[i].c + "" + d;
+      });
+
+    var sections = axis.canvas.select(".axis-canvas").append("g").selectAll('rect').data(escalationsAxis.tickValues())
+
+    var escY = function(d,i) {
+        if (escalationLevels[i].c == '<') {
+            return escalationsScale(d);
+        } else {
+            if (i == escalationLevels.length-1) return 0;
+            return escalationsScale(escalationLevels[i+1].val);
+        }
+    };
+
+    var escHeight = function(d,i) {
+        if (escalationLevels[i].c == '<') {
+            if (i==0) return axis.height- escalationsScale(d);
+            return escalationsScale(escalationLevels[i-1].val)- escalationsScale(d);
+        }
+        else {
+            if (i == escalationLevels.length-1) return escalationsScale(d);
+            return escalationsScale(d) - escalationsScale(escalationLevels[i+1].val);
+        }
+    };
+    var escFill = function(d,i) {
+        return escalationLevels[i].color;
+    };
+
+    sections.enter()
+        .append("rect")
+        .merge(sections)
+            .attr("y", escY)
+            .attr("width", axis.width)
+            .attr("height", escHeight)
+            .attr("fill", escFill);
+    });
+
+d3.selection.prototype.moveToFront = function() {
+return this.each(function(){
+this.parentNode.appendChild(this);
+});
+};
+
+    d3.selection.prototype.moveToBack = function() {
+    return this.each(function() {
+    var firstChild = this.parentNode.firstChild;
+    if (firstChild) {
+    this.parentNode.insertBefore(this, firstChild);
+    }
+    });
+    };
+
+
+    var mouseG = axis.canvas.append("g")
+        .attr("class", "mouse-over-effects")
+
+
+
+    mouseG.append("path") // this is the black vertical line to follow mouse
+     .attr("class", "mouse-line")
+     .style("opacity", "0");
+    mouseG.append("g")
+     .attr("class", "mouse-x")
+     .attr("transform", "translate(" + 0 + "," + axis.height + ")")
+     .append("text")
+     .style("fill","white")
+     .text("hello");
+
+    // var trace = ['#median-line'];
+    var trace = ['#control-line','#median-line'];
+
+
+    var mousePerLine = mouseG.selectAll('.mouse-per-line')
+    .data(trace)
+    .enter()
+    .append("g")
+    .attr("class", "mouse-per-line");
+
+    mousePerLine.append("circle")
+        .attr("r", 3)
+        // .style("stroke", 'white')
+        .style("fill", "white")
+        .style("stroke-width", "1px")
+        .style("opacity", "0");
+
+    var xFormat = d3.timeFormat("%H:%M");
+
+    mouseG.append('svg:rect') // append a rect to catch mouse movements on canvas
+        .attr('width', axis.width) // can't catch mouse events on a g element
+        .attr('height', axis.height)
+        .attr('fill', 'none')
+        .attr('pointer-events', 'all')
+        .on('mouseout', function() { // on mouse out hide line, circles and text
+            d3.select(".mouse-line")
+              .style("opacity", "0");
+            d3.selectAll(".mouse-per-line circle")
+              .style("opacity", "0");
+            d3.selectAll(".mouse-x text")
+             .style("opacity", "0");
+            axis.hideTooltip();
+
+        })
+        .on('mouseover', function() { // on mouse in show line, circles and text
+            d3.select(".mouse-line")
+                .style("opacity", "1");
+            d3.selectAll(".mouse-per-line circle")
+                .style("opacity", "1")
+                .style("fill", function(d, i) {
+                    var element = d3.select(d).select('path');
+                    var stroke = window.getComputedStyle(element.node()).getPropertyValue("stroke");
+                    return stroke;
+                });
+            d3.selectAll(".mouse-x text")
+            .style("opacity", "1");
+            axis.tooltip
+            .transition()
+            .duration(50)
+            .style('opacity', 0.9)
+        })
+        .on('mousemove', function() { // mouse moving over canvas
+            var mouse = d3.mouse(this);
+            d3.select(".mouse-line")
+            .attr("d", function() {
+                var d = "M" + mouse[0] + "," + axis.height;
+                d += " " + mouse[0] + "," + 0;
+                return d;
+            });
+
+
+            var bisect = d3.bisector(function(d) { return d.x; }).right;
+            var popupData = {};
+            var posx;
+            axis.canvas.selectAll(".mouse-per-line")
+                .attr("transform", function(d, i) {
+                    var element = d3.select(d).select('path');
+                    var stroke = window.getComputedStyle(element.node()).getPropertyValue("stroke");
+                    var datum = element.datum();
+                    var idx = bisect(datum, mouse[0]);
+                    var posy = datum[idx].y;
+                    posx = datum[idx].x;
+                    popupData[d]= { 'x': axis.xScale.invert(datum[idx].x), 'y': axis.yScale.invert(posy), 'color': stroke};
+                    return "translate(" + posx + "," + posy +")";
+                })
+            var htmlContent ='';
+            for (var label in popupData) {
+                var v = popupData[label];
+                htmlContent += '<span style="color:'  + v.color+ ' ">' + "   " + v.y.toFixed(2) +  '</span><br/>';
+            }
+
+            var div = axis.tooltip
+              .html(htmlContent);
+            var h = div.node().clientHeight/2;
+
+            div
+            .style('left', d3.event.pageX + 'px')
+            .style('top', (d3.event.pageY  - h )+ 'px')
+
+
+            d3.select(".mouse-x")
+            .attr("transform", "translate("+ (mouse[0] + 2) + "," + (axis.height -5) + ")")
+            .select("text")
+            .text(xFormat(axis.xScale.invert(posx)));
+
+        });
+        </script>
+
+
+    </body>
+</html>
