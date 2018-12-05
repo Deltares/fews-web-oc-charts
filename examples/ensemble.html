@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <title>Ensemble Tech Demo</title>
+        <style>
+
+
+            body {
+                background-color : rgb(44,44,44);
+            }
+
+            title {
+                stroke: black;
+            }
+
+            .axis-canvas {
+                fill:rgb(89, 89, 89);
+            }
+
+            #chart-container-1 {
+                display: block;
+            }
+
+            #chart-container-2 {
+            display: block;
+            }
+
+
+            #polar-dot {
+                fill: #999999;
+                stroke: white;
+            }
+            
+            .chart-line { fill: none; stroke: skyblue; }
+            #control-line { fill: none; stroke: red; stroke-dasharray : 4,2; stroke-width: 2px; } 
+
+            #median-line { fill: none; stroke: white; stroke-width: 2px; }
+
+            #cartesian-line { fill: none; stroke: white; }
+            #percent90 { fill: skyblue; stroke: skyblue; }
+            #percent50 { fill: deepskyblue; stroke: deepskyblue; }
+
+
+            /* .tooltip { background: #eee;
+            box-shadow: 0 0 5px #999999;
+            color: #333;
+            display: none;
+            font-size: 12px;
+            left: 130px;
+            padding: 10px;
+            position: absolute;
+            text-align: center;
+            top: 95px;
+            width: 80px;
+            z-index: 10; } */
+
+            div.tooltip { position: absolute; text-align: center; width: 60px; height: 28px; padding: 2px; font: 12px sans-serif; background:
+lightgray; border: 0px; border-radius: 8px; pointer-events: none; }
+
+        </style>
+        <script src="https://d3js.org/d3.v4.min.js"></script>
+        <link rel="stylesheet" href="/dist/wb-charts.css">
+    </head>
+    <body>
+
+        <div id="chart-container-1"></div>
+
+        <div id="chart-container-2"></div>
+        <script src="/dist/wb-charts.umd.js"></script>
+        <script type="text/javascript">
+
+// set constants
+var height = 400;
+var width = 800;
+var container1 = document.getElementById("chart-container-1");
+
+var axis1 = new wbCharts.CartesianAxis(container1, width, height, { x:{ time: true } } );
+var container2 = document.getElementById("chart-container-2");
+var axis = new wbCharts.CartesianAxis(container2, width, height,  { x: { time: true }});
+
+percentile = function(p, data) {
+    var points = data;
+    points.sort(function (a, b) { return a - b });
+    if (Array.isArray(p)) {
+        var result = [];
+        for (i = 0; i < p.length; ++i) {
+            var x = p[i] * (points.length + 1);
+            var x1 = Math.floor(x);
+            var frac = x - x1;
+            result.push(points[x1 - 1] + frac * (points[x1] - points[x1 - 1]));
+        }
+        return result;
+    } else {
+        var x = p * (points.length + 1);
+        var x1 = Math.floor(x);
+        var frac = x - x1;
+        return points[x1 - 1] + frac * (points[x1] - points[x1 - 1]);
+    }
+};
+
+var refDate = new Date(2018,10,1);
+
+console.log(axis.yScale.range());
+
+
+var escalations= axis.canvas
+.append('g')
+.attr("transform", "translate(" + axis.width + " ,0)")
+.attr('class', 'axis y2-axis');
+
+
+
+d3.json("ensemble.json", function (error, data) {
+    var nEnsemble = data.values[0].length;
+    var members = Array(nEnsemble);
+    var percentiles = [[],[],[]]; 
+
+    for (s = 0; s< nEnsemble ; s++) {
+        members[s]= Array();
+    }
+    var plotEnsemble = [];
+    data.times.forEach( function(time, index) {
+        var dateTime = new Date(time * 1000);
+        if (dateTime.getTime() > refDate.getTime()) return;
+        
+        for (i = 0; i < nEnsemble; i++) {
+            members[i].push({ x: dateTime , y: data.values[index][i] })
+        }
+        var points = data.values[index]
+        percentiles[0].push({ x: dateTime, y: percentile(.5,points)  });
+        percentiles[1].push({ x: dateTime, y: percentile([0.25, 0.75], points) });
+        percentiles[2].push({ x: dateTime, y: percentile([0.05, 0.95], points) });
+    })
+
+
+    for (i = 1; i< nEnsemble; i++) {
+        var plotEnsemble = new wbCharts.ChartLine(members[i], {});
+        plotEnsemble.addTo(axis1, { xkey: "x", ykey: "y" }, 'ensemble-line');
+    }
+    var plotMedian = new wbCharts.ChartLine(percentiles[0], {});
+    var plotControl = new wbCharts.ChartLine(members[0], {});
+    plotControl.addTo(axis1, { xkey: "x", ykey: "y" }, 'control-line');
+    plotMedian.addTo(axis1, { xkey: "x", ykey: "y" }, 'median-line');
+    axis1.redraw();
+
+    var plotControl1 = new wbCharts.ChartLine(members[0], {});
+    var plotMedian1 = new wbCharts.ChartLine(percentiles[0], {});
+    var plotPercentile50 = new wbCharts.ChartArea(percentiles[1], {});
+    var plotPercentile90 = new wbCharts.ChartArea(percentiles[2], {});
+
+    plotPercentile90.addTo(axis, { xkey: "x", ykey: "y" }, 'percent90');
+    plotPercentile50.addTo(axis, { xkey: "x", ykey: "y" }, 'percent50');
+    plotControl1.addTo(axis, { xkey: "x", ykey: "y" }, 'control-line');
+    plotMedian1.addTo(axis, { xkey: "x", ykey: "y" }, 'median-line');
+    axis.redraw();
+
+
+
+    var escalationLevels= [
+        {id: 'extralow', val : -110, color: "rgb(139, 69, 19,.5)", c: '<'},
+        {id: 'low', val : -100, color: "rgb(205, 133, 63,.5)", c: '<'},
+        {id: 'warn', val: 100, color: "rgb(255, 215, 0,.5)", c: '>'},
+        {id: 'alert', val: 120, color: "rgb(255, 0, 0,.5)", c: '>' }
+    ];
+    var escalationsScale = d3.scaleLinear().domain(axis.yScale.domain()).range(axis.yScale.range())
+    console.log(axis.yScale.domain())
+    var escalationsAxis = d3.axisRight(escalationsScale).tickValues([-110,-100,100,120]).tickFormat( function(d,i){return escalationLevels[i].id});
+    axis.canvas.select(".y2-axis").call(escalationsAxis);
+
+    var sections = axis.canvas.select(".axis-canvas").append("g").selectAll('rect').data(escalationsAxis.tickValues())
+    
+    // sections.exit().remove();
+
+    var escY = function(d,i) {
+        if (escalationLevels[i].c == '<') {
+            return escalationsScale(d);
+        } else {
+            if (i == escalationLevels.length-1) return 0;
+            return escalationsScale(escalationLevels[i+1].val);
+        }
+    };
+
+    var escHeight = function(d,i) {
+        if (escalationLevels[i].c == '<') {
+            if (i==0) return axis.height- escalationsScale(d);
+            return escalationsScale(escalationLevels[i-1].val)- escalationsScale(d);
+        }
+        else {
+            if (i == escalationLevels.length-1) return escalationsScale(d);
+            return escalationsScale(d) - escalationsScale(escalationLevels[i+1].val);
+        }
+    };
+    var escFill = function(d,i) {
+        return escalationLevels[i].color;
+    };
+
+    sections.enter()
+        .append("rect")
+        .merge(sections)
+            .attr("y", escY)
+            .attr("width", axis.width)
+            .attr("height", escHeight)
+            .attr("fill", escFill);
+
+});
+
+        </script>
+
+
+    </body>
+</html>
