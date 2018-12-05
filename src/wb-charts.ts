@@ -40,6 +40,7 @@ export abstract class Axis {
   tooltip: any = null
   type: string
   canvas: any
+  svg: any
   container: HTMLElement
   width: number
   height: number
@@ -59,11 +60,12 @@ export abstract class Axis {
     })
     this.height = height - margin.top - margin.bottom
     this.width = width - margin.left - margin.right
-    this.canvas = d3
+    this.svg = d3
       .select(container)
       .append('svg')
       .attr('width', width)
       .attr('height', height)
+    this.canvas = this.svg
       .append('g')
       .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')')
     this.createTooltip()
