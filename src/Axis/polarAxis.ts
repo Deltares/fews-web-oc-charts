@@ -70,6 +70,7 @@ export class PolarAxis extends Axis {
 
     this.setRange()
     this.initGrid()
+    this.createChartGroup()
   }
 
   redraw() {

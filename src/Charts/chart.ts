@@ -54,7 +54,7 @@ export abstract class Chart {
     this.group =
       this.group != null
         ? this.group
-        : axis.canvas
+        : axis.chartGroup
             .append('g')
             .attr('class', cssClass)
             .attr('id', this.id)

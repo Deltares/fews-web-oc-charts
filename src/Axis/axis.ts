@@ -16,6 +16,7 @@ export abstract class Axis {
   height: number
   margin: any
   options: any
+  chartGroup: any
   charts: Chart[]
   initialDraw: boolean = true
 
@@ -45,6 +46,10 @@ export abstract class Axis {
   abstract redraw()
 
   abstract updateGrid()
+
+  createChartGroup() {
+    this.chartGroup = this.canvas.append('g').attr('class', 'charts')
+  }
 
   createTooltip() {
     this.tooltip = d3

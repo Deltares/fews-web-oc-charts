@@ -43,9 +43,9 @@ export class CartesianAxis extends Axis {
       .append('rect')
       .attr('width', this.width)
       .attr('height', this.height)
-
     this.setRange()
     this.initGrid()
+    this.createChartGroup()
   }
 
   redraw() {
