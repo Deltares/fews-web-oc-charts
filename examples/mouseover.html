@@ -20,11 +20,14 @@
             }
 
             #chart-container-2 {
-            display: block;
+                display: block;
             }
 
 /* .mouse-over-effects { cursor:ew-resize; } */
 
+            .legend-entry {
+                cursor:pointer;
+            }
 
             #polar-dot {
                 fill: #999999;
@@ -41,6 +44,10 @@
                 fill: white;
             }
 
+            #chart-legend-2 {
+                display: block;
+                fill: white;
+            }
 
             .chart-line { fill: none; stroke: skyblue; }
             #control-line { fill: none; stroke: red; stroke-dasharray : 4,2; stroke-width: 2px; }
@@ -93,9 +100,10 @@ border-color: transparent black transparent transparent;
         <link rel="stylesheet" href="/dist/wb-charts.css">
     </head>
     <body>
-
-
-        <div id="chart-container-2"></div>
+        <div>
+            <div id="chart-container-2"></div>
+            <div id="chart-legend-2"></div>
+        </div>
         <script src="/dist/wb-charts.umd.js"></script>
         <script type="text/javascript">
 
@@ -104,7 +112,13 @@ var height = 400;
 var width = 800;
 
 var container2 = document.getElementById("chart-container-2");
-var axis = new wbCharts.CartesianAxis(container2, width, height, { x : {time: true} });
+var axis =  new wbCharts.CartesianAxis(container2, width, height, { x : {time: true,label: 'datum tijd in MET'}, y : {label: 'Waterstand [m]'} });
+var legend = new wbCharts.Legend( {
+    '#median-line': 'Middelste (P50)', 
+    '#control-line': 'Controle', 
+    '#percent90': '90% interval' ,
+    '#percent50': '50% interval' }
+    ,document.getElementById("chart-legend-2"));
 
 percentile = function(p, data) {
     var points = data;
@@ -167,20 +181,25 @@ d3.json("ensemble.json", function (error, data) {
     var plotPercentile50 = new wbCharts.ChartArea(percentiles[1], {});
     var plotPercentile90 = new wbCharts.ChartArea(percentiles[2], {});
 
-    // plotPercentile90.addTo(axis, { xkey: "x", ykey: "y" }, 'percent90');
-    // plotPercentile50.addTo(axis, { xkey: "x", ykey: "y" }, 'percent50');
+    plotPercentile90.addTo(axis, { xkey: "x", ykey: "y" }, 'percent90');
+    plotPercentile50.addTo(axis, { xkey: "x", ykey: "y" }, 'percent50');
+
+// for (i = 1; i< nEnsemble; i++) { var plotEnsemble=new wbCharts.ChartLine(members[i], {});
+//   plotEnsemble.addTo(axis, { xkey: "x" , ykey: "y" }, 'ensemble-line' ); }
+
     plotControl1.addTo(axis, { xkey: "x", ykey: "y" }, 'control-line');
     plotMedian1.addTo(axis, { xkey: "x", ykey: "y" }, 'median-line');
     axis.redraw();
+    axis.accept(legend);
 
     var escalationLevels= [
-        {id: 'extralow', val : -110, color: "rgba(139, 69, 19,.5)", c: '<'},
-        {id: 'low', val : -100, color: "rgba(205, 133, 63,.5)", c: '<'},
-        {id: 'warn', val: 100, color: "rgba(255, 215, 0,.5)", c: '>'},
-        {id: 'alert', val: 120, color: "rgba(255, 0, 0,.5)", c: '>' }
+        {id: 'streefpeil', val : -100, color: "rgba(205, 133, 63,.5)", c: '<'},
+        {id: 'verhoogd', val: 100, color: "rgba(255, 215, 0,.5)", c: '>'},
+        {id: 'hoog', val: 110, color: "rgba(255, 150, 0,.5)", c: '>' },
+        {id: 'extreem', val: 140, color: "rgba(255, 0, 0,.5)", c: '>' },
     ];
     var escalationsScale = d3.scaleLinear().domain(axis.yScale.domain()).range(axis.yScale.range())
-    var escalationsAxis = d3.axisRight(escalationsScale).tickValues([-110,-100,100,120]).tickFormat( function(d,i){return escalationLevels[i].id});
+    var escalationsAxis = d3.axisRight(escalationsScale).tickValues([-100,100,110,140]).tickFormat( function(d,i){return escalationLevels[i].id});
     var axisHandle = axis.canvas.select(".y2-axis").call(escalationsAxis);
 
     axisHandle.selectAll('.tick text')
@@ -259,6 +278,9 @@ this.parentNode.appendChild(this);
     var trace = ['#control-line','#median-line'];
 
 
+    
+
+
     var mousePerLine = mouseG.selectAll('.mouse-per-line')
     .data(trace)
     .enter()
@@ -315,7 +337,6 @@ this.parentNode.appendChild(this);
                 return d;
             });
 
-
             var bisect = d3.bisector(function(d) { return d.x; }).right;
             var popupData = {};
             var posx;
@@ -327,13 +348,25 @@ this.parentNode.appendChild(this);
                     var idx = bisect(datum, mouse[0]);
                     var posy = datum[idx].y;
                     posx = datum[idx].x;
-                    popupData[d]= { 'x': axis.xScale.invert(datum[idx].x), 'y': axis.yScale.invert(posy), 'color': stroke};
+                    var yLabel;
+                    if (Array.isArray(posy) ) {
+                        var labels=posy
+                        for (var i=0; i<posy.length;i++ ) {
+                            labels[i] = axis.yScale.invert(posy[i]).toFixed(2)
+                        }
+                        yLabel = labels.join(':')
+                        posy = posy[0]
+                    } else {
+                        yLabel = axis.yScale.invert(posy).toFixed(2)
+                    }  
+
+                    popupData[d]= { 'x': axis.xScale.invert(datum[idx].x), 'y': yLabel, 'color': stroke};
                     return "translate(" + posx + "," + posy +")";
                 })
             var htmlContent ='';
             for (var label in popupData) {
                 var v = popupData[label];
-                htmlContent += '<span style="color:'  + v.color+ ' ">' + "   " + v.y.toFixed(2) +  '</span><br/>';
+                htmlContent += '<span style="color:'  + v.color+ ' ">' + "   " + v.y +  '</span><br/>';
             }
 
             var div = axis.tooltip
