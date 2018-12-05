@@ -119,6 +119,8 @@ var axis = new wbCharts.CartesianAxis(container2, 400, height, { yScale: wbChart
 // plot3.addTo(axis, { xkey: "y", ykey: "x" }, 'cartesian-line')
 plot4.addTo(axis, { xkey: "x", ykey: "y", colorkey: "y" }, 'cartesian-histogram');
 // plot5.addTo(axis, { xkey: "x", ykey: "y", colorkey: "y" }, 'cartesian-line')
+axis.redraw()
+polarAxis.redraw()
 var count = 0;
 var updateCharts = function (event) {
     var newData = randomSpectrum(count + 1);
