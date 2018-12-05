@@ -34,6 +34,13 @@
                 stroke: white;
             }
 
+            .ensemble-line {
+              stroke: black;
+              stroke-width: 1px;
+              fill: none;
+              opacity: .5;
+            }
+
             .mouse-line {
                 stroke: white;
                 stroke-width: 1px;
@@ -49,7 +56,7 @@
                 fill: white;
             }
 
-            .chart-line { fill: none; stroke: skyblue; }
+            /* .chart-line { fill: none; stroke: skyblue; } */
             #control-line { fill: none; stroke: red; stroke-dasharray : 4,2; stroke-width: 2px; }
 
             #median-line { fill: none; stroke: white; stroke-width: 2px; }
@@ -117,7 +124,9 @@ var legend = new wbCharts.Legend( {
     '#median-line': 'Middelste (P50)',
     '#control-line': 'Controle',
     '#percent90': '90% interval' ,
-    '#percent50': '50% interval' }
+    '#percent50': '50% interval',
+    '.ensemble-line': 'Verstoord',
+  }
     ,document.getElementById("chart-legend-2"));
 
 percentile = function(p, data) {
@@ -186,7 +195,7 @@ d3.json("ensemble.json", function (error, data) {
 
     for (i = 1; i< nEnsemble; i++) {
       var plotEnsemble=new wbCharts.ChartLine(members[i], {});
-      // plotEnsemble.addTo(axis, { xkey: "x" , ykey: "y" }, '.ensemble-line' );
+      plotEnsemble.addTo(axis, { xkey: "x" , ykey: "y" }, '.ensemble-line' );
     }
 
     plotControl1.addTo(axis, { xkey: "x", ykey: "y" }, '#control-line');
@@ -195,7 +204,7 @@ d3.json("ensemble.json", function (error, data) {
     axis.accept(legend);
 
     var escalationLevels= [
-        {id: 'streefpeil', val : -100, color: "rgba(205, 133, 63,.5)", c: '<'},
+        {id: 'normaal', val : -100, color: "rgba(205, 133, 63,.5)", c: '<'},
         {id: 'verhoogd', val: 100, color: "rgba(255, 215, 0,.5)", c: '>'},
         {id: 'hoog', val: 110, color: "rgba(255, 150, 0,.5)", c: '>' },
         {id: 'extreem', val: 140, color: "rgba(255, 0, 0,.5)", c: '>' },
