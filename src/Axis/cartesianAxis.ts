@@ -12,6 +12,7 @@ function mean(x: number[] | number) {
 
 interface XAxisOptions {
   label?: string
+  time?: boolean
 }
 
 interface YAxisOptions {
@@ -71,6 +72,9 @@ export class CartesianAxis extends Axis {
 
   updateGrid() {
     let xAxis = d3.axisBottom(this.xScale).ticks(5)
+    if (this.xScale instanceof d3.scaleTime) {
+      xAxis.tickFormat(this.multiFormat)
+    }
     let xGrid = d3
       .axisBottom(this.xScale)
       .ticks(5)
@@ -122,7 +126,11 @@ export class CartesianAxis extends Axis {
   }
 
   protected setRange() {
-    this.xScale = d3.scaleLinear().range([0, this.width])
+    if (this.options.x && this.options.x.time) {
+      this.xScale = d3.scaleTime().range([0, this.width])
+    } else {
+      this.xScale = d3.scaleLinear().range([0, this.width])
+    }
     this.yScale = d3.scaleLinear().range([this.height, 0])
   }
 
@@ -153,5 +161,24 @@ export class CartesianAxis extends Axis {
         .style('font-size', '11px')
         .text(this.options.x.label)
     }
+  }
+
+  // Define filter conditions
+  multiFormat(date) {
+    return (d3.timeSecond(date) < date
+      ? d3.timeFormat('.%L')
+      : d3.timeMinute(date) < date
+        ? d3.timeFormat(':%S')
+        : d3.timeHour(date) < date
+          ? d3.timeFormat('%H:%M')
+          : d3.timeDay(date) < date
+            ? d3.timeFormat('%H:%M')
+            : d3.timeMonth(date) < date
+              ? d3.timeWeek(date) < date
+                ? d3.timeFormat('%a %d')
+                : d3.timeFormat('%b %d')
+              : d3.timeYear(date) < date
+                ? d3.timeFormat('%B')
+                : d3.timeFormat('%Y'))(date)
   }
 }
