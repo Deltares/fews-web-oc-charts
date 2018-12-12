@@ -55,6 +55,7 @@ export class ChartArea extends Chart {
 
     let area = this.group.select('path')
     area.attr('d', areaGenerator(mappedData))
+    area.datum(mappedData)
   }
 
   plotterPolar(axis: PolarAxis, dataKeys: any) {

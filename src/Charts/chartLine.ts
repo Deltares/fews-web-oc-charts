@@ -35,6 +35,7 @@ export class ChartLine extends Chart {
       .on('mouseout', function(d: any) {
         axis.hideTooltip(d)
       })
+    line.datum(mappedData)
   }
 
   plotterPolar(axis: PolarAxis, dataKeys: any) {
