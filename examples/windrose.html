@@ -30,10 +30,16 @@
             }
 
             #chart-container-1 {
-                display: inline;
+                display: inline-block;
+                width: 400px;
+                height: 400px;
             }
 
-            #chart-container-2 { display: inline; }
+            #chart-container-2 {
+                display: inline-block;
+                width: 150px;
+                height: 400px;
+            }
 
             #polar-dot {
                 fill: greenyellow;
@@ -100,13 +106,11 @@ lightgray; border: 0px; border-radius: 8px; pointer-events: none; }
 }
 // set constants
 var transitionTime = 200;
-var height = 400;
-var width = 400;
 var container1 = document.getElementById("chart-container-1");
-var polarAxis = new wbCharts.PolarAxis(container1, width, height, { angular: { direction: wbCharts.CLOCKWISE, intercept: 90 } ,  innerRadius: 20 });
+var polarAxis = new wbCharts.PolarAxis(container1, null, null, { angular: { direction: wbCharts.CLOCKWISE, intercept: 90 } ,  innerRadius: 20 });
 
 var container2 = document.getElementById("chart-container-2");
-var axis = new wbCharts.CartesianAxis(container2, 150, height, {  transitionTime: transitionTime, y : { label: "windsnelheid [m/s]" }} );
+var axis = new wbCharts.CartesianAxis(container2, null, null, {  transitionTime: transitionTime, y : { label: "windsnelheid [m/s]" }} );
 
 var polarDataMeting = [
     [

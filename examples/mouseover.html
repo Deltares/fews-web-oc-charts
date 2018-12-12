@@ -17,10 +17,8 @@
 
             #chart-container-1 {
                 display: block;
-            }
-
-            #chart-container-2 {
-                display: block;
+                width: 100%;
+                height: 400px;
             }
 
 .mouse-over-effects { cursor:crosshair; }
@@ -51,7 +49,7 @@
                 fill: white;
             }
 
-            #chart-legend-2 {
+            #chart-legend-1 {
                 display: block;
                 fill: white;
             }
@@ -108,18 +106,14 @@ border-color: transparent black transparent transparent;
     </head>
     <body>
         <div>
-            <div id="chart-container-2"></div>
-            <div id="chart-legend-2"></div>
+            <div id="chart-container-1"></div>
+            <div id="chart-legend-1"></div>
         </div>
         <script src="/dist/wb-charts.umd.js"></script>
         <script type="text/javascript">
 
-// set constants
-var height = 400;
-var width = 800;
-
-var container2 = document.getElementById("chart-container-2");
-var axis =  new wbCharts.CartesianAxis(container2, width, height, { x : {time: true }, y : {label: 'Waterstand [cm]'} });
+var container = document.getElementById("chart-container-1");
+var axis =  new wbCharts.CartesianAxis(container, null, null, { x : {time: true }, y : {label: 'Waterstand [cm]'} });
 var legend = new wbCharts.Legend( {
     '#median-line': 'Middelste (P50)',
     '#control-line': 'Controle',
@@ -127,7 +121,7 @@ var legend = new wbCharts.Legend( {
     '#percent50': '50% interval',
     '.ensemble-line': 'Verstoord',
   }
-    ,document.getElementById("chart-legend-2"));
+    ,document.getElementById("chart-legend-1"));
 
 percentile = function(p, data) {
     var points = data;

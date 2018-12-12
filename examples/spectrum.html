@@ -19,10 +19,16 @@
             }
 
             #chart-container-1 {
-                display: inline;
+                display: inline-block;
+                width: 400px;
+                height: 400px;
             }
 
-            #chart-container-2 { display: inline; }
+            #chart-container-2 {
+                display: inline-block;
+                width: 400px;
+                height: 400px;
+            }
 
             #polar-dot {
                 fill: #999999;
@@ -72,10 +78,8 @@ lightgray; border: 0px; border-radius: 8px; pointer-events: none; }
     return spectrum;
 }
 // set constants
-var height = 400;
-var width = 400;
 var container1 = document.getElementById("chart-container-1");
-var polarAxis = new wbCharts.PolarAxis(container1, width, height,  { angular: { direction: wbCharts.CLOCKWISE, }, innerRadius: 40 });
+var polarAxis = new wbCharts.PolarAxis(container1, null, null,  { angular: { direction: wbCharts.CLOCKWISE, }, innerRadius: 40 });
 var polarData = [
     [
         { x: [1, 2], y: [35, 85], v: 0 },

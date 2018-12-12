@@ -20,10 +20,14 @@
 
             #chart-container-1 {
                 display: block;
+                height: 400px;
+                width: 100%;
             }
 
             #chart-container-2 {
-            display: block;
+                display: block;
+                height: 400px;
+                width: 100%;
             }
 
 
@@ -71,13 +75,11 @@ lightgray; border: 0px; border-radius: 8px; pointer-events: none; }
         <script type="text/javascript">
 
 // set constants
-var height = 400;
-var width = 800;
 var container1 = document.getElementById("chart-container-1");
 
-var axis1 = new wbCharts.CartesianAxis(container1, width, height, { x:{ time: true } } );
+var axis1 = new wbCharts.CartesianAxis(container1, null, null, { x:{ time: true } } );
 var container2 = document.getElementById("chart-container-2");
-var axis = new wbCharts.CartesianAxis(container2, width, height,  { x: { time: true }});
+var axis = new wbCharts.CartesianAxis(container2, null, null,  { x: { time: true }});
 
 percentile = function(p, data) {
     var points = data;
