@@ -34,7 +34,10 @@ export class ChartArea extends Chart {
       }
     })
 
-    this.group = this.selectGroup(axis, 'chart-area').append('path')
+    this.group = this.selectGroup(axis, 'chart-area')
+    if (this.group.select('path').size() === 0) {
+      this.group.append('path')
+    }
 
     let areaGenerator = d3
       .area()
@@ -50,12 +53,8 @@ export class ChartArea extends Chart {
 
     let elements = this.group.datum(mappedData)
 
-    let t = d3
-      .transition()
-      .duration(this.options.transitionTime)
-      .ease(d3.easeLinear)
-
-    elements.attr('d', areaGenerator)
+    let area = this.group.select('path')
+    area.attr('d', areaGenerator(mappedData))
   }
 
   plotterPolar(axis: PolarAxis, dataKeys: any) {

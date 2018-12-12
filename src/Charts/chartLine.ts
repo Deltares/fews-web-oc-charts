@@ -8,7 +8,7 @@ export class ChartLine extends Chart {
     const ykey = dataKeys.ykey ? dataKeys.ykey : 'y'
 
     let mappedData = this.mapDataCartesian(axis, dataKeys)
-    let line = d3
+    let lineGenerator = d3
       .line()
       .x(function(d: any) {
         return d.x
@@ -20,12 +20,14 @@ export class ChartLine extends Chart {
         return d.y != null
       })
 
-    this.group = this.selectGroup(axis, 'chart-line').append('path')
+    this.group = this.selectGroup(axis, 'chart-line')
+    if (this.group.select('path').size() === 0) {
+      this.group.append('path')
+    }
 
-    let elements = this.group.datum(mappedData)
-
-    elements
-      .attr('d', line(mappedData))
+    let line = this.group.select('path')
+    line
+      .attr('d', lineGenerator(mappedData))
       .on('mouseover', function(d: any) {
         const v = { x: d[xkey], y: d[ykey] }
         axis.showTooltip(v)
@@ -33,14 +35,6 @@ export class ChartLine extends Chart {
       .on('mouseout', function(d: any) {
         axis.hideTooltip(d)
       })
-      .merge(elements)
-
-    let t = d3
-      .transition()
-      .duration(this.options.transitionTime)
-      .ease(d3.easeLinear)
-
-    elements.transition(t).attr('d', line(mappedData))
   }
 
   plotterPolar(axis: PolarAxis, dataKeys: any) {
