@@ -46,6 +46,8 @@ export class Legend implements Visitor {
             .attr('y1', 0)
             .attr('y2', 0)
             .style('stroke', style.getPropertyValue('stroke'))
+            .style('stroke-width', style.getPropertyValue('stroke-width'))
+            .style('stroke-dasharray', style.getPropertyValue('stroke-dasharray'))
         } else if (chart instanceof ChartArea) {
           element
             .append('rect')
@@ -53,7 +55,7 @@ export class Legend implements Visitor {
             .attr('y', -4)
             .attr('width', 20)
             .attr('height', 10)
-            .style('fill', style.getPropertyValue('stroke'))
+            .style('fill', style.getPropertyValue('fill'))
         }
       } else if (selector.startsWith('.')) {
         group = d3.selectAll(selector)
