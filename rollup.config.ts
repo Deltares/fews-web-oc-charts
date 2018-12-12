@@ -40,6 +40,7 @@ export default {
     copy({
       assets: [
         `./src/${libraryName}.css`,
+        `./src/${libraryName}-light.css`,
       ],
     }),
 
