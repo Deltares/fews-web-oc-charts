@@ -9,3 +9,7 @@
 }
 
 .grid text { display: none; }
+
+.view {
+  fill: none;
+}
