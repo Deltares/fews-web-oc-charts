@@ -194,7 +194,6 @@ export class CartesianAxis extends Axis {
       g.append('text')
         .attr('x', -40)
         .attr('y', -10)
-        .style('fill', 'white')
         .style('text-anchor', 'start')
         .style('font-size', '11px')
         .text(this.options.y.label)
@@ -203,7 +202,6 @@ export class CartesianAxis extends Axis {
       g.append('text')
         .attr('x', this.width / 2)
         .attr('y', this.height + 30)
-        .style('fill', 'white')
         .style('text-anchor', 'middle')
         .style('font-size', '11px')
         .text(this.options.x.label)
@@ -215,17 +213,17 @@ export class CartesianAxis extends Axis {
     return (d3.timeSecond(date) < date
       ? d3.timeFormat('.%L')
       : d3.timeMinute(date) < date
-      ? d3.timeFormat(':%S')
-      : d3.timeHour(date) < date
-      ? d3.timeFormat('%H:%M')
-      : d3.timeDay(date) < date
-      ? d3.timeFormat('%H:%M')
-      : d3.timeMonth(date) < date
-      ? d3.timeWeek(date) < date
-        ? d3.timeFormat('%a %d')
-        : d3.timeFormat('%b %d')
-      : d3.timeYear(date) < date
-      ? d3.timeFormat('%B')
-      : d3.timeFormat('%Y'))(date)
+        ? d3.timeFormat(':%S')
+        : d3.timeHour(date) < date
+          ? d3.timeFormat('%H:%M')
+          : d3.timeDay(date) < date
+            ? d3.timeFormat('%H:%M')
+            : d3.timeMonth(date) < date
+              ? d3.timeWeek(date) < date
+                ? d3.timeFormat('%a %d')
+                : d3.timeFormat('%b %d')
+              : d3.timeYear(date) < date
+                ? d3.timeFormat('%B')
+                : d3.timeFormat('%Y'))(date)
   }
 }
