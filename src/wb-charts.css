@@ -1,3 +1,7 @@
+.axis-canvas {
+  fill: rgb(44, 44, 44);
+}
+
 .axis path { stroke-width: 1px; stroke: white;}
 .axis .tick line { stroke-width: 1px; stroke: white;}
 .axis .tick text { stroke-width: 1px; fill: white;}
