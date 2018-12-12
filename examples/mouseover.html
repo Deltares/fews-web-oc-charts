@@ -194,30 +194,12 @@ d3.json("ensemble.json", function (error, data) {
     axis.accept(legend);
     axis.accept(escalationsVisitor);
 
-
-
-
     });
-
-d3.selection.prototype.moveToFront = function() {
-return this.each(function(){
-this.parentNode.appendChild(this);
-});
-};
-
-    d3.selection.prototype.moveToBack = function() {
-    return this.each(function() {
-    var firstChild = this.parentNode.firstChild;
-    if (firstChild) {
-    this.parentNode.insertBefore(this, firstChild);
-    }
-    });
-    };
-
 
     var mouseG = axis.canvas.append("g")
         .attr("class", "mouse-over-effects")
 
+    window.onresize = function() { axis.resize()};
 
 
     mouseG.append("path") // this is the black vertical line to follow mouse
