@@ -106,7 +106,7 @@ export class CartesianAxis extends Axis {
       xExtent = d3.extent(d3.merge([xExtent, [].concat(...chartXExtent)]))
       yExtent = d3.extent(d3.merge([yExtent, [].concat(...chartYExtent)]))
     }
-    this.xScale.domain(xExtent).nice()
+    this.xScale.domain(xExtent)
     this.yScale.domain(yExtent).nice()
 
     for (let chart of this.charts) {
