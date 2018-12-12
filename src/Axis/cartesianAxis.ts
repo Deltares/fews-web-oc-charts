@@ -37,15 +37,60 @@ export class CartesianAxis extends Axis {
     options?: CartesianAxisOptions
   ) {
     super(container, width, height, options)
-    this.canvas
-      .append('g')
-      .attr('class', 'axis-canvas')
-      .append('rect')
-      .attr('width', this.width)
-      .attr('height', this.height)
+    this.view = this.canvas
+    this.chartGroup = this.canvas
+
+    this.setCanvas()
     this.setRange()
     this.initGrid()
-    this.createChartGroup()
+    this.setClipPath()
+
+    this.chartGroup = this.chartGroup
+      .append('g')
+      .attr('class', 'group')
+      .attr('clip-path', 'url(#clipPath)')
+      .append('g')
+  }
+
+  setCanvas() {
+    let rect = this.canvas.select('.axis-canvas')
+    if (rect.size() === 0) {
+      this.canvas
+        .append('g')
+        .attr('class', 'axis-canvas')
+        .append('rect')
+        .attr('width', this.width)
+        .attr('height', this.height)
+    } else {
+      rect
+        .select('rect')
+        .attr('height', this.height)
+        .attr('width', this.width)
+    }
+  }
+
+  setClipPath() {
+    let clipPath = this.defs.select('clipPath')
+    if (clipPath.size() === 0) {
+      this.defs
+        .append('clipPath')
+        .attr('id', 'clipPath')
+        .append('rect')
+        .attr('height', this.height)
+        .attr('width', this.width)
+    } else {
+      clipPath
+        .select('rect')
+        .attr('height', this.height)
+        .attr('width', this.width)
+    }
+  }
+
+  zoom() {
+    for (let chart of this.charts) {
+      chart.plotterCartesian(this, chart.dataKeys)
+    }
+    this.updateGrid()
   }
 
   redraw() {
@@ -71,6 +116,8 @@ export class CartesianAxis extends Axis {
   }
 
   updateGrid() {
+    this.setClipPath()
+    this.setCanvas()
     let xAxis = d3.axisBottom(this.xScale).ticks(5)
     if (this.xScale instanceof d3.scaleTime) {
       xAxis.tickFormat(this.multiFormat)
@@ -168,17 +215,17 @@ export class CartesianAxis extends Axis {
     return (d3.timeSecond(date) < date
       ? d3.timeFormat('.%L')
       : d3.timeMinute(date) < date
-        ? d3.timeFormat(':%S')
-        : d3.timeHour(date) < date
-          ? d3.timeFormat('%H:%M')
-          : d3.timeDay(date) < date
-            ? d3.timeFormat('%H:%M')
-            : d3.timeMonth(date) < date
-              ? d3.timeWeek(date) < date
-                ? d3.timeFormat('%a %d')
-                : d3.timeFormat('%b %d')
-              : d3.timeYear(date) < date
-                ? d3.timeFormat('%B')
-                : d3.timeFormat('%Y'))(date)
+      ? d3.timeFormat(':%S')
+      : d3.timeHour(date) < date
+      ? d3.timeFormat('%H:%M')
+      : d3.timeDay(date) < date
+      ? d3.timeFormat('%H:%M')
+      : d3.timeMonth(date) < date
+      ? d3.timeWeek(date) < date
+        ? d3.timeFormat('%a %d')
+        : d3.timeFormat('%b %d')
+      : d3.timeYear(date) < date
+      ? d3.timeFormat('%B')
+      : d3.timeFormat('%Y'))(date)
   }
 }

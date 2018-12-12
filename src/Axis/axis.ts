@@ -10,6 +10,8 @@ export interface AxisOptions {
 export abstract class Axis {
   tooltip: any = null
   type: string
+  view: any
+  defs: any
   canvas: any
   svg: any
   container: HTMLElement
@@ -24,24 +26,43 @@ export abstract class Axis {
   constructor(container: HTMLElement, width: number, height: number, options: AxisOptions) {
     this.container = container
     this.options = options
+
+    let containerWidth = width == null ? this.container.offsetWidth : width
+    let containerHeight = height == null ? this.container.offsetHeight : height
+
     let margin = (this.margin = {
       top: 40,
       right: 40,
       bottom: 40,
       left: 40
     })
-    this.height = height - margin.top - margin.bottom
-    this.width = width - margin.left - margin.right
-    this.svg = d3
+
+    this.setSize()
+    this.canvas = d3
       .select(container)
       .append('svg')
-      .attr('width', width)
-      .attr('height', height)
-    this.canvas = this.svg
+      .attr('width', '100%')
+      .attr('height', '100%')
+
+    this.defs = this.canvas
+    this.defs = this.defs.append('defs')
+    this.canvas = this.canvas
       .append('g')
       .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')')
     this.createTooltip()
     this.charts = []
+  }
+
+  setSize() {
+    this.height = this.container.offsetHeight - this.margin.top - this.margin.bottom
+    this.width = this.container.offsetWidth - this.margin.left - this.margin.right
+  }
+
+  resize() {
+    this.setSize()
+    this.setRange()
+    this.updateGrid()
+    this.redraw()
   }
 
   abstract redraw()
