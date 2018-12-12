@@ -27,9 +27,6 @@ export abstract class Axis {
     this.container = container
     this.options = options
 
-    let containerWidth = width == null ? this.container.offsetWidth : width
-    let containerHeight = height == null ? this.container.offsetHeight : height
-
     let margin = (this.margin = {
       top: 40,
       right: 40,
@@ -37,7 +34,7 @@ export abstract class Axis {
       left: 40
     })
 
-    this.setSize()
+    this.setSize(height, width)
     this.canvas = d3
       .select(container)
       .append('svg')
@@ -53,9 +50,12 @@ export abstract class Axis {
     this.charts = []
   }
 
-  setSize() {
-    this.height = this.container.offsetHeight - this.margin.top - this.margin.bottom
-    this.width = this.container.offsetWidth - this.margin.left - this.margin.right
+  setSize(height?: number, width?: number) {
+    // FIXME: does not work for arguments
+    let containerWidth = width == null ? this.container.offsetWidth : width
+    let containerHeight = height == null ? this.container.offsetHeight : height
+    this.height = containerHeight - this.margin.top - this.margin.bottom
+    this.width = containerWidth - this.margin.left - this.margin.right
   }
 
   resize() {
