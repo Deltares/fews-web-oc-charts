@@ -81,6 +81,9 @@ var axis1 = new wbCharts.CartesianAxis(container1, null, null, { x:{ time: true 
 var container2 = document.getElementById("chart-container-2");
 var axis = new wbCharts.CartesianAxis(container2, null, null,  { x: { time: true }});
 
+var warnings = new wbCharts.WarningLevels();
+
+
 percentile = function(p, data) {
     var points = data;
     points.sort(function (a, b) { return a - b });
@@ -104,12 +107,6 @@ percentile = function(p, data) {
 var refDate = new Date(2018,10,1);
 
 console.log(axis.yScale.range());
-
-
-var escalations= axis.canvas
-.append('g')
-.attr("transform", "translate(" + axis.width + " ,0)")
-.attr('class', 'axis y2-axis');
 
 
 
@@ -156,54 +153,8 @@ d3.json("ensemble.json", function (error, data) {
     plotControl1.addTo(axis, { xkey: "x", ykey: "y" }, '#control-line');
     plotMedian1.addTo(axis, { xkey: "x", ykey: "y" }, '#median-line');
     axis.redraw();
+    axis.accept(warnings);
 
-
-
-    var escalationLevels= [
-        {id: 'extralow', val : -110, color: "rgb(139, 69, 19,.5)", c: '<'},
-        {id: 'low', val : -100, color: "rgb(205, 133, 63,.5)", c: '<'},
-        {id: 'warn', val: 100, color: "rgb(255, 215, 0,.5)", c: '>'},
-        {id: 'alert', val: 120, color: "rgb(255, 0, 0,.5)", c: '>' }
-    ];
-    var escalationsScale = d3.scaleLinear().domain(axis.yScale.domain()).range(axis.yScale.range())
-    console.log(axis.yScale.domain())
-    var escalationsAxis = d3.axisRight(escalationsScale).tickValues([-110,-100,100,120]).tickFormat( function(d,i){return escalationLevels[i].id});
-    axis.canvas.select(".y2-axis").call(escalationsAxis);
-
-    var sections = axis.canvas.select(".axis-canvas").append("g").selectAll('rect').data(escalationsAxis.tickValues())
-
-    // sections.exit().remove();
-
-    var escY = function(d,i) {
-        if (escalationLevels[i].c == '<') {
-            return escalationsScale(d);
-        } else {
-            if (i == escalationLevels.length-1) return 0;
-            return escalationsScale(escalationLevels[i+1].val);
-        }
-    };
-
-    var escHeight = function(d,i) {
-        if (escalationLevels[i].c == '<') {
-            if (i==0) return axis.height- escalationsScale(d);
-            return escalationsScale(escalationLevels[i-1].val)- escalationsScale(d);
-        }
-        else {
-            if (i == escalationLevels.length-1) return escalationsScale(d);
-            return escalationsScale(d) - escalationsScale(escalationLevels[i+1].val);
-        }
-    };
-    var escFill = function(d,i) {
-        return escalationLevels[i].color;
-    };
-
-    sections.enter()
-        .append("rect")
-        .merge(sections)
-            .attr("y", escY)
-            .attr("width", axis.width)
-            .attr("height", escHeight)
-            .attr("fill", escFill);
 
 });
 
