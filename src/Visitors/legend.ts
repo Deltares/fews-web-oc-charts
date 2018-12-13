@@ -24,9 +24,12 @@ export class Legend implements Visitor {
 
   createLegend(axis: Axis) {
     this.svg.attr('width', axis.margin.left + axis.width + axis.margin.right).attr('height', 20)
-    this.group = this.svg.append('g').attr('transform', 'translate(' + axis.margin.left + ', 0)')
+    if (this.group == null) this.group = this.svg.append('g')
+    this.group.attr('transform', 'translate(' + axis.margin.left + ', 0)')
     let dx = Math.round(axis.width / Object.keys(this.labels).length)
     let entries = this.group.selectAll('g').data(this.labels)
+
+    //enter
     let enter = entries
       .enter()
       .append('g')
@@ -35,7 +38,6 @@ export class Legend implements Visitor {
       })
       .attr('class', 'legend-entry')
       .each(function(d, i) {
-        console.log(d, i)
         let entry = d3.select(this)
         let chartElement = d3
           .select(d.selector)
@@ -79,5 +81,10 @@ export class Legend implements Visitor {
           }
         })
       })
+
+    //update
+    entries.attr('transform', function(d, i) {
+      return 'translate(' + i * dx + ',10)'
+    })
   }
 }
