@@ -26,20 +26,25 @@ export class Legend implements Visitor {
     this.svg.attr('width', axis.margin.left + axis.width + axis.margin.right).attr('height', 20)
     this.group = this.svg.append('g').attr('transform', 'translate(' + axis.margin.left + ', 0)')
     let dx = Math.round(axis.width / Object.keys(this.labels).length)
-    let i = 0
-    for (let selector in this.labels) {
-      let style
-      let group
-      let element = this.group
-        .append('g')
-        .attr('transform', 'translate(' + i * dx + ',10)')
-        .attr('class', 'legend-entry')
-      if (selector.startsWith('#')) {
-        group = d3.select(selector)
-        style = window.getComputedStyle(group.select('path').node() as Element)
-        let chart = axis.charts.find(x => x.id === selector)
-        if (chart instanceof ChartLine) {
-          element
+    let entries = this.group.selectAll('g').data(this.labels)
+    let enter = entries
+      .enter()
+      .append('g')
+      .attr('transform', function(d, i) {
+        return 'translate(' + i * dx + ',10)'
+      })
+      .attr('class', 'legend-entry')
+      .each(function(d, i) {
+        console.log(d, i)
+        let entry = d3.select(this)
+        let chartElement = d3
+          .select(d.selector)
+          .select('path')
+          .node() as Element
+        let style = window.getComputedStyle(chartElement)
+        let chart = axis.charts.filter(x => x.id === d.selector)
+        if (chart[0] instanceof ChartLine) {
+          entry
             .append('line')
             .attr('x1', 0)
             .attr('x2', 20)
@@ -48,8 +53,8 @@ export class Legend implements Visitor {
             .style('stroke', style.getPropertyValue('stroke'))
             .style('stroke-width', style.getPropertyValue('stroke-width'))
             .style('stroke-dasharray', style.getPropertyValue('stroke-dasharray'))
-        } else if (chart instanceof ChartArea) {
-          element
+        } else if (chart[0] instanceof ChartArea) {
+          entry
             .append('rect')
             .attr('x', 0)
             .attr('y', -4)
@@ -57,36 +62,22 @@ export class Legend implements Visitor {
             .attr('height', 10)
             .style('fill', style.getPropertyValue('fill'))
         }
-      } else if (selector.startsWith('.')) {
-        group = d3.selectAll(selector)
-        let charts = axis.charts.filter(x => x.id === selector)
-        let groupElement = d3.select(selector)
-        style = window.getComputedStyle(groupElement.select('path').node() as Element)
-        element
-          .append('line')
-          .attr('x1', 0)
-          .attr('x2', 20)
-          .attr('y1', 0)
-          .attr('y2', 0)
-          .style('stroke', style.getPropertyValue('stroke'))
-      }
-      element
-        .append('text')
-        .text(this.labels[selector])
-        .attr('x', 25)
-        .attr('y', 0)
-        .style('dominant-baseline', 'middle')
-      element.on('click', function() {
-        let display = style.getPropertyValue('visibility')
-        if (display === 'visible') {
-          group.style('visibility', 'hidden')
-          element.style('opacity', 0.5)
-        } else {
-          group.style('visibility', 'visible')
-          element.style('opacity', 1.0)
-        }
+        entry
+          .append('text')
+          .text(d.label)
+          .attr('x', 25)
+          .attr('y', 0)
+          .style('dominant-baseline', 'middle')
+        entry.on('click', function() {
+          let display = style.getPropertyValue('visibility')
+          if (display === 'visible') {
+            d3.selectAll(d.selector).style('visibility', 'hidden')
+            entry.style('opacity', 0.5)
+          } else {
+            d3.selectAll(d.selector).style('visibility', 'visible')
+            entry.style('opacity', 1.0)
+          }
+        })
       })
-      i++
-    }
   }
 }
