@@ -34,10 +34,10 @@ export class Legend implements Visitor {
         .append('g')
         .attr('transform', 'translate(' + i * dx + ',10)')
         .attr('class', 'legend-entry')
-      if (selector.startsWith('#')) {
+      if (selector.lastIndexOf('#',0)===0) {
         group = d3.select(selector)
         style = window.getComputedStyle(group.select('path').node() as Element)
-        let chart = axis.charts.find(x => x.id === selector)
+        let chart = axis.charts.filter(x => x.id === selector)[0]
         if (chart instanceof ChartLine) {
           element
             .append('line')
@@ -57,7 +57,7 @@ export class Legend implements Visitor {
             .attr('height', 10)
             .style('fill', style.getPropertyValue('fill'))
         }
-      } else if (selector.startsWith('.')) {
+      } else if (selector.lastIndexOf('.',0)===0) {
         group = d3.selectAll(selector)
         let charts = axis.charts.filter(x => x.id === selector)
         let groupElement = d3.select(selector)
@@ -77,13 +77,12 @@ export class Legend implements Visitor {
         .attr('y', 0)
         .style('dominant-baseline', 'middle')
       element.on('click', function() {
-        let display = style.getPropertyValue('visibility')
-        if (display === 'visible') {
-          group.style('visibility', 'hidden')
-          element.style('opacity', 0.5)
-        } else {
-          group.style('visibility', 'visible')
+        if (group.style('display')=== 'none') {
+          group.style('display', 'inline')
           element.style('opacity', 1.0)
+        } else {
+          group.style('display', 'none')
+          element.style('opacity', 0.5)
         }
       })
       i++
