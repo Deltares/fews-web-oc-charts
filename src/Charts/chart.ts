@@ -55,8 +55,8 @@ export abstract class Chart {
       this.group = axis.chartGroup
         .append('g')
         .attr('transform', 'rotate(' + intercept + ')scale(' + direction + ' ,1)')
-      if (this.id.startsWith('#')) this.group.attr('id', this.id.substr(1))
-      if (this.id.startsWith('.')) {
+      if (this.id.lastIndexOf('#', 0) === 0) this.group.attr('id', this.id.substr(1))
+      if (this.id.lastIndexOf('.', 0) === 0) {
         this.group.attr('class', cssClass + ' ' + this.id.substr(1))
       } else {
         this.group.attr('class', cssClass)

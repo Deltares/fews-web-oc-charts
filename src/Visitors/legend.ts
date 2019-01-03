@@ -34,10 +34,10 @@ export class Legend implements Visitor {
         .append('g')
         .attr('transform', 'translate(' + i * dx + ',10)')
         .attr('class', 'legend-entry')
-      if (selector.startsWith('#')) {
+      if (selector.lastIndexOf('#',0)===0) {
         group = d3.select(selector)
         style = window.getComputedStyle(group.select('path').node() as Element)
-        let chart = axis.charts.find(x => x.id === selector)
+        let chart = axis.charts.filter(x => x.id === selector)[0]
         if (chart instanceof ChartLine) {
           element
             .append('line')
@@ -57,7 +57,7 @@ export class Legend implements Visitor {
             .attr('height', 10)
             .style('fill', style.getPropertyValue('fill'))
         }
-      } else if (selector.startsWith('.')) {
+      } else if (selector.lastIndexOf('#',0)===0) {
         group = d3.selectAll(selector)
         let charts = axis.charts.filter(x => x.id === selector)
         let groupElement = d3.select(selector)
