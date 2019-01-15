@@ -24,7 +24,8 @@ export class Legend implements Visitor {
 
   createLegend(axis: Axis) {
     this.svg.attr('width', axis.margin.left + axis.width + axis.margin.right).attr('height', 20)
-    this.group = this.svg.append('g').attr('transform', 'translate(' + axis.margin.left + ', 0)')
+    if (this.group == null) this.group = this.svg.append('g')
+    this.group.attr('transform', 'translate(' + axis.margin.left + ', 0)')
     let dx = Math.round(axis.width / Object.keys(this.labels).length)
     let i = 0
     for (let selector in this.labels) {
@@ -48,8 +49,8 @@ export class Legend implements Visitor {
             .style('stroke', style.getPropertyValue('stroke'))
             .style('stroke-width', style.getPropertyValue('stroke-width'))
             .style('stroke-dasharray', style.getPropertyValue('stroke-dasharray'))
-        } else if (chart instanceof ChartArea) {
-          element
+        } else if (chart[0] instanceof ChartArea) {
+          entry
             .append('rect')
             .attr('x', 0)
             .attr('y', -4)
@@ -86,7 +87,10 @@ export class Legend implements Visitor {
           element.style('opacity', 1.0)
         }
       })
-      i++
-    }
+
+    //update
+    entries.attr('transform', function(d, i) {
+      return 'translate(' + i * dx + ',10)'
+    })
   }
 }
