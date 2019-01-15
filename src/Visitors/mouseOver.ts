@@ -4,6 +4,7 @@ import { Visitor } from './visitor'
 
 export class MouseOver implements Visitor {
   private trace: string[]
+  private group: any
 
   constructor(trace: string[]) {
     this.trace = trace
@@ -15,20 +16,31 @@ export class MouseOver implements Visitor {
   }
 
   create(axis: CartesianAxis) {
-    let mouseG = axis.canvas.append('g').attr('class', 'mouse-over-effects')
+    let mouseG = axis.canvas.select('.mouse-events')
+    if (mouseG.size() === 0) {
+      mouseG = axis.canvas
+        .append('g')
+        .attr('class', 'mouse-events')
+        .append('svg:rect') // append a rect to catch mouse movements on canvas
+        .attr('width', axis.width) // can't catch mouse events on a g element
+        .attr('height', axis.height)
+        .attr('fill', 'none')
+        .attr('pointer-events', 'all')
+    }
+    this.group = axis.canvas.insert('g', '.mouse-events').attr('class', 'mouse-over')
 
-    mouseG
+    this.group
       .append('path') // this is the black vertical line to follow mouse
       .attr('class', 'mouse-line')
       .style('opacity', '0')
-    mouseG
+    this.group
       .append('g')
       .attr('class', 'mouse-x')
       .attr('transform', 'translate(' + 0 + ',' + axis.height + ')')
       .append('text')
       .text('')
 
-    let mousePerLine = mouseG
+    let mousePerLine = this.group
       .selectAll('.mouse-per-line')
       .data(this.trace)
       .enter()
@@ -44,11 +56,6 @@ export class MouseOver implements Visitor {
       .style('opacity', '0')
 
     mouseG
-      .append('svg:rect') // append a rect to catch mouse movements on canvas
-      .attr('width', axis.width) // can't catch mouse events on a g element
-      .attr('height', axis.height)
-      .attr('fill', 'none')
-      .attr('pointer-events', 'all')
       .on('mouseout', function() {
         // on mouse out hide line, circles and text
         d3.select('.mouse-line').style('opacity', '0')

@@ -39,6 +39,7 @@ export class ZoomHandler implements Visitor {
         .attr('class', 'mouse-events')
         .attr('pointer-events', 'all')
     }
+    this.mouseGroup = mouseGroup
     let that = this
     let mouseRect = mouseGroup
       .append('rect')
@@ -48,18 +49,15 @@ export class ZoomHandler implements Visitor {
       .attr('pointer-events', 'all')
     mouseRect
       .on('mousedown', function() {
-        console.log('mousedown')
         that.initSelection(d3.mouse(this))
       })
       .on('mouseup', function() {
-        console.log('mouseup')
         that.endSelection(d3.mouse(this))
       })
       .on('dblclick', function() {
-        console.log('dblclick')
         that.resetZoom(d3.mouse(this))
+        that.mouseGroup.dispatch('mouseover')
       })
-    this.mouseGroup = mouseGroup
 
     this.brushGroup
       .append('rect')
@@ -95,11 +93,10 @@ export class ZoomHandler implements Visitor {
     this.brushStartPoint = point
     this.mode = SelectionMode.CANCEL
     let that = this
+    this.mouseGroup.dispatch('mouseout')
     this.mouseGroup.select('#overlay').on('mousemove', function() {
-      console.log('mousemove')
       that.updateSelection(d3.mouse(this))
     })
-    this.brushGroup
     this.brushGroup
       .select('.select-rect')
       .attr('visibility', 'initial')
@@ -209,6 +206,7 @@ export class ZoomHandler implements Visitor {
       }
     }
     this.brushGroup.selectAll('*').attr('visibility', 'hidden')
+    this.mouseGroup.dispatch('mouseover')
     this.axis.zoom()
   }
 
