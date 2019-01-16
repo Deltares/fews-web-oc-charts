@@ -54,7 +54,7 @@ export class Legend implements Visitor {
             .style('stroke', style.getPropertyValue('stroke'))
             .style('stroke-width', style.getPropertyValue('stroke-width'))
             .style('stroke-dasharray', style.getPropertyValue('stroke-dasharray'))
-        } else if (chart[0] instanceof ChartLine) {
+        } else if (chart[0] instanceof ChartArea) {
           entry
             .append('rect')
             .attr('x', 0)
