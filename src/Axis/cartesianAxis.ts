@@ -48,7 +48,7 @@ export class CartesianAxis extends Axis {
     this.chartGroup = this.chartGroup
       .append('g')
       .attr('class', 'group')
-      .attr('clip-path', 'url(#clipPath)')
+      .attr('clip-path', 'url(#canvas-clippath)')
       .append('g')
   }
 
@@ -70,11 +70,11 @@ export class CartesianAxis extends Axis {
   }
 
   setClipPath() {
-    let clipPath = this.defs.select('clipPath')
+    let clipPath = this.defs.select('#canvas-clippath')
     if (clipPath.size() === 0) {
       this.defs
         .append('clipPath')
-        .attr('id', 'clipPath')
+        .attr('id', 'canvas-clippath')
         .append('rect')
         .attr('height', this.height)
         .attr('width', this.width)
@@ -221,17 +221,17 @@ export class CartesianAxis extends Axis {
     return (d3.timeSecond(date) < date
       ? d3.timeFormat('.%L')
       : d3.timeMinute(date) < date
-      ? d3.timeFormat(':%S')
-      : d3.timeHour(date) < date
-      ? d3.timeFormat('%H:%M')
-      : d3.timeDay(date) < date
-      ? d3.timeFormat('%H:%M')
-      : d3.timeMonth(date) < date
-      ? d3.timeWeek(date) < date
-        ? d3.timeFormat('%a %d')
-        : d3.timeFormat('%b %d')
-      : d3.timeYear(date) < date
-      ? d3.timeFormat('%B')
-      : d3.timeFormat('%Y'))(date)
+        ? d3.timeFormat(':%S')
+        : d3.timeHour(date) < date
+          ? d3.timeFormat('%H:%M')
+          : d3.timeDay(date) < date
+            ? d3.timeFormat('%H:%M')
+            : d3.timeMonth(date) < date
+              ? d3.timeWeek(date) < date
+                ? d3.timeFormat('%a %d')
+                : d3.timeFormat('%b %d')
+              : d3.timeYear(date) < date
+                ? d3.timeFormat('%B')
+                : d3.timeFormat('%Y'))(date)
   }
 }
