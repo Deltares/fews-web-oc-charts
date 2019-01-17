@@ -43,7 +43,7 @@ export class ZoomHandler implements Visitor {
     let that = this
     let mouseRect = mouseGroup
       .append('rect')
-      .attr('id', 'overlay')
+      .attr('class', 'overlay')
       .attr('height', axis.height)
       .attr('width', axis.width)
       .attr('pointer-events', 'all')
@@ -94,7 +94,7 @@ export class ZoomHandler implements Visitor {
     this.mode = SelectionMode.CANCEL
     let that = this
     this.mouseGroup.dispatch('mouseout')
-    this.mouseGroup.select('#overlay').on('mousemove', function() {
+    this.mouseGroup.select('.overlay').on('mousemove', function() {
       that.updateSelection(d3.mouse(this))
     })
     this.brushGroup
@@ -111,10 +111,10 @@ export class ZoomHandler implements Visitor {
     let m = [0, 0]
     m[0] = point[0] - this.brushStartPoint[0]
     m[1] = point[1] - this.brushStartPoint[1]
-    let x = this.brushStartPoint[0],
-      y = this.brushStartPoint[1],
-      width = Math.abs(m[0]),
-      height = Math.abs(m[1])
+    let x = this.brushStartPoint[0]
+    let y = this.brushStartPoint[1]
+    let width = Math.abs(m[0])
+    let height = Math.abs(m[1])
     let selectRect = this.brushGroup.select('.select-rect')
     if (m[0] < 0) x = this.brushStartPoint[0] + m[0]
     if (m[1] < 0) y = this.brushStartPoint[1] + m[1]
@@ -175,7 +175,7 @@ export class ZoomHandler implements Visitor {
   }
 
   endSelection(point: [number, number]) {
-    this.mouseGroup.select('#overlay').on('mousemove', null)
+    this.mouseGroup.select('.overlay').on('mousemove', null)
     this.brushGroup.select('.select-rect').attr('visibility', 'hidden')
     let xScale = this.axis.xScale
     let yScale = this.axis.yScale

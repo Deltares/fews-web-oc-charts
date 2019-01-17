@@ -87,3 +87,41 @@
   fill:white;
 }
 
+.mouse-events {
+  cursor: crosshair;
+}
+
+.mouse-events > text {
+  user-select: none;
+}
+
+.brush .handle {
+  fill: white;
+  stroke: black;
+  stroke-width: .5px;
+}
+
+.brush .select-rect {
+  fill: rgba(111, 111, 111, 0.5);
+  stroke: white;
+  stroke-width: 1px;
+  stroke-dasharray: 5, 2;
+}
+
+.mouse-events .overlay {
+  visibility: hidden;
+}
+
+.mouse-over .mouse-line {
+  stroke: white;
+  stroke-width: 1px;
+  stroke-dasharray: 5, 2, 2, 2;
+}
+
+.mouse-over .mouse-per-line {
+  fill: white;
+}
+
+.legend-entry {
+  cursor: pointer;
+}
