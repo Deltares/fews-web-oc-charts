@@ -63,3 +63,22 @@
   fill: red;
   cursor: pointer;
 }
+
+.current-time {
+  stroke: red;
+}
+
+.current-time-indicator {
+  /* stroke:red; */
+  fill: red
+}
+
+.current-time-indicator:hover>text {
+  visibility: visible;
+}
+
+.current-time-indicator>text {
+  /* stroke:red; */
+  visibility: hidden;
+  stroke: black;
+}
