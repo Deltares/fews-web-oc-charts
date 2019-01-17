@@ -45,7 +45,6 @@ export class Legend implements Visitor {
         return 'translate(' + i * dx + ',10)'
       })
       .each(function(d, i) {
-        console.log(d, i)
         let entry = d3.select(this)
         let chartElement = d3
           .select(d.selector)
