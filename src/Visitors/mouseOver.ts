@@ -55,18 +55,20 @@ export class MouseOver implements Visitor {
       .style('stroke-width', '1px')
       .style('opacity', '0')
 
+    let that = this
     mouseG
       .on('mouseout', function() {
         // on mouse out hide line, circles and text
-        d3.select('.mouse-line').style('opacity', '0')
-        d3.selectAll('.mouse-per-line circle').style('opacity', '0')
-        d3.selectAll('.mouse-x text').style('opacity', '0')
+        that.group.select('.mouse-line').style('opacity', '0')
+        that.group.selectAll('.mouse-per-line circle').style('opacity', '0')
+        that.group.select('.mouse-x text').style('opacity', '0')
         axis.hideTooltip(null)
       })
       .on('mouseover', function() {
         // on mouse in show line, circles and text
-        d3.select('.mouse-line').style('opacity', '1')
-        d3.selectAll('.mouse-per-line circle')
+        that.group.select('.mouse-line').style('opacity', '1')
+        that.group
+          .selectAll('.mouse-per-line circle')
           .style('opacity', '1')
           .style('fill', function(d: any, i) {
             let element = d3.select(d).select('path')
@@ -75,7 +77,7 @@ export class MouseOver implements Visitor {
               .getPropertyValue('stroke')
             return stroke
           })
-        d3.selectAll('.mouse-x text').style('opacity', '1')
+        that.group.select('.mouse-x text').style('opacity', '1')
         axis.tooltip
           .transition()
           .duration(50)
@@ -91,7 +93,7 @@ export class MouseOver implements Visitor {
         let posx = mouse[0]
         let allHidden = true
         axis.canvas.selectAll('.mouse-per-line').attr('transform', function(d, i) {
-          let element = d3.select(d).select('path')
+          let element = axis.canvas.select(d).select('path')
           let style = window.getComputedStyle(element.node() as Element)
           if (style.getPropertyValue('visibility') === 'hidden') return
           allHidden = false
@@ -124,7 +126,8 @@ export class MouseOver implements Visitor {
 
         // update x-value
         let xFormat = d3.timeFormat('%H:%M')
-        d3.select('.mouse-x')
+        that.group
+          .select('.mouse-x')
           .attr('transform', 'translate(' + (posx + 2) + ',' + (axis.height - 5) + ')')
           .select('text')
           .text(xFormat(axis.xScale.invert(posx)))
