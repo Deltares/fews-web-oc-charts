@@ -53,3 +53,13 @@
     stroke-dashoffset: 10.56;
   }
 }
+
+.level-select {
+  stroke: red;
+}
+
+.level-select-handle {
+  stroke: red;
+  fill: red;
+  cursor: pointer;
+}
