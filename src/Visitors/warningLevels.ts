@@ -19,22 +19,22 @@ export class WarningLevels implements Visitor {
   }
 
   create(axis: CartesianAxis) {
-    var escalationsScale = d3
+    let escalationsScale = d3
       .scaleLinear()
       .domain(axis.yScale.domain())
       .range(axis.yScale.range())
-    var escalations = axis.canvas
+    let escalations = axis.canvas
       .append('g')
       .attr('transform', 'translate(' + axis.width + ' ,0)')
       .attr('class', 'axis y2-axis')
     let escalationLevels = this.escalationLevels
-    var escalationsAxis = d3
+    let escalationsAxis = d3
       .axisRight(escalationsScale)
       .tickValues([-100, 100, 110, 140])
       .tickFormat(function(d, i) {
         return escalationLevels[i].id
       })
-    var axisHandle = axis.canvas.select('.y2-axis').call(escalationsAxis)
+    let axisHandle = axis.canvas.select('.y2-axis').call(escalationsAxis)
     axisHandle
       .selectAll('.tick text')
       .append('title')
@@ -43,31 +43,31 @@ export class WarningLevels implements Visitor {
         return 'waarschuwing waardes' + escalationLevels[i].c + '' + d
       })
 
-    var sections = axis.canvas
+    let sections = axis.canvas
       .select('.axis-canvas')
       .append('g')
       .selectAll('rect')
       .data(escalationsAxis.tickValues())
 
-    var escY = function(d, i) {
-      if (escalationLevels[i].c == '<') {
+    let escY = function(d, i) {
+      if (escalationLevels[i].c === '<') {
         return escalationsScale(d)
       } else {
-        if (i == escalationLevels.length - 1) return 0
+        if (i === escalationLevels.length - 1) return 0
         return escalationsScale(escalationLevels[i + 1].val)
       }
     }
 
-    var escHeight = function(d, i) {
-      if (escalationLevels[i].c == '<') {
-        if (i == 0) return axis.height - escalationsScale(d)
+    let escHeight = function(d, i) {
+      if (escalationLevels[i].c === '<') {
+        if (i === 0) return axis.height - escalationsScale(d)
         return escalationsScale(escalationLevels[i - 1].val) - escalationsScale(d)
       } else {
-        if (i == escalationLevels.length - 1) return escalationsScale(d)
+        if (i === escalationLevels.length - 1) return escalationsScale(d)
         return escalationsScale(d) - escalationsScale(escalationLevels[i + 1].val)
       }
     }
-    var escFill = function(d, i) {
+    let escFill = function(d, i) {
       return escalationLevels[i].color
     }
 

@@ -21,8 +21,8 @@ export class MouseOver implements Visitor {
       mouseG = axis.canvas
         .append('g')
         .attr('class', 'mouse-events')
-        .append('svg:rect') // append a rect to catch mouse movements on canvas
-        .attr('width', axis.width) // can't catch mouse events on a g element
+        .append('svg:rect')
+        .attr('width', axis.width)
         .attr('height', axis.height)
         .attr('fill', 'none')
         .attr('pointer-events', 'all')
@@ -30,7 +30,7 @@ export class MouseOver implements Visitor {
     this.group = axis.canvas.insert('g', '.mouse-events').attr('class', 'mouse-over')
 
     this.group
-      .append('path') // this is the black vertical line to follow mouse
+      .append('path')
       .attr('class', 'mouse-line')
       .style('opacity', '0')
     this.group
@@ -70,7 +70,7 @@ export class MouseOver implements Visitor {
           .style('opacity', '1')
           .style('fill', function(d: any, i) {
             let element = d3.select(d).select('path')
-            var stroke = window
+            let stroke = window
               .getComputedStyle(element.node() as Element)
               .getPropertyValue('stroke')
             return stroke
@@ -117,7 +117,7 @@ export class MouseOver implements Visitor {
 
         // update line
         d3.select('.mouse-line').attr('d', function() {
-          var d = 'M' + posx + ',' + axis.height
+          let d = 'M' + posx + ',' + axis.height
           d += ' ' + posx + ',' + 0
           return d
         })
@@ -133,14 +133,14 @@ export class MouseOver implements Visitor {
           axis.hideTooltip(null)
           return
         }
-        var htmlContent = ''
-        for (var label in popupData) {
-          var v = popupData[label]
+        let htmlContent = ''
+        for (let label in popupData) {
+          let v = popupData[label]
           htmlContent += '<span style="color:' + v.color + ' ">' + '   ' + v.y + '</span><br/>'
         }
 
-        var div = axis.tooltip.html(htmlContent)
-        var h = div.node().clientHeight / 2
+        let div = axis.tooltip.html(htmlContent)
+        let h = div.node().clientHeight / 2
 
         div.style('left', d3.event.pageX + 'px').style('top', d3.event.pageY - h + 'px')
       })
