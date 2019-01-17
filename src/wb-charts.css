@@ -64,3 +64,21 @@
   cursor: pointer;
 }
 
+.current-time {
+  stroke: red;
+}
+
+.current-time-indicator {
+  fill: red
+}
+
+.current-time-indicator:hover>text {
+  visibility: visible;
+}
+
+.current-time-indicator>text {
+  visibility: hidden;
+  stroke:none;
+  fill:white;
+}
+
