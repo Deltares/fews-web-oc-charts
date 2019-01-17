@@ -92,7 +92,8 @@
   cursor: crosshair;
 }
 
-.mouse-events>text {
+.mouse-x > text {
+  -webkit-user-select:none;
   user-select: none;
 }
 
