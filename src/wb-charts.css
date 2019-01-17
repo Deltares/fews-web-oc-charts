@@ -9,6 +9,7 @@
     fill: none;
     stroke-width: 1px;
     stroke: black;
+    color: black;
     stroke-dasharray: 2px;
 }
 
@@ -43,6 +44,7 @@
     stroke-dashoffset: 10.56;
   }
 
+      .attr('clip-path', 'url(#canvas-clippath)')
   50% {
     transform: rotate(720deg);
     stroke-dashoffset: 50.24;

@@ -8,7 +8,8 @@
 .grid {
     fill: none;
     stroke-width: 1px;
-    stroke: white;
+    stroke: black;
+    color: black;
     stroke-dasharray: 2px;
 }
 
