@@ -58,6 +58,11 @@
   stroke: red;
 }
 
+.level-select > text {
+  stroke: none;
+  fill: red;
+}
+
 .level-select-handle {
   stroke: red;
   fill: red;
