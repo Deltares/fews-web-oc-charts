@@ -79,7 +79,7 @@ export abstract class Axis {
 
   createTooltip() {
     this.tooltip = d3
-      .select('body')
+      .select(this.container)
       .append('div')
       .attr('class', 'tooltip')
       .style('opacity', 0)
