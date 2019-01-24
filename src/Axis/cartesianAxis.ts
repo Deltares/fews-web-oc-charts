@@ -106,13 +106,21 @@ export class CartesianAxis extends Axis {
       xExtent = d3.extent(d3.merge([xExtent, [].concat(...chartXExtent)]))
       yExtent = d3.extent(d3.merge([yExtent, [].concat(...chartYExtent)]))
     }
-    this.xScale.domain(xExtent).nice()
+    this.xScale.domain(xExtent)
     this.yScale.domain(yExtent).nice()
 
     for (let chart of this.charts) {
       chart.plotterCartesian(this, chart.dataKeys)
     }
     this.updateGrid()
+  }
+
+  resize() {
+    this.setSize()
+    this.setCanvas()
+    this.setClipPath()
+    this.setRange()
+    this.zoom()
   }
 
   updateGrid() {
@@ -173,12 +181,12 @@ export class CartesianAxis extends Axis {
   }
 
   protected setRange() {
-    if (this.options.x && this.options.x.time) {
-      this.xScale = d3.scaleTime().range([0, this.width])
-    } else {
-      this.xScale = d3.scaleLinear().range([0, this.width])
+    if (!this.xScale) {
+      this.xScale = this.options.x && this.options.x.time ? d3.scaleTime() : d3.scaleLinear()
     }
-    this.yScale = d3.scaleLinear().range([this.height, 0])
+    if (!this.yScale) this.yScale = d3.scaleLinear()
+    this.xScale.range([0, this.width])
+    this.yScale.range([this.height, 0])
   }
 
   protected initGrid() {
@@ -213,17 +221,17 @@ export class CartesianAxis extends Axis {
     return (d3.timeSecond(date) < date
       ? d3.timeFormat('.%L')
       : d3.timeMinute(date) < date
-        ? d3.timeFormat(':%S')
-        : d3.timeHour(date) < date
-          ? d3.timeFormat('%H:%M')
-          : d3.timeDay(date) < date
-            ? d3.timeFormat('%H:%M')
-            : d3.timeMonth(date) < date
-              ? d3.timeWeek(date) < date
-                ? d3.timeFormat('%a %d')
-                : d3.timeFormat('%b %d')
-              : d3.timeYear(date) < date
-                ? d3.timeFormat('%B')
-                : d3.timeFormat('%Y'))(date)
+      ? d3.timeFormat(':%S')
+      : d3.timeHour(date) < date
+      ? d3.timeFormat('%H:%M')
+      : d3.timeDay(date) < date
+      ? d3.timeFormat('%H:%M')
+      : d3.timeMonth(date) < date
+      ? d3.timeWeek(date) < date
+        ? d3.timeFormat('%a %d')
+        : d3.timeFormat('%b %d')
+      : d3.timeYear(date) < date
+      ? d3.timeFormat('%B')
+      : d3.timeFormat('%Y'))(date)
   }
 }

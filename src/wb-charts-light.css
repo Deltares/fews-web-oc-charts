@@ -17,3 +17,113 @@
 .view {
   fill: none;
 }
+
+.spinner {
+  /* fill: transparent; */
+  stroke: gray;
+  fill: none;
+  stroke-width: 2px;
+  stroke-linecap: round;
+  stroke-dasharray: 50.24;
+  -webkit-transform-origin: 10px 0px 0;
+  -moz-transform-origin: 10px 0px 0;
+  -ms-transform-origin: 10px 0px 0;
+  -o-transform-origin: 10px 0px 0;
+  transform-origin: 10px 0px 0;
+  -webkit-animation: spinner 2s linear infinite;
+  -moz-animation: spinner 2s linear infinite;
+  -ms-animation: spinner 2s linear infinite;
+  -o-animation: spinner 2s linear infinite;
+  animation: spinner 2s linear infinite;
+}
+
+@keyframes spinner {
+  0% {
+    transform: rotate(0deg);
+    stroke-dashoffset: 10.56;
+  }
+
+  50% {
+    transform: rotate(720deg);
+    stroke-dashoffset: 50.24;
+  }
+
+  100% {
+    transform: rotate(1080deg);
+    stroke-dashoffset: 10.56;
+  }
+}
+
+.level-select {
+  stroke: red;
+}
+
+.level-select > text {
+  stroke: none;
+  fill: red;
+}
+
+.level-select-handle {
+  stroke: red;
+  fill: red;
+  cursor: pointer;
+}
+
+.current-time {
+  stroke: red;
+}
+
+.current-time-indicator {
+  /* stroke:red; */
+  fill: red
+}
+
+.current-time-indicator:hover>text {
+  visibility: visible;
+}
+
+.current-time-indicator>text {
+  visibility: hidden;
+  stroke:none;
+  fill:black;
+}
+
+.mouse-events {
+  cursor: crosshair;
+}
+
+.mouse-x > text {
+  -webkit-user-select:none;
+  user-select: none;
+}
+
+.brush .handle {
+  fill: white;
+  stroke: black;
+  stroke-width: .5px;
+}
+
+.brush .select-rect {
+  fill: rgba(111, 111, 111, 0.5);
+  stroke: white;
+  stroke-width: 1px;
+  stroke-dasharray: 5, 2;
+}
+
+.mouse-events .overlay {
+  visibility: hidden;
+}
+
+.mouse-over .mouse-line {
+  stroke: black;
+  stroke-width: 1px;
+  stroke-dasharray: 5, 2, 2, 2;
+}
+
+.mouse-over .mouse-per-line {
+  fill: black;
+}
+
+.legend-entry {
+  cursor: pointer;
+}
