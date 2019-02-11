@@ -5,6 +5,8 @@ import { Visitor } from '../Visitors'
 
 export interface AxisOptions {
   transitionTime?: number
+  x?: any
+  y?: any
 }
 
 export abstract class Axis {
@@ -17,8 +19,8 @@ export abstract class Axis {
   container: HTMLElement
   width: number
   height: number
-  margin: any
-  options: any
+  margin: { top: number; right: number; bottom: number; left: number }
+  options: AxisOptions
   chartGroup: any
   charts: Chart[]
   initialDraw: boolean = true

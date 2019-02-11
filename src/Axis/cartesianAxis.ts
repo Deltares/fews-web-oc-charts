@@ -88,7 +88,7 @@ export class CartesianAxis extends Axis {
 
   zoom() {
     for (let chart of this.charts) {
-      chart.plotterCartesian(this, chart.dataKeys)
+      chart.plotter(this, chart.dataKeys)
     }
     this.updateGrid()
   }
@@ -97,12 +97,8 @@ export class CartesianAxis extends Axis {
     let xExtent = new Array(2)
     let yExtent = new Array(2)
     for (let chart of this.charts) {
-      let chartXExtent = d3.extent(chart.data, function(d: any) {
-        return d[chart.dataKeys.xkey]
-      })
-      let chartYExtent = d3.extent(chart.data, function(d: any) {
-        return d[chart.dataKeys.ykey]
-      })
+      let chartXExtent = chart.extent[chart.dataKeys.xkey]
+      let chartYExtent = chart.extent[chart.dataKeys.ykey]
       xExtent = d3.extent(d3.merge([xExtent, [].concat(...chartXExtent)]))
       yExtent = d3.extent(d3.merge([yExtent, [].concat(...chartYExtent)]))
     }
@@ -110,7 +106,7 @@ export class CartesianAxis extends Axis {
     this.yScale.domain(yExtent).nice()
 
     for (let chart of this.charts) {
-      chart.plotterCartesian(this, chart.dataKeys)
+      chart.plotter(this, chart.dataKeys)
     }
     this.updateGrid()
   }
