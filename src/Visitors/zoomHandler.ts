@@ -71,6 +71,11 @@ export class ZoomHandler implements Visitor {
         .attr('class', 'mouse-events')
         .attr('pointer-events', 'all')
       let that = this
+      let documentMouseUp = function(event) {
+        that.endSelection(null)
+        document.removeEventListener('mouseup', documentMouseUp)
+      }
+
       let mouseRect = this.mouseGroup
         .append('rect')
         .attr('class', 'overlay')
@@ -78,17 +83,16 @@ export class ZoomHandler implements Visitor {
       mouseRect
         .on('mousedown', function() {
           that.initSelection(d3.mouse(this))
+          document.addEventListener('mouseup', documentMouseUp)
         })
         .on('mouseup', function() {
+          document.removeEventListener('mouseup', documentMouseUp)
           that.endSelection(d3.mouse(this))
         })
         .on('dblclick', function() {
           that.resetZoom(d3.mouse(this))
           that.mouseGroup.dispatch('mouseover')
         })
-      document.addEventListener('mouseup', function(event) {
-        that.endSelection(null)
-      })
     }
     let mouseRect = this.mouseGroup
       .select('rect')
