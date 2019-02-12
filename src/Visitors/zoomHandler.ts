@@ -76,11 +76,9 @@ export class ZoomHandler implements Visitor {
         .attr('pointer-events', 'all')
       mouseRect
         .on('mousedown', function() {
-          console.log('mousedown')
           that.initSelection(d3.mouse(this))
         })
         .on('mouseup', function() {
-          console.log('mouseup')
           that.endSelection(d3.mouse(this))
         })
         .on('dblclick', function() {
@@ -220,4 +218,7 @@ export class ZoomHandler implements Visitor {
     this.axis.yScale.domain(this.y0)
     this.axis.zoom()
   }
+
+  // FIXME: remove when IDrawble is introduced
+  redraw() {}
 }
