@@ -58,6 +58,7 @@ export class CartesianAxis extends Axis {
       this.canvas
         .append('g')
         .attr('class', 'axis-canvas')
+        .attr('clip-path', 'url(#clipPath)')
         .append('rect')
         .attr('width', this.width)
         .attr('height', this.height)
@@ -91,6 +92,10 @@ export class CartesianAxis extends Axis {
       chart.plotter(this, chart.dataKeys)
     }
     this.updateGrid()
+    // FIXME: move to Axis.ts?
+    for (let visitor of this.visitors) {
+      visitor.redraw()
+    }
   }
 
   redraw() {

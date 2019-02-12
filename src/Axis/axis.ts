@@ -24,6 +24,7 @@ export abstract class Axis {
   chartGroup: any
   charts: Chart[]
   initialDraw: boolean = true
+  visitors: Visitor[]
 
   constructor(container: HTMLElement, width: number, height: number, options: AxisOptions) {
     this.container = container
@@ -50,6 +51,7 @@ export abstract class Axis {
       .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')')
     this.createTooltip()
     this.charts = []
+    this.visitors = []
   }
 
   setSize(height?: number, width?: number) {
@@ -72,6 +74,7 @@ export abstract class Axis {
   abstract updateGrid()
 
   accept(v: Visitor) {
+    this.visitors.push(v)
     v.visit(this)
   }
 
