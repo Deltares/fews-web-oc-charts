@@ -175,7 +175,8 @@ border-color: transparent black transparent transparent;
       plotControl1.addTo(axis, { xkey: "x", ykey: "y" }, '#control-line');
       plotMedian1.addTo(axis, { xkey: "x", ykey: "y" }, '#median-line');
       axis.redraw();
-      legend.visit(axis);
+      axis.zoom();
+      // legend.visit(axis);
       // axis.accept(legend);
       axis.accept(currentTime);
       axis.accept(levelSelect);
@@ -185,8 +186,7 @@ border-color: transparent black transparent transparent;
     });}
     window.setTimeout(dataload,1000);
 
-    window.onresize = function() { axis.resize(),legend.visit(axis), levelSelect.visit(axis,
-    currentTime.visit(axis), escalationsVisitor.visit(axis), zoom.visit(axis) ) };
+    window.onresize = function() { axis.resize();};
     </script>
 
 
