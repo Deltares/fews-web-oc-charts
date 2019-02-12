@@ -125,7 +125,6 @@ export class CartesianAxis extends Axis {
   resize() {
     this.setSize()
     this.setRange()
-    this.updateGrid()
     this.zoom()
   }
 
