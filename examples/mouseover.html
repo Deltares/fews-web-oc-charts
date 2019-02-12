@@ -18,28 +18,6 @@
                 fill: white;
             }
 
-            .mouse-events { cursor:crosshair; }
-
-            .legend-entry {
-                cursor:pointer;
-            }
-            .select-rect {
-                fill: rgba(111, 111, 111, 0.5);
-                stroke: white;
-                stroke-width: 1px;
-                stroke-dasharray: 5,2;
-            }
-
-            .handle {
-                fill:white;
-                stroke: black;
-                stroke-width: .5px;
-            }
-
-            #overlay {
-                visibility:hidden;
-            }
-
             #polar-dot {
                 fill: #999999;
                 stroke: white;
@@ -50,16 +28,6 @@
               stroke-width: 1px;
               fill: none;
               opacity: .5;
-            }
-
-            .mouse-line {
-                stroke: white;
-                stroke-width: 1px;
-                stroke-dasharray: 5,2,2,2;
-            }
-
-            .mouse-per-line {
-                fill: white;
             }
 
             #chart-legend-1 {
@@ -125,92 +93,100 @@ border-color: transparent black transparent transparent;
         <script src="/dist/wb-charts.umd.js"></script>
         <script type="text/javascript">
 
-var container = document.getElementById("chart-container-1");
-var axis =  new wbCharts.CartesianAxis(container, null, null, { x : {time: true }, y : {label: 'Waterstand [cm]'} });
-var legend = new wbCharts.Legend( [
-    {selector: '#median-line', label : 'Middelste (P50)'},
-    {selector: '#control-line', label :'Controle'},
-    {selector: '#percent90', label :'90% interval'} ,
-    {selector: '#percent50', label :'50% interval'},
-    {selector: '.ensemble-line', label : 'Verstoord'},
-    ]
-    ,document.getElementById("chart-legend-1"));
+    var container = document.getElementById("chart-container-1");
+    var axis =  new wbCharts.CartesianAxis(container, null, null, { x : {time: true }, y : {label: 'Waterstand [cm]'} });
+    var legend = new wbCharts.Legend( [
+        {selector: '#median-line', label : 'Middelste (P50)'},
+        {selector: '#control-line', label :'Controle'},
+        {selector: '#percent90', label :'90% interval'} ,
+        {selector: '#percent50', label :'50% interval'},
+        {selector: '.ensemble-line', label : 'Verstoord'},
+        ]
+        ,document.getElementById("chart-legend-1"));
 
-percentile = function(p, data) {
-    var points = data;
-    points.sort(function (a, b) { return a - b });
-    if (Array.isArray(p)) {
-        var result = [];
-        for (i = 0; i < p.length; ++i) {
-            var x = p[i] * (points.length + 1);
+    var currentTime = new wbCharts.CurrentTime();
+    var levelSelect = new wbCharts.LevelSelect(function(x) {console.log(x)} );
+    percentile = function(p, data) {
+        var points = data;
+        points.sort(function (a, b) { return a - b });
+        if (Array.isArray(p)) {
+            var result = [];
+            for (i = 0; i < p.length; ++i) {
+                var x = p[i] * (points.length + 1);
+                var x1 = Math.floor(x);
+                var frac = x - x1;
+                result.push(points[x1 - 1] + frac * (points[x1] - points[x1 - 1]));
+            }
+            return result;
+        } else {
+            var x = p * (points.length + 1);
             var x1 = Math.floor(x);
             var frac = x - x1;
-            result.push(points[x1 - 1] + frac * (points[x1] - points[x1 - 1]));
+            return points[x1 - 1] + frac * (points[x1] - points[x1 - 1]);
         }
-        return result;
-    } else {
-        var x = p * (points.length + 1);
-        var x1 = Math.floor(x);
-        var frac = x - x1;
-        return points[x1 - 1] + frac * (points[x1] - points[x1 - 1]);
-    }
-};
+    };
 
-var refDate = new Date(2018,10,1);
+    var refDate = new Date();
+    var mouseOver = new wbCharts.MouseOver(['#control-line','#median-line']);
+    var escalationsVisitor = new wbCharts.WarningLevels();
+    var zoom = new wbCharts.ZoomHandler();
 
-var mouseOver = new wbCharts.MouseOver(['#control-line','#median-line']);
-var escalationsVisitor = new wbCharts.WarningLevels();
-var zoom = new wbCharts.ZoomHandler();
-
-d3.json("ensemble.json", function (error, data) {
-    var nEnsemble = data.values[0].length;
-    var members = Array(nEnsemble);
-    var percentiles = [[],[],[]];
-
-    for (s = 0; s< nEnsemble ; s++) {
-        members[s]= Array();
-    }
-    var plotEnsemble = [];
-    data.times.forEach( function(time, index) {
-        var dateTime = new Date(time * 1000);
-        if (dateTime.getTime() > refDate.getTime()) return;
-
-        for (i = 0; i < nEnsemble; i++) {
-            members[i].push({ x: dateTime , y: data.values[index][i] })
-        }
-        var points = data.values[index]
-        percentiles[0].push({ x: dateTime, y: percentile(.5,points)  });
-        percentiles[1].push({ x: dateTime, y: percentile([0.25, 0.75], points) });
-        percentiles[2].push({ x: dateTime, y: percentile([0.05, 0.95], points) });
-    })
-
-
-    var plotMedian = new wbCharts.ChartLine(percentiles[0], {});
-    var plotControl = new wbCharts.ChartLine(members[0], {});
-
-    var plotControl1 = new wbCharts.ChartLine(members[0], {});
-    var plotMedian1 = new wbCharts.ChartLine(percentiles[0], {});
-    var plotPercentile50 = new wbCharts.ChartArea(percentiles[1], {});
-    var plotPercentile90 = new wbCharts.ChartArea(percentiles[2], {});
-
-    plotPercentile90.addTo(axis, { xkey: "x", ykey: "y" }, '#percent90');
-    plotPercentile50.addTo(axis, { xkey: "x", ykey: "y" }, '#percent50');
-
-    for (i = 1; i< nEnsemble; i++) {
-      var plotEnsemble=new wbCharts.ChartLine(members[i], {});
-      plotEnsemble.addTo(axis, { xkey: "x" , ykey: "y" }, '.ensemble-line' );
-    }
-
-    plotControl1.addTo(axis, { xkey: "x", ykey: "y" }, '#control-line');
-    plotMedian1.addTo(axis, { xkey: "x", ykey: "y" }, '#median-line');
-    axis.redraw();
     axis.accept(legend);
-    axis.accept(escalationsVisitor);
-    axis.accept(zoom);
-    axis.accept(mouseOver);
-    });
+    function dataload() { d3.json("ensemble.json", function (error, data) {
+      var nEnsemble = data.values[0].length;
+      var members = Array(nEnsemble);
+      var percentiles = [[],[],[]];
 
-    window.onresize = function() { axis.resize(),legend.visit(axis)};
+      for (s = 0; s< nEnsemble ; s++) {
+          members[s]= Array();
+      }
+      var plotEnsemble = [];
+      var medianTime = (data.times[0] + data.times[data.times.length-1])/2;
+      console.log(new Date( medianTime * 1000 ) )
+
+      data.times.forEach( function(time, index) {
+          var dateTime = new Date( (time - medianTime) * 1000 + refDate.getTime() );
+          for (i = 0; i < nEnsemble; i++) {
+              members[i].push({ x: dateTime , y: data.values[index][i] })
+          }
+          var points = data.values[index]
+          percentiles[0].push({ x: dateTime, y: percentile(.5,points)  });
+          percentiles[1].push({ x: dateTime, y: percentile([0.25, 0.75], points) });
+          percentiles[2].push({ x: dateTime, y: percentile([0.05, 0.95], points) });
+      })
+
+
+      var plotMedian = new wbCharts.ChartLine(percentiles[0], {});
+      var plotControl = new wbCharts.ChartLine(members[0], {});
+
+      var plotControl1 = new wbCharts.ChartLine(members[0], {});
+      var plotMedian1 = new wbCharts.ChartLine(percentiles[0], {});
+      var plotPercentile50 = new wbCharts.ChartArea(percentiles[1], {});
+      var plotPercentile90 = new wbCharts.ChartArea(percentiles[2], {});
+
+      plotPercentile90.addTo(axis, { xkey: "x", ykey: "y" }, '#percent90');
+      plotPercentile50.addTo(axis, { xkey: "x", ykey: "y" }, '#percent50');
+
+      for (i = 1; i< nEnsemble; i++) {
+        var plotEnsemble=new wbCharts.ChartLine(members[i], {});
+        plotEnsemble.addTo(axis, { xkey: "x" , ykey: "y" }, '.ensemble-line' );
+      }
+
+      plotControl1.addTo(axis, { xkey: "x", ykey: "y" }, '#control-line');
+      plotMedian1.addTo(axis, { xkey: "x", ykey: "y" }, '#median-line');
+      axis.redraw();
+      legend.visit(axis);
+      // axis.accept(legend);
+      axis.accept(currentTime);
+      axis.accept(levelSelect);
+      axis.accept(escalationsVisitor);
+      axis.accept(zoom);
+      axis.accept(mouseOver);
+    });}
+    window.setTimeout(dataload,1000);
+
+    window.onresize = function() { axis.resize(),legend.visit(axis), levelSelect.visit(axis,
+    currentTime.visit(axis), escalationsVisitor.visit(axis), zoom.visit(axis) ) };
     </script>
 
 
