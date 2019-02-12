@@ -9,6 +9,7 @@ export class WarningLevels implements Visitor {
   private scale: any
   private warningAxis: any
   private sections: any
+  private transitionTime: number
 
   constructor() {
     this.escalationLevels = [
@@ -17,6 +18,7 @@ export class WarningLevels implements Visitor {
       { id: 'hoog', val: 110, color: 'rgba(255, 150, 0,.5)', c: '>' },
       { id: 'extreem', val: 140, color: 'rgba(255, 0, 0,.5)', c: '>' }
     ]
+    this.transitionTime = 0
   }
 
   visit(axis: Axis) {
@@ -25,31 +27,35 @@ export class WarningLevels implements Visitor {
   }
 
   create(axis: CartesianAxis) {
-    if (!this.scale) {
-      this.scale = d3.scaleLinear()
-    }
+    let scale = (this.scale = d3.scaleLinear())
     this.scale.domain(axis.yScale.domain()).range(axis.yScale.range())
-
-    if (!this.warningAxis) {
-      this.warningAxis = d3
-        .axisRight(this.scale)
-        .tickValues([-100, 100, 110, 140])
-        .tickFormat(function(d, i) {
-          return escalationLevels[i].id
-        })
-    }
-
-    if (!this.group) {
-      this.group = d3
-      axis.canvas
-        .append('g')
-        .attr('class', 'axis y2-axis')
-        .attr('transform', 'translate(' + axis.width + ' ,0)')
-    }
-
-    this.group.select('.y2-axis').attr('transform', 'translate(' + axis.width + ' ,0)')
-
     let escalationLevels = this.escalationLevels
+
+    let tickValues = escalationLevels
+      .filter(function(el) {
+        let domain = scale.domain()
+        return el.val >= domain[0] && el.val <= domain[1]
+      })
+      .map(function(el) {
+        return el.val
+      })
+
+    this.warningAxis = d3
+      .axisRight(this.scale)
+      .tickValues(tickValues)
+      .tickFormat(function(d, i) {
+        let level
+        for (level of escalationLevels) {
+          if (level.val === d) break
+        }
+        return level.id
+      })
+
+    this.group = d3
+    axis.canvas
+      .append('g')
+      .attr('class', 'axis y2-axis')
+      .attr('transform', 'translate(' + axis.width + ' ,0)')
 
     let axisHandle = axis.canvas.select('.y2-axis').call(this.warningAxis)
     axisHandle
@@ -77,6 +83,23 @@ export class WarningLevels implements Visitor {
 
   redraw() {
     let escalationLevels = this.escalationLevels
+    let scale = this.scale.domain(this.axis.yScale.domain()).range(this.axis.yScale.range())
+    let tickValues = escalationLevels
+      .filter(function(el) {
+        let domain = scale.domain()
+        return el.val >= domain[0] && el.val <= domain[1]
+      })
+      .map(function(el) {
+        return el.val
+      })
+
+    this.warningAxis.tickValues(tickValues)
+
+    this.group
+      .select('.y2-axis')
+      .attr('transform', 'translate(' + this.axis.width + ' ,0)')
+      .transition(this.transitionTime)
+      .call(this.warningAxis)
 
     let that = this
     let escY = function(d, i) {
@@ -90,11 +113,11 @@ export class WarningLevels implements Visitor {
 
     let escHeight = function(d, i) {
       if (escalationLevels[i].c === '<') {
-        if (i === 0) return that.axis.height - that.scale(d)
-        return that.scale(escalationLevels[i - 1].val) - that.scale(d)
+        if (i === 0) return Math.max(0, that.axis.height - that.scale(d))
+        return Math.max(0, that.scale(escalationLevels[i - 1].val) - that.scale(d))
       } else {
-        if (i === escalationLevels.length - 1) return that.scale(d)
-        return that.scale(d) - that.scale(escalationLevels[i + 1].val)
+        if (i === escalationLevels.length - 1) return Math.max(0, that.scale(d))
+        return Math.max(0, that.scale(d) - that.scale(escalationLevels[i + 1].val))
       }
     }
     let escFill = function(d, i) {
