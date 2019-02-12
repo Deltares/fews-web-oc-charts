@@ -95,10 +95,11 @@ export class WarningLevels implements Visitor {
 
     this.warningAxis.tickValues(tickValues)
 
+    let transition = d3.transition().duration(this.transitionTime)
     this.group
       .select('.y2-axis')
       .attr('transform', 'translate(' + this.axis.width + ' ,0)')
-      .transition(this.transitionTime)
+      .transition(transition)
       .call(this.warningAxis)
 
     let that = this
