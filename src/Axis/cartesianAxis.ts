@@ -132,8 +132,8 @@ export class CartesianAxis extends Axis {
   updateGrid() {
     this.setClipPath()
     this.setCanvas()
-    let xAxis = d3.axisBottom(this.xScale).ticks(5)
-    if (this.xScale instanceof d3.scaleTime) {
+    let xAxis = d3.axisBottom(this.xScale)
+    if (this.options.x && this.options.x.time) {
       xAxis.tickFormat(this.multiFormat)
     }
     let xGrid = d3
@@ -231,17 +231,17 @@ export class CartesianAxis extends Axis {
     return (d3.timeSecond(date) < date
       ? d3.timeFormat('.%L')
       : d3.timeMinute(date) < date
-        ? d3.timeFormat(':%S')
-        : d3.timeHour(date) < date
-          ? d3.timeFormat('%H:%M')
-          : d3.timeDay(date) < date
-            ? d3.timeFormat('%H:%M')
-            : d3.timeMonth(date) < date
-              ? d3.timeWeek(date) < date
-                ? d3.timeFormat('%a %d')
-                : d3.timeFormat('%b %d')
-              : d3.timeYear(date) < date
-                ? d3.timeFormat('%B')
-                : d3.timeFormat('%Y'))(date)
+      ? d3.timeFormat(':%S')
+      : d3.timeHour(date) < date
+      ? d3.timeFormat('%H:%M')
+      : d3.timeDay(date) < date
+      ? d3.timeFormat('%H:%M')
+      : d3.timeMonth(date) < date
+      ? d3.timeWeek(date) < date
+        ? d3.timeFormat('%a %d')
+        : d3.timeFormat('%b %d')
+      : d3.timeYear(date) < date
+      ? d3.timeFormat('%B')
+      : d3.timeFormat('%Y'))(date)
   }
 }
