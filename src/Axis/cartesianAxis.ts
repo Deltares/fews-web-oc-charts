@@ -29,6 +29,7 @@ export class CartesianAxis extends Axis {
   container: HTMLElement
   xScale: any
   yScale: any
+  clipPathId: string
 
   constructor(
     container: HTMLElement,
@@ -48,17 +49,22 @@ export class CartesianAxis extends Axis {
     this.chartGroup = this.chartGroup
       .append('g')
       .attr('class', 'group')
-      .attr('clip-path', 'url(#canvas-clippath)')
+      .attr('clip-path', 'url(#' + this.clipPathId + ')')
       .append('g')
   }
 
   setCanvas() {
     let rect = this.canvas.select('.axis-canvas')
     if (rect.size() === 0) {
+      this.clipPathId =
+        'id-' +
+        Math.random()
+          .toString(36)
+          .substr(2, 16)
       this.canvas
         .append('g')
         .attr('class', 'axis-canvas')
-        .attr('clip-path', 'url(#clipPath)')
+        .attr('clip-path', 'url(#' + this.clipPathId + ')')
         .append('rect')
         .attr('width', this.width)
         .attr('height', this.height)
@@ -71,11 +77,11 @@ export class CartesianAxis extends Axis {
   }
 
   setClipPath() {
-    let clipPath = this.defs.select('#canvas-clippath')
+    let clipPath = this.defs.select('#' + this.clipPathId)
     if (clipPath.size() === 0) {
       this.defs
         .append('clipPath')
-        .attr('id', 'canvas-clippath')
+        .attr('id', this.clipPathId)
         .append('rect')
         .attr('height', this.height)
         .attr('width', this.width)
@@ -118,9 +124,8 @@ export class CartesianAxis extends Axis {
 
   resize() {
     this.setSize()
-    this.setCanvas()
-    this.setClipPath()
     this.setRange()
+    this.updateGrid()
     this.zoom()
   }
 
@@ -147,6 +152,7 @@ export class CartesianAxis extends Axis {
         .ease(d3.easeLinear)
       this.canvas
         .select('.x-axis')
+        .attr('transform', 'translate(' + 0 + ',' + this.height + ')')
         .transition(t)
         .call(xAxis)
       this.canvas
@@ -162,7 +168,10 @@ export class CartesianAxis extends Axis {
         .transition(t)
         .call(yGrid)
     } else {
-      this.canvas.select('.x-axis').call(xAxis)
+      this.canvas
+        .select('.x-axis')
+        .attr('transform', 'translate(' + 0 + ',' + this.height + ')')
+        .call(xAxis)
       this.canvas.select('.x-grid').call(xGrid)
       this.canvas.select('.y-axis').call(yAxis)
       this.canvas.select('.y-grid').call(yGrid)
