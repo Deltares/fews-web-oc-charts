@@ -14,7 +14,8 @@
             #chart-container-1 {
                 display: block;
                 width: 100%;
-                height: 400px;
+                height: 100vh;
+                max-height: 414px;
                 fill: white;
             }
 
@@ -82,7 +83,7 @@ border-color: transparent black transparent transparent;
 
 
         </style>
-        <script src="https://d3js.org/d3.v4.min.js"></script>
+        <script src="https://d3js.org/d3.v5.min.js"></script>
         <link rel="stylesheet" href="/dist/wb-charts.css">
     </head>
     <body>
@@ -93,8 +94,25 @@ border-color: transparent black transparent transparent;
         <script src="/dist/wb-charts.umd.js"></script>
         <script type="text/javascript">
 
+    d3.timeFormatDefaultLocale(
+      {
+        "dateTime": "%a %e %B %Y %T",
+        "date": "%d-%m-%Y",
+        "time": "%H:%M:%S",
+        "periods": ["AM", "PM"],
+        "days": ["zondag", "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag"],
+        "shortDays": ["zo", "ma", "di", "wo", "do", "vr", "za"],
+        "months": ["januari", "februari", "maart", "april", "mei", "juni", "juli", "augustus", "september", "oktober", "november", "december"],
+        "shortMonths": ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"]
+      }
+    )
+
     var container = document.getElementById("chart-container-1");
-    var axis =  new wbCharts.CartesianAxis(container, null, null, { x : {time: true }, y : {label: 'Waterstand [cm]'} });
+    var axis =  new wbCharts.CartesianAxis(container, null, null,
+      { x : {time: true },
+        y : {label: 'Waterstand [cm]'},
+        margin: {left: 50, right: 50 }
+      });
     var legend = new wbCharts.Legend( [
         {selector: '#median-line', label : 'Middelste (P50)'},
         {selector: '#control-line', label :'Controle'},
@@ -132,7 +150,7 @@ border-color: transparent black transparent transparent;
     var zoom = new wbCharts.ZoomHandler();
 
     axis.accept(legend);
-    function dataload() { d3.json("ensemble.json", function (error, data) {
+    function dataload() { d3.json("ensemble.json").then(function (data) {
       var nEnsemble = data.values[0].length;
       var members = Array(nEnsemble);
       var percentiles = [[],[],[]];
