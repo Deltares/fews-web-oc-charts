@@ -19,6 +19,7 @@ export class ZoomHandler implements Visitor {
   private y0: any
   private mode: SelectionMode
   private readonly MINMOVE = 15
+  private lastPoint: [number, number]
 
   constructor() {}
 
@@ -76,17 +77,18 @@ export class ZoomHandler implements Visitor {
         .attr('pointer-events', 'all')
       mouseRect
         .on('mousedown', function() {
-          console.log('mousedown')
           that.initSelection(d3.mouse(this))
         })
         .on('mouseup', function() {
-          console.log('mouseup')
           that.endSelection(d3.mouse(this))
         })
         .on('dblclick', function() {
           that.resetZoom(d3.mouse(this))
           that.mouseGroup.dispatch('mouseover')
         })
+      document.addEventListener('mouseup', function(event) {
+        that.endSelection(null)
+      })
     }
     let mouseRect = this.mouseGroup
       .select('rect')
@@ -96,6 +98,7 @@ export class ZoomHandler implements Visitor {
 
   initSelection(point: [number, number]) {
     this.brushStartPoint = point
+    this.lastPoint = null
     this.mode = SelectionMode.CANCEL
     let that = this
     this.mouseGroup.dispatch('mouseout')
@@ -113,6 +116,7 @@ export class ZoomHandler implements Visitor {
 
   updateSelection(point: [number, number]) {
     if (!this.brushStartPoint) return
+    this.lastPoint = point
     let m = [0, 0]
     m[0] = point[0] - this.brushStartPoint[0]
     m[1] = point[1] - this.brushStartPoint[1]
@@ -180,6 +184,8 @@ export class ZoomHandler implements Visitor {
   }
 
   endSelection(point: [number, number]) {
+    if (!this.brushStartPoint) return
+    point = point !== null ? point : this.lastPoint
     this.mouseGroup.select('.overlay').on('mousemove', null)
     this.brushGroup.select('.select-rect').attr('visibility', 'hidden')
     let xScale = this.axis.xScale
@@ -220,4 +226,7 @@ export class ZoomHandler implements Visitor {
     this.axis.yScale.domain(this.y0)
     this.axis.zoom()
   }
+
+  // FIXME: remove when IDrawble is introduced
+  redraw() {}
 }

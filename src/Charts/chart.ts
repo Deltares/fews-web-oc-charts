@@ -3,11 +3,6 @@ import { Axis, CartesianAxis, PolarAxis } from '../Axis'
 
 export const AUTO_SCALE = 1
 
-export interface Data {
-  x: number[]
-  y: number[]
-}
-
 function mean(x: number[] | number) {
   if (x instanceof Array) {
     return d3.mean(x)
@@ -16,13 +11,13 @@ function mean(x: number[] | number) {
 }
 
 export abstract class Chart {
-  data: any
-  style: any
+  _data: any
   group: any
   colorMap: any
   id: string
   options: any
   dataKeys: any
+  _extent: any[]
 
   constructor(data: any, options: any) {
     this.data = data
@@ -34,11 +29,45 @@ export abstract class Chart {
     this.colorMap = d3.scaleSequential(d3.interpolateWarm)
   }
 
+  set data(d: any) {
+    this._data = d
+    this.extent = null
+  }
+
+  get data() {
+    return this._data
+  }
+
+  set extent(extent: any[]) {
+    this._extent = extent
+  }
+
+  get extent(): any[] {
+    if (!this._extent) {
+      this._extent = Array()
+      for (let key in this.dataKeys) {
+        let path = this.dataKeys[key]
+        this._extent[path] = d3.extent(this._data, function(d) {
+          return d[path]
+        })
+      }
+    }
+    return this._extent
+  }
+
   addTo(axis: Axis, dataKeys: any, id?: string) {
     this.id = id ? id : ''
     this.dataKeys = dataKeys
     axis.charts.push(this)
     return this
+  }
+
+  plotter(axis: Axis, dataKeys: any) {
+    if (axis instanceof CartesianAxis) {
+      this.plotterCartesian(axis, dataKeys)
+    } else if (axis instanceof PolarAxis) {
+      this.plotterPolar(axis, dataKeys)
+    }
   }
 
   abstract plotterCartesian(axis: CartesianAxis, dataKeys: any)

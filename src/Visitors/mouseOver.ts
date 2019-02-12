@@ -8,7 +8,6 @@ export class MouseOver implements Visitor {
 
   constructor(trace: string[]) {
     this.trace = trace
-    console.log('MouseOver')
   }
 
   visit(axis: Axis) {
@@ -148,4 +147,7 @@ export class MouseOver implements Visitor {
         div.style('left', d3.event.pageX + 'px').style('top', d3.event.pageY - h + 'px')
       })
   }
+
+  // FIXME: Remove when IDrawable is introduced
+  redraw() {}
 }

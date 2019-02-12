@@ -5,6 +5,8 @@ import { Visitor } from '../Visitors'
 
 export interface AxisOptions {
   transitionTime?: number
+  x?: any
+  y?: any
 }
 
 export abstract class Axis {
@@ -17,11 +19,12 @@ export abstract class Axis {
   container: HTMLElement
   width: number
   height: number
-  margin: any
-  options: any
+  margin: { top: number; right: number; bottom: number; left: number }
+  options: AxisOptions
   chartGroup: any
   charts: Chart[]
   initialDraw: boolean = true
+  visitors: Visitor[]
 
   constructor(container: HTMLElement, width: number, height: number, options: AxisOptions) {
     this.container = container
@@ -48,6 +51,7 @@ export abstract class Axis {
       .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')')
     this.createTooltip()
     this.charts = []
+    this.visitors = []
   }
 
   setSize(height?: number, width?: number) {
@@ -70,6 +74,7 @@ export abstract class Axis {
   abstract updateGrid()
 
   accept(v: Visitor) {
+    this.visitors.push(v)
     v.visit(this)
   }
 
