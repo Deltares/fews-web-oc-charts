@@ -14,6 +14,8 @@ export interface AxisOptions {
   transitionTime?: number
   x?: any
   y?: any
+  x2?: any
+  y2?: any
   margin?: Margin
 }
 
