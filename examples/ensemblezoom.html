@@ -97,14 +97,6 @@ var refDate = new Date(2018,10,1);
 
 console.log(axis.yScale.range());
 
-
-var escalations= axis.canvas
-.append('g')
-.attr("transform", "translate(" + axis.width + " ,0)")
-.attr('class', 'axis y2-axis');
-
-
-
 d3.json("ensemble.json", function (error, data) {
     var nEnsemble = data.values[0].length;
     var members = Array(nEnsemble);
@@ -149,107 +141,8 @@ d3.json("ensemble.json", function (error, data) {
     plotMedian1.addTo(axis, { xkey: "x", ykey: "y" }, '#median-line');
     axis.redraw();
 
-    var escalationLevels= [
-      {id: 'extralow', val : -110, color: "rgba(139, 69, 19,.5)", c: '<'},
-      {id: 'low' , val : -100, color: "rgba(205, 133, 63,.5)" , c: '<' },
-      {id: 'warn' , val: 100, color: "rgba(255, 215, 0,.5)" , c: '>' },
-      {id: 'alert' , val: 120, color: "rgba(255, 0, 0,.5)" , c: '>' } ];
-      var escalationsScale=d3.scaleLinear()
-        .domain(axis.yScale.domain())
-        .range(axis.yScale.range())
-        .clamp(true);
-      var escalationsAxis=d3.axisRight(escalationsScale).tickValues(
-          [-110,-100,100,120])
-        .tickFormat(function(d,i){
-          let min = escalationsScale.domain()[0];
-          let max = escalationsScale.domain()[1];
-          if (d >= max || d <= min) return '';
-          return escalationLevels[i].id; }
-        );
-
-
-    function drawEscalations() {
-
-      axis.canvas.select(".y2-axis").call(escalationsAxis);
-      var elements = sections.selectAll('rect').data(escalationsAxis.tickValues())
-      var escY = function(d,i) {
-        if (escalationLevels[i].c == '<') {
-            return escalationsScale(d);
-        } else {
-            if (i == escalationLevels.length-1) return 0;
-            return escalationsScale(escalationLevels[i+1].val);
-        }
-      };
-
-      var escHeight = function(d,i) {
-        if (escalationLevels[i].c == '<') {
-            if (i==0) return axis.height- escalationsScale(d);
-            return escalationsScale(escalationLevels[i-1].val)- escalationsScale(d);
-        }
-        else {
-            if (i == escalationLevels.length-1) return escalationsScale(d);
-            return escalationsScale(d) - escalationsScale(escalationLevels[i+1].val);
-        }
-      };
-      var escFill = function(d,i) {
-          return escalationLevels[i].color;
-      };
-
-      elements.enter()
-        .append("rect")
-        .merge(elements)
-            .attr("y", escY)
-            .attr("width", axis.width)
-            .attr("height", escHeight)
-            .attr("fill", escFill);
-
-    }
-
-    drawEscalations();
-
-
-    const brush = d3.brush().extent([[0, 0], [axis.width, axis.height]])
-      .on("end", () => {brushEnded();})
-      .on("start.nokey", function() {
-        d3.select(window).on("keydown.brush keyup.brush", null);
-      });
-
-    let brushStartPoint = null;
-    let brushSvg = axis.canvas.append("g").attr("class", "brush")
-    .call(brush);
-    let x0 = axis.xScale.domain()
-    let y0 = axis.yScale.domain()
-
-    var idleTimeout;
-    var idleDelay = 350;
-
-    function idled() {
-      idleTimeout = null;
-    }
-
-
-    function brushEnded() {
-      var s = d3.event.selection;
-      if (!s) {
-        if (!idleTimeout) return idleTimeout = setTimeout(idled, idleDelay);
-          axis.xScale.domain(x0);
-          axis.yScale.domain(y0);
-          escalationsScale.domain(axis.yScale.domain());
-        } else {
-          var x = axis.xScale;
-          var y = axis.yScale;
-          axis.xScale.domain([s[0][0], s[1][0]].map(x.invert, x));
-          axis.yScale.domain([s[1][1], s[0][1]].map(y.invert, y));
-          escalationsScale.domain(axis.yScale.domain());
-          brushSvg.call(brush.move, null);
-          }
-          axis.zoom();
-          drawEscalations();
-        }
-    });
-
-        window.onresize = function(){axis.resize(); axis1.resize()};
-
+    window.onresize = function(){axis.resize(); axis1.resize()};
+})
         </script>
 
 
