@@ -8,6 +8,9 @@
 
             body {
                 background-color : rgb(44,44,44);
+            }
+
+            text {
                 fill: white;
             }
 
@@ -23,11 +26,32 @@
               display: none;
             }
 
-            .x-axis{
+            .r-grid{
               display: none;
             }
-            .x-grid{
+
+            #wind-gauges .y-axis{
               display: none;
+            }
+            #wind-gauges .y-grid{
+              display: none;
+            }
+
+            #slider {
+                width: 320px;
+                margin-left: 40px;
+                margin-right: 40px;
+            }
+
+            /* All the same stuff for IE */
+            input[type=range]::-ms-thumb {
+                border: black;
+                background:gray;
+            }
+
+            .data-field{
+                font-family: sans-serif;
+                font-size: 12px;
             }
 
             #chart-container-1 {
@@ -36,15 +60,33 @@
                 height: 400px;
             }
 
-            #chart-container-2 {
+            #chart-container-1 .data-field{
+                text-anchor: middle
+            }
+
+            #chart-container-1 .data-field-value{
+                font-family: sans-serif;
+                font-size: 18px;
+            }
+
+            #wind-gauges {
                 display: inline-block;
-                width: 120px;
-                height: 400px;
-                margin-left: -30px;
+            }
+
+            #chart-container-2 {
+                display: block;
+                width: 400px;
+                height: 140px;
             }
             #chart-container-3 {
-                display: inline-block;
-                width: 120px;
+                display: block;
+                width: 400px;
+                height: 140px;
+            }
+
+            #chart-container-4 {
+                display: block;
+                width: 800px;
                 height: 400px;
             }
 
@@ -59,7 +101,7 @@
             }
 
             #cartesian-range {
-                fill:rgba(0,128,255,0.5);
+                fill:rgba(53, 180, 41,0.5);
                 stroke: none;
             }
 
@@ -68,8 +110,8 @@
 
             #cartesian-dot { fill: #999999; stroke: white; }
 
-            #wind-line { fill: none; stroke: rgb(0, 128, 255); stroke-width: 3px;}
-            #stoot-line { fill: none; stroke: rgb(128, 0, 0); stroke-width: 3px;}
+            #wind-line { fill: none; stroke: rgb(53, 180, 41); stroke-width: 3px;}
+            #stoot-line { fill: none; stroke: rgb(170, 30, 30); stroke-width: 3px;}
 
             [id^=wind-zoom] {
                 display: none
@@ -98,10 +140,13 @@ lightgray; border: 0px; border-radius: 8px; pointer-events: none; }
     <body>
 
         <div id="chart-container-1"></div>
-        <div id="chart-container-2"></div>
-        <div id="chart-container-3"></div>
+        <div id="wind-gauges">
+            <input id="slider" type="range" name="points" min="0" max="10">
+            <div id="chart-container-2"></div>
+            <div id="chart-container-3"></div>
+        </div>
         <div>
-        <input id="slider" type="range" name="points" min="0" max="10">
+        <div id="chart-container-4"></div>
         </div>
         <script src="../dist/wb-charts.umd.js"></script>
         <script type="text/javascript">
@@ -115,12 +160,45 @@ lightgray; border: 0px; border-radius: 8px; pointer-events: none; }
 // set constants
 var transitionTime = 200;
 var container1 = document.getElementById("chart-container-1");
-var polarAxis = new wbCharts.PolarAxis(container1, null, null, { angular: { direction: wbCharts.CLOCKWISE, intercept: 90 } ,  innerRadius: 20 });
+var polarAxis = new wbCharts.PolarAxis(container1, null, null, { angular: { direction: wbCharts.CLOCKWISE, intercept: 90 } ,  innerRadius: 80 });
 
 var container2 = document.getElementById("chart-container-2");
 var container3 = document.getElementById("chart-container-3");
-var axis = new wbCharts.CartesianAxis(container3, null, null, {  transitionTime: transitionTime, y : { label: "windsnelheid [m/s]" }} );
-var axis2 = new wbCharts.CartesianAxis(container2, null, null, {  transitionTime: transitionTime, y : { label: "windstoot [m/s]" }} );
+var container4 = document.getElementById("chart-container-4");
+
+var axis = new wbCharts.CartesianAxis(container3, null, null, 
+    {   transitionTime: transitionTime, 
+        x: { unit: "[m/s]"},
+        x2: { unit: "[Bft]"}, 
+        margin:{bottom: 60}
+    });
+var axis2 = new wbCharts.CartesianAxis(container2, null, null, {  transitionTime: transitionTime, x: { unit: "[m/s]" }, margin:{bottom: 60}} );
+var axis3 = new wbCharts.CartesianAxis(container4, null, null, {  transitionTime: transitionTime, y : { label: "windsnelheid [m/s]" }} );
+var polarText = new wbCharts.DataField(
+    polarAxis.canvas, 
+    {selector: '#polar-line', label : 'richting'},
+    function (d) { 
+        let format = d3.format(".0f");
+        return format( d[0].y ) + "°";}
+    );
+
+function speedDataFormatter(d) { 
+    var format = d3.format(".1f");
+    var value = d[0].y
+    var knots = value * 1.943844;
+    var kmph = value * 3.6;
+    return format(value) +  "[m/s]\t" + format(knots) + "[kt]\t" + format(kmph) + "[km/h]";
+}
+
+var windAmplitudeText = new wbCharts.DataField(
+    axis.canvas, 
+    {selector: '#wind-line', label : 'windsnelheid'}, 
+    speedDataFormatter );
+var windStootText = new wbCharts.DataField(
+    axis2.canvas, 
+    {selector: '#stoot-line',label : 'windstoot'},
+    speedDataFormatter );
+
 
 var polarDataMeting = [
     [
@@ -195,6 +273,9 @@ var plot2 = new wbCharts.ChartRange(rangeData[0], {transitionTime: transitionTim
 var plot3 = new wbCharts.ChartRange(rangeData2[0], {transitionTime: transitionTime});
 target = 16;
 
+// var plot = new wbCharts.ChartLine(windAmpl, {transitionTime: transitionTime});
+// plot5.addTo(axis3, {xkey: "x", ykey: "y"})
+
 function getZoomLimit(upperLimit) {
     const zoomLevels = [32.7, 20.8, 10.8];
     result = upperLimit;
@@ -219,47 +300,62 @@ var plot5 = new wbCharts.ChartLine( windAmpl[0], {transitionTime: transitionTime
 var plot5a = new wbCharts.ChartLine( stoot[0], {transitionTime: transitionTime});
 
 
-plot3.addTo(axis,{ xkey: "x", ykey: "y"}, '#cartesian-range');
-plot4.addTo(axis,{ xkey: "x", ykey: "y"},  '#wind-zoom');
-plot5.addTo(axis,{ xkey: "x", ykey: "y"}, '#wind-line');
 
-plot4a.addTo(axis2,{ xkey: "x", ykey: "y"},  '#wind-zoom2');
-plot5a.addTo(axis2,{ xkey: "x", ykey: "y"}, '#stoot-line');
+plot3.addTo(axis,{ xkey: "y", ykey: "x"}, '#cartesian-range');
+plot4.addTo(axis,{ xkey: "y", ykey: "x"},  '#wind-zoom');
+plot5.addTo(axis,{ xkey: "y", ykey: "x"}, '#wind-line');
 
+plot4a.addTo(axis2,{ xkey: "y", ykey: "x"},  '#wind-zoom2');
+plot5a.addTo(axis2,{ xkey: "y", ykey: "x"}, '#stoot-line');
+
+var plot6 = new wbCharts.ChartLine( windAmpl[0], {transitionTime: transitionTime});
+var plot6a = new wbCharts.ChartLine( stoot[0], {transitionTime: transitionTime});
+
+plot6.addTo(axis3,{ xkey: "x", ykey: "y"}, '#wind-line');
+plot6a.addTo(axis3,{ xkey: "x", ykey: "y"}, '#stoot-line');
+var plot7 = new wbCharts.ChartLine( [
+{ x: 0, y: 0},
+{ x: 0, y: 40},
+], {});
+
+plot7.addTo(axis3,{ xkey: "x", ykey: "y"}, '#stoot-line-time');
 axis.redraw();
 axis2.redraw();
+axis3.redraw();
 
 var beaufort= axis.canvas
     .append('g')
-    .attr("transform", "translate(" + axis.width + " ,0)")
     .attr('class', 'axis y2-axis');
 
 var limits;
 var beaufortScale = d3.scaleLinear();
 
 function updateBeaufortScale(target) {
-    const beaufortLimits = [0, .3, 1.6, 3.4, 5.5, 8.0, 10.8, 13.9, 17.2, 20.8, 24.5, 28.5, 32.7 ];
+    const beaufortLimits = [0, .3, 1.6, 3.4, 5.5, 8.0, 10.8, 13.9, 17.2, 20.8, 24.5, 28.5, 32.7, 40 ];
     limits = beaufortLimits.filter( function(x) {return x<= target });
     beaufortScale.domain(Object.keys(limits))
-    beaufortScale.range( limits.map(function(x) {return ( 1- x / target) * axis.height }) )
+    beaufortScale.range( limits.map(function(x) {return ( x / target) * axis.width }) )
     return beaufortScale;
 }
 
 var beaufortScale = updateBeaufortScale(zoomLimit);
 
 function bftFormat(val) {
-    var format = d3.format(".1f");
-    if ( [3,6,9,12].indexOf(val) > -1 ) return format(val) + ' Bft';
-    return '';
+    var format = d3.format("i");
+    return format(val);
 }
 
-var beaufortAxis = d3.axisRight(beaufortScale).tickFormat(bftFormat).tickValues([1,2,3,4,5,6,7,8,9,10,11,12]);
+var beaufortAxis = d3.axisTop(beaufortScale).tickFormat(bftFormat).tickValues([1,2,3,4,5,6,7,8,9,10,11,12]);
 axis.canvas.select(".y2-axis").call(beaufortAxis);
 
 plot2.addTo(polarAxis, { rkey: "x", tkey: "y" }, '#polar-range');
 plot.addTo(polarAxis, { rkey: "x", tkey: "y", colorkey: "v"}, '#polar-line');
 plotv.addTo(polarAxis, { rkey: "x", tkey: "y", colorkey: "v"}, '#polar-line-verwachting');
 polarAxis.redraw();
+polarAxis.accept(polarText);
+axis.accept(windAmplitudeText);
+axis2.accept(windStootText);
+
 
 var count = 0;
 var updateCharts = function (event) {
@@ -285,8 +381,11 @@ var updateCharts = function (event) {
     plot5.data = windAmpl[count % 2];
     plot5a.data = stoot[count % 2];
     axis.redraw();
+    windAmplitudeText.redraw()
+    polarText.redraw();
     axis.canvas.select(".y2-axis").transition(transitionTime).call(beaufortAxis);
     axis2.redraw();
+    windStootText.redraw()
 };
 var input = document.getElementById("slider");
 input.onchange = function (event) { updateCharts(event); };
