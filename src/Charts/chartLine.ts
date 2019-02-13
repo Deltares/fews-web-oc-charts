@@ -25,24 +25,21 @@ export class ChartLine extends Chart {
       this.group.append('path')
     }
 
+    let t = d3
+      .transition()
+      .duration(this.options.transitionTime)
+      .ease(d3.easeLinear)
+
     let line = this.group.select('path')
-    line
-      .attr('d', lineGenerator(mappedData))
-      .on('mouseover', function(d: any) {
-        const v = { x: d[xkey], y: d[ykey] }
-        axis.showTooltip(v)
-      })
-      .on('mouseout', function(d: any) {
-        axis.hideTooltip(d)
-      })
-    line.datum(mappedData)
+    line.transition(t).attr('d', lineGenerator(mappedData))
+    line.datum(this.data)
   }
 
   plotterPolar(axis: PolarAxis, dataKeys: any) {
     let mappedData = this.mapDataPolar(axis, dataKeys)
     const tkey = dataKeys.tkey ? dataKeys.tkey : 't'
     const rkey = dataKeys.rkey ? dataKeys.rkey : 'r'
-    let line = d3
+    let lineGenerator = d3
       .lineRadial()
       .angle(function(d: any) {
         return d.t
@@ -51,30 +48,17 @@ export class ChartLine extends Chart {
         return d.r
       })
     this.group = this.selectGroup(axis, 'chart-line')
-    let elements = this.group.selectAll('path').data(this.data)
-
-    // exit selection
-    elements.exit().remove()
-
-    // enter + update selection
-    elements
-      .enter()
-      .append('path')
-      .attr('d', line(mappedData))
-      .on('mouseover', function(d: any) {
-        const v = { r: d[rkey], t: d[tkey] }
-        axis.showTooltip(v)
-      })
-      .on('mouseout', function(d: any) {
-        axis.hideTooltip(d)
-      })
-      .merge(elements)
+    if (this.group.select('path').size() === 0) {
+      this.group.append('path')
+    }
+    let line = this.group.select('path')
 
     let t = d3
       .transition()
       .duration(this.options.transitionTime)
       .ease(d3.easeLinear)
 
-    elements.transition(t).attr('d', line(mappedData))
+    line.transition(t).attr('d', lineGenerator(mappedData))
+    line.datum(this.data)
   }
 }
