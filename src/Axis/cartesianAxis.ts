@@ -13,15 +13,19 @@ function mean(x: number[] | number) {
 interface XAxisOptions {
   label?: string
   time?: boolean
+  unit?: string
 }
 
 interface YAxisOptions {
   label?: string
+  unit?: string
 }
 
 export interface CartesianAxisOptions extends AxisOptions {
   x?: XAxisOptions
+  x2?: XAxisOptions
   y?: YAxisOptions
+  y2?: YAxisOptions
 }
 
 export class CartesianAxis extends Axis {
@@ -207,21 +211,48 @@ export class CartesianAxis extends Axis {
       .attr('class', 'axis x-axis')
       .attr('transform', 'translate(' + 0 + ',' + this.height + ')')
     let yAxis = g.append('g').attr('class', 'axis y-axis')
-    if (this.options.y && this.options.y.label) {
-      g.append('text')
-        .attr('x', -40)
-        .attr('y', -10)
-        .style('text-anchor', 'start')
-        .style('font-size', '11px')
-        .text(this.options.y.label)
+    if (this.options.y) {
+      if (this.options.y.label) {
+        g.append('text')
+          .attr('x', -this.margin.left)
+          .attr('y', -10)
+          .attr('text-anchor', 'start')
+          .attr('font-family', 'sans-serif')
+          .attr('font-size', '10px')
+          .text(this.options.y.label)
+      }
     }
-    if (this.options.x && this.options.x.label) {
-      g.append('text')
-        .attr('x', this.width / 2)
-        .attr('y', this.height + 30)
-        .style('text-anchor', 'middle')
-        .style('font-size', '11px')
-        .text(this.options.x.label)
+    if (this.options.x) {
+      if (this.options.x.label) {
+        g.append('text')
+          .attr('x', this.width / 2)
+          .attr('y', this.height + 30)
+          .attr('text-anchor', 'middle')
+          .attr('font-family', 'sans-serif')
+          .attr('font-size', '10px')
+          .text(this.options.x.label)
+      }
+      if (this.options.x.unit) {
+        g.append('text')
+          .attr('x', this.width + 10)
+          .attr('y', this.height + 9)
+          .attr('dy', '0.71em')
+          .attr('text-anchor', 'start')
+          .attr('font-family', 'sans-serif')
+          .attr('font-size', '10px')
+          .text(this.options.x.unit)
+      }
+    }
+    if (this.options.x2) {
+      if (this.options.x2.unit) {
+        g.append('text')
+          .attr('x', this.width + 10)
+          .attr('y', -9)
+          .attr('text-anchor', 'start')
+          .attr('font-family', 'sans-serif')
+          .attr('font-size', '10px')
+          .text(this.options.x2.unit)
+      }
     }
   }
 
