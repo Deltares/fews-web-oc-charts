@@ -25,12 +25,14 @@ export class Legend implements Visitor {
   }
 
   createLegend(axis: Axis) {
-    this.svg.attr('width', axis.margin.left + axis.width + axis.margin.right).attr('height', 100)
     if (!this.group) this.group = this.svg.append('g')
     this.redraw()
   }
 
   redraw() {
+    this.svg
+      .attr('width', this.axis.margin.left + this.axis.width + this.axis.margin.right)
+      .attr('height', 100)
     this.group.attr('transform', 'translate(' + this.axis.margin.left + ', 0)')
     let dx = Math.round(this.axis.width / Object.keys(this.labels).length)
     this.group.selectAll('g').remove()

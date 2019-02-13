@@ -82,6 +82,7 @@ export class ZoomHandler implements Visitor {
         .attr('pointer-events', 'all')
       mouseRect
         .on('mousedown', function() {
+          d3.event.preventDefault()
           that.initSelection(d3.mouse(this))
           document.addEventListener('mouseup', documentMouseUp)
         })

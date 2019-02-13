@@ -3,10 +3,20 @@ import { Chart } from '../Charts'
 import { Visitor } from '../Visitors'
 // import { scaleLinear } from 'd3-scale'
 
+export interface Margin {
+  top: number
+  right: number
+  bottom: number
+  left: number
+}
+
 export interface AxisOptions {
   transitionTime?: number
   x?: any
   y?: any
+  x2?: any
+  y2?: any
+  margin?: Margin
 }
 
 export abstract class Axis {
@@ -30,25 +40,18 @@ export abstract class Axis {
     this.container = container
     this.options = options
 
-    let margin = (this.margin = {
-      top: 40,
-      right: 40,
-      bottom: 40,
-      left: 40
-    })
-
+    this.margin = { ...{ top: 40, right: 40, bottom: 40, left: 40 }, ...options.margin }
     this.setSize(height, width)
-    this.canvas = d3
+    this.svg = d3
       .select(container)
       .append('svg')
       .attr('width', '100%')
       .attr('height', '100%')
 
-    this.defs = this.canvas
-    this.defs = this.defs.append('defs')
-    this.canvas = this.canvas
+    this.defs = this.svg.append('defs')
+    this.canvas = this.svg
       .append('g')
-      .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')')
+      .attr('transform', 'translate(' + this.margin.left + ',' + this.margin.top + ')')
     this.createTooltip()
     this.charts = []
     this.visitors = []
