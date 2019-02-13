@@ -186,7 +186,7 @@ export class PolarAxis extends Axis {
       .attr('x', this.outerRadius + 15)
       .attr('y', 0)
       .text(function(d: number) {
-        return d
+        return d + '°'
       })
       .attr('transform', textRotate)
   }
