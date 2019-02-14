@@ -91,13 +91,22 @@ export abstract class Chart {
     return this.group
   }
 
-  protected mapDataCartesian(axis: CartesianAxis, dataKeys: any) {
+  protected mapDataCartesian(axis: CartesianAxis, dataKeys: any, domain: any) {
     let xkey = dataKeys.xkey ? dataKeys.xkey : 'x'
     let ykey = dataKeys.ykey ? dataKeys.ykey : 'y'
-    let mappedData: any = this.data.map(function(d: any) {
+
+    var bisectDate = d3.bisector(function(d) {
+      return d[xkey]
+    })
+    let i0 = bisectDate.right(this.data, domain[0])
+    let i1 = bisectDate.left(this.data, domain[1])
+    i0 = i0 > 0 ? i0 - 1 : 0
+    i1 = i1 < this.data.length - 1 ? i1 + 1 : this.data.length
+
+    let mappedData: any = this.data.slice(i0, i1).map(function(d: any) {
       return {
-        x: axis.xScale(d[xkey]),
-        y: axis.yScale(d[ykey])
+        x: d[xkey],
+        y: d[ykey]
       }
     })
     return mappedData

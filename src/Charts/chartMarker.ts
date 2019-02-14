@@ -16,7 +16,7 @@ export class ChartMarker extends Chart {
     const xkey = dataKeys.xkey ? dataKeys.xkey : 'x'
     const ykey = dataKeys.ykey ? dataKeys.ykey : 'y'
 
-    let mappedData = this.mapDataCartesian(axis, dataKeys)
+    let mappedData = this.mapDataCartesian(axis, dataKeys, axis.xScale.domain())
     this.group = this.selectGroup(axis, 'chart-marker')
     let elements = this.group.selectAll('.symbol').data(this.data)
     let symbolId = this.options.symbolId ? this.options.symbolId : 0
