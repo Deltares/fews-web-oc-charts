@@ -104,9 +104,10 @@ export class MouseOver implements Visitor {
           allHidden = false
           let stroke = style.getPropertyValue('stroke')
           let datum = element.datum() as any
-          let idx = bisect(datum, mouse[0])
-          let posy = datum[idx].y
-          posx = datum[idx].x
+          let idx = bisect(datum, axis.xScale.invert(mouse[0]))
+          let valy = datum[idx].y
+          let posy = axis.yScale(valy)
+          posx = axis.xScale(datum[idx].x)
           let yLabel
           if (Array.isArray(posy)) {
             let labels = posy
@@ -116,7 +117,7 @@ export class MouseOver implements Visitor {
             yLabel = labels.join(':')
             posy = posy[0]
           } else {
-            yLabel = axis.yScale.invert(posy).toFixed(2)
+            yLabel = valy.toFixed(2)
           }
           popupData[d] = { x: axis.xScale.invert(datum[idx].x), y: yLabel, color: stroke }
           return 'translate(' + posx + ',' + posy + ')'
@@ -150,7 +151,6 @@ export class MouseOver implements Visitor {
       })
   }
 
-  // FIXME: Remove when IDrawable is introduced
   redraw() {
     this.group.select('.mouse-line').attr('d', function() {
       let d = 'M' + 0 + ',' + this.axis.height
