@@ -74,16 +74,13 @@ export abstract class Chart {
   abstract plotterPolar(axis: PolarAxis, dataKeys: any)
 
   protected selectGroup(axis: Axis, cssClass: string) {
-    let direction = 1
-    let intercept = 0
-    if (axis instanceof PolarAxis) {
-      direction = -axis.direction
-      intercept = 90 - axis.intercept
-    }
     if (this.group == null) {
-      this.group = axis.chartGroup
-        .append('g')
-        .attr('transform', 'rotate(' + intercept + ')scale(' + direction + ' ,1)')
+      this.group = axis.chartGroup.append('g')
+      if (axis instanceof PolarAxis) {
+        let direction = -axis.direction
+        let intercept = 90 - axis.intercept
+        this.group.attr('transform', 'rotate(' + intercept + ')scale(' + direction + ' ,1)')
+      }
       if (this.id.lastIndexOf('#', 0) === 0) this.group.attr('id', this.id.substr(1))
       if (this.id.lastIndexOf('.', 0) === 0) {
         this.group.attr('class', cssClass + ' ' + this.id.substr(1))

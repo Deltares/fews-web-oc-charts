@@ -214,12 +214,21 @@ export class CartesianAxis extends Axis {
     if (this.options.y) {
       if (this.options.y.label) {
         g.append('text')
-          .attr('x', -this.margin.left)
-          .attr('y', -10)
+          .attr('x', 0)
+          .attr('y', -9)
           .attr('text-anchor', 'start')
           .attr('font-family', 'sans-serif')
           .attr('font-size', '10px')
           .text(this.options.y.label)
+      }
+      if (this.options.y.unit) {
+        g.append('text')
+          .attr('x', -9)
+          .attr('y', -9)
+          .attr('text-anchor', 'end')
+          .attr('font-family', 'sans-serif')
+          .attr('font-size', '10px')
+          .text(this.options.y.unit)
       }
     }
     if (this.options.x) {
