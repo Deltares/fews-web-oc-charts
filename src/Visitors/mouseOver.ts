@@ -32,6 +32,12 @@ export class MouseOver implements Visitor {
       .append('path')
       .attr('class', 'mouse-line')
       .style('opacity', '0')
+      .attr('d', function() {
+        let d = 'M' + 0 + ',' + axis.height
+        d += ' ' + 0 + ',' + 0
+        return d
+      })
+
     this.group
       .append('g')
       .attr('class', 'mouse-x')
@@ -117,11 +123,7 @@ export class MouseOver implements Visitor {
         })
 
         // update line
-        d3.select('.mouse-line').attr('d', function() {
-          let d = 'M' + posx + ',' + axis.height
-          d += ' ' + posx + ',' + 0
-          return d
-        })
+        d3.select('.mouse-line').attr('transform', 'translate(' + posx + ',' + 0 + ')')
 
         // update x-value
         let xFormat = d3.timeFormat('%H:%M')
@@ -149,5 +151,11 @@ export class MouseOver implements Visitor {
   }
 
   // FIXME: Remove when IDrawable is introduced
-  redraw() {}
+  redraw() {
+    this.group.select('.mouse-line').attr('d', function() {
+      let d = 'M' + 0 + ',' + this.axis.height
+      d += ' ' + 0 + ',' + 0
+      return d
+    })
+  }
 }
