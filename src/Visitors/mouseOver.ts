@@ -5,12 +5,14 @@ import { Visitor } from './visitor'
 export class MouseOver implements Visitor {
   private trace: string[]
   private group: any
+  private axis: CartesianAxis
 
   constructor(trace: string[]) {
     this.trace = trace
   }
 
   visit(axis: Axis) {
+    this.axis = axis as CartesianAxis
     this.create(axis as CartesianAxis)
   }
 
@@ -152,8 +154,9 @@ export class MouseOver implements Visitor {
 
   // FIXME: Remove when IDrawable is introduced
   redraw() {
+    let that = this
     this.group.select('.mouse-line').attr('d', function() {
-      let d = 'M' + 0 + ',' + this.axis.height
+      let d = 'M' + 0 + ',' + that.axis.height
       d += ' ' + 0 + ',' + 0
       return d
     })
