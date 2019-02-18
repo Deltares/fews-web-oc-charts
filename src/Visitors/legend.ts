@@ -30,18 +30,15 @@ export class Legend implements Visitor {
       .attr('width', this.axis.margin.left + this.axis.width + this.axis.margin.right)
       .attr('height', 100)
     this.group.attr('transform', 'translate(' + this.axis.margin.left + ', 0)')
-    let dx = Math.round(this.axis.width / Object.keys(this.labels).length)
     this.group.selectAll('g').remove()
     let entries = this.group.selectAll('g').data(this.labels)
     let that = this
+    let maxWidth = 0
     let enter = entries
       .enter()
       .append('g')
       .attr('class', 'legend-entry')
       .merge(entries)
-      .attr('transform', function(d, i) {
-        return 'translate(' + i * dx + ',10)'
-      })
       .each(function(d, i) {
         let entry = d3.select(this)
         let chartElement = d3
@@ -93,10 +90,24 @@ export class Legend implements Visitor {
           .text(d.label)
           .attr('x', 25)
           .attr('dy', '0.32em')
+        maxWidth = Math.max(maxWidth, entry.node().getBoundingClientRect().width)
       })
     // update
-    entries.attr('transform', function(d, i) {
-      return 'translate(' + i * dx + ',10)'
+    let columns = Math.floor(this.axis.width / maxWidth)
+    if (columns >= this.labels.length) columns = this.labels.length
+    else {
+      let rows = Math.ceil(this.labels.length / columns)
+      let lastRow = this.labels.length % columns
+      if (columns - lastRow > rows - 1) columns--
+    }
+    let rows = Math.ceil(this.labels.length / columns)
+    let dx = Math.floor(this.axis.width / columns)
+    let y = 10
+    let dy = 15
+    enter.attr('transform', function(d, i) {
+      let column = Math.floor(i / rows)
+      let row = i % rows
+      return 'translate(' + column * dx + ',' + (y + row * dy) + ')'
     })
   }
 }
