@@ -79,7 +79,7 @@ export class PolarAxis extends Axis {
       let chartRadialExtent = chart.extent[chart.dataKeys.rkey]
       radialExtent = d3.extent(d3.merge([radialExtent, [].concat(...chartRadialExtent)]))
     }
-    this.radialScale.domain(radialExtent).nice()
+    this.radialScale.domain(radialExtent)
     for (let chart of this.charts) {
       chart.plotter(this, chart.dataKeys)
     }
