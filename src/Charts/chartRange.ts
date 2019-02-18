@@ -12,6 +12,27 @@ function mean(x: number[] | number) {
 export class ChartRange extends Chart {
   private previousData: any[] = []
 
+  set extent(extent: any[]) {
+    this._extent = extent
+  }
+
+  get extent(): any[] {
+    if (!this._extent) {
+      this._extent = Array()
+      for (let key in this.dataKeys) {
+        let path = this.dataKeys[key]
+        let min = d3.min(this._data, function(d: any) {
+          return d3.min(d[path])
+        })
+        let max = d3.max(this._data, function(d: any) {
+          return d3.max(d[path])
+        })
+        this._extent[path] = [min, max]
+      }
+    }
+    return this._extent
+  }
+
   plotterCartesian(axis: CartesianAxis, dataKeys: any) {
     let xkey = dataKeys.xkey ? dataKeys.xkey : 'x'
     let ykey = dataKeys.ykey ? dataKeys.ykey : 'y'
