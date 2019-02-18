@@ -92,8 +92,7 @@ export class Legend implements Visitor {
           .append('text')
           .text(d.label)
           .attr('x', 25)
-          .attr('y', 0)
-          .style('dominant-baseline', 'middle')
+          .attr('dy', '0.32em')
       })
     // update
     entries.attr('transform', function(d, i) {
