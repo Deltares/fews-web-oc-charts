@@ -14,11 +14,13 @@ interface XAxisOptions {
   label?: string
   time?: boolean
   unit?: string
+  domain?: [number, number]
 }
 
 interface YAxisOptions {
   label?: string
   unit?: string
+  domain?: [number, number]
 }
 
 export interface CartesianAxisOptions extends AxisOptions {
@@ -108,18 +110,28 @@ export class CartesianAxis extends Axis {
     }
   }
 
-  redraw() {
-    let xExtent = new Array(2)
-    let yExtent = new Array(2)
-    for (let chart of this.charts) {
-      let chartXExtent = chart.extent[chart.dataKeys.xkey]
-      let chartYExtent = chart.extent[chart.dataKeys.ykey]
-      xExtent = d3.extent(d3.merge([xExtent, [].concat(...chartXExtent)]))
-      yExtent = d3.extent(d3.merge([yExtent, [].concat(...chartYExtent)]))
+  redraw(options?) {
+    options = { ...{ x: { autoScale: false }, y: { autoScale: false } }, ...options }
+    if (this.options.x && this.options.x.domain) {
+      this.xScale.domain(this.options.x.domain)
+    } else if (options.x.autoScale === true) {
+      let xExtent = new Array(2)
+      for (let chart of this.charts) {
+        let chartXExtent = chart.extent[chart.dataKeys.xkey]
+        xExtent = d3.extent(d3.merge([xExtent, [].concat(...chartXExtent)]))
+      }
+      this.xScale.domain(xExtent)
     }
-    this.xScale.domain(xExtent)
-    this.yScale.domain(yExtent)
-
+    if (this.options.y && this.options.y.domain) {
+      this.yScale.domain(this.options.y.domain)
+    } else if (options.y.autoScale === true) {
+      let yExtent = new Array(2)
+      for (let chart of this.charts) {
+        let chartYExtent = chart.extent[chart.dataKeys.ykey]
+        yExtent = d3.extent(d3.merge([yExtent, [].concat(...chartYExtent)]))
+      }
+      this.yScale.domain(yExtent)
+    }
     for (let chart of this.charts) {
       chart.plotter(this, chart.dataKeys)
     }
@@ -153,8 +165,9 @@ export class CartesianAxis extends Axis {
       let step = d3.tickIncrement(domain[0], domain[1], 5)
       step = step >= 100 ? 90 : step >= 50 ? 45 : step >= 20 ? 15 : step
       let start = Math.ceil(domain[0] / step) * step
-      yAxis.tickValues(d3.range(start, domain[1] + Number.MIN_VALUE, step))
-      yGrid.tickValues(d3.range(start, domain[1] + Number.MIN_VALUE, step))
+      let stop = Math.floor(domain[1] / step + 1) * step
+      yAxis.tickValues(d3.range(start, stop, step))
+      yGrid.tickValues(d3.range(start, stop, step))
     }
     if (this.options.transitionTime > 0 && !this.initialDraw) {
       let t = d3
