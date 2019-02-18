@@ -135,7 +135,7 @@ export class CartesianAxis extends Axis {
   updateGrid() {
     this.setClipPath()
     this.setCanvas()
-    let xAxis = d3.axisBottom(this.xScale)
+    let xAxis = d3.axisBottom(this.xScale).ticks(5)
     if (this.options.x && this.options.x.time) {
       xAxis.tickFormat(this.multiFormat)
     }
