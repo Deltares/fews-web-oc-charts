@@ -118,7 +118,7 @@ export class CartesianAxis extends Axis {
       yExtent = d3.extent(d3.merge([yExtent, [].concat(...chartYExtent)]))
     }
     this.xScale.domain(xExtent)
-    this.yScale.domain(yExtent).nice()
+    this.yScale.domain(yExtent)
 
     for (let chart of this.charts) {
       chart.plotter(this, chart.dataKeys)
@@ -148,6 +148,14 @@ export class CartesianAxis extends Axis {
       .axisRight(this.yScale)
       .ticks(5)
       .tickSize(this.width)
+    if (this.options.y && this.options.y.axisType === 'degrees') {
+      let domain = this.yScale.domain()
+      let step = d3.tickIncrement(domain[0], domain[1], 5)
+      step = step >= 100 ? 90 : step >= 50 ? 45 : step >= 20 ? 15 : step
+      let start = Math.ceil(domain[0] / step) * step
+      yAxis.tickValues(d3.range(start, domain[1] + Number.MIN_VALUE, step))
+      yGrid.tickValues(d3.range(start, domain[1] + Number.MIN_VALUE, step))
+    }
     if (this.options.transitionTime > 0 && !this.initialDraw) {
       let t = d3
         .transition()
