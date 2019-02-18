@@ -126,7 +126,7 @@ export class MouseOver implements Visitor {
         })
 
         // update line
-        d3.select('.mouse-line').attr('transform', 'translate(' + posx + ',' + 0 + ')')
+        that.group.select('.mouse-line').attr('transform', 'translate(' + posx + ',' + 0 + ')')
 
         // update x-value
         let xFormat = d3.timeFormat('%H:%M')
