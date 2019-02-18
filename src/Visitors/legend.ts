@@ -17,15 +17,11 @@ export class Legend implements Visitor {
       .select(container)
       .append('svg')
       .attr('class', 'legend')
+    this.group = this.svg.append('g')
   }
 
   visit(axis: Axis) {
     this.axis = axis as CartesianAxis
-    this.createLegend(axis)
-  }
-
-  createLegend(axis: Axis) {
-    if (!this.group) this.group = this.svg.append('g')
     this.redraw()
   }
 
@@ -96,8 +92,7 @@ export class Legend implements Visitor {
           .append('text')
           .text(d.label)
           .attr('x', 25)
-          .attr('y', 0)
-          .style('dominant-baseline', 'middle')
+          .attr('dy', '0.32em')
       })
     // update
     entries.attr('transform', function(d, i) {

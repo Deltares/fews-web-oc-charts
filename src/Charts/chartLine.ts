@@ -1,20 +1,21 @@
 import * as d3 from 'd3'
 import { CartesianAxis, PolarAxis } from '../Axis'
 import { Chart } from './chart'
+import { map } from 'd3'
 
 export class ChartLine extends Chart {
   plotterCartesian(axis: CartesianAxis, dataKeys: any) {
     const xkey = dataKeys.xkey ? dataKeys.xkey : 'x'
     const ykey = dataKeys.ykey ? dataKeys.ykey : 'y'
 
-    let mappedData = this.mapDataCartesian(axis, dataKeys)
+    let mappedData = this.mapDataCartesian(axis, dataKeys, axis.xScale.domain())
     let lineGenerator = d3
       .line()
       .x(function(d: any) {
-        return d.x
+        return axis.xScale(d.x)
       })
       .y(function(d: any) {
-        return d.y
+        return axis.yScale(d.y)
       })
       .defined(function(d: any) {
         return d.y != null
@@ -24,15 +25,10 @@ export class ChartLine extends Chart {
     if (this.group.select('path').size() === 0) {
       this.group.append('path')
     }
-
-    let t = d3
-      .transition()
-      .duration(this.options.transitionTime)
-      .ease(d3.easeLinear)
-
-    let line = this.group.select('path')
-    line.transition(t).attr('d', lineGenerator(mappedData))
-    line.datum(this.data)
+    this.group
+      .select('path')
+      .datum(mappedData)
+      .attr('d', lineGenerator)
   }
 
   plotterPolar(axis: PolarAxis, dataKeys: any) {

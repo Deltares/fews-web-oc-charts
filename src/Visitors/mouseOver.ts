@@ -5,12 +5,14 @@ import { Visitor } from './visitor'
 export class MouseOver implements Visitor {
   private trace: string[]
   private group: any
+  private axis: CartesianAxis
 
   constructor(trace: string[]) {
     this.trace = trace
   }
 
   visit(axis: Axis) {
+    this.axis = axis as CartesianAxis
     this.create(axis as CartesianAxis)
   }
 
@@ -32,6 +34,12 @@ export class MouseOver implements Visitor {
       .append('path')
       .attr('class', 'mouse-line')
       .style('opacity', '0')
+      .attr('d', function() {
+        let d = 'M' + 0 + ',' + axis.height
+        d += ' ' + 0 + ',' + 0
+        return d
+      })
+
     this.group
       .append('g')
       .attr('class', 'mouse-x')
@@ -98,9 +106,10 @@ export class MouseOver implements Visitor {
           allHidden = false
           let stroke = style.getPropertyValue('stroke')
           let datum = element.datum() as any
-          let idx = bisect(datum, mouse[0])
-          let posy = datum[idx].y
-          posx = datum[idx].x
+          let idx = bisect(datum, axis.xScale.invert(mouse[0]))
+          let valy = datum[idx].y
+          let posy = axis.yScale(valy)
+          posx = axis.xScale(datum[idx].x)
           let yLabel
           if (Array.isArray(posy)) {
             let labels = posy
@@ -110,18 +119,14 @@ export class MouseOver implements Visitor {
             yLabel = labels.join(':')
             posy = posy[0]
           } else {
-            yLabel = axis.yScale.invert(posy).toFixed(2)
+            yLabel = valy.toFixed(2)
           }
           popupData[d] = { x: axis.xScale.invert(datum[idx].x), y: yLabel, color: stroke }
           return 'translate(' + posx + ',' + posy + ')'
         })
 
         // update line
-        d3.select('.mouse-line').attr('d', function() {
-          let d = 'M' + posx + ',' + axis.height
-          d += ' ' + posx + ',' + 0
-          return d
-        })
+        d3.select('.mouse-line').attr('transform', 'translate(' + posx + ',' + 0 + ')')
 
         // update x-value
         let xFormat = d3.timeFormat('%H:%M')
@@ -148,6 +153,12 @@ export class MouseOver implements Visitor {
       })
   }
 
-  // FIXME: Remove when IDrawable is introduced
-  redraw() {}
+  redraw() {
+    let that = this
+    this.group.select('.mouse-line').attr('d', function() {
+      let d = 'M' + 0 + ',' + that.axis.height
+      d += ' ' + 0 + ',' + 0
+      return d
+    })
+  }
 }

@@ -54,8 +54,7 @@ export class LevelSelect implements Visitor {
       .select('line')
       .attr('x1', 0)
       .attr('x2', this.axis.width)
-      .attr('y1', y)
-      .attr('y2', y)
+      .attr('transform', 'translate( 0, ' + y + ')')
     // text
     this.group
       .select('text')
