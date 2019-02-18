@@ -102,12 +102,15 @@ export class MouseOver implements Visitor {
         axis.canvas.selectAll('.mouse-per-line').attr('transform', function(d, i) {
           let element = axis.canvas.select(d).select('path')
           let style = window.getComputedStyle(element.node() as Element)
-          if (style.getPropertyValue('visibility') === 'hidden') return
+          if (style.getPropertyValue('visibility') === 'hidden')
+            return 'translate(' + -2 * axis.margin.left + ',' + -2 * axis.margin.top + ')'
           allHidden = false
           let stroke = style.getPropertyValue('stroke')
           let datum = element.datum() as any
           let idx = bisect(datum, axis.xScale.invert(mouse[0]))
           let valy = datum[idx].y
+          if (valy === null)
+            return 'translate(' + -2 * axis.margin.left + ',' + -2 * axis.margin.top + ')'
           let posy = axis.yScale(valy)
           posx = axis.xScale(datum[idx].x)
           let yLabel
