@@ -1,5 +1,6 @@
 import * as d3 from 'd3'
 import { Axis, CartesianAxis } from '../Axis'
+import * as WB from '../Utils'
 import { Visitor } from './visitor'
 
 export class CurrentTime implements Visitor {
@@ -48,7 +49,17 @@ export class CurrentTime implements Visitor {
       this.indicator.append('text')
     }
     this.indicator.attr('transform', 'translate(' + x + ',' + this.axis.height + ')')
-    let dateFormatter = d3.timeFormat('%Y-%m-%d %H:%M %Z')
+    let timezone = 'Etc/GMT' + this.axis.timeZoneOffset / 60
+    let options = {
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: 'numeric',
+      timeZone: timezone,
+      timeZoneOffset: this.axis.timeZoneOffset
+    }
+    let dateFormatter = WB.dateFormatter('nl-NL', options)
     this.indicator
       .select('text')
       .attr('x', 5)

@@ -1,5 +1,6 @@
 import * as d3 from 'd3'
 import { Axis, CartesianAxis } from '../Axis'
+import * as WB from '../Utils'
 import { Visitor } from './visitor'
 
 export class MouseOver implements Visitor {
@@ -133,13 +134,21 @@ export class MouseOver implements Visitor {
         that.group.select('.mouse-line').attr('transform', 'translate(' + posx + ',' + 0 + ')')
 
         // update x-value
-        let xFormat = d3.timeFormat('%H:%M')
+        let timezone = 'Etc/GMT' + that.axis.timeZoneOffset / 60
+        let options = {
+          weekday: 'short',
+          day: 'numeric',
+          hour: 'numeric',
+          minute: 'numeric',
+          timeZone: timezone,
+          timeZoneOffset: that.axis.timeZoneOffset
+        }
+        let dateFormatter = WB.dateFormatter('nl-NL', options)
         that.group
           .select('.mouse-x')
           .attr('transform', 'translate(' + (posx + 2) + ',' + (axis.height - 5) + ')')
           .select('text')
-          .text(xFormat(axis.xScale.invert(posx)))
-
+          .text(dateFormatter(axis.xScale.invert(posx)))
         if (allHidden) {
           axis.hideTooltip(null)
           return

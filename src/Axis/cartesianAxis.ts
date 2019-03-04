@@ -36,6 +36,7 @@ export class CartesianAxis extends Axis {
   xScale: any
   yScale: any
   clipPathId: string
+  timeZoneOffset: number
 
   constructor(
     container: HTMLElement,
@@ -46,7 +47,7 @@ export class CartesianAxis extends Axis {
     super(container, width, height, options)
     this.view = this.canvas
     this.chartGroup = this.canvas
-
+    this.timeZoneOffset = -60
     this.setCanvas()
     this.setRange()
     this.initGrid()
@@ -147,12 +148,23 @@ export class CartesianAxis extends Axis {
   updateGrid() {
     this.setClipPath()
     this.setCanvas()
-    let xAxis = d3.axisBottom(this.xScale).ticks(5)
+    let that = this
+    let proxyXscale = this.xScale
+    if (this.options.x && this.options.x.time) {
+      let domain = this.xScale.domain().map(function(d) {
+        return new Date(+d - that.timeZoneOffset * 60000)
+      })
+      proxyXscale = d3
+        .scaleUtc()
+        .domain(domain)
+        .range(this.xScale.range())
+    }
+    let xAxis = d3.axisBottom(proxyXscale).ticks(5)
     if (this.options.x && this.options.x.time) {
       xAxis.tickFormat(this.multiFormat)
     }
     let xGrid = d3
-      .axisBottom(this.xScale)
+      .axisBottom(proxyXscale)
       .ticks(5)
       .tickSize(this.height)
     let yAxis = d3.axisLeft(this.yScale).ticks(5)
@@ -216,7 +228,7 @@ export class CartesianAxis extends Axis {
 
   protected setRange() {
     if (!this.xScale) {
-      this.xScale = this.options.x && this.options.x.time ? d3.scaleTime() : d3.scaleLinear()
+      this.xScale = this.options.x && this.options.x.time ? d3.scaleUtc() : d3.scaleLinear()
     }
     if (!this.yScale) this.yScale = d3.scaleLinear()
     this.xScale.range([0, this.width])
@@ -288,20 +300,20 @@ export class CartesianAxis extends Axis {
 
   // Define filter conditions
   multiFormat(date) {
-    return (d3.timeSecond(date) < date
-      ? d3.timeFormat('.%L')
-      : d3.timeMinute(date) < date
-      ? d3.timeFormat(':%S')
-      : d3.timeHour(date) < date
-      ? d3.timeFormat('%H:%M')
-      : d3.timeDay(date) < date
-      ? d3.timeFormat('%H:%M')
-      : d3.timeMonth(date) < date
-      ? d3.timeWeek(date) < date
-        ? d3.timeFormat('%a %d')
-        : d3.timeFormat('%b %d')
-      : d3.timeYear(date) < date
-      ? d3.timeFormat('%B')
-      : d3.timeFormat('%Y'))(date)
+    return (d3.utcSecond(date) < date
+      ? d3.utcFormat('.%L')
+      : d3.utcMinute(date) < date
+      ? d3.utcFormat(':%S')
+      : d3.utcHour(date) < date
+      ? d3.utcFormat('%H:%M')
+      : d3.utcDay(date) < date
+      ? d3.utcFormat('%H:%M')
+      : d3.utcMonth(date) < date
+      ? d3.utcWeek(date) < date
+        ? d3.utcFormat('%a %d')
+        : d3.utcFormat('%b %d')
+      : d3.utcYear(date) < date
+      ? d3.utcFormat('%B')
+      : d3.utcFormat('%Y'))(date)
   }
 }
