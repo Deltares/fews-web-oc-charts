@@ -95,11 +95,11 @@ export abstract class Chart {
     let xkey = dataKeys.xkey ? dataKeys.xkey : 'x'
     let ykey = dataKeys.ykey ? dataKeys.ykey : 'y'
 
-    var bisectDate = d3.bisector(function(d) {
+    var bisectData = d3.bisector(function(d) {
       return d[xkey]
     })
-    let i0 = bisectDate.right(this.data, domain[0])
-    let i1 = bisectDate.left(this.data, domain[1])
+    let i0 = bisectData.right(this.data, domain[0])
+    let i1 = bisectData.left(this.data, domain[1])
     i0 = i0 > 0 ? i0 - 1 : 0
     i1 = i1 < this.data.length - 1 ? i1 + 1 : this.data.length
 
