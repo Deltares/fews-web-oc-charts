@@ -34,36 +34,41 @@ export class CurrentTime implements Visitor {
   redraw() {
     let currentDate = new Date()
     let x = this.axis.xScale(currentDate)
+    let domain = this.axis.xScale.domain()
     if (!this.line) {
       this.line = this.group.append('line')
     }
-    this.line
-      .attr('x1', x)
-      .attr('x2', x)
-      .attr('y1', this.axis.height)
-      .attr('y2', 0)
-
-    if (!this.indicator) {
-      this.indicator = this.group.append('g').attr('class', 'current-time-indicator')
-      this.indicator.append('polygon').attr('points', '0,0 5,5 -5,5')
-      this.indicator.append('text')
+    if (currentDate < domain[0] || currentDate > domain[1]) {
+      this.group.attr('display', 'hidden')
+    } else {
+      this.group.attr('display', 'initial')
+      this.line
+        .attr('x1', x)
+        .attr('x2', x)
+        .attr('y1', this.axis.height)
+        .attr('y2', 0)
+      if (!this.indicator) {
+        this.indicator = this.group.append('g').attr('class', 'current-time-indicator')
+        this.indicator.append('polygon').attr('points', '0,0 5,5 -5,5')
+        this.indicator.append('text')
+      }
+      this.indicator.attr('transform', 'translate(' + x + ',' + this.axis.height + ')')
+      let timezone = 'Etc/GMT' + this.axis.timeZoneOffset / 60
+      let options = {
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: 'numeric',
+        timeZone: timezone,
+        timeZoneOffset: this.axis.timeZoneOffset
+      }
+      let dateFormatter = WB.dateFormatter('nl-NL', options)
+      this.indicator
+        .select('text')
+        .attr('x', 5)
+        .attr('y', -5)
+        .text(dateFormatter(currentDate))
     }
-    this.indicator.attr('transform', 'translate(' + x + ',' + this.axis.height + ')')
-    let timezone = 'Etc/GMT' + this.axis.timeZoneOffset / 60
-    let options = {
-      year: 'numeric',
-      month: 'numeric',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: 'numeric',
-      timeZone: timezone,
-      timeZoneOffset: this.axis.timeZoneOffset
-    }
-    let dateFormatter = WB.dateFormatter('nl-NL', options)
-    this.indicator
-      .select('text')
-      .attr('x', 5)
-      .attr('y', -5)
-      .text(dateFormatter(currentDate))
   }
 }
