@@ -84,6 +84,8 @@
 }
 
 .current-time-indicator>text {
+  font-family: sans-serif;
+  font-size: 10px;
   visibility: hidden;
   stroke:none;
   fill:black;
@@ -96,6 +98,7 @@
 .mouse-x > text {
   -webkit-user-select:none;
   user-select: none;
+  font: 10px sans-serif;
 }
 
 .brush .handle {

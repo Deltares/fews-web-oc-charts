@@ -96,6 +96,7 @@
 .mouse-x > text {
   -webkit-user-select:none;
   user-select: none;
+  font: 10px sans-serif;
 }
 
 .brush .handle {
