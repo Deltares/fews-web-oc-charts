@@ -41,21 +41,17 @@
 
             #cartesian-line { fill: none; stroke: white; }
 
-            /* .tooltip { background: #eee;
-            box-shadow: 0 0 5px #999999;
-            color: #333;
-            display: none;
-            font-size: 12px;
-            left: 130px;
-            padding: 10px;
-            position: absolute;
-            text-align: center;
-            top: 95px;
-            width: 80px;
-            z-index: 10; } */
-
-            div.tooltip { position: absolute; text-align: center; width: 60px; height: 28px; padding: 2px; font: 12px sans-serif; background:
-lightgray; border: 0px; border-radius: 8px; pointer-events: none; }
+            div.tooltip { position: absolute; 
+                text-align: center;
+                width: 60px;
+                height: 28px;
+                padding: 2px;
+                font: 12px sans-serif; 
+                color: #fff;
+                background: black;
+                border: 0px;
+                border-radius: 8px;
+                pointer-events: none; }
 
         </style>
         <script src="https://d3js.org/d3.v4.min.js"></script>
@@ -129,7 +125,7 @@ var count = 0;
 var updateCharts = function (event) {
     var newData = randomSpectrum(count + 1);
     plot4.data = newData;
-    axis.redraw();
+    axis.redraw({y: {autoScale: true }});
     count++;
     plot.data = polarData[count % 2];
     polarAxis.redraw();
