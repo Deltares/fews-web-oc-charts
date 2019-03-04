@@ -215,13 +215,13 @@ export class CartesianAxis extends Axis {
     this.initialDraw = false
   }
 
-  showTooltip(d: any) {
+  showTooltip(html: string) {
     this.tooltip
       .transition()
       .duration(50)
       .style('opacity', 0.9)
     this.tooltip
-      .html('x: ' + d.x + '<br/>' + 'y: ' + d.y.toFixed(2))
+      .html(html)
       .style('left', d3.event.pageX + 'px')
       .style('top', d3.event.pageY + 'px')
   }

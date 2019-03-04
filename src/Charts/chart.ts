@@ -21,9 +21,15 @@ export abstract class Chart {
 
   constructor(data: any, options: any) {
     this.data = data
-    this.options = options
-    if (!('transitionTime' in this.options)) {
-      this.options.transitionTime = 100
+    this.options = {
+      ...{
+        r: { includeInTooltip: true },
+        t: { includeInTooltip: true },
+        x: { includeInTooltip: true },
+        y: { includeInTooltip: true },
+        transitionTime: 100
+      },
+      ...options
     }
     // https://github.com/d3/d3-scale-chromatic
     this.colorMap = d3.scaleSequential(d3.interpolateWarm)
@@ -68,6 +74,28 @@ export abstract class Chart {
     } else if (axis instanceof PolarAxis) {
       this.plotterPolar(axis, dataKeys)
     }
+  }
+
+  protected toolTipFormatterCartesian(d) {
+    let html = ''
+    if (this.options.x.includeInTooltip) {
+      html += 'x: ' + d.x.toFixed(2) + '<br/>'
+    }
+    if (this.options.y.includeInTooltip) {
+      html += 'y: ' + d.y.toFixed(2)
+    }
+    return html
+  }
+
+  protected toolTipFormatterPolar(d) {
+    let html = ''
+    if (this.options.t.includeInTooltip) {
+      html += 't: ' + d.t.toFixed(2) + '<br/>'
+    }
+    if (this.options.r.includeInTooltip) {
+      html += 'r: ' + d.r.toFixed(2)
+    }
+    return html
   }
 
   abstract plotterCartesian(axis: CartesianAxis, dataKeys: any)

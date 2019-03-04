@@ -47,6 +47,7 @@ export class ChartHistogram extends Chart {
 
     let elements: any = this.group.selectAll('rect').data(mappedData)
 
+    let that = this
     // remove
     elements.exit().remove()
     // enter + update
@@ -68,7 +69,7 @@ export class ChartHistogram extends Chart {
         return histScale(d.x)
       })
       .on('mouseover', function(d: any) {
-        axis.showTooltip(d)
+        axis.showTooltip(that.toolTipFormatterCartesian(d))
       })
       .on('mouseout', function(d: any) {
         axis.hideTooltip(d)

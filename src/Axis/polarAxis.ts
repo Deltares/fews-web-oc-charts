@@ -191,13 +191,13 @@ export class PolarAxis extends Axis {
       .attr('transform', textRotate)
   }
 
-  showTooltip(d: any) {
+  showTooltip(html: string) {
     this.tooltip
       .transition()
       .duration(50)
       .style('opacity', 0.9)
     this.tooltip
-      .html('t: ' + mean(d.t).toFixed(2) + '<br/>' + 'r: ' + mean(d.r).toFixed(2))
+      .html(html)
       .style('left', d3.event.pageX + 'px')
       .style('top', d3.event.pageY + 'px')
   }

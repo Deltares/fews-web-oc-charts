@@ -33,6 +33,36 @@ export class ChartRange extends Chart {
     return this._extent
   }
 
+  toolTipFormatterCartesian(d) {
+    let html = ''
+    if (this.options.x.includeInTooltip) {
+      if (d.x[0] != d.x[1]) {
+        html += 'x: ' + d.x[0].toFixed(2) + '-' + d.x[1].toFixed(2) + '<br/>'
+      }
+    }
+    if (this.options.y.includeInTooltip) {
+      if (d.y[0] != d.y[1]) {
+        html += 'y: ' + d.y[0].toFixed(2) + '-' + d.y[1].toFixed(2)
+      }
+    }
+    return html
+  }
+
+  toolTipFormatterPolar(d) {
+    let html = ''
+    if (this.options.t.includeInTooltip) {
+      if (d.t[0] != d.t[1]) {
+        html += 't: ' + d.t[0].toFixed(0) + '-' + d.t[1].toFixed(0) + '<br/>'
+      }
+    }
+    if (this.options.r.includeInTooltip) {
+      if (d.r[0] != d.r[1]) {
+        html += 'r: ' + d.r[0].toFixed(0) + '-' + d.r[1].toFixed(0)
+      }
+    }
+    return html
+  }
+
   plotterCartesian(axis: CartesianAxis, dataKeys: any) {
     let xkey = dataKeys.xkey ? dataKeys.xkey : 'x'
     let ykey = dataKeys.ykey ? dataKeys.ykey : 'y'
@@ -64,7 +94,7 @@ export class ChartRange extends Chart {
       .transition()
       .duration(this.options.transitionTime)
       .ease(d3.easeLinear)
-
+    let that = this
     // exit
     elements.exit().remove()
     // update + enter
@@ -82,6 +112,12 @@ export class ChartRange extends Chart {
       })
       .attr('height', function(d: any) {
         return d.y[0] - d.y[1]
+      })
+      .on('mouseover', function(d: any) {
+        axis.showTooltip(that.toolTipFormatterCartesian(d))
+      })
+      .on('mouseout', function(d: any) {
+        axis.hideTooltip(d)
       })
 
     if (colorkey) {
@@ -162,12 +198,13 @@ export class ChartRange extends Chart {
 
     elements.exit().remove()
 
+    let that = this
     let enter = elements
       .enter()
       .append('path')
       .attr('d', arcGenerator)
       .on('mouseover', function(d: any) {
-        axis.showTooltip(d)
+        axis.showTooltip(that.toolTipFormatterPolar(d))
       })
       .on('mouseout', function(d: any) {
         axis.hideTooltip(d)

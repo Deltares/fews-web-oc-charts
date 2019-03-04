@@ -24,13 +24,14 @@ export class ChartMarker extends Chart {
     // exit selection
     elements.exit().remove()
 
+    let that = this
     // enter + update selection
     elements
       .enter()
       .append('path')
       .on('mouseover', function(d: any) {
         const v = { x: d[xkey], y: d[ykey] }
-        axis.showTooltip(v)
+        axis.showTooltip(that.toolTipFormatterCartesian(v))
       })
       .on('mouseout', function(d: any) {
         axis.hideTooltip(d)
@@ -73,6 +74,7 @@ export class ChartMarker extends Chart {
     // exit selection
     elements.exit().remove()
 
+    let that = this
     // enter + update selection
     elements
       .enter()
@@ -85,7 +87,7 @@ export class ChartMarker extends Chart {
       .attr('d', d3.symbol().type(d3.symbols[symbolId]))
       .on('mouseover', function(d: any) {
         const v = { r: d[rkey], t: d[tkey] }
-        axis.showTooltip(v)
+        axis.showTooltip(that.toolTipFormatterPolar(v))
       })
       .on('mouseout', function(d: any) {
         axis.hideTooltip(d)

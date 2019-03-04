@@ -94,7 +94,7 @@ export abstract class Axis {
       .style('opacity', 0)
   }
 
-  abstract showTooltip(d: any)
+  abstract showTooltip(html: string)
 
   hideTooltip(d: any) {
     this.tooltip
