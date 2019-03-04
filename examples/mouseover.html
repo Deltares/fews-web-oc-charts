@@ -192,7 +192,7 @@ border-color: transparent black transparent transparent;
 
       plotControl1.addTo(axis, { xkey: "x", ykey: "y" }, '#control-line');
       plotMedian1.addTo(axis, { xkey: "x", ykey: "y" }, '#median-line');
-      axis.redraw();
+      axis.redraw({x:{ autoScale: true}, y: {autoScale: true} });
       axis.zoom();
       // legend.visit(axis);
       // axis.accept(legend);
