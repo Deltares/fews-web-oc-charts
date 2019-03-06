@@ -10,8 +10,8 @@ export class LevelSelect implements Visitor {
   callback: Function
   format: any
 
-  constructor(callback: Function) {
-    this.value = 50
+  constructor(value: number, callback: Function) {
+    this.value = value
     this.callback = callback
     this.format = d3.format('.2f')
   }
