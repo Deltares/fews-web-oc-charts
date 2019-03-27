@@ -108,7 +108,11 @@ export class MouseOver implements Visitor {
           allHidden = false
           let stroke = style.getPropertyValue('stroke')
           let datum = element.datum() as any
-          let idx = bisect(datum, axis.xScale.invert(mouse[0]))
+          let mouseValue = axis.xScale.invert(mouse[0])
+          let idx = bisect(datum, mouseValue)
+          if (idx == 0 && datum[idx].x >= mouseValue) {
+            return 'translate(' + -2 * axis.margin.left + ',' + -2 * axis.margin.top + ')'
+          }
           if (!datum[idx] || datum[idx].y === null) {
             return 'translate(' + -2 * axis.margin.left + ',' + -2 * axis.margin.top + ')'
           }
