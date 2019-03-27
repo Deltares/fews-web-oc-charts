@@ -39,7 +39,7 @@ export class CurrentTime implements Visitor {
       this.line = this.group.append('line')
     }
     if (currentDate < domain[0] || currentDate > domain[1]) {
-      this.group.attr('display', 'hidden')
+      this.group.attr('display', 'none')
     } else {
       this.group.attr('display', 'initial')
       this.line
