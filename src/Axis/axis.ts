@@ -48,6 +48,7 @@ export abstract class Axis {
       .attr('width', '100%')
       .attr('height', '100%')
       .attr('class', 'wb-charts')
+      .attr('overflow', 'visible')
 
     this.defs = this.svg.append('defs')
     this.canvas = this.svg
