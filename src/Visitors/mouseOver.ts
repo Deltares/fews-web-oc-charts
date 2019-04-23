@@ -130,6 +130,10 @@ export class MouseOver implements Visitor {
           } else {
             yLabel = valy.toFixed(2)
           }
+          posy =
+            posy < axis.yScale.range()[1] || posy > axis.yScale.range()[0]
+              ? -window.innerHeight
+              : posy
           popupData[d] = { x: axis.xScale.invert(datum[idx].x), y: yLabel, color: stroke }
           return 'translate(' + posx + ',' + posy + ')'
         })
