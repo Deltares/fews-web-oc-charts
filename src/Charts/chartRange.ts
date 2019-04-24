@@ -22,9 +22,11 @@ export class ChartRange extends Chart {
       for (let key in this.dataKeys) {
         let path = this.dataKeys[key]
         let min = d3.min(this._data, function(d: any) {
+          if (d[path] === null) return undefined
           return d3.min(d[path])
         })
         let max = d3.max(this._data, function(d: any) {
+          if (d[path] === null) return undefined
           return d3.max(d[path])
         })
         this._extent[path] = [min, max]
