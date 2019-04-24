@@ -2,6 +2,7 @@ import * as d3 from 'd3'
 import { Axis, CartesianAxis } from '../Axis'
 import * as WB from '../Utils'
 import { Visitor } from './visitor'
+import { dateFormatter } from '../Utils'
 
 export class MouseOver implements Visitor {
   private trace: string[]
@@ -152,7 +153,7 @@ export class MouseOver implements Visitor {
           .select('.mouse-x')
           .attr('transform', 'translate(' + (posx + 2) + ',' + (axis.height - 5) + ')')
           .select('text')
-          .text(dateFormatter(axis.xScale.invert(posx)))
+          .text(dateFormatter(axis.xScale.invert(posx), 'YYYY-MM-DD HH:mm z',{timeZone: that.axis.timeZone} ) )
         if (allHidden) {
           axis.hideTooltip(null)
           return

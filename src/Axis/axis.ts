@@ -35,10 +35,12 @@ export abstract class Axis {
   charts: Chart[]
   initialDraw: boolean = true
   visitors: Visitor[]
+  timeZone: string
 
   constructor(container: HTMLElement, width: number, height: number, options: AxisOptions) {
     this.container = container
     this.options = options
+    this.timeZone = 'Europe/Amsterdam'
 
     this.margin = { ...{ top: 40, right: 40, bottom: 40, left: 40 }, ...options.margin }
     this.setSize(height, width)
@@ -74,9 +76,9 @@ export abstract class Axis {
     this.redraw()
   }
 
-  abstract redraw()
+  abstract redraw() : void
 
-  abstract updateGrid()
+  abstract updateGrid() : void
 
   accept(v: Visitor) {
     this.visitors.push(v)
@@ -95,7 +97,7 @@ export abstract class Axis {
       .style('opacity', 0)
   }
 
-  abstract showTooltip(html: string)
+  abstract showTooltip(html: string): void
 
   hideTooltip(d: any) {
     this.tooltip
@@ -104,6 +106,6 @@ export abstract class Axis {
       .style('opacity', 0)
   }
 
-  protected abstract setRange()
-  protected abstract initGrid()
+  protected abstract setRange() : void
+  protected abstract initGrid() : void
 }

@@ -14,8 +14,15 @@ const libraryName = 'wb-charts'
 export default {
   input: `src/${libraryName}.ts`,
   output: [
-    { file: pkg.main, name: camelCase(libraryName), format: 'umd', sourcemap: true, globals: { "d3": "d3" }  },
-    { file: pkg.module, format: 'es', sourcemap: true, globals: {"d3": "d3" }   },
+    { file: pkg.main,
+      name: camelCase(libraryName),
+      format: 'umd',
+      sourcemap: true,
+      globals: { "d3": "d3" }  },
+    { file: pkg.module,
+      format: 'es',
+      sourcemap: true,
+      globals: { "d3": "d3" }   },
   ],
   // Indicate here external modules you don't wanna include in your bundle (i.e.: 'lodash')
   external: ['d3'],
