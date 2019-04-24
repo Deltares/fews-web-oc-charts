@@ -104,18 +104,18 @@ export class MouseOver implements Visitor {
         axis.canvas.selectAll('.mouse-per-line').attr('transform', function(d, i) {
           let element = axis.canvas.select(d).select('path')
           let style = window.getComputedStyle(element.node() as Element)
-          if (style.getPropertyValue('visibility') === 'hidden')
-            return 'translate(' + -2 * axis.margin.left + ',' + -2 * axis.margin.top + ')'
+          if (style === null || style.getPropertyValue('visibility') === 'hidden')
+            return 'translateY(' + -window.innerHeight + ')'
           allHidden = false
           let stroke = style.getPropertyValue('stroke')
           let datum = element.datum() as any
           let mouseValue = axis.xScale.invert(mouse[0])
           let idx = bisect(datum, mouseValue)
           if (idx == 0 && datum[idx].x >= mouseValue) {
-            return 'translate(' + -2 * axis.margin.left + ',' + -2 * axis.margin.top + ')'
+            return 'translateY(' + -window.innerHeight + ')'
           }
           if (!datum[idx] || datum[idx].y === null) {
-            return 'translate(' + -2 * axis.margin.left + ',' + -2 * axis.margin.top + ')'
+            return 'translateY(' + -window.innerHeight + ')'
           }
           let valy = datum[idx].y
           let posy = axis.yScale(valy)
@@ -131,6 +131,10 @@ export class MouseOver implements Visitor {
           } else {
             yLabel = valy.toFixed(2)
           }
+          posy =
+            posy < axis.yScale.range()[1] || posy > axis.yScale.range()[0]
+              ? -window.innerHeight
+              : posy
           popupData[d] = { x: axis.xScale.invert(datum[idx].x), y: yLabel, color: stroke }
           return 'translate(' + posx + ',' + posy + ')'
         })
