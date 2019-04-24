@@ -9,6 +9,11 @@
             body {
                 background-color : rgb(44,44,44);
                 font: 10px sans-serif;
+                margin: 20px;
+            }
+
+            .dst-indicator {
+              fill: yellow
             }
 
             #chart-container-1 {
@@ -83,6 +88,11 @@ border-color: transparent black transparent transparent;
 
 
         </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.js"> </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/locale/nl.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment-timezone/0.5.23/moment-timezone-with-data.js">
+</script>
+
         <script src="https://d3js.org/d3.v5.min.js"></script>
         <link rel="stylesheet" href="/dist/wb-charts.css">
     </head>
@@ -94,18 +104,8 @@ border-color: transparent black transparent transparent;
         <script src="/dist/wb-charts.umd.js"></script>
         <script type="text/javascript">
 
-    d3.timeFormatDefaultLocale(
-      {
-        "dateTime": "%a %e %B %Y %T",
-        "date": "%d-%m-%Y",
-        "time": "%H:%M:%S",
-        "periods": ["AM", "PM"],
-        "days": ["zondag", "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag"],
-        "shortDays": ["zo", "ma", "di", "wo", "do", "vr", "za"],
-        "months": ["januari", "februari", "maart", "april", "mei", "juni", "juli", "augustus", "september", "oktober", "november", "december"],
-        "shortMonths": ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"]
-      }
-    )
+    var m = moment.tz(new Date(), "Europe/Amsterdam");
+    console.log(m.format())
 
     var container = document.getElementById("chart-container-1");
     var axis =  new wbCharts.CartesianAxis(container, null, null,
@@ -119,10 +119,12 @@ border-color: transparent black transparent transparent;
         {selector: '#percent90', label :'90% interval'} ,
         {selector: '#percent50', label :'50% interval'},
         {selector: '.ensemble-line', label : 'Verstoord'},
+        {selector: '.missing-line', label : 'Missing'},
         ]
         ,document.getElementById("chart-legend-1"));
 
     var currentTime = new wbCharts.CurrentTime();
+    var dstIndicator = new wbCharts.DstIndicator();
     var levelSelect = new wbCharts.LevelSelect(function(x) {console.log(x)} );
     percentile = function(p, data) {
         var points = data;
@@ -144,7 +146,7 @@ border-color: transparent black transparent transparent;
         }
     };
 
-    var refDate = new Date();
+    var refDate = new Date(2019,02,31);
     var mouseOver = new wbCharts.MouseOver(['#control-line','#median-line']);
     var escalationsVisitor = new wbCharts.WarningLevels();
     var zoom = new wbCharts.ZoomHandler();
@@ -197,6 +199,7 @@ border-color: transparent black transparent transparent;
       // legend.visit(axis);
       // axis.accept(legend);
       axis.accept(currentTime);
+      axis.accept(dstIndicator);
       axis.accept(levelSelect);
       axis.accept(escalationsVisitor);
       axis.accept(zoom);
