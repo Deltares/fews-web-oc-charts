@@ -15,8 +15,6 @@ export class ZoomHandler implements Visitor {
   private brushGroup: any
   private mouseGroup: any
   private axis: CartesianAxis
-  private x0: any
-  private y0: any
   private mode: SelectionMode
   private readonly MINMOVE = 15
   private lastPoint: [number, number]
@@ -29,8 +27,6 @@ export class ZoomHandler implements Visitor {
   }
 
   createHandler(axis: CartesianAxis) {
-    if (!this.x0) this.x0 = axis.xScale.domain()
-    if (!this.y0) this.y0 = axis.yScale.domain()
     this.svg = axis.canvas
     if (!this.brushGroup) {
       this.brushGroup = this.svg.append('g').attr('class', 'brush')
@@ -227,9 +223,7 @@ export class ZoomHandler implements Visitor {
   }
 
   resetZoom(point: [number, number]) {
-    this.axis.xScale.domain(this.x0)
-    this.axis.yScale.domain(this.y0)
-    this.axis.zoom()
+    this.axis.redraw({ x: { autoScale: true }, y: { autoScale: true } })
   }
 
   // FIXME: remove when IDrawble is introduced
