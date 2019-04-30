@@ -1,6 +1,5 @@
 import * as d3 from 'd3'
 import { Axis, CartesianAxis } from '../Axis'
-import * as WB from '../Utils'
 import { Visitor } from './visitor'
 import { dateFormatter } from '../Utils'
 
@@ -104,14 +103,15 @@ export class MouseOver implements Visitor {
         axis.canvas.selectAll('.mouse-per-line').attr('transform', function(d, i) {
           let element = axis.canvas.select(d).select('path')
           let style = window.getComputedStyle(element.node() as Element)
-          if (style === null || style.getPropertyValue('visibility') === 'hidden')
+          if (style === null || style.getPropertyValue('visibility') === 'hidden') {
             return 'translateY(' + -window.innerHeight + ')'
+          }
           allHidden = false
           let stroke = style.getPropertyValue('stroke')
           let datum = element.datum() as any
           let mouseValue = axis.xScale.invert(mouse[0])
           let idx = bisect(datum, mouseValue)
-          if (idx == 0 && datum[idx].x >= mouseValue) {
+          if (idx === 0 && datum[idx].x >= mouseValue) {
             return 'translateY(' + -window.innerHeight + ')'
           }
           if (!datum[idx] || datum[idx].y === null) {
