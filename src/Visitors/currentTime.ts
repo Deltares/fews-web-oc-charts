@@ -57,7 +57,7 @@ export class CurrentTime implements Visitor {
         .select('text')
         .attr('x', 5)
         .attr('y', -5)
-        .text(dateFormatter(currentDate, 'yyyy-MM-dd HH:mm zzz'), {timeZone: this.axis.timeZone} )
+        .text(dateFormatter(currentDate, 'YYYY-MM-DD HH:mm zz', {timeZone: this.axis.timeZone} ))
     }
   }
 }
