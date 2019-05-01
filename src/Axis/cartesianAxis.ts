@@ -1,5 +1,6 @@
 import * as d3 from 'd3'
 import { Axis, AxisOptions } from './axis'
+import momenttz from 'moment-timezone'
 
 // import { scaleLinear } from 'd3-scale'
 
@@ -47,7 +48,6 @@ export class CartesianAxis extends Axis {
     super(container, width, height, options)
     this.view = this.canvas
     this.chartGroup = this.canvas
-    this.timeZoneOffset = -60
     this.setCanvas()
     this.setRange()
     this.initGrid()
@@ -149,24 +149,29 @@ export class CartesianAxis extends Axis {
     this.setClipPath()
     this.setCanvas()
     let that = this
-    let proxyXscale = this.xScale
-    if (this.options.x && this.options.x.time) {
-      let domain = this.xScale.domain().map(function(d) {
-        return new Date(+d - that.timeZoneOffset * 60000)
-      })
-      proxyXscale = d3
-        .scaleUtc()
-        .domain(domain)
-        .range(this.xScale.range())
-    }
-    let xAxis = d3.axisBottom(proxyXscale).ticks(5)
-    if (this.options.x && this.options.x.time) {
-      xAxis.tickFormat(this.multiFormat)
-    }
+
+    let xAxis = d3.axisBottom(this.xScale).ticks(5)
     let xGrid = d3
-      .axisBottom(proxyXscale)
+      .axisBottom(this.xScale)
       .ticks(5)
       .tickSize(this.height)
+
+    if (this.options.x && this.options.x.time) {
+      xAxis.tickFormat(this.multiFormat)
+      let offsetDomain = this.xScale.domain().map(function (d) {
+        let m = momenttz(d as Date).tz(that.timeZone)
+        return new Date(d.getTime() + m.utcOffset() * 60000);
+      })
+      let offsetScale = d3.scaleUtc().domain(offsetDomain)
+      let tickValues = offsetScale.ticks(5)
+      let offsetValues = tickValues.map(function(d) {
+        let m = momenttz(d as Date).tz(that.timeZone)
+        return new Date(d.getTime() - m.utcOffset() * 60000);
+      })
+      xAxis.tickValues(offsetValues)
+      xGrid.tickValues(offsetValues)
+    }
+
     let yAxis = d3.axisLeft(this.yScale).ticks(5)
     let yGrid = d3
       .axisRight(this.yScale)
@@ -298,22 +303,24 @@ export class CartesianAxis extends Axis {
     }
   }
 
-  // Define filter conditions
   multiFormat(date) {
-    return (d3.utcSecond(date) < date
-      ? d3.utcFormat('.%L')
-      : d3.utcMinute(date) < date
-      ? d3.utcFormat(':%S')
-      : d3.utcHour(date) < date
-      ? d3.utcFormat('%H:%M')
-      : d3.utcDay(date) < date
-      ? d3.utcFormat('%H:%M')
-      : d3.utcMonth(date) < date
-      ? d3.utcWeek(date) < date
-        ? d3.utcFormat('%a %d')
-        : d3.utcFormat('%b %d')
-      : d3.utcYear(date) < date
-      ? d3.utcFormat('%B')
-      : d3.utcFormat('%Y'))(date)
+    let m = momenttz(date as Date).tz('Europe/Amsterdam')
+    let offsetDate = new Date ( date.getTime() + m.utcOffset()*60000)
+    return (d3.utcSecond(offsetDate) < offsetDate
+      ? m.format('.SSS')
+      : d3.utcMinute(offsetDate) < offsetDate
+        ? m.format(':ss')
+        : d3.utcHour(offsetDate) < offsetDate
+          ? m.format('hh:mm')
+          : d3.utcDay(offsetDate) < offsetDate
+            ? m.format('hh:mm')
+            : d3.utcMonth(offsetDate) < offsetDate
+              ? d3.utcWeek(offsetDate) < offsetDate
+                ? m.format( 'dd DD')
+                : m.format( 'MMM DD')
+              : d3.utcYear(offsetDate) < offsetDate
+                ? m.format( 'MMMM')
+                : m.format('YYYY'))
   }
+
 }
