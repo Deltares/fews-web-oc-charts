@@ -69,7 +69,7 @@ export class MouseOver implements Visitor {
         // on mouse out hide line, circles and text
         that.group.select('.mouse-line').style('opacity', '0')
         that.group.selectAll('.mouse-per-line circle').style('opacity', '0')
-        that.group.select('.mouse-x text').style('opacity', '0')
+        that.group.select('.mouse-x text').style('fill-opacity', '0')
         axis.hideTooltip(null)
       })
       .on('mouseover', function() {
@@ -85,7 +85,7 @@ export class MouseOver implements Visitor {
               .getPropertyValue('stroke')
             return stroke
           })
-        that.group.select('.mouse-x text').style('opacity', '1')
+        that.group.select('.mouse-x text').style('fill-opacity', '1')
         axis.tooltip
           .transition()
           .duration(50)
