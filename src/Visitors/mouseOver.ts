@@ -80,6 +80,7 @@ export class MouseOver implements Visitor {
           .style('opacity', '1')
           .style('fill', function(d: any, i) {
             let element = d3.select(d).select('path')
+            if (element.node() === null ) return
             let stroke = window
               .getComputedStyle(element.node() as Element)
               .getPropertyValue('stroke')
@@ -102,6 +103,7 @@ export class MouseOver implements Visitor {
         let allHidden = true
         axis.canvas.selectAll('.mouse-per-line').attr('transform', function(d, i) {
           let element = axis.canvas.select(d).select('path')
+          if (element.node() === null) return
           let style = window.getComputedStyle(element.node() as Element)
           if (style === null || style.getPropertyValue('visibility') === 'hidden') {
             return 'translateY(' + -window.innerHeight + ')'
