@@ -49,6 +49,7 @@ export class LevelSelect implements Visitor {
 
   redraw() {
     let y = this.axis.yScale(this.value)
+    y = (y === undefined) ? this.axis.yScale.range()[1] : y
     // line
     this.group
       .select('line')
@@ -83,6 +84,8 @@ export class LevelSelect implements Visitor {
 
   end(event) {
     this.group.select('text').remove()
-    this.callback(this.value)
+    if (typeof this.callback === 'function') {
+      this.callback(this.value)
+    }
   }
 }
