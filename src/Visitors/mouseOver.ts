@@ -106,18 +106,21 @@ export class MouseOver implements Visitor {
           if (element.node() === null) return
           let style = window.getComputedStyle(element.node() as Element)
           if (style === null || style.getPropertyValue('visibility') === 'hidden') {
-            return 'translateY(' + -window.innerHeight + ')'
+            return 'translate(0,' + -window.innerHeight + ')'
           }
           allHidden = false
           let stroke = style.getPropertyValue('stroke')
           let datum = element.datum() as any
+          if (datum === null || datum.length === 0) {
+            return 'translate(0,' + -window.innerHeight + ')'
+          }
           let mouseValue = axis.xScale.invert(mouse[0])
           let idx = bisect(datum, mouseValue)
           if (idx === 0 && datum[idx].x >= mouseValue) {
-            return 'translateY(' + -window.innerHeight + ')'
+            return 'translate(0,' + -window.innerHeight + ')'
           }
           if (!datum[idx] || datum[idx].y === null) {
-            return 'translateY(' + -window.innerHeight + ')'
+            return 'translate(0,' + -window.innerHeight + ')'
           }
           let valy = datum[idx].y
           let posy = axis.yScale(valy)
