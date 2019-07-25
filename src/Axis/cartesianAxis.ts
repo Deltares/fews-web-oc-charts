@@ -41,8 +41,8 @@ export class CartesianAxis extends Axis {
 
   constructor(
     container: HTMLElement,
-    width: number,
-    height: number,
+    width: number | null,
+    height: number | null,
     options?: CartesianAxisOptions
   ) {
     super(container, width, height, options)
