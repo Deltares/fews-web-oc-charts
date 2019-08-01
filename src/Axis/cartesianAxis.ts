@@ -257,6 +257,7 @@ export class CartesianAxis extends Axis {
           .attr('text-anchor', 'start')
           .attr('font-family', 'sans-serif')
           .attr('font-size', '10px')
+          .attr('fill', 'currentColor')
           .text(this.options.y.label)
       }
       if (this.options.y.unit) {
@@ -266,6 +267,7 @@ export class CartesianAxis extends Axis {
           .attr('text-anchor', 'end')
           .attr('font-family', 'sans-serif')
           .attr('font-size', '10px')
+          .attr('fill', 'currentColor')
           .text(this.options.y.unit)
       }
     }
@@ -277,6 +279,7 @@ export class CartesianAxis extends Axis {
           .attr('text-anchor', 'middle')
           .attr('font-family', 'sans-serif')
           .attr('font-size', '10px')
+          .attr('fill', 'currentColor')
           .text(this.options.x.label)
       }
       if (this.options.x.unit) {
@@ -287,6 +290,7 @@ export class CartesianAxis extends Axis {
           .attr('text-anchor', 'start')
           .attr('font-family', 'sans-serif')
           .attr('font-size', '10px')
+          .attr('fill', 'currentColor')
           .text(this.options.x.unit)
       }
     }
@@ -298,6 +302,7 @@ export class CartesianAxis extends Axis {
           .attr('text-anchor', 'start')
           .attr('font-family', 'sans-serif')
           .attr('font-size', '10px')
+          .attr('fill', 'currentColor')
           .text(this.options.x2.unit)
       }
     }
