@@ -328,6 +328,7 @@ pointer-events: none;
         return result;
       }
 
+
       function updateBeaufortScale(target) {
         const beaufortLimits = [0, .3, 1.6, 3.4, 5.5, 8.0, 10.8, 13.9, 17.2, 20.8, 24.5, 28.5, 32.7, 40];
         limits = beaufortLimits.filter(function (x) {
@@ -349,16 +350,9 @@ pointer-events: none;
         return value + "[m/s]\t" + knots + "[kt]\t" + kmph + "[km/h]";
       }
 
-      var windCategories = d3.scaleQuantize()
-        .domain([-11.25, 371.25])
-        .range([
-          "N", "NNW", 'NW', "WNW",
-          'W', "WZW", 'ZW', "ZZW", 
-          'Z', "ZZO", 'ZO', "OZO", 
-          "O", "ONO", 'NO', 'NNO', 'N'
-        ])
-      var units = [{unit: ' m/s', factor : 1.0 }, {unit: ' kt', factor: 1.943844 }, {unit: ' km/h', factor: 3.6 }]
-      var degree = [{unit: '°', factor : 1.0, precision: '.0f' }, {unit: '', scale : windCategories }]
+      var unitsSpeed = [{unit: ' m/s', factor : 1.0 }, {unit: ' kt', factor: 1.943844 }, {unit: ' km/h', factor: 3.6 }, {unit: ' Bft', scale: wbCharts.scaleBeaufort }]
+      var unitsStoot = [{unit: ' m/s', factor : 1.0 }, {unit: ' kt', factor: 1.943844 }, {unit: ' km/h', factor: 3.6 } ]
+      var degree = [{unit: '°', factor : 1.0, precision: '.0f' }, {unit: '', scale : wbCharts.scaleWindCategories }]
 
       function setupWindrose(windRichtingMetingen,
       windRichtingVerwachtingen,
@@ -388,25 +382,20 @@ pointer-events: none;
           labelField: {text: 'richting', dy: '-45px' },
           valueField: {dy: '-25px', units: degree }
         }
-        // function (d) {
-        //   if ( d[0].y === null) return "-";
-        //   var format = d3.format(".0f");
-        //   return format(d[0].y) + "°";
-        // }
         );
         
         polarText1 = new wbCharts.DataField(
         polarAxis.canvas, {
           selector: '#wind-line',
           labelField: {text: 'windsnelheid', dy: '-10px' },
-          valueField: {dy: '10px', units: units }
+          valueField: {dy: '10px', units: unitsSpeed }
         });
 
         polarText2 = new wbCharts.DataField(
         polarAxis.canvas, {
           selector: '#stoot-line',
           labelField: {text: 'windstoot', dy: '25px' },
-          valueField: {dy: '45px', units: units }
+          valueField: {dy: '45px', units: unitsStoot }
         });
 
         // Wind speed chart
