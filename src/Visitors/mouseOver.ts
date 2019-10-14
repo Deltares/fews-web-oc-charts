@@ -103,7 +103,7 @@ export class MouseOver implements Visitor {
         let allHidden = true
         axis.canvas.selectAll('.mouse-per-line').attr('transform', function(d, i) {
           let element = axis.canvas.select(d).select('path')
-          if (element.node() === null) return
+          if (element.node() === null) return 'translate(0,' + -window.innerHeight + ')'
           let style = window.getComputedStyle(element.node() as Element)
           if (style === null || style.getPropertyValue('visibility') === 'hidden') {
             return 'translate(0,' + -window.innerHeight + ')'
