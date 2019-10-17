@@ -13,8 +13,12 @@ export class CurrentTime implements Visitor {
   private datetime: Date
   static readonly REFRESH_INTERVAL: number = 10000
 
-  constructor(dt?: Date) {
-    this.datetime = dt || null
+  constructor() {
+    this.datetime = null
+  }
+
+  setDateTime(dt: Date) {
+    this.datetime = dt
   }
 
   visit(axis: Axis) {
