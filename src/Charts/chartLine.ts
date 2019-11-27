@@ -1,7 +1,6 @@
 import * as d3 from 'd3'
 import { CartesianAxis, PolarAxis } from '../Axis'
 import { Chart } from './chart'
-import { map } from 'd3'
 
 export class ChartLine extends Chart {
   plotterCartesian(axis: CartesianAxis, dataKeys: any) {
