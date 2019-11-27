@@ -1,19 +1,41 @@
-import { Axis, CartesianAxis, PolarAxis } from '../Axis'
+import { Axis, PolarAxis } from '../Axis'
 import { Visitor } from './visitor'
+import { format as d3_format } from 'd3'
+import { mergeRecursive } from '../Utils'
+
+export interface DataFieldOptions {
+  selector? : string
+  labelField?: {
+    dx?: string | number
+    dy?: string | number
+    text?: string
+  },
+  valueField?: {
+    dx?: string | number
+    dy?: string | number
+    units?: any
+    precision?: string
+  }
+}
 
 export class DataField implements Visitor {
   private container: any
   private group: any
-  private labels: any
+  private options: DataFieldOptions
   private axis: Axis
   private text: any
   private value: any
   private formatter: any
+  private clickCount = 0
 
-  constructor(container, labels: any, formatter: any) {
+  constructor(container, options: DataFieldOptions, formatter?: any) {
     this.container = container
-    this.labels = labels
-    this.formatter = formatter
+    this.options = mergeRecursive(
+      {
+        labelField : {dx: 0, dy: 0}, 
+        valueField : {dx: 0, dy: 0, units: [{unit: '', factor: 1.0} ], precision: "0.1f" }
+      }, options )
+    this.formatter = formatter !== undefined ? formatter : this.valueFormatter
   }
 
   visit(axis: Axis) {
@@ -27,26 +49,59 @@ export class DataField implements Visitor {
       this.text = this.group
         .append('text')
         .attr('class', 'data-field-label')
-        .text(this.labels.label)
+        .text(this.options.labelField.text)
       this.value = this.group.append('text').attr('class', 'data-field-value')
-      if (axis instanceof PolarAxis) {
-        this.text.attr('dy', '-0.2em')
-        this.value.attr('dy', '1.2em')
-      } else {
-        this.text.attr('dy', this.axis.margin.bottom + this.axis.height - 10 + 'px')
-        this.value.attr('dy', this.axis.margin.bottom + this.axis.height - 10 + 'px')
-        this.value.attr('dx', '100px')
+      this.text.attr('dx', this.options.labelField.dx)
+      this.text.attr('dy', this.options.labelField.dy)
+
+      this.value.attr('dx', this.options.valueField.dx)
+      this.value.attr('dy', this.options.valueField.dy)
+      let that = this
+      if ( this.options.valueField.units.length > 1 ) {
+        this.value.on('click', function() { that.onClick() } )
+        this.value.style('cursor','pointer')
       }
     }
     this.redraw()
   }
 
   redraw() {
-    let element = this.axis.chartGroup.select(this.labels.selector).select('path')
+    let element = this.axis.chartGroup.select(this.options.selector).select('path')
     let data = element.datum()
     let style = window.getComputedStyle(element.node() as Element)
 
     this.value.text(this.formatter(data))
     this.value.style('fill', style.getPropertyValue('stroke'))
   }
+
+  onClick() {
+    this.clickCount++
+    this.redraw()
+  }
+
+  valueFormatter(d) {
+    const idx = this.clickCount % this.options.valueField.units.length
+    const value = this.getValue(d)
+    const units  = this.options.valueField.units[idx]
+    if (value === null) {
+      return '-' + units.unit;
+    }
+    if ( units.factor !== undefined ) {
+      const format = units.precision !== undefined?  d3_format(units.precision)  : d3_format(".1f");
+      const valueString = value !== null ? format(value * units.factor ) : '-';
+      return valueString + units.unit;
+    } else {
+      let valueString: string = value !== null ? units.scale( value ) : '-';
+      return valueString + units.unit;
+    }
+  }
+
+  getValue(d) {
+    if (this.axis instanceof PolarAxis) {
+      return d[0] !== undefined ? d[0].y : null
+    } else {
+      return d[0] !== undefined ? d[0].x : null
+    }
+  }
+
 }

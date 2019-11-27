@@ -10,14 +10,22 @@ export class CurrentTime implements Visitor {
   private indicator: any
   private axis: CartesianAxis
   private transition: any
+  private datetime: Date
   static readonly REFRESH_INTERVAL: number = 10000
 
-  constructor() {}
+  constructor() {
+    this.datetime = null
+  }
+
+  setDateTime(dt: Date) {
+    this.datetime = dt
+  }
 
   visit(axis: Axis) {
     this.axis = axis as CartesianAxis
     this.create(axis as CartesianAxis)
     let that = this
+    this.redraw()
     this.timer = d3.interval(function(elapsed: number) {
       that.redraw()
     }, CurrentTime.REFRESH_INTERVAL)
@@ -32,7 +40,7 @@ export class CurrentTime implements Visitor {
   }
 
   redraw() {
-    let currentDate = new Date()
+    let currentDate = this.datetime || new Date()
     let x = this.axis.xScale(currentDate)
     let domain = this.axis.xScale.domain()
     if (!this.line) {
