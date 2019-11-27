@@ -16,10 +16,10 @@ export class ChartMarker extends Chart {
     const xkey = dataKeys.xkey ? dataKeys.xkey : 'x'
     const ykey = dataKeys.ykey ? dataKeys.ykey : 'y'
 
-    let mappedData = this.mapDataCartesian(axis, dataKeys, axis.xScale.domain())
     this.group = this.selectGroup(axis, 'chart-marker')
-    let elements = this.group.selectAll('.symbol').data(this.data)
     let symbolId = this.options.symbolId ? this.options.symbolId : 0
+
+    let elements = this.group.selectAll('path').data(this.data)
 
     // exit selection
     elements.exit().remove()
@@ -36,11 +36,11 @@ export class ChartMarker extends Chart {
       .on('mouseout', function(d: any) {
         axis.hideTooltip(d)
       })
-      .merge(elements)
-      .attr('transform', function(d: any, i: number) {
-        return 'translate(' + d.x + ',' + d.y + ')'
-      })
       .attr('d', d3.symbol().type(d3.symbols[symbolId]))
+      .merge(elements)
+      .attr('transform', function (d: any, i: number) {
+        return 'translate(' + axis.xScale(d[xkey]) + ',' + axis.yScale(d[ykey]) + ')'
+      })
   }
 
   plotterPolar(axis: PolarAxis, dataKeys: any) {
