@@ -147,7 +147,7 @@ border-color: transparent black transparent transparent;
     };
 
     var refDate = new Date(2019,02,31);
-    var mouseOver = new wbCharts.MouseOver(['#control-line','#median-line']);
+    var mouseOver = new wbCharts.MouseOver(['#control-line']);
     var escalationsVisitor = new wbCharts.WarningLevels();
     var zoom = new wbCharts.ZoomHandler();
 
@@ -180,7 +180,7 @@ border-color: transparent black transparent transparent;
       var plotControl = new wbCharts.ChartLine(members[0], {});
 
       var plotControl1 = new wbCharts.ChartLine(members[0], {});
-      var plotMedian1 = new wbCharts.ChartLine(percentiles[0], {});
+      var plotMedian1 = new wbCharts.ChartMarker(percentiles[0], {});
       var plotPercentile50 = new wbCharts.ChartArea(percentiles[1], {});
       var plotPercentile90 = new wbCharts.ChartArea(percentiles[2], {});
 
