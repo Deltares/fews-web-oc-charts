@@ -80,6 +80,14 @@ export abstract class Axis {
 
   abstract updateGrid() : void
 
+  removeAllCharts() {
+    for (let i=0; i< this.charts.length;i++) {
+      console.log(this.charts[i].id)
+    }
+    this.charts = []
+    this.chartGroup.remove()
+  }
+
   accept(v: Visitor) {
     this.visitors.push(v)
     v.visit(this)
