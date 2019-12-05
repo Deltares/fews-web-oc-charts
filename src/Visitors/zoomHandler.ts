@@ -227,5 +227,10 @@ export class ZoomHandler implements Visitor {
   }
 
   // FIXME: remove when IDrawble is introduced
-  redraw() {}
+  redraw() {
+    this.mouseGroup
+      .select('rect')
+      .attr('height', this.axis.height)
+      .attr('width', this.axis.width)
+  }
 }
