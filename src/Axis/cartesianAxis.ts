@@ -113,7 +113,7 @@ export class CartesianAxis extends Axis {
 
   redraw(options?) {
     options = { ...{ x: { autoScale: false }, y: { autoScale: false } }, ...options }
-    if (this.options.x && this.options.x.domain) {
+    if (this.options.x?.domain) {
       this.xScale.domain(this.options.x.domain)
     } else if (options.x.autoScale === true) {
       let xExtent = new Array(2)
@@ -123,7 +123,7 @@ export class CartesianAxis extends Axis {
       }
       this.xScale.domain(xExtent)
     }
-    if (this.options.y && this.options.y.domain) {
+    if (this.options.y?.domain) {
       this.yScale.domain(this.options.y.domain)
     } else if (options.y.autoScale === true) {
       let yExtent = new Array(2)
@@ -156,7 +156,7 @@ export class CartesianAxis extends Axis {
       .ticks(5)
       .tickSize(this.height)
 
-    if (this.options.x && this.options.x.time) {
+    if (this.options.x?.time) {
       xAxis.tickFormat(this.multiFormat)
       let offsetDomain = this.xScale.domain().map(function (d) {
         let m = momenttz(d as Date).tz(that.timeZone)
@@ -177,7 +177,7 @@ export class CartesianAxis extends Axis {
       .axisRight(this.yScale)
       .ticks(5)
       .tickSize(this.width)
-    if (this.options.y && this.options.y.axisType === 'degrees') {
+    if (this.options.y?.axisType === 'degrees') {
       let domain = this.yScale.domain()
       let step = d3.tickIncrement(domain[0], domain[1], 5)
       step = step >= 100 ? 90 : step >= 50 ? 45 : step >= 20 ? 15 : step
@@ -249,57 +249,51 @@ export class CartesianAxis extends Axis {
       .attr('class', 'axis x-axis')
       .attr('transform', 'translate(' + 0 + ',' + this.height + ')')
     let yAxis = g.append('g').attr('class', 'axis y-axis')
-    if (this.options.y) {
-      if (this.options.y.label) {
-        g.append('text')
-          .attr('x', 0)
-          .attr('y', -9)
-          .attr('text-anchor', 'start')
-          .attr('font-family', 'sans-serif')
-          .attr('font-size', '10px')
-          .text(this.options.y.label)
-      }
-      if (this.options.y.unit) {
-        g.append('text')
-          .attr('x', -9)
-          .attr('y', -9)
-          .attr('text-anchor', 'end')
-          .attr('font-family', 'sans-serif')
-          .attr('font-size', '10px')
-          .text(this.options.y.unit)
-      }
+    if (this.options.y?.label) {
+      g.append('text')
+        .attr('x', 0)
+        .attr('y', -9)
+        .attr('text-anchor', 'start')
+        .attr('font-family', 'sans-serif')
+        .attr('font-size', '10px')
+        .text(this.options.y.label)
     }
-    if (this.options.x) {
-      if (this.options.x.label) {
-        g.append('text')
-          .attr('x', this.width / 2)
-          .attr('y', this.height + 30)
-          .attr('text-anchor', 'middle')
-          .attr('font-family', 'sans-serif')
-          .attr('font-size', '10px')
-          .text(this.options.x.label)
-      }
-      if (this.options.x.unit) {
-        g.append('text')
-          .attr('x', this.width + 10)
-          .attr('y', this.height + 9)
-          .attr('dy', '0.71em')
-          .attr('text-anchor', 'start')
-          .attr('font-family', 'sans-serif')
-          .attr('font-size', '10px')
-          .text(this.options.x.unit)
-      }
+    if (this.options.y?.unit) {
+      g.append('text')
+        .attr('x', -9)
+        .attr('y', -9)
+        .attr('text-anchor', 'end')
+        .attr('font-family', 'sans-serif')
+        .attr('font-size', '10px')
+        .text(this.options.y.unit)
     }
-    if (this.options.x2) {
-      if (this.options.x2.unit) {
-        g.append('text')
-          .attr('x', this.width + 10)
-          .attr('y', -9)
-          .attr('text-anchor', 'start')
-          .attr('font-family', 'sans-serif')
-          .attr('font-size', '10px')
-          .text(this.options.x2.unit)
-      }
+    if (this.options.x?.label) {
+      g.append('text')
+        .attr('x', this.width / 2)
+        .attr('y', this.height + 30)
+        .attr('text-anchor', 'middle')
+        .attr('font-family', 'sans-serif')
+        .attr('font-size', '10px')
+        .text(this.options.x.label)
+    }
+    if (this.options.x?.unit) {
+      g.append('text')
+        .attr('x', this.width + 10)
+        .attr('y', this.height + 9)
+        .attr('dy', '0.71em')
+        .attr('text-anchor', 'start')
+        .attr('font-family', 'sans-serif')
+        .attr('font-size', '10px')
+        .text(this.options.x.unit)
+    }
+    if (this.options.x2?.unit) {
+      g.append('text')
+        .attr('x', this.width + 10)
+        .attr('y', -9)
+        .attr('text-anchor', 'start')
+        .attr('font-family', 'sans-serif')
+        .attr('font-size', '10px')
+        .text(this.options.x2.unit)
     }
   }
 
