@@ -11,13 +11,8 @@ export class WarningLevels implements Visitor {
   private sections: any
   private transitionTime: number
 
-  constructor() {
-    this.escalationLevels = [
-      { id: 'normaal', val: -100, color: 'rgba(205, 133, 63,.5)', c: '<' },
-      { id: 'verhoogd', val: 100, color: 'rgba(255, 215, 0,.5)', c: '>' },
-      { id: 'hoog', val: 110, color: 'rgba(255, 150, 0,.5)', c: '>' },
-      { id: 'extreem', val: 140, color: 'rgba(255, 0, 0,.5)', c: '>' }
-    ]
+  constructor(escalationLevels) {
+    this.escalationLevels = escalationLevels
     this.transitionTime = 0
   }
 

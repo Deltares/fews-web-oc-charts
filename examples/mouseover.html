@@ -148,7 +148,14 @@ border-color: transparent black transparent transparent;
 
     var refDate = new Date(2019,02,31);
     var mouseOver = new wbCharts.MouseOver(['#control-line']);
-    var escalationsVisitor = new wbCharts.WarningLevels();
+    var escalationLevels = [
+      { id: 'laag', val: -100, color: 'rgba(205, 133, 63,.5)', c: '<' },
+      { id: 'verhoogd', val: 100, color: 'rgba(255, 215, 0,.5)', c: '>' },
+      { id: 'hoog', val: 110, color: 'rgba(255, 150, 0,.5)', c: '>' },
+      { id: 'extreem', val: 140, color: 'rgba(255, 0, 0,.5)', c: '>' }
+    ]
+
+    var escalationsVisitor = new wbCharts.WarningLevels(escalationLevels);
     var zoom = new wbCharts.ZoomHandler();
 
     axis.accept(legend);
