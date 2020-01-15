@@ -80,8 +80,13 @@ var container1 = document.getElementById("chart-container-1");
 var axis1 = new wbCharts.CartesianAxis(container1, null, null, { x:{ time: true } } );
 var container2 = document.getElementById("chart-container-2");
 var axis = new wbCharts.CartesianAxis(container2, null, null,  { x: { time: true }});
-
-var warnings = new wbCharts.WarningLevels();
+var escalationLevels = [
+      { id: 'normaal', val: -100, color: 'rgba(205, 133, 63,.5)', c: '<' },
+      { id: 'verhoogd', val: 100, color: 'rgba(255, 215, 0,.5)', c: '>' },
+      { id: 'hoog', val: 110, color: 'rgba(255, 150, 0,.5)', c: '>' },
+      { id: 'extreem', val: 140, color: 'rgba(255, 0, 0,.5)', c: '>' }
+    ]
+var warnings = new wbCharts.WarningLevels(escalationLevels);
 
 
 percentile = function(p, data) {
