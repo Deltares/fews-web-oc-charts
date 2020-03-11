@@ -82,7 +82,7 @@ export abstract class Axis {
 
   removeAllCharts() {
     for (let i=0; i< this.charts.length;i++) {
-      console.log(this.charts[i].id)
+      // console.log(this.charts[i].id)
       this.charts[i].group = null
     }
     this.charts = []
