@@ -67,6 +67,10 @@ export abstract class Axis {
     let containerHeight = height == null ? this.container.offsetHeight : height
     this.height = containerHeight - this.margin.top - this.margin.bottom
     this.width = containerWidth - this.margin.left - this.margin.right
+    if (this.height < 0 || this.width < 0) {
+      this.height = 0
+      this.width = 0
+    }
   }
 
   resize() {
