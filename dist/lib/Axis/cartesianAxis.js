@@ -150,7 +150,7 @@ var CartesianAxis = /** @class */ (function (_super) {
             .ticks(5)
             .tickSize(this.height);
         if (this.options.x && this.options.x.time) {
-            xAxis.tickFormat(this.multiFormat);
+            xAxis.tickFormat(this.generateMultiFormat());
             var offsetDomain = this.xScale.domain().map(function (d) {
                 var m = moment_timezone_1.default(d).tz(that.timeZone);
                 return new Date(d.getTime() + m.utcOffset() * 60000);
@@ -293,24 +293,27 @@ var CartesianAxis = /** @class */ (function (_super) {
             }
         }
     };
-    CartesianAxis.prototype.multiFormat = function (date) {
-        var m = moment_timezone_1.default(date).tz('Europe/Amsterdam');
-        var offsetDate = new Date(date.getTime() + m.utcOffset() * 60000);
-        return (d3.utcSecond(offsetDate) < offsetDate
-            ? m.format('.SSS')
-            : d3.utcMinute(offsetDate) < offsetDate
-                ? m.format(':ss')
-                : d3.utcHour(offsetDate) < offsetDate
-                    ? m.format('hh:mm')
-                    : d3.utcDay(offsetDate) < offsetDate
+    CartesianAxis.prototype.generateMultiFormat = function () {
+        var timeZone = this.timeZone;
+        return function (date) {
+            var m = moment_timezone_1.default(date).tz(timeZone);
+            var offsetDate = new Date(date.getTime() + m.utcOffset() * 60000);
+            return (d3.utcSecond(offsetDate) < offsetDate
+                ? m.format('.SSS')
+                : d3.utcMinute(offsetDate) < offsetDate
+                    ? m.format(':ss')
+                    : d3.utcHour(offsetDate) < offsetDate
                         ? m.format('hh:mm')
-                        : d3.utcMonth(offsetDate) < offsetDate
-                            ? d3.utcWeek(offsetDate) < offsetDate
-                                ? m.format('dd DD')
-                                : m.format('MMM DD')
-                            : d3.utcYear(offsetDate) < offsetDate
-                                ? m.format('MMMM')
-                                : m.format('YYYY'));
+                        : d3.utcDay(offsetDate) < offsetDate
+                            ? m.format('hh:mm')
+                            : d3.utcMonth(offsetDate) < offsetDate
+                                ? d3.utcWeek(offsetDate) < offsetDate
+                                    ? m.format('dd DD')
+                                    : m.format('MMM DD')
+                                : d3.utcYear(offsetDate) < offsetDate
+                                    ? m.format('MMMM')
+                                    : m.format('YYYY'));
+        };
     };
     return CartesianAxis;
 }(axis_1.Axis));

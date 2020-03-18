@@ -73,6 +73,10 @@
             var containerHeight = height == null ? this.container.offsetHeight : height;
             this.height = containerHeight - this.margin.top - this.margin.bottom;
             this.width = containerWidth - this.margin.left - this.margin.right;
+            if (this.height < 0 || this.width < 0) {
+                this.height = 0;
+                this.width = 0;
+            }
         };
         Axis.prototype.resize = function () {
             this.setSize();
@@ -82,7 +86,7 @@
         };
         Axis.prototype.removeAllCharts = function () {
             for (var i = 0; i < this.charts.length; i++) {
-                console.log(this.charts[i].id);
+                // console.log(this.charts[i].id)
                 this.charts[i].group = null;
             }
             this.charts = [];
@@ -6084,7 +6088,7 @@
                 .ticks(5)
                 .tickSize(this.height);
             if (this.options.x && this.options.x.time) {
-                xAxis.tickFormat(this.multiFormat);
+                xAxis.tickFormat(this.generateMultiFormat());
                 var offsetDomain = this.xScale.domain().map(function (d) {
                     var m = momentTimezone$1(d).tz(that.timeZone);
                     return new Date(d.getTime() + m.utcOffset() * 60000);
@@ -6225,24 +6229,27 @@
                 }
             }
         };
-        CartesianAxis.prototype.multiFormat = function (date) {
-            var m = momentTimezone$1(date).tz('Europe/Amsterdam');
-            var offsetDate = new Date(date.getTime() + m.utcOffset() * 60000);
-            return (d3.utcSecond(offsetDate) < offsetDate
-                ? m.format('.SSS')
-                : d3.utcMinute(offsetDate) < offsetDate
-                    ? m.format(':ss')
-                    : d3.utcHour(offsetDate) < offsetDate
-                        ? m.format('hh:mm')
-                        : d3.utcDay(offsetDate) < offsetDate
+        CartesianAxis.prototype.generateMultiFormat = function () {
+            var timeZone = this.timeZone;
+            return function (date) {
+                var m = momentTimezone$1(date).tz(timeZone);
+                var offsetDate = new Date(date.getTime() + m.utcOffset() * 60000);
+                return (d3.utcSecond(offsetDate) < offsetDate
+                    ? m.format('.SSS')
+                    : d3.utcMinute(offsetDate) < offsetDate
+                        ? m.format(':ss')
+                        : d3.utcHour(offsetDate) < offsetDate
                             ? m.format('hh:mm')
-                            : d3.utcMonth(offsetDate) < offsetDate
-                                ? d3.utcWeek(offsetDate) < offsetDate
-                                    ? m.format('dd DD')
-                                    : m.format('MMM DD')
-                                : d3.utcYear(offsetDate) < offsetDate
-                                    ? m.format('MMMM')
-                                    : m.format('YYYY'));
+                            : d3.utcDay(offsetDate) < offsetDate
+                                ? m.format('hh:mm')
+                                : d3.utcMonth(offsetDate) < offsetDate
+                                    ? d3.utcWeek(offsetDate) < offsetDate
+                                        ? m.format('dd DD')
+                                        : m.format('MMM DD')
+                                    : d3.utcYear(offsetDate) < offsetDate
+                                        ? m.format('MMMM')
+                                        : m.format('YYYY'));
+            };
         };
         return CartesianAxis;
     }(Axis));

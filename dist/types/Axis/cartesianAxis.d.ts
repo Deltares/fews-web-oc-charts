@@ -33,6 +33,6 @@ export declare class CartesianAxis extends Axis {
     showTooltip(html: string): void;
     protected setRange(): void;
     protected initGrid(): void;
-    multiFormat(date: any): string;
+    generateMultiFormat(): (date: any) => string;
 }
 export {};
