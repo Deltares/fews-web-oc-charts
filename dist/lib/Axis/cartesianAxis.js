@@ -303,9 +303,9 @@ var CartesianAxis = /** @class */ (function (_super) {
                 : d3.utcMinute(offsetDate) < offsetDate
                     ? m.format(':ss')
                     : d3.utcHour(offsetDate) < offsetDate
-                        ? m.format('hh:mm')
+                        ? m.format('HH:mm')
                         : d3.utcDay(offsetDate) < offsetDate
-                            ? m.format('hh:mm')
+                            ? m.format('HH:mm')
                             : d3.utcMonth(offsetDate) < offsetDate
                                 ? d3.utcWeek(offsetDate) < offsetDate
                                     ? m.format('dd DD')

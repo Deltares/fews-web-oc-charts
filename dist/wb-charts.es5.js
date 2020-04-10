@@ -6236,9 +6236,9 @@ var CartesianAxis = /** @class */ (function (_super) {
                 : utcMinute(offsetDate) < offsetDate
                     ? m.format(':ss')
                     : utcHour(offsetDate) < offsetDate
-                        ? m.format('hh:mm')
+                        ? m.format('HH:mm')
                         : utcDay(offsetDate) < offsetDate
-                            ? m.format('hh:mm')
+                            ? m.format('HH:mm')
                             : utcMonth(offsetDate) < offsetDate
                                 ? utcWeek(offsetDate) < offsetDate
                                     ? m.format('dd DD')
