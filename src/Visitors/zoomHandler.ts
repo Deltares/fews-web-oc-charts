@@ -224,6 +224,7 @@ export class ZoomHandler implements Visitor {
 
   resetZoom(point: [number, number]) {
     this.axis.redraw({ x: { autoScale: true }, y: { autoScale: true } })
+    this.axis.zoom()
   }
 
   // FIXME: remove when IDrawble is introduced
