@@ -1,4 +1,5 @@
 import * as d3 from 'd3'
+import "d3-selection-multi"
 import { CartesianAxis, PolarAxis } from '../Axis'
 import { Chart, AUTO_SCALE } from './chart'
 
@@ -26,7 +27,7 @@ export class ChartArea extends Chart {
 
     let colorMap = this.colorMap
 
-    var bisectX = d3.bisector(function(d) {
+    let bisectX = d3.bisector(function(d) {
       return d[xkey]
     })
     let i0 = bisectX.right(this.data, axis.xScale.domain()[0])
@@ -64,6 +65,9 @@ export class ChartArea extends Chart {
     let area = this.group.select('path')
     area.attr('d', areaGenerator(mappedData))
     area.datum(mappedData)
+    if (this.style) {
+      area.styles(this.style)
+    }
   }
 
   plotterPolar(axis: PolarAxis, dataKeys: any) {

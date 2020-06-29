@@ -156,7 +156,7 @@ d3.json("ensemble.json", function (error, data) {
     plotPercentile90.addTo(axis, { xkey: "x", ykey: "y" }, '#percent90');
     plotPercentile50.addTo(axis, { xkey: "x", ykey: "y" }, '#percent50');
     plotControl1.addTo(axis, { xkey: "x", ykey: "y" }, '#control-line');
-    plotMedian1.addTo(axis, { xkey: "x", ykey: "y" }, '#median-line');
+    plotMedian1.addTo(axis, { xkey: "x", ykey: "y" }, '#median-line', {fill: 'none', stroke: 'white', strokewidth: '2px'});
     axis.redraw();
     axis.accept(warnings);
 

@@ -18,6 +18,7 @@ export abstract class Chart {
   options: any
   dataKeys: any
   _extent: any[]
+  style: CSSStyleDeclaration
 
   constructor(data: any, options: any) {
     this.data = data
@@ -61,8 +62,9 @@ export abstract class Chart {
     return this._extent
   }
 
-  addTo(axis: Axis, dataKeys: any, id?: string) {
+  addTo(axis: Axis, dataKeys: any, id: string, style: CSSStyleDeclaration) {
     this.id = id ? id : ''
+    this.style = style
     this.dataKeys = dataKeys
     axis.charts.push(this)
     return this
@@ -123,7 +125,7 @@ export abstract class Chart {
     let xkey = dataKeys.xkey ? dataKeys.xkey : 'x'
     let ykey = dataKeys.ykey ? dataKeys.ykey : 'y'
 
-    var bisectData = d3.bisector(function(d) {
+    let bisectData = d3.bisector(function(d) {
       return d[xkey]
     })
     let i0 = bisectData.right(this.data, domain[0])

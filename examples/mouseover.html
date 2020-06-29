@@ -29,13 +29,6 @@
                 stroke: white;
             }
 
-            .ensemble-line {
-              stroke: black;
-              stroke-width: 1px;
-              fill: none;
-              opacity: .5;
-            }
-
             #chart-legend-1 {
                 display: block;
                 fill: white;
@@ -46,9 +39,7 @@
 
             #median-line { fill: none; stroke: white; stroke-width: 2px; }
 
-            #cartesian-line { fill: none; stroke: white; }
-            #percent90 { fill: skyblue; stroke: skyblue; }
-            #percent50 { fill: deepskyblue; stroke: deepskyblue; }
+
 
             /* div.tooltip { position: absolute; text-align: left; min-width: 60px; min-height: 28px; padding: 2px; font: 12px sans-serif; background:
 rgba(0, 0, 0,.8); border: 0px;
@@ -88,12 +79,10 @@ border-color: transparent black transparent transparent;
 
 
         </style>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.js"> </script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/locale/nl.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/moment-timezone/0.5.23/moment-timezone-with-data.js">
 </script>
 
-        <script src="https://d3js.org/d3.v5.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/5.16.0/d3.js"></script>
+        <script src="https://d3js.org/d3-selection-multi.v1.min.js"></script>
         <link rel="stylesheet" href="/dist/wb-charts.css">
     </head>
     <body>
@@ -103,9 +92,6 @@ border-color: transparent black transparent transparent;
         </div>
         <script src="/dist/wb-charts.umd.js"></script>
         <script type="text/javascript">
-
-    var m = moment.tz(new Date(), "Europe/Amsterdam");
-    console.log(m.format())
 
     var container = document.getElementById("chart-container-1");
     var axis =  new wbCharts.CartesianAxis(container, null, null,
@@ -146,7 +132,8 @@ border-color: transparent black transparent transparent;
         }
     };
 
-    var refDate = new Date(2019,02,31);
+    // var refDate = new Date(2019,02,31);
+    var refDate = new Date();
     var mouseOver = new wbCharts.MouseOver(['#control-line']);
     var escalationLevels = [
       { id: 'laag', val: -100, color: 'rgba(205, 133, 63,.5)', c: '<' },
@@ -191,12 +178,32 @@ border-color: transparent black transparent transparent;
       var plotPercentile50 = new wbCharts.ChartArea(percentiles[1], {});
       var plotPercentile90 = new wbCharts.ChartArea(percentiles[2], {});
 
-      plotPercentile90.addTo(axis, { xkey: "x", ykey: "y" }, '#percent90');
-      plotPercentile50.addTo(axis, { xkey: "x", ykey: "y" }, '#percent50');
+      let style90 = {
+        'fill': 'skyblue', 'stroke': 'skyblue'
+      };
+      let style50 = {
+        'fill': 'deepskyblue', 'stroke': 'deepskyblue'
+      }
+      const styleLine = {
+        fill: 'none', stroke: 'white'
+      }
+      plotPercentile90.addTo(axis, { xkey: "x", ykey: "y" }, '.percent90', style90);
+      plotPercentile50.addTo(axis, { xkey: "x", ykey: "y" }, '.percent50', style50);
 
       for (i = 1; i< nEnsemble; i++) {
         var plotEnsemble=new wbCharts.ChartLine(members[i], {});
-        plotEnsemble.addTo(axis, { xkey: "x" , ykey: "y" }, '.ensemble-line' );
+        let declaration = { 'stroke': 'black',
+        'stroke-width': '1px',
+        'fill': 'none',
+        'opacity': '.5'
+        }
+
+        // new CSSStyleDeclaration()
+        // declaration.setProperty("stroke", "black");
+        // declaration.setProperty("stroke-width", "1px");
+        // declaration.setProperty("fill", "none");
+        // declaration.setProperty("opacity", ".");
+        plotEnsemble.addTo(axis, { xkey: "x" , ykey: "y" }, '.ensemble-line', declaration );
       }
 
       plotControl1.addTo(axis, { xkey: "x", ykey: "y" }, '#control-line');

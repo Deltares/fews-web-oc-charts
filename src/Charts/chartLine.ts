@@ -1,4 +1,5 @@
 import * as d3 from 'd3'
+import "d3-selection-multi"
 import { CartesianAxis, PolarAxis } from '../Axis'
 import { Chart } from './chart'
 
@@ -24,10 +25,13 @@ export class ChartLine extends Chart {
     if (this.group.select('path').size() === 0) {
       this.group.append('path')
     }
-    this.group
+    let path = this.group
       .select('path')
       .datum(mappedData)
       .attr('d', lineGenerator)
+    if (this.style) {
+      path.styles(this.style)
+    }
   }
 
   plotterPolar(axis: PolarAxis, dataKeys: any) {
@@ -55,5 +59,9 @@ export class ChartLine extends Chart {
 
     line.transition(t).attr('d', lineGenerator(mappedData))
     line.datum(this.data)
+    if (this.style) {
+      line.styles(this.style)
+    }
+
   }
 }
