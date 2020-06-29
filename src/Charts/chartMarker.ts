@@ -11,13 +11,18 @@ function mean(x: number[] | number) {
 
 export class ChartMarker extends Chart {
   private previousData: any[] = []
+  symbolId!: number
+
+  constructor(data: any, options: any) {
+    super(data, options)
+    this.symbolId = this.options.symbolId ? this.options.symbolId : 0
+  }
 
   plotterCartesian(axis: CartesianAxis, dataKeys: any) {
     const xkey = dataKeys.xkey ? dataKeys.xkey : 'x'
     const ykey = dataKeys.ykey ? dataKeys.ykey : 'y'
 
     this.group = this.selectGroup(axis, 'chart-marker')
-    let symbolId = this.options.symbolId ? this.options.symbolId : 0
 
     let elements = this.group.selectAll('path').data(this.data)
 
@@ -36,7 +41,7 @@ export class ChartMarker extends Chart {
       .on('mouseout', function(d: any) {
         axis.hideTooltip(d)
       })
-      .attr('d', d3.symbol().type(d3.symbols[symbolId]))
+      .attr('d', d3.symbol().type(d3.symbols[this.symbolId]))
       .merge(elements)
       .attr('transform', function (d: any, i: number) {
         return 'translate(' + axis.xScale(d[xkey]) + ',' + axis.yScale(d[ykey]) + ')'
@@ -45,7 +50,6 @@ export class ChartMarker extends Chart {
 
   plotterPolar(axis: PolarAxis, dataKeys: any) {
     this.group = this.selectGroup(axis, 'chart-marker')
-    let symbolId = this.options.symbolId ? this.options.symbolId : 0
     const tkey = dataKeys.tkey ? dataKeys.tkey : 't'
     const rkey = dataKeys.rkey ? dataKeys.rkey : 'r'
 
@@ -84,7 +88,7 @@ export class ChartMarker extends Chart {
         const t: number = axis.angularScale(d[tkey])
         return 'translate(' + -r * Math.sin(-t) + ',' + -r * Math.cos(-t) + ')'
       })
-      .attr('d', d3.symbol().type(d3.symbols[symbolId]))
+      .attr('d', d3.symbol().type(d3.symbols[this.symbolId]))
       .on('mouseover', function(d: any) {
         const v = { r: d[rkey], t: d[tkey] }
         axis.showTooltip(that.toolTipFormatterPolar(v))
@@ -103,4 +107,19 @@ export class ChartMarker extends Chart {
 
     this.previousData = this.data
   }
+
+  drawLegendSymbol(entry) {
+    let chartElement = this.group
+      .select('path')
+      .node() as Element
+    let style = window.getComputedStyle(chartElement)
+    entry
+      .append('g')
+      .attr('transform', 'translate(10 0)')
+      .append('path')
+      .attr('d', d3.symbol().type(d3.symbols[this.symbolId]))
+      .style('stroke', style.getPropertyValue('stroke'))
+      .style('fill', style.getPropertyValue('fill'))
+  }
+
 }
