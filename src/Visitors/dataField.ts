@@ -32,7 +32,7 @@ export class DataField implements Visitor {
     this.container = container
     this.options = mergeRecursive(
       {
-        labelField : {dx: 0, dy: 0}, 
+        labelField : {dx: 0, dy: 0},
         valueField : {dx: 0, dy: 0, units: [{unit: '', factor: 1.0} ], precision: "0.1f" }
       }, options )
     this.formatter = formatter !== undefined ? formatter : this.valueFormatter
@@ -66,7 +66,7 @@ export class DataField implements Visitor {
   }
 
   redraw() {
-    let element = this.axis.chartGroup.select(this.options.selector).select('path')
+    let element = this.axis.chartGroup.select(`[data-id=${this.options.selector}]`).select('path')
     let data = element.datum()
     let style = window.getComputedStyle(element.node() as Element)
 
