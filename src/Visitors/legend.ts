@@ -42,7 +42,7 @@ export class Legend implements Visitor {
       .each(function(d, i) {
         let entry = d3.select(this)
         let chartElement = d3
-          .select(d.selector)
+          .select(`[data-id=${d.selector}]`)
           .select('path')
           .node() as Element
         if (chartElement) {
@@ -70,10 +70,10 @@ export class Legend implements Visitor {
           entry.on('click', function() {
             let display = style.getPropertyValue('visibility')
             if (display === 'visible') {
-              d3.selectAll(d.selector).style('visibility', 'hidden')
+              d3.selectAll(`[data-id=${d.selector}]`).style('visibility', 'hidden')
               entry.style('opacity', 0.5)
             } else {
-              d3.selectAll(d.selector).style('visibility', 'visible')
+              d3.selectAll(`[data-id=${d.selector}]`).style('visibility', 'visible')
               entry.style('opacity', 1.0)
             }
           })

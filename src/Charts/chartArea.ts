@@ -26,7 +26,7 @@ export class ChartArea extends Chart {
 
     let colorMap = this.colorMap
 
-    var bisectX = d3.bisector(function(d) {
+    let bisectX = d3.bisector(function(d) {
       return d[xkey]
     })
     let i0 = bisectX.right(this.data, axis.xScale.domain()[0])

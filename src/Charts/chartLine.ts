@@ -24,7 +24,7 @@ export class ChartLine extends Chart {
     if (this.group.select('path').size() === 0) {
       this.group.append('path')
     }
-    this.group
+    let path = this.group
       .select('path')
       .datum(mappedData)
       .attr('d', lineGenerator)

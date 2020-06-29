@@ -124,21 +124,16 @@
     }
 
     #polar-line { fill: none; stroke: rgb(0, 128, 255); stroke-width: 3px; }
-    #polar-line-forecast { fill: none; stroke: rgb(255, 128, 255); stroke-width: 3px; }
+    #forecast { fill: none; stroke: rgb(255, 128, 255); stroke-width: 3px; }
 
     #cartesian-dot { fill: #999999; stroke: white; }
 
     #wind-line { fill: none; stroke: rgb(53, 180, 41); stroke-width: 3px;}
     #wind-line-time { fill: none; stroke: rgb(53, 180, 41); stroke-width: 1px;}
-#windstoot-line-time { fill: none; stroke: rgb(170, 30, 30); stroke-width: 1px;}
+    #windstoot-line-time { fill: none; stroke: rgb(170, 30, 30); stroke-width: 1px;}
 
-
-
-    #wind-forecast-line{ fill: none; stroke: rgb(255, 128, 255); stroke-width: 3px;}
-    #wind-forecast-line-time{ fill: none; stroke: rgb(255, 128, 255); stroke-width: 1px;}
 
     #winddirection-line-time{ fill: none; stroke: rgb(0, 128, 255); stroke-width: 1px;}
-    #winddirection-forecast-line-time{ fill: none; stroke: rgb(255, 128, 255); stroke-width: 1px;}
 
     #stoot-line { fill: none; stroke: rgb(170, 30, 30); stroke-width: 3px;}
 
@@ -169,7 +164,7 @@
     }
 
     .legend {
-      font: 10px sans-serif; 
+      font: 10px sans-serif;
     }
 
     /* div.tooltip { position: absolute; text-align: center; min-width: 10px; height: 28px; padding: 2px;
@@ -184,7 +179,7 @@ margin-left: 5px;
 min-width: 40px;
 background-color: black;
 color: #fff;
-font: 11px sans-serif; 
+font: 11px sans-serif;
 text-align: center;
 padding: 5px;
 border-radius: 6px;
@@ -207,6 +202,7 @@ pointer-events: none;
   integrity="sha256-2Kok7MbOyxpgUVvAk/HJ2jigOSYS2auK4Pfzbm7uH60="
   crossorigin="anonymous"></script>
     <script src="https://d3js.org/d3.v5.js"></script>
+    <script src="https://d3js.org/d3-selection-multi.v1.min.js"></script>
     <!-- <script src="https://unpkg.com/date-time-format-timezone@latest/build/browserified/date-time-format-timezone-complete-min.js"></script> -->
     <link rel="stylesheet" href="../dist/wb-charts.css">
   </head>
@@ -372,28 +368,28 @@ pointer-events: none;
         windDirectionMeasurement = new wbCharts.ChartLine(windRichtingMetingen[0], {transitionTime: transitionTime});
         windDirectionForecast = new wbCharts.ChartLine(windRichtingVerwachtingen[0], {transitionTime: transitionTime});
         windDirectionRange = new wbCharts.ChartRange(allWindSpreidingR[0], {transitionTime: transitionTime, r:{includeInTooltip:false} });
-        windDirectionRange.addTo(polarAxis, { rkey: "x", tkey: "y"}, '#polar-range');
-        windDirectionMeasurement.addTo(polarAxis, { rkey: "x", tkey: "y" }, '#polar-line');
-        windDirectionForecast.addTo(polarAxis, { rkey: "x", tkey: "y" }, '#polar-line-forecast');
+        windDirectionRange.addTo(polarAxis, { rkey: "x", tkey: "y"}, 'direction-range', '#polar-range');
+        windDirectionMeasurement.addTo(polarAxis, { rkey: "x", tkey: "y" }, 'direction-measured', '#polar-line');
+        windDirectionForecast.addTo(polarAxis, { rkey: "x", tkey: "y" }, 'direction-forecast','#polar-line-forecast');
 
         polarText = new wbCharts.DataField(
         polarAxis.canvas, {
-          selector: '#polar-line',
+          selector: 'direction-measured',
           labelField: {text: 'richting', dy: '-45px' },
           valueField: {dy: '-25px', units: degree }
         }
         );
-        
+
         polarText1 = new wbCharts.DataField(
         polarAxis.canvas, {
-          selector: '#wind-line',
+          selector: 'wind',
           labelField: {text: 'windsnelheid', dy: '-10px' },
           valueField: {dy: '10px', units: unitsSpeed }
         });
 
         polarText2 = new wbCharts.DataField(
         polarAxis.canvas, {
-          selector: '#stoot-line',
+          selector: 'stoot',
           labelField: {text: 'windstoot', dy: '25px' },
           valueField: {dy: '45px', units: unitsStoot }
         });
@@ -419,13 +415,14 @@ pointer-events: none;
         windSpeedMeasurement = new wbCharts.ChartLine( windSnelheiMetingen[0], {transitionTime: transitionTime});
         windSpeedForecast = new wbCharts.ChartLine( windSnelheiVerwachtingen[0], {transitionTime: transitionTime});
 
-        windSpeedRange.addTo(windSpeedAxis, { xkey: "y", ykey: "x"}, '#cartesian-range');
-        windSpeedMeasurement.addTo(windSpeedAxis,{ xkey: "y", ykey: "x"}, '#wind-line');
-        windSpeedForecast.addTo(windSpeedAxis,{ xkey: "y", ykey: "x"}, '#wind-forecast-line');
+        windSpeedRange.addTo(windSpeedAxis, { xkey: "y", ykey: "x"}, 'cartesian-range', '#cartesian-range');
+        windSpeedMeasurement.addTo(windSpeedAxis,{ xkey: "y", ykey: "x"}, 'wind', '#wind-line');
+        windSpeedForecast.addTo(windSpeedAxis,{ xkey: "y", ykey: "x"},
+        'wind-forecast', '#wind-forecast-line');
 
         windAmplitudeText = new wbCharts.DataField(
         windSpeedAxis.canvas, {
-          selector: '#wind-line',
+          selector: 'wind',
           labelField: {text: 'windsnelheid', dy: '80px' },
           valueField: {dx: '100px', dy: '80px' }
         },
@@ -444,11 +441,11 @@ pointer-events: none;
           }
         });
         windStootChart = new wbCharts.ChartLine( allWindStoot[0], {transitionTime: transitionTime});
-        windStootChart.addTo(windStootAxis,{ xkey: "y", ykey: "x"}, '#stoot-line');
+        windStootChart.addTo(windStootAxis,{ xkey: "y", ykey: "x"}, 'stoot', '#stoot-line');
 
         windStootText = new wbCharts.DataField(
         windStootAxis.canvas, {
-          selector: '#stoot-line',
+          selector: 'stoot',
           labelField: {text: 'windstoot', dy: '80px' },
           valueField: {dx: '100px', dy: '80px' }},
         speedDataFormatter
@@ -472,12 +469,12 @@ pointer-events: none;
         windSpeedTimeM.addTo(windTimeAxis,{
         xkey: "t",
         ykey: "y"
-        }, '#wind-line-time');
+        }, 'wind', '#wind-line-time');
 
         windStootTimeM.addTo(windTimeAxis,{
         xkey: "t",
         ykey: "y"
-        }, '#windstoot-line-time');
+        }, 'windstoot', '#windstoot-line-time');
 
         windSpeedTimeF.addTo(windTimeAxis,{
         xkey: "t",
@@ -485,9 +482,9 @@ pointer-events: none;
         }, '#wind-forecast-line-time');
 
         var legendWindTime = new wbCharts.Legend( [
-        {selector: '#windstoot-line-time', label :'Windstoot meting'},
-        {selector: '#wind-line-time', label : 'Windsnelheid meting'},
-        {selector: '#wind-forecast-line-time', label :'Windsnelheid verwachting'},
+        {selector: 'windstoot', label :'Windstoot meting'},
+        {selector: 'wind', label : 'Windsnelheid meting'},
+        {selector: 'wind-forecast', label :'Windsnelheid verwachting'},
         ],
         document.getElementById("legend-wind-speed-time")
         );
@@ -507,17 +504,17 @@ pointer-events: none;
         windDirectionTimeM.addTo(windDirectionTimeAxis,{
                 xkey: "t",
                 ykey: "y"
-                }, '#winddirection-line-time');
+                }, 'winddirection', '#winddirection-line-time');
 
         windDirectionTimeF.addTo(windDirectionTimeAxis,{
                 xkey: "t",
                 ykey: "y"
-                }, '#winddirection-forecast-line-time');
+                }, 'winddirection-forecast', '#forecast');
 
 
         var legendWindDirectionTime = new wbCharts.Legend( [
-        {selector: '#winddirection-line-time', label : 'Windrichting meting'},
-        {selector: '#winddirection-forecast-line-time', label :'Windrichting verwachting'},
+        {selector: 'winddirection', label : 'Windrichting meting'},
+        {selector: 'winddirection-forecast', label :'Windrichting verwachting'},
         ],
         document.getElementById("legend-wind-direction-time")
         );
