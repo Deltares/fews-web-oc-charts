@@ -100,12 +100,12 @@ border-color: transparent black transparent transparent;
         margin: {left: 50, right: 50 }
       });
     var legend = new wbCharts.Legend( [
-        {selector: '#median-line', label : 'Middelste (P50)'},
-        {selector: '#control-line', label :'Controle'},
-        {selector: '#percent90', label :'90% interval'} ,
-        {selector: '#percent50', label :'50% interval'},
-        {selector: '.ensemble-line', label : 'Verstoord'},
-        {selector: '.missing-line', label : 'Missing'},
+        {selector: 'median-line', label : 'Middelste (P50)'},
+        {selector: 'control-line', label :'Controle'},
+        {selector: 'percent90', label :'90% interval'} ,
+        {selector: 'percent50', label :'50% interval'},
+        {selector: 'ensemble-line', label : 'Verstoord'},
+        {selector: 'missing-line', label : 'Missing'},
         ]
         ,document.getElementById("chart-legend-1"));
 
@@ -187,8 +187,8 @@ border-color: transparent black transparent transparent;
       const styleLine = {
         fill: 'none', stroke: 'white'
       }
-      plotPercentile90.addTo(axis, { xkey: "x", ykey: "y" }, '.percent90', style90);
-      plotPercentile50.addTo(axis, { xkey: "x", ykey: "y" }, '.percent50', style50);
+      plotPercentile90.addTo(axis, { xkey: "x", ykey: "y" }, 'percent90', style90);
+      plotPercentile50.addTo(axis, { xkey: "x", ykey: "y" }, 'percent50', style50);
 
       for (i = 1; i< nEnsemble; i++) {
         var plotEnsemble=new wbCharts.ChartLine(members[i], {});
@@ -203,11 +203,11 @@ border-color: transparent black transparent transparent;
         // declaration.setProperty("stroke-width", "1px");
         // declaration.setProperty("fill", "none");
         // declaration.setProperty("opacity", ".");
-        plotEnsemble.addTo(axis, { xkey: "x" , ykey: "y" }, '.ensemble-line', declaration );
+        plotEnsemble.addTo(axis, { xkey: "x" , ykey: "y" }, 'ensemble-line', declaration );
       }
 
-      plotControl1.addTo(axis, { xkey: "x", ykey: "y" }, '#control-line');
-      plotMedian1.addTo(axis, { xkey: "x", ykey: "y" }, '#median-line');
+      plotControl1.addTo(axis, { xkey: "x", ykey: "y" }, 'control-line', '#control-line');
+      plotMedian1.addTo(axis, { xkey: "x", ykey: "y" }, 'median-line', '#median-line');
       axis.redraw({x:{ autoScale: true}, y: {autoScale: true} });
       axis.zoom();
       // legend.visit(axis);
