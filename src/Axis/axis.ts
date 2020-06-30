@@ -84,9 +84,20 @@ export abstract class Axis {
 
   abstract updateGrid() : void
 
+  removeChart(id: string) {
+    let i: number
+    for (i = 0; i < this.charts.length; i++) {
+      if ( this.charts[i].id === id) {
+        this.charts[i].group = null
+        break
+      }
+    }
+    this.charts.splice(i, 1)
+    this.chartGroup.selectAll(`[data-id=${id}]`).remove()
+  }
+
   removeAllCharts() {
     for (let i=0; i< this.charts.length;i++) {
-      // console.log(this.charts[i].id)
       this.charts[i].group = null
     }
     this.charts = []
