@@ -66,7 +66,7 @@ export class DataField implements Visitor {
   }
 
   redraw() {
-    let element = this.axis.chartGroup.select(`[data-id=${this.options.selector}]`).select('path')
+    let element = this.axis.chartGroup.select(`[data-id="${this.options.selector}"]`).select('path')
     let data = element.datum()
     let style = window.getComputedStyle(element.node() as Element)
 
