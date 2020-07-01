@@ -1,5 +1,4 @@
 import * as d3 from 'd3'
-import "d3-selection-multi"
 import { SvgProperties } from 'csstype';
 import { Axis, CartesianAxis, PolarAxis } from '../Axis'
 
@@ -128,7 +127,8 @@ export abstract class Chart {
           this.group.attr('class', cssClass)
         }
       } else {
-        this.group.styles(this.style)
+        Object.entries(this.style).forEach(
+          ([prop, val]) => this.group.style(prop, val))
       }
     }
     return this.group
