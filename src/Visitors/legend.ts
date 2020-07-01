@@ -1,7 +1,7 @@
 import * as d3 from 'd3'
 import { Axis, CartesianAxis } from '../Axis'
 import { Visitor } from './visitor'
-import { ChartLine, ChartArea } from '../Charts'
+import { ChartLine, ChartArea, ChartMarker } from '../Charts'
 
 export class Legend implements Visitor {
   private container: HTMLElement
@@ -42,38 +42,20 @@ export class Legend implements Visitor {
       .each(function(d, i) {
         let entry = d3.select(this)
         let chartElement = d3
-          .select(d.selector)
+          .select(`[data-id="${d.selector}"]`)
           .select('path')
           .node() as Element
         if (chartElement) {
           let style = window.getComputedStyle(chartElement)
           let chart = that.axis.charts.filter(x => x.id === d.selector)
-          if (chart[0] instanceof ChartLine) {
-            entry
-              .append('line')
-              .attr('x1', 0)
-              .attr('x2', 20)
-              .attr('y1', 0)
-              .attr('y2', 0)
-              .style('stroke', style.getPropertyValue('stroke'))
-              .style('stroke-width', style.getPropertyValue('stroke-width'))
-              .style('stroke-dasharray', style.getPropertyValue('stroke-dasharray'))
-          } else if (chart[0] instanceof ChartArea) {
-            entry
-              .append('rect')
-              .attr('x', 0)
-              .attr('y', -5)
-              .attr('width', 20)
-              .attr('height', 10)
-              .style('fill', style.getPropertyValue('fill'))
-          }
+          chart[0].drawLegendSymbol(entry)
           entry.on('click', function() {
             let display = style.getPropertyValue('visibility')
             if (display === 'visible') {
-              d3.selectAll(d.selector).style('visibility', 'hidden')
+              d3.selectAll(`[data-id="${d.selector}"]`).style('visibility', 'hidden')
               entry.style('opacity', 0.5)
             } else {
-              d3.selectAll(d.selector).style('visibility', 'visible')
+              d3.selectAll(`[data-id="${d.selector}"]`).style('visibility', 'visible')
               entry.style('opacity', 1.0)
             }
           })

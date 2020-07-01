@@ -1,4 +1,6 @@
 import * as d3 from 'd3'
+import "d3-selection-multi"
+import { SvgProperties } from 'csstype';
 import { Axis, CartesianAxis, PolarAxis } from '../Axis'
 
 export const AUTO_SCALE = 1
@@ -18,6 +20,8 @@ export abstract class Chart {
   options: any
   dataKeys: any
   _extent: any[]
+  style: SvgProperties
+  cssSelector: string
 
   constructor(data: any, options: any) {
     this.data = data
@@ -61,8 +65,13 @@ export abstract class Chart {
     return this._extent
   }
 
-  addTo(axis: Axis, dataKeys: any, id?: string) {
+  addTo(axis: Axis, dataKeys: any, id: string, style: SvgProperties | string) {
     this.id = id ? id : ''
+    if (typeof style === 'string') {
+      this.cssSelector = style
+    } else {
+      this.style = style
+    }
     this.dataKeys = dataKeys
     axis.charts.push(this)
     return this
@@ -100,6 +109,7 @@ export abstract class Chart {
 
   abstract plotterCartesian(axis: CartesianAxis, dataKeys: any)
   abstract plotterPolar(axis: PolarAxis, dataKeys: any)
+  abstract drawLegendSymbol(entry: any)
 
   protected selectGroup(axis: Axis, cssClass: string) {
     if (this.group == null) {
@@ -109,11 +119,16 @@ export abstract class Chart {
         let intercept = 90 - axis.intercept
         this.group.attr('transform', 'rotate(' + intercept + ')scale(' + direction + ' ,1)')
       }
-      if (this.id.lastIndexOf('#', 0) === 0) this.group.attr('id', this.id.substr(1))
-      if (this.id.lastIndexOf('.', 0) === 0) {
-        this.group.attr('class', cssClass + ' ' + this.id.substr(1))
+      this.group.attr('data-id', this.id)
+      if ( this.cssSelector ) {
+        if (this.cssSelector.lastIndexOf('#', 0) === 0) this.group.attr('id', this.cssSelector.substr(1))
+        if (this.cssSelector.lastIndexOf('.', 0) === 0) {
+          this.group.attr('class', cssClass + ' ' + this.cssSelector.substr(1))
+        } else {
+          this.group.attr('class', cssClass)
+        }
       } else {
-        this.group.attr('class', cssClass)
+        this.group.styles(this.style)
       }
     }
     return this.group
@@ -123,7 +138,7 @@ export abstract class Chart {
     let xkey = dataKeys.xkey ? dataKeys.xkey : 'x'
     let ykey = dataKeys.ykey ? dataKeys.ykey : 'y'
 
-    var bisectData = d3.bisector(function(d) {
+    let bisectData = d3.bisector(function(d) {
       return d[xkey]
     })
     let i0 = bisectData.right(this.data, domain[0])

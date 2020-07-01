@@ -24,7 +24,7 @@ export class ChartLine extends Chart {
     if (this.group.select('path').size() === 0) {
       this.group.append('path')
     }
-    this.group
+    let path = this.group
       .select('path')
       .datum(mappedData)
       .attr('d', lineGenerator)
@@ -55,5 +55,21 @@ export class ChartLine extends Chart {
 
     line.transition(t).attr('d', lineGenerator(mappedData))
     line.datum(this.data)
+  }
+
+  drawLegendSymbol( entry ) {
+    let chartElement = this.group
+      .select('path')
+      .node() as Element
+    let style = window.getComputedStyle(chartElement)
+    entry
+      .append('line')
+      .attr('x1', 0)
+      .attr('x2', 20)
+      .attr('y1', 0)
+      .attr('y2', 0)
+      .style('stroke', style.getPropertyValue('stroke'))
+      .style('stroke-width', style.getPropertyValue('stroke-width'))
+      .style('stroke-dasharray', style.getPropertyValue('stroke-dasharray'))
   }
 }

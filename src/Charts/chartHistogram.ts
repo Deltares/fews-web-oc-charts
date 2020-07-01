@@ -92,4 +92,24 @@ export class ChartHistogram extends Chart {
   plotterPolar(axis: PolarAxis, dataKeys: any) {
     console.error('plotterPolar is not implemented for ChartHistogram')
   }
+
+  drawLegendSymbol(entry) {
+    let chartElement = this.group
+      .select('path')
+      .node() as Element
+    let style = window.getComputedStyle(chartElement)
+    entry
+      .append('rect')
+      .attr('x', 0)
+      .attr('y', -5)
+      .attr('width', 10)
+      .attr('height', 10)
+      .style('fill', style.getPropertyValue('fill'))
+      .append('rect')
+      .attr('x', 0)
+      .attr('y', -5)
+      .attr('width', 10)
+      .attr('height', 6)
+      .style('fill', style.getPropertyValue('fill'))
+  }
 }
