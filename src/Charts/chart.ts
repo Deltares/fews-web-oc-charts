@@ -148,7 +148,7 @@ export abstract class Chart {
       this.group = axis.chartGroup.append('g')
       if (axis instanceof PolarAxis) {
         let direction = -axis.direction
-        let intercept = 90 - axis.intercept
+        let intercept = 90 - 180 * axis.intercept / Math.PI
         this.group.attr('transform', 'rotate(' + intercept + ')scale(' + direction + ' ,1)')
       }
       this.group.attr('data-id', this.id)

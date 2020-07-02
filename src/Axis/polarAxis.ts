@@ -16,6 +16,7 @@ interface AngularAxisOptions {
   direction?: number
   intercept?: number
   range?: number[]
+  domain?: number[]
 }
 
 export interface PolarAxisOptions extends AxesOptions {
@@ -43,19 +44,29 @@ export class PolarAxis extends Axis {
     angular: {},
     radial: {}
   }
+  private angularDomain: number[]
+
   constructor(container: HTMLElement, width: number, height: number, options?: PolarAxisOptions) {
     super(container, width, height, options, PolarAxis.defaultOptions)
     this.canvas = this.canvas
       .append('g')
       .attr('transform', 'translate(' + this.width / 2 + ',' + this.height / 2 + ' )')
 
-    this.direction =
-      options.angular && options.angular.direction ? options.angular.direction : ANTICLOCKWISE
-    this.intercept = options.angular && options.angular.intercept ? options.angular.intercept : 0
+    this.direction = options.angular.direction ? options.angular.direction : ANTICLOCKWISE
+    this.intercept = options.angular.intercept ? options.angular.intercept : 0
     this.innerRadius = options.innerRadius ? options.innerRadius : 0
     this.outerRadius = Math.min(this.width, this.height) / 2
-    this.angularRange =
-      options.angular && options.angular.range ? options.angular.range : [0, 2 * Math.PI]
+    this.angularRange = options.angular.range ? options.angular.range : [0, 2 * Math.PI]
+    this.angularDomain = options.angular.domain ? options.angular.domain : [0, 360]
+
+    console.log(this.angularDomain)
+
+    let startAngle = Math.PI/2  - this.intercept + this.angularRange[0]
+    let endAngle =  Math.PI/2 - this.intercept + this.angularRange[1]
+    if (this.direction === ANTICLOCKWISE) {
+      startAngle = Math.PI + startAngle
+      endAngle = Math.PI + endAngle
+    }
 
     this.canvas
       .append('g')
@@ -67,8 +78,8 @@ export class PolarAxis extends Axis {
           .arc()
           .innerRadius(this.innerRadius)
           .outerRadius(this.outerRadius)
-          .startAngle(this.angularRange[0])
-          .endAngle(this.angularRange[1])
+          .startAngle(startAngle)
+          .endAngle(endAngle)
       )
 
     this.setRange()
@@ -102,30 +113,45 @@ export class PolarAxis extends Axis {
     let radialAxis = this.canvas.select('.r-axis').call(rAxis)
 
     let radialTicks = this.radialScale.ticks(5).map(this.radialScale)
+
     let drawRadial = this.canvas
       .select('.r-grid')
-      .selectAll('circle')
+      .selectAll('path')
       .data(radialTicks)
+
     drawRadial.exit().remove()
+
+    let startAngle = Math.PI / 2 - this.intercept + this.angularRange[0]
+    let endAngle = Math.PI / 2 - this.intercept + this.angularRange[1]
+    if (this.direction === ANTICLOCKWISE) {
+      startAngle = Math.PI + startAngle
+      endAngle = Math.PI + endAngle
+    }
+
+
+    let draw = (context, radius) => {
+      context.arc(0, 0, radius, -this.direction * this.angularRange[0] - this.intercept, -this.direction * this.angularRange[1] - this.intercept, this.direction === ANTICLOCKWISE) // draw an arc, the turtle ends up at ⟨194.4,108.5⟩
+      return context;
+    }
+
     drawRadial
       .enter()
-      .append('circle')
+      .append('path')
       .merge(drawRadial)
-      .attr('cx', 0)
-      .attr('cy', 0)
-      .attr('r', function(d: number) {
-        return d
-      })
+      .attr('d', (d) => { return draw(d3.path(), d) })
 
-    let angularTicks = d3.range(
-      this.angularRange[0],
-      this.angularRange[1],
-      this.angularRange[1] / 8
-    )
+    let step = d3.tickIncrement(this.angularDomain[0], this.angularDomain[1], 8)
+    console.log(step)
+
+    step = step >= 100 ? 90 : step >= 50 ? 45 : step >= 20 ? 15 : step
+    let start = Math.ceil(this.angularDomain[0] / step) * step
+    let stop = Math.floor(this.angularDomain[1] / step + 1) * step
+    let angularTicks = d3.range(start, stop, step)
+
     let suffix: string = ''
     let offset = 10
 
-    angularTicks = angularTicks.map(this.radToDegrees)
+    // angularTicks = angularTicks.map(this.radToDegrees)
 
     let drawAngular = this.canvas
       .select('.t-grid')
@@ -137,12 +163,12 @@ export class PolarAxis extends Axis {
       .attr('y1', 0)
       .attr('x2', this.outerRadius)
       .attr('y2', 0)
-      .attr('transform', function(d: number) {
-        return 'rotate(' + d + ')'
+      .attr('transform', (d: number) => {
+        return 'rotate(' + (this.radToDegrees( -this.intercept - this.direction * this.angularScale(d))) + ')'
       })
 
     let groupRotate = function(d: number) {
-      return 'rotate(' + -this.direction * d + ')'
+      return 'rotate(' + this.radToDegrees( -this.direction * this.angularScale(d)) + ')'
     }.bind(this)
     let drawTicks = this.canvas
       .select('.t-axis')
@@ -164,7 +190,7 @@ export class PolarAxis extends Axis {
     let textRotate = function(d: number) {
       return (
         'rotate(' +
-        (this.direction * d + this.intercept) +
+        this.radToDegrees(this.direction * this.angularScale(d) + this.intercept) +
         ',' +
         (this.outerRadius + 15) +
         ',0' +
@@ -172,7 +198,7 @@ export class PolarAxis extends Axis {
       )
     }.bind(this)
     let anchor = function(d: number) {
-      let dNorthCW = (((90 - this.intercept - this.direction * d) % 360) + 360) % 360
+      let dNorthCW = (( this.radToDegrees(Math.PI / 2 - this.intercept - this.direction * this.angularScale(d)) % 360) + 360) % 360
       if (dNorthCW > 0 && dNorthCW < 180) {
         return 'start'
       } else if (dNorthCW > 180 && dNorthCW < 360) {
@@ -188,7 +214,7 @@ export class PolarAxis extends Axis {
       .attr('alignment-baseline', 'middle')
       .attr('x', this.outerRadius + 15)
       .attr('y', 0)
-      .text(function(d: number) {
+      .text((d: number) => {
         return d + '°'
       })
       .attr('transform', textRotate)
@@ -209,7 +235,7 @@ export class PolarAxis extends Axis {
     this.radialScale = d3.scaleLinear().range([this.innerRadius, this.outerRadius])
     this.angularScale = d3
       .scaleLinear()
-      .domain([0, 360])
+      .domain(this.angularDomain)
       .range(this.angularRange)
   }
 
@@ -222,7 +248,7 @@ export class PolarAxis extends Axis {
       .attr('class', 'axis t-axis')
       .attr('font-size', '10')
       .attr('font-family', 'sans-serif')
-      .attr('transform', 'rotate(' + -this.intercept + ')')
+      .attr('transform', 'rotate(' + -this.intercept * 180 / Math.PI + ')')
     this.updateGrid()
   }
 }
