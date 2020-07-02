@@ -22,9 +22,11 @@ export class ChartMarker extends Chart {
     const xkey = dataKeys.xkey ? dataKeys.xkey : 'x'
     const ykey = dataKeys.ykey ? dataKeys.ykey : 'y'
 
-    this.group = this.selectGroup(axis, 'chart-marker')
+    let mappedData = this.mapDataCartesian(axis, dataKeys, axis.xScale.domain())
 
-    let elements = this.group.selectAll('path').data(this.data)
+    this.group = this.selectGroup(axis, 'chart-marker')
+      .datum(mappedData)
+    let elements = this.group.selectAll('path').data(d => d)
 
     // exit selection
     elements.exit().remove()
@@ -35,7 +37,7 @@ export class ChartMarker extends Chart {
       .enter()
       .append('path')
       .on('mouseover', function(d: any) {
-        const v = { x: d[xkey], y: d[ykey] }
+        const v = { x: d.x, y: d.y }
         axis.showTooltip(that.toolTipFormatterCartesian(v))
       })
       .on('mouseout', function(d: any) {
@@ -44,7 +46,7 @@ export class ChartMarker extends Chart {
       .attr('d', d3.symbol().type(d3.symbols[this.symbolId]))
       .merge(elements)
       .attr('transform', function (d: any, i: number) {
-        return 'translate(' + axis.xScale(d[xkey]) + ',' + axis.yScale(d[ykey]) + ')'
+        return 'translate(' + axis.xScale(d.x) + ',' + axis.yScale(d.y) + ')'
       })
   }
 

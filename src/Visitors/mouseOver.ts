@@ -8,7 +8,7 @@ export class MouseOver implements Visitor {
   private group: any
   private axis: CartesianAxis
 
-  constructor(trace: string[]) {
+  constructor(trace?: string[]) {
     this.trace = trace
   }
 
@@ -48,20 +48,7 @@ export class MouseOver implements Visitor {
       .append('text')
       .text('')
 
-    let mousePerLine = this.group
-      .selectAll('.mouse-per-line')
-      .data(this.trace)
-      .enter()
-      .append('g')
-      .attr('class', 'mouse-per-line')
-
-    mousePerLine
-      .append('circle')
-      .attr('r', 3)
-      // .style("stroke", 'white')
-      .style('fill', 'white')
-      .style('stroke-width', '1px')
-      .style('opacity', '0')
+    this.updateLineIndicators()
 
     let that = this
     mouseG
@@ -79,7 +66,8 @@ export class MouseOver implements Visitor {
           .selectAll('.mouse-per-line circle')
           .style('opacity', '1')
           .style('fill', function(d: any, i) {
-            let element = d3.select(d).select('path')
+            const selector = `[data-id="${d}"]`
+            let element = d3.select(selector).select('path')
             if (element.node() === null ) return
             let stroke = window
               .getComputedStyle(element.node() as Element)
@@ -102,7 +90,8 @@ export class MouseOver implements Visitor {
         let posx = mouse[0]
         let allHidden = true
         axis.canvas.selectAll('.mouse-per-line').attr('transform', function(d, i) {
-          let element = axis.canvas.select(d).select('path')
+          const selector = `[data-id="${d}"]`
+          let element = axis.canvas.select(selector).select('path')
           if (element.node() === null) return 'translate(0,' + -window.innerHeight + ')'
           let style = window.getComputedStyle(element.node() as Element)
           if (style === null || style.getPropertyValue('visibility') === 'hidden') {
@@ -145,14 +134,14 @@ export class MouseOver implements Visitor {
         })
 
         // update line
-        that.group.select('.mouse-line').attr('transform', 'translate(' + posx + ',' + 0 + ')')
+        that.group.select('.mouse-line').attr('transform', 'translate(' + mouse[0] + ',' + 0 + ')')
 
         // update x-value
         that.group
           .select('.mouse-x')
-          .attr('transform', 'translate(' + (posx + 2) + ',' + (axis.height - 5) + ')')
+          .attr('transform', 'translate(' + (mouse[0] + 2) + ',' + (axis.height - 5) + ')')
           .select('text')
-          .text(dateFormatter(axis.xScale.invert(posx), 'YYYY-MM-DD HH:mm z',{timeZone: that.axis.timeZone} ) )
+          .text(dateFormatter(axis.xScale.invert(mouse[0]), 'YYYY-MM-DD HH:mm z',{timeZone: that.axis.timeZone} ) )
         if (allHidden) {
           axis.hideTooltip(null)
           return
@@ -170,7 +159,33 @@ export class MouseOver implements Visitor {
       })
   }
 
+  updateLineIndicators () {
+    let traces = (this.trace !== undefined)
+    ? this.trace
+    : this.axis.charts.map( (chart) => {return chart.id})
+
+    console.log(traces)
+    let mousePerLine = this.group
+      .selectAll('.mouse-per-line')
+      .data(traces)
+
+    mousePerLine
+      .enter()
+      .append('g')
+      .attr('class', 'mouse-per-line')
+      .append('circle')
+      .attr('r', 3)
+      .style('fill', 'white')
+      .style('stroke-width', '1px')
+      .style('opacity', '0')
+
+      mousePerLine
+      .exit()
+      .remove()
+  }
+
   redraw() {
+    this.updateLineIndicators()
     let that = this
     this.group.select('.mouse-line').attr('d', function() {
       let d = 'M' + 0 + ',' + that.axis.height
