@@ -1,6 +1,7 @@
 import * as d3 from 'd3'
 import { SvgProperties } from 'csstype';
 import { Axis, CartesianAxis, PolarAxis } from '../Axis'
+import { merge } from "lodash";
 
 export const AUTO_SCALE = 1
 
@@ -12,28 +13,30 @@ function mean(x: number[] | number) {
 }
 
 export abstract class Chart {
-  _data: any
+  protected _data: any
+  protected _extent: any[]
   group: any
   colorMap: any
   id: string
   options: any
   dataKeys: any
-  _extent: any[]
   style: SvgProperties
   cssSelector: string
 
   constructor(data: any, options: any) {
     this.data = data
     this.options = {
-      ...{
-        r: { includeInTooltip: true },
-        t: { includeInTooltip: true },
-        x: { includeInTooltip: true },
-        y: { includeInTooltip: true },
-        transitionTime: 100
-      },
-      ...options
-    }
+      r: { includeInTooltip: true, format: d => d },
+      t: { includeInTooltip: true, format: d => d },
+      x: { includeInTooltip: true, format: d => d },
+      y: { includeInTooltip: true, format: d => d },
+      transitionTime: 100
+    },
+    merge(
+      this.options,
+      options
+    )
+
     // https://github.com/d3/d3-scale-chromatic
     this.colorMap = d3.scaleSequential(d3.interpolateWarm)
   }

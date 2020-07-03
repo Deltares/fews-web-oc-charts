@@ -1,5 +1,6 @@
 import * as d3 from 'd3'
 import { Axis, AxisOptions } from './axis'
+import { generateMultiFormat } from '../utils/date'
 import momenttz from 'moment-timezone'
 
 // import { scaleLinear } from 'd3-scale'
@@ -157,7 +158,7 @@ export class CartesianAxis extends Axis {
       .tickSize(this.height)
 
     if (this.options.x && this.options.x.time) {
-      xAxis.tickFormat(this.generateMultiFormat())
+      xAxis.tickFormat(generateMultiFormat())
       let offsetDomain = this.xScale.domain().map(function (d) {
         let m = momenttz(d as Date).tz(that.timeZone)
         return new Date(d.getTime() + m.utcOffset() * 60000);
@@ -302,28 +303,4 @@ export class CartesianAxis extends Axis {
       }
     }
   }
-
-  generateMultiFormat() {
-    let timeZone = this.timeZone
-    return function(date) {
-      let m = momenttz(date as Date).tz(timeZone)
-      let offsetDate = new Date ( date.getTime() + m.utcOffset()*60000)
-      return (d3.utcSecond(offsetDate) < offsetDate
-        ? m.format('.SSS')
-        : d3.utcMinute(offsetDate) < offsetDate
-          ? m.format(':ss')
-          : d3.utcHour(offsetDate) < offsetDate
-            ? m.format('HH:mm')
-            : d3.utcDay(offsetDate) < offsetDate
-              ? m.format('HH:mm')
-              : d3.utcMonth(offsetDate) < offsetDate
-                ? d3.utcWeek(offsetDate) < offsetDate
-                  ? m.format( 'dd DD')
-                  : m.format( 'MMM DD')
-                : d3.utcYear(offsetDate) < offsetDate
-                  ? m.format( 'MMMM')
-                  : m.format('YYYY'))
-    }
-  }
-
 }
