@@ -5,6 +5,7 @@
   <title>Model status Demo</title>
   <style>
     body {
+      /* background-color: rgb(220, 220, 220); */
       background-color: rgb(44, 44, 44);
     }
 
@@ -12,35 +13,10 @@
       stroke: black;
     }
 
-    .axis-canvas {
-      fill: rgb(89, 89, 89);
-    }
-
     .chart-container {
       display: inline-block;
-      width: 800px;
+      width: 840px;
       height: 800px;
-    }
-
-
-    #polar-dot {
-      fill: #999999;
-      stroke: white;
-    }
-
-    #polar-line {
-      fill: none;
-      stroke: white;
-    }
-
-    #cartesian-dot {
-      fill: #999999;
-      stroke: white;
-    }
-
-    #cartesian-line {
-      fill: none;
-      stroke: white;
     }
 
     div.tooltip {
@@ -58,7 +34,9 @@
     }
   </style>
   <script src="/js/d3js/d3.v5.min.js"></script>
-  <link rel="stylesheet" href="/dist/wb-charts.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.2/FileSaver.min.js"></script>
+  <link rel="stylesheet" href="/dist/wb-charts-print.css">
+  <link rel="stylesheet" media="screen" href="/dist/wb-charts.css">
 </head>
 
 <body>
@@ -68,9 +46,11 @@
   <div style="display: flex;">
     <div class="chart-container" id="2"></div>
   </div>
+  <button type="button" onclick="download()">Download</button>
+  <button type="reset" onclick="togglePrintSheet()">Optimize for printing</button>
   <script src="/dist/wb-charts.umd.js"></script>
   <script type="text/javascript">
-    // set constants
+    // set constants b]
 
     var startDay = new Date(Date.now());
     startDay.setMinutes(0);
@@ -131,7 +111,7 @@
     });
 
     var container2 = document.getElementById("2");
-    var polarAxis2 = new wbCharts.PolarAxis(container1, null, null, {
+    var polarAxis2 = new wbCharts.PolarAxis(container2, null, null, {
     angular: {
     direction: -1,
     range: [Math.PI/3, 5 * Math.PI / 3],
@@ -145,7 +125,7 @@
     type: 'band',
     showgrid: false
     },
-    innerRadius: 100
+    innerRadius: 100,
     });
 
 
@@ -205,7 +185,7 @@
 
     var planned = new wbCharts.ChartProgress(planning, {
       colorScale: wbCharts.AUTO_SCALE, t: { format: dateFormat }, style: { fill: 'none',
-      'stroke-width': '2px', stroke: 'white', 'stroke-dasharray': '5 5'}
+      'stroke-width': '2px', stroke: 'currentColor', 'stroke-dasharray': '5 5'}
     });
     var progress = new wbCharts.ChartProgress(progressData, {
       colorScale: wbCharts.AUTO_SCALE, t: { format: dateFormat }
@@ -236,7 +216,7 @@
 
     var planned2 = new wbCharts.ChartProgress(planning, {
     colorScale: wbCharts.AUTO_SCALE, t: { format: dateFormat }, style: { fill: 'none',
-    'stroke-width': '2px', stroke: 'white', 'stroke-dasharray': '5 5'}
+    'stroke-width': '2px', stroke: 'currentColor', 'stroke-dasharray': '5 5'}
     });
     var progress2 = new wbCharts.ChartProgress(progressData, {
     colorScale: wbCharts.AUTO_SCALE, t: { format: dateFormat }
@@ -265,12 +245,85 @@
     });
 
     polarAxis2.redraw()
+  </script>
+
+  <script>
+    function saveSvgAsPng(svgElement, name) {
+
+      const bbox = svgElement.getBoundingClientRect()
+      console.log(bbox)
+      let svgString = wbCharts.getSvgAsString(svgElement)
+      console.log('svgString', svgString);
+      wbCharts.svgStringToImage( svgString, 2*bbox.width, 2*bbox.height, save )
+      function save( dataBlob, filesize ){
+        saveAs( dataBlob, `${name}.png` )
+      }
+    }
+
+    function saveSvg(svgElement, name) {
+      let svgString = wbCharts.getSvgAsString(svgElement)
+      let preface = '<?xml version="1.0" standalone="no"?>\r\n';
+      let svgBlob = new Blob([preface, svgString], {type:"image/svg+xml;charset=utf-8"});
+      let svgUrl = URL.createObjectURL(svgBlob);
+      let downloadLink = document.createElement("a");
+      downloadLink.href = svgUrl;
+      downloadLink.download = `${name}.svg`;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+    }
+
+//convert svg source to URI data scheme.
+
+//set url value to a element's href attribute.
+
+    function download () {
+      let element = document.getElementById('1');
+      console.log('save', element.children[0])
+      saveSvgAsPng(element.children[0], 'hello')
+    }
+
+    function togglePrintSheet () {
+      let status
+      for (let i=0; i < document.styleSheets.length; i++) {
+        const s=document.styleSheets[i]
+        console.log(s.href)
+        if (s.href?.match(/wb-charts\.css/) ) {
+          s.disabled = !s.disabled
+          status = s.disabled
+        }
+      }
+      for (let i=0; i < document.styleSheets.length; i++) {
+        const s=document.styleSheets[i]
+        console.log(s.href)
+        if (s.href?.match(/wb-charts-print\.css/) ) {
+          s.disabled = !status
+          console.log(s.disabled)
+        }
+      }
+    }
+
+    // function saveSvg(svgEl, name) {
+    // svgEl.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+    // var svgData = svgEl.outerHTML;
+    // var preface = '<?xml version="1.0" standalone="no"?>\r\n';
+    // const bbox = svgEl.getBoundingClientRect()
+    // let svgString = wbCharts.getSvgAsString(svgEl)
+    // wbCharts.svgStringToImage( svgString, 2*bbox.width, 2*bbox.height, save )
 
 
-
-
+    // var svgBlob = new Blob([preface, svgString], {type:"image/svg+xml;charset=utf-8"});
+    // var svgUrl = URL.createObjectURL(svgBlob);
+    // var downloadLink = document.createElement("a");
+    // downloadLink.href = svgUrl;
+    // downloadLink.download = name;
+    // document.body.appendChild(downloadLink);
+    // downloadLink.click();
+    // document.body.removeChild(downloadLink);
+    // }
 
   </script>
+
 
 </body>
 

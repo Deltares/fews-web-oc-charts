@@ -41,12 +41,12 @@
 
             #cartesian-line { fill: none; stroke: white; }
 
-            div.tooltip { position: absolute; 
+            div.tooltip { position: absolute;
                 text-align: center;
                 width: 60px;
                 height: 28px;
                 padding: 2px;
-                font: 12px sans-serif; 
+                font: 12px sans-serif;
                 color: #fff;
                 background: black;
                 border: 0px;
@@ -117,7 +117,7 @@ var axis = new wbCharts.CartesianAxis(container2, null, null, {});
 // plot.addTo(axis, {xkey : "y", ykey: "x", colorkey: 'v' })
 // plot2.addTo(axis, { xkey: "y", ykey: "x"}, 'cartesian-dot')
 // plot3.addTo(axis, { xkey: "y", ykey: "x" }, 'cartesian-line')
-plot4.addTo(axis, { xkey: "x", ykey: "y", colorkey: "y" }, '#cartesian-histogram');
+plot4.addTo(axis, { xkey: "x", ykey: "y", colorkey: "y" }, 'histogram','#cartesian-histogram');
 // plot5.addTo(axis, { xkey: "x", ykey: "y", colorkey: "y" }, 'cartesian-line')
 axis.redraw()
 polarAxis.redraw()

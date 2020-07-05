@@ -90,6 +90,11 @@ border-color: transparent black transparent transparent;
             <div id="chart-container-1"></div>
             <div id="chart-legend-1"></div>
         </div>
+        <button type="button" data-id="median" onclick="toggleChart(this)">median</button>
+        <button type="button" data-id="control" onclick="toggleChart(this)">control</button>
+        <button type="button" data-id="percent50,percent90" onclick="toggleChart(this)">percentile</button>
+        <button type="button" data-id="ensemble" onclick="toggleChart(this)">ensemble</button>
+
         <script src="/dist/wb-charts.umd.js"></script>
         <script type="text/javascript">
 
@@ -100,12 +105,12 @@ border-color: transparent black transparent transparent;
         margin: {left: 50, right: 50 }
       });
     var legend = new wbCharts.Legend( [
-        {selector: 'median-line', label : 'Middelste (P50)'},
-        {selector: 'control-line', label :'Controle'},
+        {selector: 'median', label : 'Middelste (P50)'},
+        {selector: 'control', label :'Controle'},
         {selector: 'percent90', label :'90% interval'} ,
         {selector: 'percent50', label :'50% interval'},
-        {selector: 'ensemble-line', label : 'Verstoord'},
-        {selector: 'missing-line', label : 'Missing'},
+        {selector: 'ensemble', label : 'Verstoord'},
+        {selector: 'missing', label : 'Missing'},
         ]
         ,document.getElementById("chart-legend-1"));
 
@@ -134,7 +139,7 @@ border-color: transparent black transparent transparent;
 
     // var refDate = new Date(2019,02,31);
     var refDate = new Date();
-    var mouseOver = new wbCharts.MouseOver(['#control-line']);
+    var mouseOver = new wbCharts.MouseOver(['control']);
     var escalationLevels = [
       { id: 'laag', val: -100, color: 'rgba(205, 133, 63,.5)', c: '<' },
       { id: 'verhoogd', val: 100, color: 'rgba(255, 215, 0,.5)', c: '>' },
@@ -203,11 +208,11 @@ border-color: transparent black transparent transparent;
         // declaration.setProperty("stroke-width", "1px");
         // declaration.setProperty("fill", "none");
         // declaration.setProperty("opacity", ".");
-        plotEnsemble.addTo(axis, { xkey: "x" , ykey: "y" }, 'ensemble-line', declaration );
+        plotEnsemble.addTo(axis, { xkey: "x" , ykey: "y" }, 'ensemble', declaration );
       }
 
-      plotControl1.addTo(axis, { xkey: "x", ykey: "y" }, 'control-line', '#control-line');
-      plotMedian1.addTo(axis, { xkey: "x", ykey: "y" }, 'median-line', '#median-line');
+      plotControl1.addTo(axis, { xkey: "x", ykey: "y" }, 'control', '#control-line');
+      plotMedian1.addTo(axis, { xkey: "x", ykey: "y" }, 'median', '#median-line');
       axis.redraw({x:{ autoScale: true}, y: {autoScale: true} });
       axis.zoom();
       // legend.visit(axis);
@@ -222,6 +227,17 @@ border-color: transparent black transparent transparent;
     window.setTimeout(dataload,1000);
 
     window.onresize = function() { axis.resize();};
+
+    function toggleChart (element) {
+      console.log('toggle', element)
+      let ids = element.getAttribute('data-id').split(',');
+      // console.log()
+      for (const id of ids) {
+        console.log(id)
+        wbCharts.toggleChartVisisbility(axis, id)
+      }
+    }
+
     </script>
 
 

@@ -158,7 +158,7 @@ export class CartesianAxis extends Axis {
       .tickSize(this.height)
 
     if (this.options.x && this.options.x.time) {
-      xAxis.tickFormat(generateMultiFormat())
+      xAxis.tickFormat(generateMultiFormat(this.timeZone))
       let offsetDomain = this.xScale.domain().map(function (d) {
         let m = momenttz(d as Date).tz(that.timeZone)
         return new Date(d.getTime() + m.utcOffset() * 60000);
