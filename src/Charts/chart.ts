@@ -1,6 +1,7 @@
 import * as d3 from 'd3'
 import { SvgProperties } from 'csstype';
-import { Axis, CartesianAxis, PolarAxis } from '../Axis'
+import { Axis, AxisIndex, CartesianAxis, PolarAxis } from '../Axis'
+import merge from 'lodash/merge'
 
 export const AUTO_SCALE = 1
 
@@ -11,29 +12,43 @@ function mean(x: number[] | number) {
   return x
 }
 
+interface ChartOptionItem {
+  includeInTooltip?: boolean;
+}
+
+interface ChartOptions {
+  x? : ChartOptionItem;
+  y? : ChartOptionItem;
+  radial? : ChartOptionItem;
+  angular? : ChartOptionItem;
+  transitionTime: number
+  colorScale?: any
+  symbolId: number
+}
+
 export abstract class Chart {
   _data: any
   group: any
   colorMap: any
   id: string
-  options: any
-  dataKeys: any
+  options: ChartOptions
+  axisIndex: AxisIndex
   _extent: any[]
   style: SvgProperties
   cssSelector: string
 
-  constructor(data: any, options: any) {
+  constructor(data: any, options: ChartOptions) {
     this.data = data
-    this.options = {
-      ...{
-        r: { includeInTooltip: true },
-        t: { includeInTooltip: true },
+    this.options = merge(this.options,
+      {
+        radial: { includeInTooltip: true },
+        angular: { includeInTooltip: true },
         x: { includeInTooltip: true },
         y: { includeInTooltip: true },
         transitionTime: 100
       },
-      ...options
-    }
+      options
+    )
     // https://github.com/d3/d3-scale-chromatic
     this.colorMap = d3.scaleSequential(d3.interpolateWarm)
   }
@@ -54,8 +69,8 @@ export abstract class Chart {
   get extent(): any[] {
     if (!this._extent) {
       this._extent = Array()
-      for (let key in this.dataKeys) {
-        let path = this.dataKeys[key]
+      for (let axisKey in this.axisIndex) {
+        let path = this.axisIndex[axisKey].key
         this._extent[path] = d3.extent(this._data, function(d) {
           return d[path]
         })
@@ -64,44 +79,62 @@ export abstract class Chart {
     return this._extent
   }
 
-  addTo(axis: Axis, dataKeys: any, id: string, style: SvgProperties | string) {
+  addTo(axis: Axis, axisIndex: AxisIndex, id: string, style: SvgProperties | string) {
     this.id = id ? id : ''
     if (typeof style === 'string') {
       this.cssSelector = style
     } else {
       this.style = style
     }
-    this.dataKeys = dataKeys
+    this.axisIndex = axisIndex
+    if ( axisIndex.x && axisIndex.x.axisIndex === undefined) {
+      this.axisIndex.x.axisIndex = 0
+    }
+    if ( axisIndex.y && axisIndex.y.axisIndex === undefined) {
+      this.axisIndex.y.axisIndex = 0
+    }
+    if ( axisIndex.radial && axisIndex.radial.axisIndex === undefined) {
+      this.axisIndex.radial.axisIndex = 0
+    }
+    if ( axisIndex.angular && axisIndex.angular.axisIndex === undefined) {
+      this.axisIndex.angular.axisIndex = 0
+    }
     axis.charts.push(this)
     return this
   }
 
-  plotter(axis: Axis, dataKeys: any) {
+  plotter(axis: Axis, axisIndex: AxisIndex) {
     if (axis instanceof CartesianAxis) {
-      this.plotterCartesian(axis, dataKeys)
+      this.plotterCartesian(axis, axisIndex)
     } else if (axis instanceof PolarAxis) {
-      this.plotterPolar(axis, dataKeys)
+      this.plotterPolar(axis, axisIndex)
     }
   }
 
   protected toolTipFormatterCartesian(d) {
+    const xKey = this.dataKeys.x
+    const yKey = this.dataKeys.y
     let html = ''
+    // TODO: supply formatter
     if (this.options.x.includeInTooltip) {
-      html += 'x: ' + d.x.toFixed(2) + '<br/>'
+      html += xKey + ': ' + d[xKey] + '<br/>'
     }
     if (this.options.y.includeInTooltip) {
-      html += 'y: ' + d.y.toFixed(2)
+      html += yKey + 'y: ' + d[yKey]
     }
     return html
   }
 
   protected toolTipFormatterPolar(d) {
+    const rKey = this.dataKeys.x
+    const tKey = this.dataKeys.y
     let html = ''
-    if (this.options.t.includeInTooltip) {
-      html += 't: ' + d.t.toFixed(2) + '<br/>'
+    // TODO: supply formatter
+    if (this.options.angular.includeInTooltip) {
+      html += 't: ' + d[tKey] + '<br/>'
     }
-    if (this.options.r.includeInTooltip) {
-      html += 'r: ' + d.r.toFixed(2)
+    if (this.options.radial.includeInTooltip) {
+      html += 'r: ' + d[rKey]
     }
     return html
   }
@@ -134,35 +167,40 @@ export abstract class Chart {
     return this.group
   }
 
-  protected mapDataCartesian(axis: CartesianAxis, dataKeys: any, domain: any) {
-    let xkey = dataKeys.xkey ? dataKeys.xkey : 'x'
-    let ykey = dataKeys.ykey ? dataKeys.ykey : 'y'
+  get dataKeys () {
+    const dataKeys: {x?: string, y?: string, radial?: string, angular?: string, color?: string} = {}
+    for (let key in this.axisIndex) {
+      dataKeys[key] = this.axisIndex[key].key ? this.axisIndex[key].key : key
+    }
+    return dataKeys
+  }
+
+  protected mapDataCartesian(domain: any) {
+
+    let xKey = this.dataKeys.x
 
     let bisectData = d3.bisector(function(d) {
-      return d[xkey]
+      return d[xKey]
     })
     let i0 = bisectData.right(this.data, domain[0])
     let i1 = bisectData.left(this.data, domain[1])
     i0 = i0 > 0 ? i0 - 1 : 0
     i1 = i1 < this.data.length - 1 ? i1 + 1 : this.data.length
 
-    let mappedData: any = this.data.slice(i0, i1).map(function(d: any) {
-      return {
-        x: d[xkey],
-        y: d[ykey]
-      }
-    })
+    let mappedData: any = this.data.slice(i0, i1)
     return mappedData
   }
 
-  protected mapDataPolar(axis: PolarAxis, dataKeys: any) {
-    let tkey = dataKeys.tkey ? dataKeys.tkey : 't'
-    let rkey = dataKeys.rkey ? dataKeys.rkey : 'r'
+
+  // TODO: do not scale data only filter
+  protected mapDataPolar(axis: PolarAxis) {
+    let rKey = this.dataKeys.radial
+    let tKey = this.dataKeys.angular
 
     let mappedData: any = this.data.map(function(d: any) {
       return {
-        r: axis.radialScale(d[rkey]),
-        t: axis.angularScale(d[tkey])
+        [rKey]: axis.radialScale(d[rKey]),
+        [tKey]: axis.angularScale(d[tKey])
       }
     })
     return mappedData

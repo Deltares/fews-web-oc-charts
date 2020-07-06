@@ -18,11 +18,13 @@ export class ChartMarker extends Chart {
     this.symbolId = this.options.symbolId ? this.options.symbolId : 0
   }
 
-  plotterCartesian(axis: CartesianAxis, dataKeys: any) {
-    const xkey = dataKeys.xkey ? dataKeys.xkey : 'x'
-    const ykey = dataKeys.ykey ? dataKeys.ykey : 'y'
+  plotterCartesian(axis: CartesianAxis, axisIndex: any) {
+    let xKey = this.dataKeys.x
+    let yKey = this.dataKeys.y
+    const xScale = axis.xScale[axisIndex.x.axisIndex]
+    const yScale = axis.yScale[axisIndex.y.axisIndex]
 
-    let mappedData = this.mapDataCartesian(axis, dataKeys, axis.xScale.domain())
+    let mappedData = this.mapDataCartesian(xScale.domain())
 
     this.group = this.selectGroup(axis, 'chart-marker')
       .datum(mappedData)
@@ -37,7 +39,7 @@ export class ChartMarker extends Chart {
       .enter()
       .append('path')
       .on('mouseover', function(d: any) {
-        const v = { x: d.x, y: d.y }
+        const v = { x: d[xKey], y: d[yKey] }
         axis.showTooltip(that.toolTipFormatterCartesian(v))
       })
       .on('mouseout', function(d: any) {
@@ -46,14 +48,14 @@ export class ChartMarker extends Chart {
       .attr('d', d3.symbol().type(d3.symbols[this.symbolId]))
       .merge(elements)
       .attr('transform', function (d: any, i: number) {
-        return 'translate(' + axis.xScale(d.x) + ',' + axis.yScale(d.y) + ')'
+        return 'translate(' + xScale(d[xKey]) + ',' + yScale(d[yKey]) + ')'
       })
   }
 
   plotterPolar(axis: PolarAxis, dataKeys: any) {
     this.group = this.selectGroup(axis, 'chart-marker')
-    const tkey = dataKeys.tkey ? dataKeys.tkey : 't'
-    const rkey = dataKeys.rkey ? dataKeys.rkey : 'r'
+    let rKey = this.dataKeys.radial
+    let tKey = this.dataKeys.angular
 
     let elements = this.group.selectAll('path').data(this.data)
 
@@ -62,13 +64,13 @@ export class ChartMarker extends Chart {
       // Code only really uses d and t.
       return function(d, i, a) {
         let old = p[i]
-        if (mean(old[tkey]) - mean(d[tkey]) > 180) {
-          old[tkey] = old[tkey] - 360
-        } else if (mean(old[tkey]) - mean(d[tkey]) < -180) {
-          old[tkey] = old[tkey] + 360
+        if (mean(old[tKey]) - mean(d[tKey]) > 180) {
+          old[tKey] = old[tKey] - 360
+        } else if (mean(old[tKey]) - mean(d[tKey]) < -180) {
+          old[tKey] = old[tKey] + 360
         }
-        let tInterpolate = d3.interpolate(old[tkey], d[tkey])
-        let rInterpolate = d3.interpolate(old[rkey], d[rkey])
+        let tInterpolate = d3.interpolate(old[tKey], d[tKey])
+        let rInterpolate = d3.interpolate(old[rKey], d[rKey])
         return function(t) {
           const theta = axis.angularScale(tInterpolate(t))
           const radius = axis.radialScale(rInterpolate(t))
@@ -86,13 +88,13 @@ export class ChartMarker extends Chart {
       .enter()
       .append('path')
       .attr('transform', function(d: any, i: number) {
-        const r: number = axis.radialScale(d[rkey])
-        const t: number = axis.angularScale(d[tkey])
+        const r: number = axis.radialScale(d[rKey])
+        const t: number = axis.angularScale(d[tKey])
         return 'translate(' + -r * Math.sin(-t) + ',' + -r * Math.cos(-t) + ')'
       })
       .attr('d', d3.symbol().type(d3.symbols[this.symbolId]))
       .on('mouseover', function(d: any) {
-        const v = { r: d[rkey], t: d[tkey] }
+        const v = { r: d[rKey], t: d[tKey] }
         axis.showTooltip(that.toolTipFormatterPolar(v))
       })
       .on('mouseout', function(d: any) {

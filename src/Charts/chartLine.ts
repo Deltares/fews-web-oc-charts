@@ -3,21 +3,24 @@ import { CartesianAxis, PolarAxis } from '../Axis'
 import { Chart } from './chart'
 
 export class ChartLine extends Chart {
-  plotterCartesian(axis: CartesianAxis, dataKeys: any) {
-    const xkey = dataKeys.xkey ? dataKeys.xkey : 'x'
-    const ykey = dataKeys.ykey ? dataKeys.ykey : 'y'
+  plotterCartesian(axis: CartesianAxis, axisIndex: any) {
+    let xKey = this.dataKeys.x
+    let yKey = this.dataKeys.y
+    const xScale = axis.xScale[axisIndex.x.axisIndex]
+    const yScale = axis.yScale[axisIndex.y.axisIndex]
 
-    let mappedData = this.mapDataCartesian(axis, dataKeys, axis.xScale.domain())
+
+    let mappedData = this.mapDataCartesian(xScale.domain())
     let lineGenerator = d3
       .line()
       .x(function(d: any) {
-        return axis.xScale(d.x)
+        return xScale(d[xKey])
       })
       .y(function(d: any) {
-        return axis.yScale(d.y)
+        return yScale(d[yKey])
       })
       .defined(function(d: any) {
-        return d.y != null
+        return d[yKey] != null
       })
 
     this.group = this.selectGroup(axis, 'chart-line')
@@ -30,17 +33,19 @@ export class ChartLine extends Chart {
       .attr('d', lineGenerator)
   }
 
-  plotterPolar(axis: PolarAxis, dataKeys: any) {
-    let mappedData = this.mapDataPolar(axis, dataKeys)
-    const tkey = dataKeys.tkey ? dataKeys.tkey : 't'
-    const rkey = dataKeys.rkey ? dataKeys.rkey : 'r'
+  plotterPolar(axis: PolarAxis, axisIndex: any) {
+    let mappedData = this.mapDataPolar(axis)
+    let rKey = this.dataKeys.radial
+    let tKey = this.dataKeys.angular
+    // const rScale = axis.rScale[axisIndex.x.axisIndex]
+    // const tScale = axis.tScale[axisIndex.y.axisIndex]
     let lineGenerator = d3
       .lineRadial()
       .angle(function(d: any) {
-        return d.t
+        return d[tKey]
       })
       .radius(function(d: any) {
-        return d.r
+        return d[rKey]
       })
     this.group = this.selectGroup(axis, 'chart-line')
     if (this.group.select('path').size() === 0) {

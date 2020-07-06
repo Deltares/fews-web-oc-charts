@@ -1,6 +1,11 @@
 import * as d3 from 'd3'
 import { Axis, CartesianAxis } from '../Axis'
 import { Visitor } from './visitor'
+import merge from 'lodash/merge'
+
+type LevelSelectOptions = {
+  [key in 'x' | 'y'] : { axisIndex: number }
+}
 
 export class LevelSelect implements Visitor {
   group: any
@@ -9,11 +14,19 @@ export class LevelSelect implements Visitor {
   value: number
   callback: Function
   format: any
+  options: LevelSelectOptions
 
-  constructor(value: number, callback: Function) {
+  // use shared Visitor constuctor (Visitor should be a abstract class)
+  constructor(value: number, callback: Function, options: LevelSelectOptions) {
     this.value = value
     this.callback = callback
     this.format = d3.format('.2f')
+    this.options = merge(this.options,
+      {
+        y: { axisIndex : 0 }
+      },
+      options
+    ) as LevelSelectOptions
   }
 
   visit(axis: Axis) {
@@ -48,8 +61,10 @@ export class LevelSelect implements Visitor {
   }
 
   redraw() {
-    let y = this.axis.yScale(this.value)
-    y = (y === undefined) ? this.axis.yScale.range()[1] : y
+    const axisIndex = this.options.y.axisIndex
+    const scale = this.axis.yScale[axisIndex]
+    let y = scale(this.value)
+    y = (y === undefined) ? scale.range()[1] : y
     // line
     this.group
       .select('line')
@@ -66,7 +81,9 @@ export class LevelSelect implements Visitor {
   }
 
   start(event) {
-    this.value = this.axis.yScale.invert(event.y)
+    const axisIndex = this.options.y.axisIndex
+    const scale = this.axis.yScale[axisIndex]
+    this.value = scale.invert(event.y)
     this.group
       .append('text')
       .attr('x', 0)
@@ -78,7 +95,9 @@ export class LevelSelect implements Visitor {
   }
 
   drag(event) {
-    this.value = this.axis.yScale.invert(event.y)
+    const axisIndex = this.options.y.axisIndex
+    const scale = this.axis.yScale[axisIndex]
+    this.value = scale.invert(event.y)
     this.redraw()
   }
 

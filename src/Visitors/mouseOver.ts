@@ -7,7 +7,9 @@ export class MouseOver implements Visitor {
   private trace: string[]
   private group: any
   private axis: CartesianAxis
+  private mouseGroup: any
 
+  // TODO: we should assign the level select to an axis and give an option where to put the labels (left, right)
   constructor(trace?: string[]) {
     this.trace = trace
   }
@@ -18,12 +20,12 @@ export class MouseOver implements Visitor {
   }
 
   create(axis: CartesianAxis) {
-    let mouseG = axis.canvas.select('.mouse-events')
-    if (mouseG.size() === 0) {
-      mouseG = axis.canvas
+    this.mouseGroup = axis.canvas.select('.mouse-events')
+    if (this.mouseGroup.size() === 0) {
+      this.mouseGroup = axis.canvas
         .append('g')
         .attr('class', 'mouse-events')
-        .append('svg:rect')
+        .append('rect')
         .attr('width', axis.width)
         .attr('height', axis.height)
         .attr('fill', 'none')
@@ -51,12 +53,12 @@ export class MouseOver implements Visitor {
     this.updateLineIndicators()
 
     let that = this
-    mouseG
+    this.mouseGroup
       .on('mouseout', function() {
         // on mouse out hide line, circles and text
         that.group.select('.mouse-line').style('opacity', '0')
         that.group.selectAll('.mouse-per-line circle').style('opacity', '0')
-        that.group.select('.mouse-x text').style('fill-opacity', '0')
+        that.group.selectAll('.mouse-x text').style('fill-opacity', '0')
         axis.hideTooltip(null)
       })
       .on('mouseover', function() {
@@ -67,7 +69,7 @@ export class MouseOver implements Visitor {
           .style('opacity', '1')
           .style('fill', function(d: any, i) {
             const selector = `[data-id="${d}"]`
-            let element = d3.select(selector).select('path')
+            let element = that.axis.chartGroup.select(selector).select('path')
             if (element.node() === null ) return
             let stroke = window
               .getComputedStyle(element.node() as Element)
@@ -83,14 +85,23 @@ export class MouseOver implements Visitor {
       .on('mousemove', function() {
         // mouse moving over canvas
         let mouse = d3.mouse(this)
-        let bisect = d3.bisector(function(d: any) {
-          return d.x
-        }).right
         let popupData = {}
         let posx = mouse[0]
         let allHidden = true
         axis.canvas.selectAll('.mouse-per-line').attr('transform', function(d, i) {
+          // let element = d3.select(d).select('path')
           const selector = `[data-id="${d}"]`
+          let chart = axis.charts.find(chart => chart.id === d)
+          let xIndex = chart.axisIndex.x.axisIndex
+          let xScale = axis.xScale[xIndex]
+          let yIndex = chart.axisIndex.y.axisIndex
+          let yScale = axis.yScale[yIndex]
+          let xKey = chart.dataKeys.x
+          let yKey = chart.dataKeys.y
+          let bisect = d3.bisector(function(d: any) {
+            return d[xKey]
+          }).right
+
           let element = axis.canvas.select(selector).select('path')
           if (element.node() === null) return 'translate(0,' + -window.innerHeight + ')'
           let style = window.getComputedStyle(element.node() as Element)
@@ -103,22 +114,22 @@ export class MouseOver implements Visitor {
           if (datum === null || datum.length === 0) {
             return 'translate(0,' + -window.innerHeight + ')'
           }
-          let mouseValue = axis.xScale.invert(mouse[0])
+          let mouseValue = xScale.invert(mouse[0])
           let idx = bisect(datum, mouseValue)
-          if (idx === 0 && datum[idx].x >= mouseValue) {
+          if (idx === 0 && datum[idx][xKey] >= mouseValue) {
             return 'translate(0,' + -window.innerHeight + ')'
           }
-          if (!datum[idx] || datum[idx].y === null) {
+          if (!datum[idx] || datum[idx][yKey] === null) {
             return 'translate(0,' + -window.innerHeight + ')'
           }
-          let valy = datum[idx].y
-          let posy = axis.yScale(valy)
-          posx = axis.xScale(datum[idx].x)
+          let valy = datum[idx][yKey]
+          let posy = yScale(valy)
+          posx = xScale(datum[idx][xKey])
           let yLabel
           if (Array.isArray(posy)) {
             let labels = posy
             for (let i = 0; i < posy.length; i++) {
-              labels[i] = axis.yScale.invert(posy[i]).toFixed(2)
+              labels[i] = yScale.invert(posy[i]).toFixed(2)
             }
             yLabel = labels.join(':')
             posy = posy[0]
@@ -126,10 +137,10 @@ export class MouseOver implements Visitor {
             yLabel = valy.toFixed(2)
           }
           posy =
-            posy < axis.yScale.range()[1] || posy > axis.yScale.range()[0]
+            posy < yScale.range()[1] || posy > yScale.range()[0]
               ? -window.innerHeight
               : posy
-          popupData[d] = { x: axis.xScale.invert(datum[idx].x), y: yLabel, color: stroke }
+          popupData[d] = { x: xScale.invert(datum[idx][xKey]), y: yLabel, color: stroke }
           return 'translate(' + posx + ',' + posy + ')'
         })
 
@@ -141,7 +152,7 @@ export class MouseOver implements Visitor {
           .select('.mouse-x')
           .attr('transform', 'translate(' + (mouse[0] + 2) + ',' + (axis.height - 5) + ')')
           .select('text')
-          .text(dateFormatter(axis.xScale.invert(mouse[0]), 'YYYY-MM-DD HH:mm z',{timeZone: that.axis.timeZone} ) )
+          .text(dateFormatter(axis.xScale[0].invert(mouse[0]), 'YYYY-MM-DD HH:mm z',{timeZone: that.axis.timeZone} ) )
         if (allHidden) {
           axis.hideTooltip(null)
           return
@@ -164,7 +175,6 @@ export class MouseOver implements Visitor {
     ? this.trace
     : this.axis.charts.map( (chart) => {return chart.id})
 
-    console.log(traces)
     let mousePerLine = this.group
       .selectAll('.mouse-per-line')
       .data(traces)
@@ -186,6 +196,12 @@ export class MouseOver implements Visitor {
 
   redraw() {
     this.updateLineIndicators()
+    // FIXME: should resize mouse-events group (is now done by zoomHandler)
+    // this.mouseGroup
+    //   .select('rect')
+    //   .attr('height', this.axis.height)
+    //   .attr('width', this.axis.width)
+
     let that = this
     this.group.select('.mouse-line').attr('d', function() {
       let d = 'M' + 0 + ',' + that.axis.height

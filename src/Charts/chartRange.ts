@@ -1,5 +1,5 @@
 import * as d3 from 'd3'
-import { CartesianAxis, PolarAxis } from '../Axis'
+import { CartesianAxis, PolarAxis, AxisIndex } from '../Axis'
 import { Chart, AUTO_SCALE } from './chart'
 
 function mean(x: number[] | number) {
@@ -52,12 +52,12 @@ export class ChartRange extends Chart {
 
   toolTipFormatterPolar(d) {
     let html = ''
-    if (this.options.t.includeInTooltip) {
+    if (this.options.angular.includeInTooltip) {
       if (d.t[0] != d.t[1]) {
         html += 't: ' + d.t[0].toFixed(0) + '-' + d.t[1].toFixed(0) + '<br/>'
       }
     }
-    if (this.options.r.includeInTooltip) {
+    if (this.options.radial.includeInTooltip) {
       if (d.r[0] != d.r[1]) {
         html += 'r: ' + d.r[0].toFixed(0) + '-' + d.r[1].toFixed(0)
       }
@@ -65,32 +65,26 @@ export class ChartRange extends Chart {
     return html
   }
 
-  plotterCartesian(axis: CartesianAxis, dataKeys: any) {
-    let xkey = dataKeys.xkey ? dataKeys.xkey : 'x'
-    let ykey = dataKeys.ykey ? dataKeys.ykey : 'y'
-    let colorkey = dataKeys.colorkey
+  plotterCartesian(axis: CartesianAxis, axisIndex: AxisIndex) {
+    let xKey = this.dataKeys.x
+    let yKey = this.dataKeys.y
+    const xScale = axis.xScale[axisIndex.x.axisIndex]
+    const yScale = axis.yScale[axisIndex.y.axisIndex]
+    let colorKey = this.dataKeys.color
 
     let colorScale = d3.scaleLinear().domain([0, 1])
     if (this.options.colorScale === AUTO_SCALE) {
       colorScale.domain(
         d3.extent(this.data, function(d: any): number {
-          return d[colorkey]
+          return d[colorKey]
         })
       )
     }
 
     let colorMap = this.colorMap
 
-    let mappedData: any = this.data.map(function(d: any) {
-      return {
-        x: d[xkey].map(axis.xScale),
-        y: d[ykey].map(axis.yScale),
-        color: colorMap(colorScale(mean(d[colorkey])))
-      }
-    })
-
     this.group = this.selectGroup(axis, 'chart-range')
-    let elements: any = this.group.selectAll('rect').data(mappedData)
+    let elements: any = this.group.selectAll('rect').data(this.data)
 
     let t = d3
       .transition()
@@ -104,16 +98,16 @@ export class ChartRange extends Chart {
       .enter()
       .append('rect')
       .attr('x', function(d: any) {
-        return d.x[0]
+        return xScale(d[xKey][0])
       })
       .attr('y', function(d: any) {
-        return d.y[1]
+        return yScale(d[yKey][1])
       })
       .attr('width', function(d: any) {
-        return d.x[1] - d.x[0]
+        return xScale(d[xKey][1] - d[xKey][0])
       })
       .attr('height', function(d: any) {
-        return d.y[0] - d.y[1]
+        return yScale(d[yKey][0] - d[yKey][1])
       })
       .on('mouseover', function(d: any) {
         axis.showTooltip(that.toolTipFormatterCartesian(d))
@@ -122,55 +116,55 @@ export class ChartRange extends Chart {
         axis.hideTooltip(d)
       })
 
-    if (colorkey) {
+    if (colorKey) {
       update.style('fill', function(d: any) {
-        return d.color
+        return colorMap(colorScale(mean(d[colorKey])))
       })
     }
 
     let enter = elements
       .transition(t)
       .attr('x', function(d: any) {
-        return d.x[0]
+        return xScale(d[xKey][0])
       })
       .attr('y', function(d: any) {
-        return d.y[1]
+        return yScale(d[yKey][1])
       })
       .attr('width', function(d: any) {
-        return d.x[1] - d.x[0]
+        return xScale(d[xKey][1] - d[xKey][0])
       })
       .attr('height', function(d: any) {
-        return d.y[0] - d.y[1]
+        return yScale(d[yKey][0] - d[yKey][1])
       })
 
-    if (colorkey) {
+    if (colorKey) {
       enter.style('fill', function(d: any) {
         return d.color
       })
     }
   }
 
-  plotterPolar(axis: PolarAxis, dataKeys: any) {
+  plotterPolar(axis: PolarAxis, axisIndex: AxisIndex) {
     let canvas = axis.canvas
 
-    let tkey = dataKeys.tkey ? dataKeys.tkey : 't'
-    let rkey = dataKeys.rkey ? dataKeys.rkey : 'r'
-    let colorkey = dataKeys.colorkey
+    let rKey = this.dataKeys.radial
+    let tKey = this.dataKeys.angular
+    let colorKey = this.dataKeys.color
 
     let colorScale = d3.scaleLinear().domain([0, 1])
     if (this.options.colorScale === AUTO_SCALE) {
       colorScale.domain(
         d3.extent(this.data, function(d: any): number {
-          return d[colorkey]
+          return d[colorKey]
         })
       )
     }
     let colorMap = this.colorMap
     let mappedData: any = this.data.map(function(d: any) {
       return {
-        r: d[rkey],
-        t: d[tkey],
-        color: colorMap(colorScale(mean(d[colorkey])))
+        r: d[rKey],
+        t: d[tKey],
+        color: colorMap(colorScale(mean(d[colorKey])))
       }
     })
 
@@ -212,7 +206,7 @@ export class ChartRange extends Chart {
         axis.hideTooltip(d)
       })
 
-    if (colorkey) {
+    if (colorKey) {
       enter.style('fill', function(d: any) {
         return d.color
       })
@@ -220,7 +214,7 @@ export class ChartRange extends Chart {
 
     let update = elements.transition(t).call(arcTween, this.previousData)
 
-    if (colorkey) {
+    if (colorKey) {
       update.style('fill', function(d: any) {
         return d.color
       })

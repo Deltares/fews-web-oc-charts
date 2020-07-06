@@ -1,5 +1,5 @@
 import * as d3 from 'd3'
-import { Axis, AxisOptions } from './axis'
+import { Axis, AxesOptions } from './axis'
 
 // import { scaleLinear } from 'd3-scale'
 
@@ -18,7 +18,7 @@ interface AngularAxisOptions {
   range?: number[]
 }
 
-export interface PolarAxisOptions extends AxisOptions {
+export interface PolarAxisOptions extends AxesOptions {
   innerRadius?: number
   radial?: RadialAxisOptions
   angular?: AngularAxisOptions
@@ -39,9 +39,12 @@ export class PolarAxis extends Axis {
   intercept: number
   direction: number
   private angularRange: number[]
-
+  static readonly defaultOptions = {
+    angular: {},
+    radial: {}
+  }
   constructor(container: HTMLElement, width: number, height: number, options?: PolarAxisOptions) {
-    super(container, width, height, options)
+    super(container, width, height, options, PolarAxis.defaultOptions)
     this.canvas = this.canvas
       .append('g')
       .attr('transform', 'translate(' + this.width / 2 + ',' + this.height / 2 + ' )')
@@ -76,12 +79,12 @@ export class PolarAxis extends Axis {
   redraw() {
     let radialExtent = new Array(2)
     for (let chart of this.charts) {
-      let chartRadialExtent = chart.extent[chart.dataKeys.rkey]
+      let chartRadialExtent = chart.extent[chart.axisIndex.radial.key]
       radialExtent = d3.extent(d3.merge([radialExtent, [].concat(...chartRadialExtent)]))
     }
     this.radialScale.domain(radialExtent)
     for (let chart of this.charts) {
-      chart.plotter(this, chart.dataKeys)
+      chart.plotter(this, chart.axisIndex)
     }
     this.updateGrid()
   }

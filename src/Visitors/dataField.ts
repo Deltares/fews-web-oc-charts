@@ -1,7 +1,7 @@
 import { Axis, PolarAxis } from '../Axis'
 import { Visitor } from './visitor'
-import { format as d3_format } from 'd3'
-import { mergeRecursive } from '../Utils'
+import * as d3 from 'd3'
+import merge from 'lodash/merge'
 
 export interface DataFieldOptions {
   selector? : string
@@ -28,9 +28,10 @@ export class DataField implements Visitor {
   private formatter: any
   private clickCount = 0
 
+  // TODO: we can provide an optional source element or axis where we look for the value
   constructor(container, options: DataFieldOptions, formatter?: any) {
     this.container = container
-    this.options = mergeRecursive(
+    this.options = merge(this.options,
       {
         labelField : {dx: 0, dy: 0},
         valueField : {dx: 0, dy: 0, units: [{unit: '', factor: 1.0} ], precision: "0.1f" }
@@ -66,7 +67,8 @@ export class DataField implements Visitor {
   }
 
   redraw() {
-    let element = this.axis.chartGroup.select(`[data-id="${this.options.selector}"]`).select('path')
+    //TODO this only works with unique ids
+    let element = d3.select(`[data-id="${this.options.selector}"]`).select('path')
     let data = element.datum()
     let style = window.getComputedStyle(element.node() as Element)
 
@@ -87,7 +89,7 @@ export class DataField implements Visitor {
       return '-' + units.unit;
     }
     if ( units.factor !== undefined ) {
-      const format = units.precision !== undefined?  d3_format(units.precision)  : d3_format(".1f");
+      const format = units.precision !== undefined?  d3.format(units.precision)  : d3.format(".1f");
       const valueString = value !== null ? format(value * units.factor ) : '-';
       return valueString + units.unit;
     } else {
@@ -96,11 +98,12 @@ export class DataField implements Visitor {
     }
   }
 
+  // TODO: we should specify a datakey or always require a formatter
   getValue(d) {
     if (this.axis instanceof PolarAxis) {
       return d[0] !== undefined ? d[0].y : null
     } else {
-      return d[0] !== undefined ? d[0].x : null
+      return d[0] !== undefined ? d[0].y : null
     }
   }
 

@@ -2,6 +2,13 @@ import * as d3 from 'd3'
 import { Axis, CartesianAxis } from '../Axis'
 import { Visitor } from './visitor'
 
+export interface WarningLevelOptions {
+  y?: {
+    axisIndex: number;
+  };
+}
+
+
 export class WarningLevels implements Visitor {
   private escalationLevels: any[]
   private group: any
@@ -10,10 +17,17 @@ export class WarningLevels implements Visitor {
   private warningAxis: any
   private sections: any
   private transitionTime: number
+  private options: any
 
-  constructor(escalationLevels) {
+  constructor(escalationLevels, options: WarningLevelOptions) {
     this.escalationLevels = escalationLevels
     this.transitionTime = 0
+    this.options = {
+      ...{
+        y: { axisIndex: 0 }
+      },
+      ...options
+    }
   }
 
   visit(axis: Axis) {
@@ -23,7 +37,7 @@ export class WarningLevels implements Visitor {
 
   create(axis: CartesianAxis) {
     let scale = (this.scale = d3.scaleLinear())
-    this.scale.domain(axis.yScale.domain()).range(axis.yScale.range())
+    this.scale.domain(axis.yScale[this.options.y.axisIndex].domain()).range(axis.yScale[this.options.y.axisIndex].range())
     let escalationLevels = this.escalationLevels
 
     let tickValues = escalationLevels
@@ -78,7 +92,7 @@ export class WarningLevels implements Visitor {
 
   redraw() {
     let escalationLevels = this.escalationLevels
-    let scale = this.scale.domain(this.axis.yScale.domain()).range(this.axis.yScale.range())
+    let scale = this.axis.yScale[this.options.y.axisIndex].copy()
     let tickValues = escalationLevels
       .filter(function(el) {
         let domain = scale.domain()
