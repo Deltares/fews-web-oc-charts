@@ -1,54 +1,58 @@
 import * as d3 from 'd3'
-import { Axis, AxisOptions } from './axis'
+import { Axis, AxesOptions, AxisIndex } from './axis'
 import momenttz from 'moment-timezone'
 
-// import { scaleLinear } from 'd3-scale'
-
-function mean(x: number[] | number) {
-  if (x instanceof Array) {
-    return d3.mean(x)
-  }
-  return x
+enum AxisPosition {
+  Top = 'top',
+  Bottom = 'bottom',
+  Left = 'left',
+  Right = 'right',
 }
 
-interface XAxisOptions {
-  label?: string
-  time?: boolean
-  unit?: string
-  domain?: [number, number]
+export enum AxisType {
+  value = 'value',
+  time = 'time',
+  degrees = 'degrees'
 }
 
-interface YAxisOptions {
-  label?: string
-  unit?: string
-  domain?: [number, number]
+export interface AxisOptions {
+  label?: string;
+  type?: AxisType;
+  unit?: string;
+  showGrid?: boolean;
+  position?: AxisPosition;
+  domain?: [number, number] | [Date, Date];
 }
 
-export interface CartesianAxisOptions extends AxisOptions {
-  x?: XAxisOptions
-  x2?: XAxisOptions
-  y?: YAxisOptions
-  y2?: YAxisOptions
+export interface CartesianAxesOptions extends AxesOptions {
+  x?: AxisOptions[]
+  y?: AxisOptions[]
 }
 
 export class CartesianAxis extends Axis {
   canvas: any
   container: HTMLElement
-  xScale: any
-  yScale: any
+  xScale: Array<any> = []
+  yScale: Array<any> = []
   clipPathId: string
   timeZoneOffset: number
+  static readonly defaultOptions = {
+    x: [ { type: AxisType.value } ],
+    y: [ { type: AxisType.value } ]
+  }
 
   constructor(
     container: HTMLElement,
     width: number| null,
     height: number| null,
-    options?: CartesianAxisOptions
+    options?: CartesianAxesOptions
   ) {
-    super(container, width, height, options)
+    super(container, width, height, options, CartesianAxis.defaultOptions)
     this.view = this.canvas
     this.chartGroup = this.canvas
     this.setCanvas()
+    this.initXScales(this.options.x)
+    this.initYScales(this.options.y)
     this.setRange()
     this.initGrid()
     this.setClipPath()
@@ -102,7 +106,7 @@ export class CartesianAxis extends Axis {
 
   zoom() {
     for (let chart of this.charts) {
-      chart.plotter(this, chart.dataKeys)
+      chart.plotter(this, chart.axisIndex)
     }
     this.updateGrid()
     // FIXME: move to Axis.ts?
@@ -111,32 +115,54 @@ export class CartesianAxis extends Axis {
     }
   }
 
+  updateXAxisScales(options: any) {
+    options = { ... { autoScale: false }, ...options }
+    for ( let key in this.xScale) {
+      const scale = this.xScale[key]
+      if (this.options.x[key]?.domain) {
+        scale.domain(this.options.x[key].domain)
+      } else if (options.autoScale === true) {
+        let extent = new Array(2)
+        for (let chart of this.charts) {
+          if ( chart.axisIndex.x?.axisIndex === +key ) {
+            let chartExtent = chart.extent[chart.dataKeys.x]
+            extent = d3.extent(d3.merge([extent, [].concat(...chartExtent)]))
+          }
+        }
+        scale.domain(extent)
+      }
+    }
+  }
+
+  updateYAxisScales(options: any) {
+    options = { ... { autoScale: false }, ...options }
+    for ( let key in this.yScale) {
+      const scale = this.yScale[key]
+      if (this.options.y[key]?.domain) {
+        scale.domain(this.options.y[key].domain)
+      } else if (options.autoScale === true) {
+        let extent = new Array(2)
+        for (let chart of this.charts) {
+          if ( chart.axisIndex.y?.axisIndex === +key ) {
+            let chartExtent = chart.extent[chart.dataKeys.y]
+            extent = d3.extent(d3.merge([extent, [].concat(...chartExtent)]))
+          }
+        }
+        scale.domain(extent)
+      }
+    }
+  }
+
   redraw(options?) {
-    options = { ...{ x: { autoScale: false }, y: { autoScale: false } }, ...options }
-    if (this.options.x && this.options.x.domain) {
-      this.xScale.domain(this.options.x.domain)
-    } else if (options.x.autoScale === true) {
-      let xExtent = new Array(2)
-      for (let chart of this.charts) {
-        let chartXExtent = chart.extent[chart.dataKeys.xkey]
-        xExtent = d3.extent(d3.merge([xExtent, [].concat(...chartXExtent)]))
-      }
-      this.xScale.domain(xExtent)
-    }
-    if (this.options.y && this.options.y.domain) {
-      this.yScale.domain(this.options.y.domain)
-    } else if (options.y.autoScale === true) {
-      let yExtent = new Array(2)
-      for (let chart of this.charts) {
-        let chartYExtent = chart.extent[chart.dataKeys.ykey]
-        yExtent = d3.extent(d3.merge([yExtent, [].concat(...chartYExtent)]))
-      }
-      this.yScale.domain(yExtent)
-    }
+    this.updateXAxisScales(options.x)
+    this.updateYAxisScales(options.y)
     for (let chart of this.charts) {
-      chart.plotter(this, chart.dataKeys)
+      chart.plotter(this, chart.axisIndex)
     }
     this.updateGrid()
+    for (let visitor of this.visitors) {
+      visitor.redraw()
+    }
   }
 
   resize() {
@@ -145,79 +171,139 @@ export class CartesianAxis extends Axis {
     this.zoom()
   }
 
-  updateGrid() {
-    this.setClipPath()
-    this.setCanvas()
-    let that = this
+  updateXAxis (options: AxisOptions[]) {
+    for (const key in this.xScale) {
+      let scale = this.xScale[key]
+      let axis = undefined
+      switch (options[key].position) {
+        case AxisPosition.Top:
+          axis = d3.axisTop(scale).ticks(5)
+          break
+        default:
+          axis = d3.axisBottom(scale).ticks(5)
+      }
+      let grid = d3.axisBottom(scale)
+      grid.ticks(5).tickSize(this.height)
+      if (options[key].type === AxisType.time ) {
 
-    let xAxis = d3.axisBottom(this.xScale).ticks(5)
-    let xGrid = d3
-      .axisBottom(this.xScale)
-      .ticks(5)
-      .tickSize(this.height)
+        let offsetDomain = scale.domain().map((d) => {
+          let m = momenttz(d as Date).tz(this.timeZone)
+          return new Date(d.getTime() + m.utcOffset() * 60000);
+        })
+        let offsetScale = d3.scaleUtc().domain(offsetDomain)
+        let tickValues = offsetScale.ticks(5)
+        let offsetValues = tickValues.map((d) => {
+          let m = momenttz(d as Date).tz(this.timeZone)
+          return new Date(d.getTime() - m.utcOffset() * 60000);
+        })
+        axis.tickValues(offsetValues)
+        axis.tickFormat(this.generateMultiFormat())
+        grid.tickValues(offsetValues)
+      } else if (options[key].type === AxisType.degrees) {
+        let domain = scale.domain()
+        let step = d3.tickIncrement(domain[0], domain[1], 5)
+        step = step >= 100 ? 90 : step >= 50 ? 45 : step >= 20 ? 15 : step
+        let start = Math.ceil(domain[0] / step) * step
+        let stop = Math.floor(domain[1] / step + 1) * step
+        axis.tickValues(d3.range(start, stop, step))
+        grid.tickValues(d3.range(start, stop, step))
+      }
+      let x = 0
+      let y = ( options[key].position !== AxisPosition.Top ) ? this.height : 0
+      let translateString = `translate(${x},${y})`
+      this.canvas
+      .select(`.x-axis-${key}`)
+      .attr('transform', translateString )
+        .call(axis)
+      if (options[key].showGrid) this.canvas.select('.x-grid').call(grid)
+    }
+  }
 
-    if (this.options.x && this.options.x.time) {
-      xAxis.tickFormat(this.generateMultiFormat())
-      let offsetDomain = this.xScale.domain().map(function (d) {
-        let m = momenttz(d as Date).tz(that.timeZone)
+updateYAxis (options: AxisOptions[]) {
+  for (const key in this.yScale) {
+    let scale = this.yScale[key]
+    let axis = undefined
+    switch (options[key].position) {
+      case AxisPosition.Right:
+      axis = d3.axisRight(scale).ticks(5)
+      break
+      default:
+      axis = d3.axisLeft(scale).ticks(5)
+    }
+    let grid = d3.axisRight(scale)
+    grid.ticks(5).tickSize(this.width)
+    if (options[key].type === AxisType.time ) {
+      let offsetDomain = scale.domain().map((d) => {
+        let m = momenttz(d as Date).tz(this.timeZone)
         return new Date(d.getTime() + m.utcOffset() * 60000);
       })
       let offsetScale = d3.scaleUtc().domain(offsetDomain)
       let tickValues = offsetScale.ticks(5)
-      let offsetValues = tickValues.map(function(d) {
-        let m = momenttz(d as Date).tz(that.timeZone)
+      let offsetValues = tickValues.map((d) => {
+        let m = momenttz(d as Date).tz(this.timeZone)
         return new Date(d.getTime() - m.utcOffset() * 60000);
       })
-      xAxis.tickValues(offsetValues)
-      xGrid.tickValues(offsetValues)
-    }
-
-    let yAxis = d3.axisLeft(this.yScale).ticks(5)
-    let yGrid = d3
-      .axisRight(this.yScale)
-      .ticks(5)
-      .tickSize(this.width)
-    if (this.options.y && this.options.y.axisType === 'degrees') {
-      let domain = this.yScale.domain()
+      axis.tickValues(offsetValues)
+      axis.tickFormat(this.generateMultiFormat())
+      grid.tickValues(offsetValues)
+    } else if (options[key].type === AxisType.degrees) {
+      let domain = scale.domain()
       let step = d3.tickIncrement(domain[0], domain[1], 5)
       step = step >= 100 ? 90 : step >= 50 ? 45 : step >= 20 ? 15 : step
       let start = Math.ceil(domain[0] / step) * step
       let stop = Math.floor(domain[1] / step + 1) * step
-      yAxis.tickValues(d3.range(start, stop, step))
-      yGrid.tickValues(d3.range(start, stop, step))
+      axis.tickValues(d3.range(start, stop, step))
+      grid.tickValues(d3.range(start, stop, step))
     }
-    if (this.options.transitionTime > 0 && !this.initialDraw) {
-      let t = d3
-        .transition()
-        .duration(this.options.transitionTime)
-        .ease(d3.easeLinear)
-      this.canvas
-        .select('.x-axis')
-        .attr('transform', 'translate(' + 0 + ',' + this.height + ')')
-        .transition(t)
-        .call(xAxis)
-      this.canvas
-        .select('.x-grid')
-        .transition(t)
-        .call(xGrid)
-      this.canvas
-        .select('.y-axis')
-        .transition(t)
-        .call(yAxis)
-      this.canvas
-        .select('.y-grid')
-        .transition(t)
-        .call(yGrid)
-    } else {
-      this.canvas
-        .select('.x-axis')
-        .attr('transform', 'translate(' + 0 + ',' + this.height + ')')
-        .call(xAxis)
-      this.canvas.select('.x-grid').call(xGrid)
-      this.canvas.select('.y-axis').call(yAxis)
-      this.canvas.select('.y-grid').call(yGrid)
-    }
-    this.initialDraw = false
+    let x = ( options[key].position === AxisPosition.Right ) ? this.width : 0
+    let y = 0
+    let translateString = `translate(${x},${y})`
+    this.canvas
+    .select(`.y-axis-${key}`)
+    .attr('transform', translateString)
+    .call(axis)
+    if (options[key].showGrid) this.canvas.select('.y-grid').call(grid)
+  }
+}
+
+  updateGrid() {
+    this.setClipPath()
+    this.setCanvas()
+    this.updateXAxis(this.options.x)
+    this.updateYAxis(this.options.y)
+
+    // if (this.options.transitionTime > 0 && !this.initialDraw) {
+    //   let t = d3
+    //     .transition()
+    //     .duration(this.options.transitionTime)
+    //     .ease(d3.easeLinear)
+    //   this.canvas
+    //     .select('.x-axis')
+    //     .attr('transform', 'translate(' + 0 + ',' + this.height + ')')
+    //     .transition(t)
+    //     .call(xAxis)
+    //   this.canvas
+    //     .select('.x-grid')
+    //     .transition(t)
+    //     .call(xGrid)
+    //   this.canvas
+    //     .select('.y-axis')
+    //     .transition(t)
+    //     .call(yAxis)
+    //   this.canvas
+    //     .select('.y-grid')
+    //     .transition(t)
+    //     .call(yGrid)
+    // } else {
+    //   this.canvas
+    //     .select('.x-axis')
+    //     .attr('transform', 'translate(' + 0 + ',' + this.height + ')')
+    //     .call(xAxis)
+    //   this.canvas.select('.x-grid').call(xGrid)
+    //   this.canvas.select('.y-axis').call(yAxis)
+    //   this.canvas.select('.y-grid').call(yGrid)
+    // }
+    // this.initialDraw = false
   }
 
   showTooltip(html: string) {
@@ -231,79 +317,127 @@ export class CartesianAxis extends Axis {
       .style('top', d3.event.pageY + 'px')
   }
 
-  protected setRange() {
-    if (!this.xScale) {
-      this.xScale = this.options.x && this.options.x.time ? d3.scaleUtc() : d3.scaleLinear()
+  protected initXScales (options: AxisOptions[]) {
+    for ( let key in options) {
+      let scale
+      switch (options[key].type) {
+        case AxisType.time:
+          scale = d3.scaleUtc()
+          break
+        default:
+          scale = d3.scaleLinear()
+      }
+      scale.range([0, this.width])
+      this.xScale.push(scale)
     }
-    if (!this.yScale) this.yScale = d3.scaleLinear()
-    this.xScale.range([0, this.width])
-    this.yScale.range([this.height, 0])
+  }
+
+  protected initYScales (options: AxisOptions[]) {
+    for ( let key in options) {
+      let scale
+      switch (options[key].type) {
+        case AxisType.time:
+          scale = d3.scaleUtc()
+          break
+        default:
+          scale = d3.scaleLinear()
+      }
+      scale.range([this.height, 0])
+      this.yScale.push(scale)
+    }
+  }
+
+  protected setRange() {
+    for ( let key in this.xScale ) {
+      this.xScale[key].range([0, this.width])
+    }
+    for ( let key in this.yScale ) {
+      this.yScale[key].range([this.height, 0])
+    }
   }
 
   protected initGrid() {
     let g = this.canvas
     let yGrid = g.append('g').attr('class', 'grid y-grid')
     let xGrid = g.append('g').attr('class', 'grid x-grid')
-    let horizontalAxis = g
-      .append('g')
-      .attr('class', 'axis x-axis')
-      .attr('transform', 'translate(' + 0 + ',' + this.height + ')')
-    let yAxis = g.append('g').attr('class', 'axis y-axis')
+    g.append('g')
+      .attr('class', 'axis x-axis-0')
+      .attr('font-size','12')
+    g.append('g')
+      .attr('class', 'axis x-axis-1')
+    g.append('g')
+      .attr('class', 'axis y-axis-0')
+    g.append('g')
+      .attr('class', 'axis y-axis-1')
+
     if (this.options.y) {
-      if (this.options.y.label) {
+      if (this.options.y[0]?.label) {
         g.append('text')
           .attr('x', 0)
           .attr('y', -9)
           .attr('text-anchor', 'start')
           .attr('font-family', 'sans-serif')
           .attr('font-size', '10px')
-          .text(this.options.y.label)
+          .text(this.options.y[0].label)
       }
-      if (this.options.y.unit) {
+      if (this.options.y[0]?.unit) {
         g.append('text')
           .attr('x', -9)
           .attr('y', -9)
           .attr('text-anchor', 'end')
           .attr('font-family', 'sans-serif')
           .attr('font-size', '10px')
-          .text(this.options.y.unit)
+          .text(this.options.y[0].unit)
       }
-    }
-    if (this.options.x) {
-      if (this.options.x.label) {
+      if (this.options.y[1]?.label) {
         g.append('text')
-          .attr('x', this.width / 2)
-          .attr('y', this.height + 30)
-          .attr('text-anchor', 'middle')
+          .attr('x', this.width)
+          .attr('y', -9)
+          .attr('text-anchor', 'end')
           .attr('font-family', 'sans-serif')
           .attr('font-size', '10px')
-          .text(this.options.x.label)
+          .text(this.options.y[1].label)
       }
-      if (this.options.x.unit) {
-        g.append('text')
-          .attr('x', this.width + 10)
-          .attr('y', this.height + 9)
-          .attr('dy', '0.71em')
-          .attr('text-anchor', 'start')
-          .attr('font-family', 'sans-serif')
-          .attr('font-size', '10px')
-          .text(this.options.x.unit)
-      }
-    }
-    if (this.options.x2) {
-      if (this.options.x2.unit) {
+      if (this.options.y[1]?.unit) {
         g.append('text')
           .attr('x', this.width + 10)
           .attr('y', -9)
           .attr('text-anchor', 'start')
           .attr('font-family', 'sans-serif')
           .attr('font-size', '10px')
-          .text(this.options.x2.unit)
+          .text(this.options.y[1].unit)
       }
+    }
+    if (this.options.x[0]?.label) {
+      g.append('text')
+        .attr('x', this.width / 2)
+        .attr('y', this.height + 30)
+        .attr('text-anchor', 'middle')
+        .attr('font-family', 'sans-serif')
+        .attr('font-size', '10px')
+        .text(this.options.x[0].label)
+    }
+    if (this.options.x[0]?.unit) {
+      g.append('text')
+        .attr('x', this.width + 10)
+        .attr('y', this.height + 9)
+        .attr('dy', '0.71em')
+        .attr('text-anchor', 'start')
+        .attr('font-family', 'sans-serif')
+        .attr('font-size', '10px')
+        .text(this.options.x[0].unit)
+    }
+
+    if (this.options.x[1]?.unit) {
+      g.append('text')
+        .attr('x', this.width + 10)
+        .attr('y', -9)
+        .attr('text-anchor', 'start')
+        .text(this.options.x[1].unit)
     }
   }
 
-  generateMultiFormat() {
+  generateMultiFormat () {
     let timeZone = this.timeZone
     return function(date) {
       let m = momenttz(date as Date).tz(timeZone)

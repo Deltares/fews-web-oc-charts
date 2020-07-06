@@ -189,24 +189,34 @@ export class ZoomHandler implements Visitor {
     point = point !== null ? point : this.lastPoint
     this.mouseGroup.select('.overlay').on('mousemove', null)
     this.brushGroup.select('.select-rect').attr('visibility', 'hidden')
-    let xScale = this.axis.xScale
-    let yScale = this.axis.yScale
     switch (this.mode) {
       case SelectionMode.X: {
-        let xExtent = d3.extent([point[0], this.brushStartPoint[0]].map(xScale.invert))
-        this.axis.xScale.domain(xExtent)
+        for ( let key in this.axis.xScale) {
+          const scale = this.axis.xScale[key]
+          let extent = d3.extent([point[0], this.brushStartPoint[0]].map(scale.invert))
+          scale.domain(extent)
+        }
         break
       }
       case SelectionMode.Y: {
-        let yExtent = d3.extent([point[1], this.brushStartPoint[1]].map(yScale.invert))
-        this.axis.yScale.domain(yExtent)
+        for ( let key in this.axis.yScale) {
+          const scale = this.axis.yScale[key]
+          let extent = d3.extent([point[1], this.brushStartPoint[1]].map(scale.invert))
+          scale.domain(extent)
+        }
         break
       }
       case SelectionMode.XY: {
-        let xExtent = d3.extent([point[0], this.brushStartPoint[0]].map(xScale.invert))
-        let yExtent = d3.extent([point[1], this.brushStartPoint[1]].map(yScale.invert))
-        this.axis.xScale.domain(xExtent)
-        this.axis.yScale.domain(yExtent)
+        for ( let key in this.axis.xScale) {
+          const scale = this.axis.xScale[key]
+          let extent = d3.extent([point[0], this.brushStartPoint[0]].map(scale.invert))
+          scale.domain(extent)
+        }
+        for ( let key in this.axis.yScale) {
+          const scale = this.axis.yScale[key]
+          let extent = d3.extent([point[1], this.brushStartPoint[1]].map(scale.invert))
+          scale.domain(extent)
+        }
         break
       }
       case SelectionMode.CANCEL: {

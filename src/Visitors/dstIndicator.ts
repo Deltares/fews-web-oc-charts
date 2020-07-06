@@ -1,21 +1,36 @@
-import { Axis, CartesianAxis } from '../Axis'
-import { dateFormatter }  from '../Utils'
+import { Axis, CartesianAxis, AxisType } from '../Axis'
 import { Visitor } from './visitor'
 import momenttz from 'moment-timezone';
+import merge from 'lodash/merge'
+
+type DstIndicatorOptions = {
+  [key in 'x' | 'y'] : { axisIndex: number }
+}
 
 export class DstIndicator implements Visitor {
   private group: any
   private indicator: any
   private axis: CartesianAxis
   private dstDate: Date
+  private options: DstIndicatorOptions
 
   // tslint:disable-next-line:no-empty
-  constructor() {}
+  constructor(options: DstIndicatorOptions) {
+    this.options = merge(this.options,
+      {
+        x: { axisIndex : 0 }
+      },
+      options
+    ) as DstIndicatorOptions
+  }
 
   visit(axis: Axis) {
     this.axis = axis as CartesianAxis
-    if (this.axis.options.x && this.axis.options.x.time) {
+    let axisIndex = this.options.x.axisIndex
+    if (this.axis.options.x[axisIndex] && this.axis.options.x[axisIndex].type === AxisType.time) {
       this.create(axis as CartesianAxis)
+    } else {
+      throw new Error (`x-axis [${axisIndex}] does not exist or is not of type 'time'`)
     }
   }
 
@@ -27,12 +42,14 @@ export class DstIndicator implements Visitor {
   }
 
   redraw() {
-    let domain = this.axis.xScale.domain()
+    const axisIndex = this.options.x.axisIndex
+    const scale = this.axis.xScale[axisIndex]
+    const domain = scale.domain()
     let startMoment = momenttz(domain[0]).tz(this.axis.timeZone)
     let endMoment = momenttz(domain[1]).tz(this.axis.timeZone)
     if (startMoment.isDST() !== endMoment.isDST() ) {
       this.dstDate = this.findDst(startMoment,endMoment)
-      let x = this.axis.xScale(this.dstDate)
+      let x = scale(this.dstDate)
         this.group.attr('display', 'initial')
         if (!this.indicator) {
           this.indicator = this.group.append('g').attr('class', 'dst-indicator')
@@ -65,7 +82,6 @@ export class DstIndicator implements Visitor {
       }
       duration = momenttz.duration(m2.diff(m1)).asMinutes()
     }
-    console.log(m2.utcOffset()-m1.utcOffset())
     return m2.seconds(0).toDate()
   }
 

@@ -3,18 +3,24 @@ import { Axis, CartesianAxis } from '../Axis'
 import { dateFormatter }  from '../Utils'
 import { Visitor } from './visitor'
 
+type CurrentTimeOptions = {
+  [key in 'x' | 'y'] : { axisIndex: number }
+}
+
 export class CurrentTime implements Visitor {
   private timer: d3.Timer
   private group: any
   private line: any
   private indicator: any
   private axis: CartesianAxis
+  private options: CurrentTimeOptions
   private transition: any
   private datetime: Date
   static readonly REFRESH_INTERVAL: number = 10000
 
-  constructor() {
+  constructor(options?) {
     this.datetime = null
+    this.options = options
   }
 
   setDateTime(dt: Date) {
@@ -41,8 +47,19 @@ export class CurrentTime implements Visitor {
 
   redraw() {
     let currentDate = this.datetime || new Date()
-    let x = this.axis.xScale(currentDate)
-    let domain = this.axis.xScale.domain()
+    let scale
+    if (this.options.x) {
+      let index = this.options.x.axisIndex
+      scale = this.axis.xScale[index]
+    } else if (this.options.x) {
+      let index = this.options.y.axisIndex
+      scale = this.axis.yScale[index]
+    } else {
+      return
+    }
+
+    let x = scale(currentDate)
+    let domain = scale.domain()
     if (!this.line) {
       this.line = this.group.append('line')
     }

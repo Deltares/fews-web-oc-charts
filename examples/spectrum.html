@@ -98,28 +98,18 @@ var random = [];
 for (var i = 0; i < 100; i++) {
     random.push({ x: d3.randomUniform(0, 1)(), y: d3.randomUniform(0, 360)() });
 }
-var a = 0;
-var b = 1 / 1440;
-var archimedeanSpiral = [];
-for (var i = 0; i <= 1440; i += 5) {
-    archimedeanSpiral.push({ x: a + b * i, y: i % 360 });
-}
-var plot2 = new wbCharts.ChartMarker(random, {});
-var plot3 = new wbCharts.ChartLine(archimedeanSpiral, {});
+
 var spectra = randomSpectrum(1);
 var plot4 = new wbCharts.ChartHistogram(spectra, { colorScale: wbCharts.AUTO_SCALE });
-var plot5 = new wbCharts.ChartLine(spectra, {});
-plot.addTo(polarAxis, { rkey: "x", tkey: "y", colorkey: 'v' });
-// plot2.addTo(polaraxis, { rkey: "x", tkey: "y" }, 'polar-dot')
-// plot3.addTo(polaraxis, { rkey: "x", tkey: "y" }, 'polar-line')
+plot.addTo(polarAxis, { radial: { key: "x", axisIndex: 0} , angular: { key: "y", axisIndex: 0}, color: {key: 'v'} });
 var container2 = document.getElementById("chart-container-2");
-var axis = new wbCharts.CartesianAxis(container2, null, null, {});
-// plot.addTo(axis, {xkey : "y", ykey: "x", colorkey: 'v' })
-// plot2.addTo(axis, { xkey: "y", ykey: "x"}, 'cartesian-dot')
-// plot3.addTo(axis, { xkey: "y", ykey: "x" }, 'cartesian-line')
-plot4.addTo(axis, { xkey: "x", ykey: "y", colorkey: "y" }, '#cartesian-histogram');
-// plot5.addTo(axis, { xkey: "x", ykey: "y", colorkey: "y" }, 'cartesian-line')
-axis.redraw()
+var axis = new wbCharts.CartesianAxis(container2, null, null, {
+    x: [{ position: 'bottom', axisIndex: 0}],
+    y: [{ position: 'left', axisIndex: 0}]
+});
+
+plot4.addTo(axis, { x: { key: "x", axisIndex: 0} , y: { key: "y", axisIndex: 0}, color: {key: 'y'}}, 'histogram', '#cartesian-histogram');
+axis.redraw({ x: {autoScale: true} , y: {autoScale: true}})
 polarAxis.redraw()
 var count = 0;
 var updateCharts = function (event) {

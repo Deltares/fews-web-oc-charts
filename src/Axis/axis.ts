@@ -1,7 +1,7 @@
 import * as d3 from 'd3'
 import { Chart } from '../Charts'
 import { Visitor } from '../Visitors'
-// import { scaleLinear } from 'd3-scale'
+import merge from 'lodash/merge'
 
 export interface Margin {
   top: number
@@ -10,13 +10,23 @@ export interface Margin {
   left: number
 }
 
-export interface AxisOptions {
+export interface AxesOptions {
   transitionTime?: number
-  x?: any
-  y?: any
-  x2?: any
-  y2?: any
+  x?: any[]
+  y?: any[]
   margin?: Margin
+}
+
+interface AxisIndexItem {
+  key: string; axisIndex: number
+}
+
+export interface AxisIndex {
+  x?: AxisIndexItem;
+  y?: AxisIndexItem;
+  radial?: AxisIndexItem;
+  angular?: AxisIndexItem;
+  color?: { key: string}
 }
 
 export abstract class Axis {
@@ -30,16 +40,20 @@ export abstract class Axis {
   width: number
   height: number
   margin: { top: number; right: number; bottom: number; left: number }
-  options: AxisOptions
+  options: AxesOptions
   chartGroup: any
   charts: Chart[]
   initialDraw: boolean = true
   visitors: Visitor[]
   timeZone: string
 
-  constructor(container: HTMLElement, width: number, height: number, options: AxisOptions) {
+  constructor(container: HTMLElement, width: number, height: number, options: AxesOptions, defaultOptions: any) {
     this.container = container
-    this.options = options
+    this.options = merge(this.options,
+      this.options,
+      defaultOptions,
+      options
+    )
     this.timeZone = 'Europe/Amsterdam'
 
     this.margin = { ...{ top: 40, right: 40, bottom: 40, left: 40 }, ...options.margin }

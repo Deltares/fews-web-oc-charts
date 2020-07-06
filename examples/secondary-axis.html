@@ -8,7 +8,7 @@
 
             body {
                 background-color : rgb(44,44,44);
-                font: 10px sans-serif;
+                font: 14px sans-serif;
                 margin: 20px;
             }
 
@@ -27,11 +27,6 @@
             #polar-dot {
                 fill: #999999;
                 stroke: white;
-            }
-
-            #chart-legend-1 {
-                display: block;
-                fill: white;
             }
 
             /* .chart-line { fill: none; stroke: skyblue; } */
@@ -82,7 +77,6 @@ border-color: transparent black transparent transparent;
 </script>
 
         <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/5.16.0/d3.js"></script>
-        <script src="https://d3js.org/d3-selection-multi.v1.min.js"></script>
         <link rel="stylesheet" href="/dist/wb-charts.css">
     </head>
     <body>
@@ -93,59 +87,45 @@ border-color: transparent black transparent transparent;
         <script src="/dist/wb-charts.umd.js"></script>
         <script type="text/javascript">
 
+    percentile = function(p, data) {
+      var points = data;
+      points.sort(function (a, b) { return a - b });
+      if (Array.isArray(p)) {
+        var result = [];
+        for (i = 0; i < p.length; ++i) {
+          var x = p[i] * (points.length + 1);
+          var x1 = Math.floor(x);
+          var frac = x - x1;
+          result.push(points[x1 - 1] + frac * (points[x1] - points[x1 - 1]));
+        }
+        return result;
+      } else {
+        var x = p * (points.length + 1);
+        var x1 = Math.floor(x);
+        var frac = x - x1;
+        return points[x1 - 1] + frac * (points[x1] - points[x1 - 1]);
+      }
+    };
+
     var container = document.getElementById("chart-container-1");
     var axis =  new wbCharts.CartesianAxis(container, null, null,
-      { x : [ {type: 'time', position: 'bottom' } ],
-        y : [ {label: 'Waterstand [cm]', position: 'left'} ],
-        margin: {left: 50, right: 50 }
+      { x : [
+        {type: 'time', showGrid: true }
+        ],
+        y : [
+          {label: 'Waterstand', unit: 'cm', showGrid: true, domain: [-450, 150] },
+          {label: 'Wind richting', unit: 'deg', position: 'right', domain: [-150, 450]},
+       ],
+        margin: {left: 50, right: 50}
       });
-    var legend = new wbCharts.Legend( [
-        {selector: 'median', label : 'Middelste (P50)'},
-        {selector: 'control', label :'Controle'},
-        {selector: 'percent90', label :'90% interval'} ,
-        {selector: 'percent50', label :'50% interval'},
-        {selector: 'ensemble', label : 'Verstoord'},
-        {selector: 'missing', label : 'Missing'},
-        ]
-        ,document.getElementById("chart-legend-1"));
-
-    var currentTime = new wbCharts.CurrentTime({x: {axisIndex: 0}});
-    var dstIndicator = new wbCharts.DstIndicator({x: {axisIndex: 0}});
-    var levelSelect = new wbCharts.LevelSelect(function(x) {console.log(x)} );
-    percentile = function(p, data) {
-        var points = data;
-        points.sort(function (a, b) { return a - b });
-        if (Array.isArray(p)) {
-            var result = [];
-            for (i = 0; i < p.length; ++i) {
-                var x = p[i] * (points.length + 1);
-                var x1 = Math.floor(x);
-                var frac = x - x1;
-                result.push(points[x1 - 1] + frac * (points[x1] - points[x1 - 1]));
-            }
-            return result;
-        } else {
-            var x = p * (points.length + 1);
-            var x1 = Math.floor(x);
-            var frac = x - x1;
-            return points[x1 - 1] + frac * (points[x1] - points[x1 - 1]);
-        }
-    };
 
     // var refDate = new Date(2019,02,31);
     var refDate = new Date();
-    var mouseOver = new wbCharts.MouseOver(['control', 'median','percent90']);
-    var escalationLevels = [
-      { id: 'laag', val: -100, color: 'rgba(205, 133, 63,.5)', c: '<' },
-      { id: 'verhoogd', val: 100, color: 'rgba(255, 215, 0,.5)', c: '>' },
-      { id: 'hoog', val: 110, color: 'rgba(255, 150, 0,.5)', c: '>' },
-      { id: 'extreem', val: 140, color: 'rgba(255, 0, 0,.5)', c: '>' }
-    ]
-
-    var escalationsVisitor = new wbCharts.WarningLevels(escalationLevels);
+    var mouseOver = new wbCharts.MouseOver(['control','median']);
     var zoom = new wbCharts.ZoomHandler();
+    var currentTime = new wbCharts.CurrentTime({x: {axisIndex: 0}});
 
-    axis.accept(legend);
+
     function dataload() { d3.json("ensemble.json").then(function (data) {
       var nEnsemble = data.values[0].length;
       var members = Array(nEnsemble);
@@ -187,35 +167,14 @@ border-color: transparent black transparent transparent;
       const styleLine = {
         fill: 'none', stroke: 'white'
       }
-      plotPercentile90.addTo(axis,{x :{ key: "x", axisIndex: 0}, y: {key: "y", axisIndex: 0} }, 'percent90', style90);
-      plotPercentile50.addTo(axis,{x :{ key: "x", axisIndex: 0}, y: {key: "y", axisIndex: 0} }, 'percent50', style50);
+      plotPercentile90.addTo(axis, { x: { key: "x", axisIndex: 0 }, y: { key: "y", axisIndex: 0 }}, 'percent90', style90);
+      plotPercentile50.addTo(axis, { x: { key: "x", axisIndex: 0 }, y: { key: "y", axisIndex: 1 }}, 'percent50', style50);
 
-      for (i = 1; i< nEnsemble; i++) {
-        var plotEnsemble=new wbCharts.ChartLine(members[i], {});
-        let declaration = { 'stroke': 'green',
-        'stroke-width': '1px',
-        'fill': 'none',
-        'opacity': '.5'
-        }
-
-        // new CSSStyleDeclaration()
-        // declaration.setProperty("stroke", "black");
-        // declaration.setProperty("stroke-width", "1px");
-        // declaration.setProperty("fill", "none");
-        // declaration.setProperty("opacity", ".");
-        plotEnsemble.addTo(axis, {x :{ key: "x", axisIndex: 0}, y: {key: "y", axisIndex: 0} }, 'ensemble', declaration );
-      }
-
-      plotControl1.addTo(axis,{x :{ key: "x", axisIndex: 0}, y: {key: "y", axisIndex: 0} }, 'control', '#control-line');
-      plotMedian1.addTo(axis, {x :{ key: "x", axisIndex: 0}, y: {key: "y", axisIndex: 0} }, 'median', '#median-line');
+      plotControl1.addTo(axis, {x: { key: "x", axisIndex: 0 }, y: { key: "y", axisIndex: 0 }}, 'control', '#control-line');
+      plotMedian1.addTo(axis, {x: { key: "x", axisIndex: 0 }, y: { key: "y", axisIndex: 1 }}, 'median', '#median-line');
+      axis.accept(currentTime);
       axis.redraw({x:{ autoScale: true}, y: {autoScale: true} });
       axis.zoom();
-      // legend.visit(axis);
-      // axis.accept(legend);
-      axis.accept(currentTime);
-      axis.accept(dstIndicator);
-      axis.accept(levelSelect);
-      axis.accept(escalationsVisitor);
       axis.accept(zoom);
       axis.accept(mouseOver);
     });}

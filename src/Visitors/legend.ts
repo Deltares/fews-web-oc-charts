@@ -41,7 +41,7 @@ export class Legend implements Visitor {
       .merge(entries)
       .each(function(d, i) {
         let entry = d3.select(this)
-        let chartElement = d3
+        let chartElement = that.axis.chartGroup
           .select(`[data-id="${d.selector}"]`)
           .select('path')
           .node() as Element
@@ -52,10 +52,10 @@ export class Legend implements Visitor {
           entry.on('click', function() {
             let display = style.getPropertyValue('visibility')
             if (display === 'visible') {
-              d3.selectAll(`[data-id="${d.selector}"]`).style('visibility', 'hidden')
+              that.axis.chartGroup.selectAll(`[data-id="${d.selector}"]`).style('visibility', 'hidden')
               entry.style('opacity', 0.5)
             } else {
-              d3.selectAll(`[data-id="${d.selector}"]`).style('visibility', 'visible')
+              that.axis.chartGroup.selectAll(`[data-id="${d.selector}"]`).style('visibility', 'visible')
               entry.style('opacity', 1.0)
             }
           })

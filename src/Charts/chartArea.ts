@@ -1,5 +1,5 @@
 import * as d3 from 'd3'
-import { CartesianAxis, PolarAxis } from '../Axis'
+import { CartesianAxis, PolarAxis, AxisIndex } from '../Axis'
 import { Chart, AUTO_SCALE } from './chart'
 
 function mean(x: number[] | number) {
@@ -10,16 +10,18 @@ function mean(x: number[] | number) {
 }
 
 export class ChartArea extends Chart {
-  plotterCartesian(axis: CartesianAxis, dataKeys: any) {
-    let xkey = dataKeys.xkey ? dataKeys.xkey : 'x'
-    let ykey = dataKeys.ykey ? dataKeys.ykey : 'y'
-    let colorkey = dataKeys.colorkey
+  plotterCartesian(axis: CartesianAxis, axisIndex: AxisIndex) {
+    let xKey = this.dataKeys.x
+    let yKey = this.dataKeys.y
+    let colorKey = this.dataKeys.color
+    const xScale = axis.xScale[axisIndex.x.axisIndex]
+    const yScale = axis.yScale[axisIndex.y.axisIndex]
 
     let colorScale = d3.scaleLinear().domain([0, 1])
     if (this.options.colorScale === AUTO_SCALE) {
       colorScale.domain(
         d3.extent(this.data, function(d: any): number {
-          return d[colorkey]
+          return d[colorKey]
         })
       )
     }
@@ -27,18 +29,18 @@ export class ChartArea extends Chart {
     let colorMap = this.colorMap
 
     let bisectX = d3.bisector(function(d) {
-      return d[xkey]
+      return d[xKey]
     })
-    let i0 = bisectX.right(this.data, axis.xScale.domain()[0])
-    let i1 = bisectX.left(this.data, axis.xScale.domain()[1])
+    let i0 = bisectX.right(this.data, xScale.domain()[0])
+    let i1 = bisectX.left(this.data, xScale.domain()[1])
     i0 = i0 > 0 ? i0 - 1 : 0
     i1 = i1 < this.data.length - 1 ? i1 + 1 : this.data.length
 
     let mappedData: any = this.data.slice(i0, i1).map(function(d: any) {
       return {
-        x: axis.xScale(d[xkey]),
-        y: d[ykey].map(axis.yScale),
-        color: colorMap(colorScale(mean(d[colorkey])))
+        [xKey]: xScale(d[xKey]),
+        [yKey]: d[yKey].map(yScale),
+        color: colorMap(colorScale(mean(d[colorKey])))
       }
     })
 
