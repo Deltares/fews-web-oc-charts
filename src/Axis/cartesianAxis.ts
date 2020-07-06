@@ -1,5 +1,6 @@
 import * as d3 from 'd3'
 import { Axis, AxesOptions, AxisIndex } from './axis'
+import { generateMultiFormat } from '../utils/date'
 import momenttz from 'moment-timezone'
 
 enum AxisPosition {
@@ -197,7 +198,7 @@ export class CartesianAxis extends Axis {
           return new Date(d.getTime() - m.utcOffset() * 60000);
         })
         axis.tickValues(offsetValues)
-        axis.tickFormat(this.generateMultiFormat())
+        axis.tickFormat(generateMultiFormat())
         grid.tickValues(offsetValues)
       } else if (options[key].type === AxisType.degrees) {
         let domain = scale.domain()
@@ -244,7 +245,7 @@ updateYAxis (options: AxisOptions[]) {
         return new Date(d.getTime() - m.utcOffset() * 60000);
       })
       axis.tickValues(offsetValues)
-      axis.tickFormat(this.generateMultiFormat())
+      axis.tickFormat(generateMultiFormat())
       grid.tickValues(offsetValues)
     } else if (options[key].type === AxisType.degrees) {
       let domain = scale.domain()
@@ -436,28 +437,4 @@ updateYAxis (options: AxisOptions[]) {
         .text(this.options.x[1].unit)
     }
   }
-
-  generateMultiFormat () {
-    let timeZone = this.timeZone
-    return function(date) {
-      let m = momenttz(date as Date).tz(timeZone)
-      let offsetDate = new Date ( date.getTime() + m.utcOffset()*60000)
-      return (d3.utcSecond(offsetDate) < offsetDate
-        ? m.format('.SSS')
-        : d3.utcMinute(offsetDate) < offsetDate
-          ? m.format(':ss')
-          : d3.utcHour(offsetDate) < offsetDate
-            ? m.format('HH:mm')
-            : d3.utcDay(offsetDate) < offsetDate
-              ? m.format('HH:mm')
-              : d3.utcMonth(offsetDate) < offsetDate
-                ? d3.utcWeek(offsetDate) < offsetDate
-                  ? m.format( 'dd DD')
-                  : m.format( 'MMM DD')
-                : d3.utcYear(offsetDate) < offsetDate
-                  ? m.format( 'MMMM')
-                  : m.format('YYYY'))
-    }
-  }
-
 }

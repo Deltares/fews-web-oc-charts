@@ -27,13 +27,13 @@ interface ChartOptions {
 }
 
 export abstract class Chart {
-  _data: any
+  protected _data: any
+  protected _extent: any[]
   group: any
   colorMap: any
   id: string
   options: ChartOptions
   axisIndex: AxisIndex
-  _extent: any[]
   style: SvgProperties
   cssSelector: string
 

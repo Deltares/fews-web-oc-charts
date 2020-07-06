@@ -1,22 +1,37 @@
 import * as d3 from 'd3'
 import { Axis, AxesOptions } from './axis'
 
+import momenttz from 'moment-timezone'
+
 // import { scaleLinear } from 'd3-scale'
 
-export const CLOCKWISE = -1
-export const ANTICLOCKWISE = 1
+export enum Direction {
+  CLOCKWISE = -1,
+  ANTICLOCKWISE = 1
+}
+
+export enum AxisType {
+  time = 'time',
+  value = 'value',
+  degrees = 'degrees',
+  ordinal = 'band'
+}
 
 interface RadialAxisOptions {
-  label?: string
-  scale?: number | number[]
+  label?: string;
+  type?: AxisType
+  scale?: number | number[];
+  format: Function;
 }
 
 interface AngularAxisOptions {
   label?: string
   direction?: number
   intercept?: number
+  type?: AxisType
   range?: number[]
   domain?: number[]
+  format: Function;
 }
 
 export interface PolarAxisOptions extends AxesOptions {
@@ -44,26 +59,30 @@ export class PolarAxis extends Axis {
     angular: {},
     radial: {}
   }
-  private angularDomain: number[]
+  private angularDomain: number[] | Date[]
+  angularAxisOptions: AngularAxisOptions
+  radialAxisOptions: RadialAxisOptions
+
 
   constructor(container: HTMLElement, width: number, height: number, options?: PolarAxisOptions) {
     super(container, width, height, options, PolarAxis.defaultOptions)
     this.canvas = this.canvas
       .append('g')
       .attr('transform', 'translate(' + this.width / 2 + ',' + this.height / 2 + ' )')
-
-    this.direction = options.angular.direction ? options.angular.direction : ANTICLOCKWISE
+    this.direction = options.angular.direction ? options.angular.direction : Direction.ANTICLOCKWISE
     this.intercept = options.angular.intercept ? options.angular.intercept : 0
     this.innerRadius = options.innerRadius ? options.innerRadius : 0
     this.outerRadius = Math.min(this.width, this.height) / 2
     this.angularRange = options.angular.range ? options.angular.range : [0, 2 * Math.PI]
     this.angularDomain = options.angular.domain ? options.angular.domain : [0, 360]
+    this.angularAxisOptions = options.angular
+    this.radialAxisOptions = options.radial
 
     console.log(this.angularDomain)
 
     let startAngle = Math.PI/2  - this.intercept + this.angularRange[0]
     let endAngle =  Math.PI/2 - this.intercept + this.angularRange[1]
-    if (this.direction === ANTICLOCKWISE) {
+    if (this.direction === Direction.ANTICLOCKWISE) {
       startAngle = Math.PI + startAngle
       endAngle = Math.PI + endAngle
     }
@@ -88,11 +107,16 @@ export class PolarAxis extends Axis {
   }
 
   redraw() {
-    let radialExtent = new Array(2)
+    let radialExtent = new Array(0)
     for (let chart of this.charts) {
-      let chartRadialExtent = chart.extent[chart.axisIndex.radial.key]
-      radialExtent = d3.extent(d3.merge([radialExtent, [].concat(...chartRadialExtent)]))
+      let chartRadialExtent = chart.extent[chart.dataKeys.radial]
+      if (this.radialAxisOptions.type === AxisType.ordinal) {
+        radialExtent = d3.merge([radialExtent, [].concat(...chartRadialExtent)])
+      } else {
+        radialExtent = d3.extent(d3.merge([radialExtent, [].concat(...chartRadialExtent)]))
+      }
     }
+    console.log(radialExtent)
     this.radialScale.domain(radialExtent)
     for (let chart of this.charts) {
       chart.plotter(this, chart.axisIndex)
@@ -109,44 +133,59 @@ export class PolarAxis extends Axis {
     let g = this.canvas
     // draw the radial axis
     let rAxis = d3.axisBottom(this.radialScale).ticks(5)
-
     let radialAxis = this.canvas.select('.r-axis').call(rAxis)
 
-    let radialTicks = this.radialScale.ticks(5).map(this.radialScale)
-
-    let drawRadial = this.canvas
-      .select('.r-grid')
-      .selectAll('path')
-      .data(radialTicks)
-
-    drawRadial.exit().remove()
+    if (this.radialAxisOptions.type !== AxisType.ordinal) {
+      let radialTicks = this.radialScale.ticks(5).map(this.radialScale)
+      let drawRadial = this.canvas
+        .select('.r-grid')
+        .selectAll('path')
+        .data(radialTicks)
+      drawRadial.exit().remove()
+      drawRadial
+        .enter()
+        .append('path')
+        .merge(drawRadial)
+        .attr('d', (d) => { return draw(d3.path(), d) })
+    }
 
     let startAngle = Math.PI / 2 - this.intercept + this.angularRange[0]
     let endAngle = Math.PI / 2 - this.intercept + this.angularRange[1]
-    if (this.direction === ANTICLOCKWISE) {
+    if (this.direction === Direction.ANTICLOCKWISE) {
       startAngle = Math.PI + startAngle
       endAngle = Math.PI + endAngle
     }
 
-
     let draw = (context, radius) => {
-      context.arc(0, 0, radius, -this.direction * this.angularRange[0] - this.intercept, -this.direction * this.angularRange[1] - this.intercept, this.direction === ANTICLOCKWISE) // draw an arc, the turtle ends up at ⟨194.4,108.5⟩
+      context.arc(0, 0, radius, -this.direction * this.angularRange[0] - this.intercept, -this.direction * this.angularRange[1] - this.intercept, this.direction === Direction.ANTICLOCKWISE) // draw an arc, the turtle ends up at ⟨194.4,108.5⟩
       return context;
     }
 
-    drawRadial
-      .enter()
-      .append('path')
-      .merge(drawRadial)
-      .attr('d', (d) => { return draw(d3.path(), d) })
+    let angularTicks
+    if (this.angularAxisOptions.type === AxisType.time) {
+      const scale = this.angularScale.copy()
+      let offsetDomain = scale.domain().map((d) => {
+        let m = momenttz(d as Date).tz(this.timeZone)
+        return new Date(d.getTime() + m.utcOffset() * 60000);
+      })
+      let offsetScale = d3.scaleUtc().domain(offsetDomain)
+      let tickValues = offsetScale.ticks(10)
+      let offsetValues = tickValues.map((d) => {
+        let m = momenttz(d as Date).tz(this.timeZone)
+        return new Date(d.getTime() - m.utcOffset() * 60000);
+      })
+      angularTicks = offsetValues
+    } else {
+      const domain = this.angularDomain as number[]
 
-    let step = d3.tickIncrement(this.angularDomain[0], this.angularDomain[1], 8)
-    console.log(step)
+      let step = d3.tickIncrement(domain[0], domain[1], 8)
+      console.log(step)
 
-    step = step >= 100 ? 90 : step >= 50 ? 45 : step >= 20 ? 15 : step
-    let start = Math.ceil(this.angularDomain[0] / step) * step
-    let stop = Math.floor(this.angularDomain[1] / step + 1) * step
-    let angularTicks = d3.range(start, stop, step)
+      step = step >= 100 ? 90 : step >= 50 ? 45 : step >= 20 ? 15 : step
+      let start = Math.ceil(domain[0] / step) * step
+      let stop = Math.floor(domain[1] / step + 1) * step
+      angularTicks = d3.range(start, stop, step)
+    }
 
     let suffix: string = ''
     let offset = 10
@@ -159,7 +198,7 @@ export class PolarAxis extends Axis {
       .data(angularTicks)
       .enter()
       .append('line')
-      .attr('x1', radialTicks[0])
+      .attr('x1', this.innerRadius)
       .attr('y1', 0)
       .attr('x2', this.outerRadius)
       .attr('y2', 0)
@@ -187,7 +226,7 @@ export class PolarAxis extends Axis {
       .attr('x2', this.outerRadius + 6)
       .attr('y2', 0)
 
-    let textRotate = function(d: number) {
+    let textRotate = function(d) {
       return (
         'rotate(' +
         this.radToDegrees(this.direction * this.angularScale(d) + this.intercept) +
@@ -197,7 +236,8 @@ export class PolarAxis extends Axis {
         ')'
       )
     }.bind(this)
-    let anchor = function(d: number) {
+
+    let anchor = function(d) {
       let dNorthCW = (( this.radToDegrees(Math.PI / 2 - this.intercept - this.direction * this.angularScale(d)) % 360) + 360) % 360
       if (dNorthCW > 0 && dNorthCW < 180) {
         return 'start'
@@ -208,15 +248,15 @@ export class PolarAxis extends Axis {
       }
     }.bind(this)
 
+    const labelFormat = this.angularAxisOptions.format ? this.angularAxisOptions.format : d => d
+
     drawTicks
       .append('text')
       .attr('text-anchor', anchor)
       .attr('alignment-baseline', 'middle')
       .attr('x', this.outerRadius + 15)
       .attr('y', 0)
-      .text((d: number) => {
-        return d + '°'
-      })
+      .text(labelFormat)
       .attr('transform', textRotate)
   }
 
@@ -232,11 +272,26 @@ export class PolarAxis extends Axis {
   }
 
   protected setRange() {
-    this.radialScale = d3.scaleLinear().range([this.innerRadius, this.outerRadius])
-    this.angularScale = d3
-      .scaleLinear()
-      .domain(this.angularDomain)
-      .range(this.angularRange)
+    switch (this.angularAxisOptions.type) {
+      case AxisType.time:
+        this.angularScale = d3.scaleUtc()
+        break
+      default:
+        this.angularScale = d3.scaleLinear()
+    }
+    this.angularScale.domain(this.angularDomain).range(this.angularRange)
+
+    switch (this.radialAxisOptions.type) {
+      case AxisType.time:
+        this.radialScale = d3.scaleUtc()
+        break
+      case AxisType.ordinal:
+        this.radialScale = d3.scaleBand()
+        break
+      default:
+        this.radialScale = d3.scaleLinear()
+    }
+    this.radialScale.range([this.innerRadius, this.outerRadius])
   }
 
   protected initGrid() {
