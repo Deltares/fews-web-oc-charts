@@ -198,7 +198,7 @@ export class CartesianAxis extends Axis {
           return new Date(d.getTime() - m.utcOffset() * 60000);
         })
         axis.tickValues(offsetValues)
-        axis.tickFormat(generateMultiFormat())
+        axis.tickFormat(generateMultiFormat(this.timeZone))
         grid.tickValues(offsetValues)
       } else if (options[key].type === AxisType.degrees) {
         let domain = scale.domain()
@@ -245,7 +245,7 @@ updateYAxis (options: AxisOptions[]) {
         return new Date(d.getTime() - m.utcOffset() * 60000);
       })
       axis.tickValues(offsetValues)
-      axis.tickFormat(generateMultiFormat())
+      axis.tickFormat(generateMultiFormat(this.timeZone))
       grid.tickValues(offsetValues)
     } else if (options[key].type === AxisType.degrees) {
       let domain = scale.domain()

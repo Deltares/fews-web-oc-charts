@@ -57,14 +57,16 @@ export abstract class Axis {
     this.timeZone = 'Europe/Amsterdam'
 
     this.margin = { ...{ top: 40, right: 40, bottom: 40, left: 40 }, ...options.margin }
-    this.setSize(height, width)
     this.svg = d3
       .select(container)
       .append('svg')
-      .attr('width', '100%')
-      .attr('height', '100%')
+      // .attr('width', '100%')
+      // .attr('height', '100%')
       .attr('class', 'wb-charts')
       .attr('overflow', 'visible')
+      // .attr('color', 'white')
+      // .attr('fill', 'white')
+    this.setSize(height, width)
 
     this.defs = this.svg.append('defs')
     this.canvas = this.svg
@@ -85,6 +87,11 @@ export abstract class Axis {
       this.height = 0
       this.width = 0
     }
+    this.svg
+      .attr('width', containerWidth)
+      .attr('height', containerHeight)
+      .attr('viewBox', `0 0 ${containerWidth} ${containerHeight}`)
+
   }
 
   resize() {

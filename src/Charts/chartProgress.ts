@@ -17,13 +17,12 @@ export class ChartProgress extends Chart {
   }
 
   get extent(): any[] {
-    if (!this.extent) {
-      this.extent = Array()
+    if (!this._extent) {
+      this._extent = Array()
       for (let key in this.dataKeys) {
-        console.log(key)
         let path = this.dataKeys[key]
         if (key  === 'rkey') {
-          this.extent[path] = this.data.map((d) => {return d[path]})
+          this._extent[path] = this._data.map((d) => {return d[path]})
         } else {
           let min = d3.min(this._data, function (d: any) {
             if (d[path] === null) return undefined

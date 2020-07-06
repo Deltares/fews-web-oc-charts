@@ -159,7 +159,7 @@ export abstract class Chart {
         } else {
           this.group.attr('class', cssClass)
         }
-      } else {
+      } else if (this.style) {
         Object.entries(this.style).forEach(
           ([prop, val]) => this.group.style(prop, val))
       }

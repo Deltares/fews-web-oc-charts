@@ -8,8 +8,7 @@ export function dateFormatter(date: number | Date, format: string, options?: any
   return moment.format(format)
 }
 
-export function generateMultiFormat() {
-  let timeZone = this.timeZone
+export function generateMultiFormat(timeZone) {
   return function (date) {
     let m = momenttz(date as Date).tz(timeZone)
     let offsetDate = new Date(date.getTime() + m.utcOffset() * 60000)

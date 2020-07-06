@@ -48,6 +48,7 @@ export default {
       assets: [
         `./src/${libraryName}.css`,
         `./src/${libraryName}-light.css`,
+        `./src/${libraryName}-print.css`,
       ],
     }),
 
