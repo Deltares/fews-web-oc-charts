@@ -1,5 +1,5 @@
 import * as d3 from 'd3'
-import { Axis, AxesOptions, AxisIndex } from './axis'
+import { Axis, AxesOptions, AxisType, AxisOptions } from './axis'
 import { generateMultiFormat } from '../utils/date'
 import momenttz from 'moment-timezone'
 
@@ -10,24 +10,13 @@ enum AxisPosition {
   Right = 'right',
 }
 
-export enum AxisType {
-  value = 'value',
-  time = 'time',
-  degrees = 'degrees'
-}
-
-export interface AxisOptions {
-  label?: string;
-  type?: AxisType;
-  unit?: string;
-  showGrid?: boolean;
+export interface CartesianAxisOptions extends AxisOptions {
   position?: AxisPosition;
-  domain?: [number, number] | [Date, Date];
 }
 
 export interface CartesianAxesOptions extends AxesOptions {
-  x?: AxisOptions[]
-  y?: AxisOptions[]
+  x?: CartesianAxisOptions[]
+  y?: CartesianAxisOptions[]
 }
 
 export class CartesianAxis extends Axis {
@@ -37,6 +26,7 @@ export class CartesianAxis extends Axis {
   yScale: Array<any> = []
   clipPathId: string
   timeZoneOffset: number
+  options: CartesianAxesOptions
   static readonly defaultOptions = {
     x: [ { type: AxisType.value } ],
     y: [ { type: AxisType.value } ]
@@ -172,7 +162,7 @@ export class CartesianAxis extends Axis {
     this.zoom()
   }
 
-  updateXAxis (options: AxisOptions[]) {
+  updateXAxis (options: CartesianAxisOptions[]) {
     for (const key in this.xScale) {
       let scale = this.xScale[key]
       let axis = undefined
@@ -220,7 +210,7 @@ export class CartesianAxis extends Axis {
     }
   }
 
-updateYAxis (options: AxisOptions[]) {
+updateYAxis (options: CartesianAxisOptions[]) {
   for (const key in this.yScale) {
     let scale = this.yScale[key]
     let axis = undefined
@@ -318,7 +308,7 @@ updateYAxis (options: AxisOptions[]) {
       .style('top', d3.event.pageY + 'px')
   }
 
-  protected initXScales (options: AxisOptions[]) {
+  protected initXScales (options: CartesianAxisOptions[]) {
     for ( let key in options) {
       let scale
       switch (options[key].type) {
@@ -333,7 +323,7 @@ updateYAxis (options: AxisOptions[]) {
     }
   }
 
-  protected initYScales (options: AxisOptions[]) {
+  protected initYScales (options: CartesianAxisOptions[]) {
     for ( let key in options) {
       let scale
       switch (options[key].type) {

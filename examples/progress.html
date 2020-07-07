@@ -194,23 +194,9 @@
       colorScale: wbCharts.AUTO_SCALE, t: { format: dateFormat }, style: { 'fill-opacity': '.1'}
     });
 
-    expected.addTo(polarAxis1, {
-    rkey: "x",
-    tkey: "y",
-    colorkey: 'v'
-    });
-
-    progress.addTo(polarAxis1, {
-      rkey: "x",
-      tkey: "y",
-      colorkey: 'v'
-    });
-
-    planned.addTo(polarAxis1, {
-      rkey: "x",
-      tkey: "y",
-      colorkey: 'v'
-    });
+    expected.addTo(polarAxis1, {radial: { key: "x"}, angular: {key: "y"}, color: { key: 'v'}});
+    progress.addTo(polarAxis1, {radial: { key: "x"}, angular: {key: "y"}, color: { key: 'v'}});
+    planned.addTo(polarAxis1, {radial: { key: "x"}, angular: {key: "y"}, color: { key: 'v'}});
 
     polarAxis1.redraw()
 
@@ -226,24 +212,9 @@
     colorScale: wbCharts.AUTO_SCALE, t: { format: dateFormat }, style: { 'fill-opacity': '.1'}
     });
 
-    expected2.addTo(polarAxis2, {
-    rkey: "x",
-    tkey: "y",
-    colorkey: 'v'
-    });
-
-    progress2.addTo(polarAxis2, {
-    rkey: "x",
-    tkey: "y",
-    colorkey: 'v'
-    });
-
-    planned2.addTo(polarAxis2, {
-    rkey: "x",
-    tkey: "y",
-    colorkey: 'v'
-    });
-
+    expected2.addTo(polarAxis1, {radial: { key: "x"}, angular: {key: "y"}, color: { key: 'v'}});
+    progress2.addTo(polarAxis1, {radial: { key: "x"}, angular: {key: "y"}, color: { key: 'v'}});
+    planned2.addTo(polarAxis1, {radial: { key: "x"}, angular: {key: "y"}, color: { key: 'v'}});
     polarAxis2.redraw()
   </script>
 

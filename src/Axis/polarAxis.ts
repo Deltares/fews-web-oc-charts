@@ -1,6 +1,6 @@
 import * as d3 from 'd3'
-import { Axis, AxesOptions } from './axis'
-
+import { Axis, AxesOptions, AxisType, AxisOptions } from './axis'
+import merge from 'lodash/merge'
 import momenttz from 'moment-timezone'
 
 // import { scaleLinear } from 'd3-scale'
@@ -10,28 +10,13 @@ export enum Direction {
   ANTICLOCKWISE = 1
 }
 
-export enum AxisType {
-  time = 'time',
-  value = 'value',
-  degrees = 'degrees',
-  ordinal = 'band'
+interface RadialAxisOptions extends AxisOptions {
 }
 
-interface RadialAxisOptions {
-  label?: string;
-  type?: AxisType
-  scale?: number | number[];
-  format: Function;
-}
-
-interface AngularAxisOptions {
-  label?: string
+interface AngularAxisOptions extends AxisOptions {
   direction?: number
+  range?: number[];
   intercept?: number
-  type?: AxisType
-  range?: number[]
-  domain?: number[]
-  format: Function;
 }
 
 export interface PolarAxisOptions extends AxesOptions {
@@ -75,10 +60,8 @@ export class PolarAxis extends Axis {
     this.outerRadius = Math.min(this.width, this.height) / 2
     this.angularRange = options.angular.range ? options.angular.range : [0, 2 * Math.PI]
     this.angularDomain = options.angular.domain ? options.angular.domain : [0, 360]
-    this.angularAxisOptions = options.angular
-    this.radialAxisOptions = options.radial
-
-    console.log(this.angularDomain)
+    this.angularAxisOptions = merge(this.angularAxisOptions, options.angular, { type: 'value'})
+    this.radialAxisOptions = merge(this.radialAxisOptions, options.radial, { type: 'value'})
 
     let startAngle = Math.PI/2  - this.intercept + this.angularRange[0]
     let endAngle =  Math.PI/2 - this.intercept + this.angularRange[1]
@@ -110,13 +93,12 @@ export class PolarAxis extends Axis {
     let radialExtent = new Array(0)
     for (let chart of this.charts) {
       let chartRadialExtent = chart.extent[chart.dataKeys.radial]
-      if (this.radialAxisOptions.type === AxisType.ordinal) {
+      if (this.radialAxisOptions.type === AxisType.band) {
         radialExtent = d3.merge([radialExtent, [].concat(...chartRadialExtent)])
       } else {
         radialExtent = d3.extent(d3.merge([radialExtent, [].concat(...chartRadialExtent)]))
       }
     }
-    console.log(radialExtent)
     this.radialScale.domain(radialExtent)
     for (let chart of this.charts) {
       chart.plotter(this, chart.axisIndex)
@@ -135,7 +117,12 @@ export class PolarAxis extends Axis {
     let rAxis = d3.axisBottom(this.radialScale).ticks(5)
     let radialAxis = this.canvas.select('.r-axis').call(rAxis)
 
-    if (this.radialAxisOptions.type !== AxisType.ordinal) {
+    let draw = (context, radius) => {
+      context.arc(0, 0, radius, -this.direction * this.angularRange[0] - this.intercept, -this.direction * this.angularRange[1] - this.intercept, this.direction === Direction.ANTICLOCKWISE) // draw an arc, the turtle ends up at ⟨194.4,108.5⟩
+      return context;
+    }
+
+    if (this.radialAxisOptions.type !== AxisType.band) {
       let radialTicks = this.radialScale.ticks(5).map(this.radialScale)
       let drawRadial = this.canvas
         .select('.r-grid')
@@ -156,11 +143,6 @@ export class PolarAxis extends Axis {
       endAngle = Math.PI + endAngle
     }
 
-    let draw = (context, radius) => {
-      context.arc(0, 0, radius, -this.direction * this.angularRange[0] - this.intercept, -this.direction * this.angularRange[1] - this.intercept, this.direction === Direction.ANTICLOCKWISE) // draw an arc, the turtle ends up at ⟨194.4,108.5⟩
-      return context;
-    }
-
     let angularTicks
     if (this.angularAxisOptions.type === AxisType.time) {
       const scale = this.angularScale.copy()
@@ -179,7 +161,6 @@ export class PolarAxis extends Axis {
       const domain = this.angularDomain as number[]
 
       let step = d3.tickIncrement(domain[0], domain[1], 8)
-      console.log(step)
 
       step = step >= 100 ? 90 : step >= 50 ? 45 : step >= 20 ? 15 : step
       let start = Math.ceil(domain[0] / step) * step
@@ -285,7 +266,7 @@ export class PolarAxis extends Axis {
       case AxisType.time:
         this.radialScale = d3.scaleUtc()
         break
-      case AxisType.ordinal:
+      case AxisType.band:
         this.radialScale = d3.scaleBand()
         break
       default:

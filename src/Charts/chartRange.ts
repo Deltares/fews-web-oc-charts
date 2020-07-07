@@ -36,30 +36,34 @@ export class ChartRange extends Chart {
   }
 
   toolTipFormatterCartesian(d) {
+    const xKey = this.dataKeys.x
+    const yKey = this.dataKeys.y
     let html = ''
     if (this.options.x.includeInTooltip) {
-      if (d.x[0] != d.x[1]) {
-        html += 'x: ' + d.x[0].toFixed(2) + '-' + d.x[1].toFixed(2) + '<br/>'
+      if (d[xKey][0] != d[xKey][1]) {
+        html += xKey + ': ' + d[xKey][0].toFixed(2) + '-' + d[xKey][1].toFixed(2) + '<br/>'
       }
     }
     if (this.options.y.includeInTooltip) {
-      if (d.y[0] != d.y[1]) {
-        html += 'y: ' + d.y[0].toFixed(2) + '-' + d.y[1].toFixed(2)
+      if (d[yKey][0] != d[yKey][1]) {
+        html += yKey + ': ' + d[yKey][0].toFixed(2) + '-' + d[yKey][1].toFixed(2)
       }
     }
     return html
   }
 
   toolTipFormatterPolar(d) {
+    const tKey = this.dataKeys.angular
+    const rKey = this.dataKeys.radial
     let html = ''
     if (this.options.angular.includeInTooltip) {
-      if (d.t[0] != d.t[1]) {
-        html += 't: ' + d.t[0].toFixed(0) + '-' + d.t[1].toFixed(0) + '<br/>'
+      if (d[tKey][0] != d[tKey][1]) {
+        html += tKey+ ': ' + d[tKey][0].toFixed(0) + '-' + d[tKey][1].toFixed(0) + '<br/>'
       }
     }
     if (this.options.radial.includeInTooltip) {
-      if (d.r[0] != d.r[1]) {
-        html += 'r: ' + d.r[0].toFixed(0) + '-' + d.r[1].toFixed(0)
+      if (d[rKey][0] != d[rKey][1]) {
+        html += rKey + ': ' + d[rKey][0].toFixed(0) + '-' + d[rKey][1].toFixed(0)
       }
     }
     return html
@@ -84,6 +88,8 @@ export class ChartRange extends Chart {
     let colorMap = this.colorMap
 
     this.group = this.selectGroup(axis, 'chart-range')
+    this.group.style('stroke', 'none')
+
     let elements: any = this.group.selectAll('rect').data(this.data)
 
     let t = d3
@@ -160,13 +166,6 @@ export class ChartRange extends Chart {
       )
     }
     let colorMap = this.colorMap
-    let mappedData: any = this.data.map(function(d: any) {
-      return {
-        r: d[rKey],
-        t: d[tKey],
-        color: colorMap(colorScale(mean(d[colorKey])))
-      }
-    })
 
     let t = d3
       .transition()
@@ -176,21 +175,22 @@ export class ChartRange extends Chart {
     let arcGenerator = d3
       .arc()
       .innerRadius(function(d: any, i) {
-        return axis.radialScale(d.r[0])
+        return axis.radialScale(d[rKey][0])
       })
       .outerRadius(function(d: any, i) {
-        return axis.radialScale(d.r[1])
+        return axis.radialScale(d[rKey][1])
       })
       .startAngle(function(d: any, i) {
-        return axis.angularScale(d.t[0])
+        return axis.angularScale(d[tKey][0])
       })
       .endAngle(function(d: any, i) {
-        return axis.angularScale(d.t[1])
+        return axis.angularScale(d[tKey][1])
       })
 
     this.group = this.selectGroup(axis, 'chart-range')
+    this.group.style('stroke', 'none')
 
-    let elements = this.group.selectAll('path').data(mappedData)
+    let elements = this.group.selectAll('path').data(this.data)
 
     elements.exit().remove()
 
@@ -208,7 +208,7 @@ export class ChartRange extends Chart {
 
     if (colorKey) {
       enter.style('fill', function(d: any) {
-        return d.color
+        return colorMap(colorScale(mean(d[colorKey])))
       })
     }
 
@@ -216,30 +216,29 @@ export class ChartRange extends Chart {
 
     if (colorKey) {
       update.style('fill', function(d: any) {
-        return d.color
+        return colorMap(colorScale(mean(d[colorKey])))
       })
     }
 
-    this.previousData = mappedData
-
+    this.previousData = {...this.data}
     function arcTween(transition: any, p: any) {
       transition.attrTween('d', function(d: any, i: number, a: any) {
         let old = p[i]
-        if (mean(old.t) - mean(d.t) > 180) {
-          old.t = old.t.map(function(x) {
+        if (mean(old[tKey]) - mean(d[tKey]) > 180) {
+          old[tKey] = old[tKey].map(function(x) {
             return x - 360
           })
-        } else if (mean(old.t) - mean(d.t) < -180) {
-          old.t = old.t.map(function(x) {
+        } else if (mean(old[tKey]) - mean(d[tKey]) < -180) {
+          old[tKey] = old[tKey].map(function(x) {
             return x + 360
           })
         }
 
-        let tInterpolate = d3.interpolateArray(old.t, d.t)
-        let rInterpolate = d3.interpolateArray(old.r, d.r)
+        let tInterpolate = d3.interpolateArray(old[tKey], d[tKey])
+        let rInterpolate = d3.interpolateArray(old[rKey], d[rKey])
         return function(t: any) {
-          d.t = tInterpolate(t)
-          d.r = rInterpolate(t)
+          d[tKey] = tInterpolate(t)
+          d[rKey] = rInterpolate(t)
           return arcGenerator(d)
         }
       })

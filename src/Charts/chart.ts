@@ -14,6 +14,7 @@ function mean(x: number[] | number) {
 
 interface ChartOptionItem {
   includeInTooltip?: boolean;
+  format?: Function;
 }
 
 interface ChartOptions {

@@ -83,7 +83,6 @@ export function svgStringToImage(svgString: string, width: number, height: numbe
 	canvas.width = width
 	canvas.height = height
 
-  console.log('svgStringToImage')
   if ( context !== null) {
     const image = new Image()
     image.onload = () => {
@@ -93,7 +92,6 @@ export function svgStringToImage(svgString: string, width: number, height: numbe
       canvas.toBlob( function(blob) {
         if (blob !== null) {
           const fileSize = Math.round( blob.size/1024 ) + ' KB'
-          console.log('callback', blob)
           // if (callback) callback( blob, fileSize)
           let svgUrl = URL.createObjectURL(blob);
           let downloadLink = document.createElement("a");

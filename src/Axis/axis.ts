@@ -10,10 +10,24 @@ export interface Margin {
   left: number
 }
 
+export enum AxisType {
+  time = 'time',
+  value = 'value',
+  degrees = 'degrees',
+  band = 'band'
+}
+
+export interface AxisOptions {
+  label?: string;
+  type?: AxisType;
+  unit?: string;
+  showGrid?: boolean;
+  format?: Function;
+  domain?: [number, number] | [Date, Date];
+}
+
 export interface AxesOptions {
   transitionTime?: number
-  x?: any[]
-  y?: any[]
   margin?: Margin
 }
 
