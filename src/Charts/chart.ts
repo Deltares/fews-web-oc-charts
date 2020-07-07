@@ -22,9 +22,9 @@ interface ChartOptions {
   y? : ChartOptionItem;
   radial? : ChartOptionItem;
   angular? : ChartOptionItem;
-  transitionTime: number
+  transitionTime?: number
   colorScale?: any
-  symbolId: number
+  symbolId?: number
 }
 
 export abstract class Chart {
