@@ -3,7 +3,7 @@ import { Axis, AxesOptions, AxisType, AxisOptions } from './axis'
 import { generateMultiFormat } from '../utils/date'
 import momenttz from 'moment-timezone'
 
-enum AxisPosition {
+export enum AxisPosition {
   Top = 'top',
   Bottom = 'bottom',
   Left = 'left',

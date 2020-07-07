@@ -4,10 +4,10 @@ import { Visitor } from '../Visitors'
 import merge from 'lodash/merge'
 
 export interface Margin {
-  top: number
-  right: number
-  bottom: number
-  left: number
+  top?: number
+  right?: number
+  bottom?: number
+  left?: number
 }
 
 export enum AxisType {
