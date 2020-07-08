@@ -91,6 +91,13 @@ export abstract class Axis {
     this.visitors = []
   }
 
+  setOptions (options: AxesOptions) {
+    this.options = merge(this.options,
+      this.options,
+      options
+    )
+  }
+
   setSize(height?: number, width?: number) {
     // FIXME: does not work for arguments
     let containerWidth = width == null ? this.container.offsetWidth : width

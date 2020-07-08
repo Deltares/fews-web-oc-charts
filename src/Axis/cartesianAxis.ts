@@ -264,7 +264,7 @@ updateYAxis (options: CartesianAxisOptions[]) {
     this.setCanvas()
     this.updateXAxis(this.options.x)
     this.updateYAxis(this.options.y)
-
+    this.updateLabels(this.options)
     // if (this.options.transitionTime > 0 && !this.initialDraw) {
     //   let t = d3
     //     .transition()
@@ -297,6 +297,48 @@ updateYAxis (options: CartesianAxisOptions[]) {
     //   this.canvas.select('.y-grid').call(yGrid)
     // }
     // this.initialDraw = false
+  }
+
+  updateLabels (options) {
+    const g = this.canvas
+    if (options.y) {
+      if (options.y[0]?.label) {
+        g.select('.y0.label')
+          .text(this.options.y[0].label)
+      }
+      if (this.options.y[0]?.unit) {
+        g.select('.y0.unit')
+          .text(this.options.y[0].unit)
+      }
+      if (this.options.y[1]?.label) {
+        g.select('.y1.label')
+          .attr('x', this.width)
+          .text(this.options.y[1].label)
+      }
+      if (this.options.y[1]?.unit) {
+        g.select('.y1.unit')
+          .attr('x', this.width + 10)
+          .text(this.options.y[1].unit)
+      }
+    }
+    if (this.options.x[0]?.label) {
+      g.select('.x0.label')
+      .attr('x', this.width / 2)
+        .attr('y', this.height + 30)
+        .text(this.options.x[0].label)
+    }
+    if (this.options.x[0]?.unit) {
+      g.select('.x0.unit')
+      .attr('x', this.width + 10)
+        .attr('y', this.height + 9)
+        .text(this.options.x[0].unit)
+    }
+
+    if (this.options.x[1]?.unit) {
+      g.select('.x1.unit')
+        .attr('x', this.width + 10)
+        .text(this.options.x[1].unit)
+    }
   }
 
   showTooltip(html: string) {
@@ -366,6 +408,7 @@ updateYAxis (options: CartesianAxisOptions[]) {
     if (this.options.y) {
       if (this.options.y[0]?.label) {
         g.append('text')
+        .attr('class','y0 label')
           .attr('x', 0)
           .attr('y', -9)
           .attr('text-anchor', 'start')
@@ -375,6 +418,7 @@ updateYAxis (options: CartesianAxisOptions[]) {
       }
       if (this.options.y[0]?.unit) {
         g.append('text')
+          .attr('class','y0 unit')
           .attr('x', -9)
           .attr('y', -9)
           .attr('text-anchor', 'end')
@@ -384,6 +428,7 @@ updateYAxis (options: CartesianAxisOptions[]) {
       }
       if (this.options.y[1]?.label) {
         g.append('text')
+          .attr('class','y1 label')
           .attr('x', this.width)
           .attr('y', -9)
           .attr('text-anchor', 'end')
@@ -393,6 +438,7 @@ updateYAxis (options: CartesianAxisOptions[]) {
       }
       if (this.options.y[1]?.unit) {
         g.append('text')
+          .attr('class','y1 unit')
           .attr('x', this.width + 10)
           .attr('y', -9)
           .attr('text-anchor', 'start')
@@ -403,6 +449,7 @@ updateYAxis (options: CartesianAxisOptions[]) {
     }
     if (this.options.x[0]?.label) {
       g.append('text')
+        .attr('class','x0 label')
         .attr('x', this.width / 2)
         .attr('y', this.height + 30)
         .attr('text-anchor', 'middle')
@@ -412,6 +459,7 @@ updateYAxis (options: CartesianAxisOptions[]) {
     }
     if (this.options.x[0]?.unit) {
       g.append('text')
+        .attr('class','x0 unit')
         .attr('x', this.width + 10)
         .attr('y', this.height + 9)
         .attr('dy', '0.71em')
@@ -423,6 +471,7 @@ updateYAxis (options: CartesianAxisOptions[]) {
 
     if (this.options.x[1]?.unit) {
       g.append('text')
+        .attr('class','x1 unit')
         .attr('x', this.width + 10)
         .attr('y', -9)
         .attr('text-anchor', 'start')
