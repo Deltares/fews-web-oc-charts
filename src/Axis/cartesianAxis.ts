@@ -121,6 +121,7 @@ export class CartesianAxis extends Axis {
           }
         }
         scale.domain(extent)
+        if (options.nice === true) scale.nice()
       }
     }
   }
@@ -140,6 +141,7 @@ export class CartesianAxis extends Axis {
           }
         }
         scale.domain(extent)
+        if (options.nice === true) scale.nice()
       }
     }
   }
