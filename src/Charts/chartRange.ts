@@ -245,18 +245,21 @@ export class ChartRange extends Chart {
     }
   }
 
-  drawLegendSymbol(entry) {
+  drawLegendSymbol(asSvgElement?: boolean) {
     let chartElement = this.group
       .select('path')
       .node() as Element
     let style = window.getComputedStyle(chartElement)
-    entry
-      .append('rect')
+    const svg = d3.create('svg')
+      .attr('width',20)
+      .attr('height',20)
+    const element = svg.append('rect')
       .attr('x', 0)
       .attr('y', -5)
       .attr('width', 20)
       .attr('height', 10)
       .style('fill', style.getPropertyValue('fill'))
-  }
+    if (asSvgElement) return element.node()
+    return svg.node()  }
 
 }

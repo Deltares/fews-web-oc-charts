@@ -112,18 +112,23 @@ export class ChartMarker extends Chart {
     this.previousData = this.data
   }
 
-  drawLegendSymbol(entry) {
+  drawLegendSymbol(asSvgElement?: boolean) {
     let chartElement = this.group
       .select('path')
       .node() as Element
     let style = window.getComputedStyle(chartElement)
-    entry
-      .append('g')
+    const svg = d3.create('svg')
+      .append('svg')
+      .attr('width',20)
+      .attr('height',20)
+    const element = svg.append('g')
       .attr('transform', 'translate(10 0)')
       .append('path')
       .attr('d', d3.symbol().type(d3.symbols[this.symbolId]))
       .style('stroke', style.getPropertyValue('stroke'))
       .style('fill', style.getPropertyValue('fill'))
+    if (asSvgElement) return element.node()
+    return svg.node()
   }
 
 }

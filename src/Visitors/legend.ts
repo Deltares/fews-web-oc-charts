@@ -34,6 +34,8 @@ export class Legend implements Visitor {
     let entries = this.group.selectAll('g').data(this.labels)
     let that = this
     let maxWidth = 0
+
+    const s = new XMLSerializer();
     let enter = entries
       .enter()
       .append('g')
@@ -48,7 +50,9 @@ export class Legend implements Visitor {
         if (chartElement) {
           let style = window.getComputedStyle(chartElement)
           let chart = that.axis.charts.filter(x => x.id === d.selector)
-          chart[0].drawLegendSymbol(entry)
+          let svgElement = chart[0].drawLegendSymbol(true)
+          let entryNode = entry.node() as Element
+          entryNode.appendChild(svgElement)
           entry.on('click', function() {
             let display = style.getPropertyValue('visibility')
             if (display === 'visible') {
