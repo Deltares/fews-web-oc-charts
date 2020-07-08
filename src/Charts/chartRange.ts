@@ -253,6 +253,8 @@ export class ChartRange extends Chart {
     const svg = d3.create('svg')
       .attr('width',20)
       .attr('height',20)
+      .append('g')
+      .attr('tranfrom','translate(0, 10)')
     const element = svg.append('rect')
       .attr('x', 0)
       .attr('y', -5)
