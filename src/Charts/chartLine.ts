@@ -72,7 +72,7 @@ export class ChartLine extends Chart {
       .attr('height',20)
     const group = svg
       .append('g')
-      .attr('tranfrom','translate(0, 10)')
+      .attr('transform','translate(0, 10)')
     const element = group.append('line')
       .attr('x1', 0)
       .attr('x2', 20)
