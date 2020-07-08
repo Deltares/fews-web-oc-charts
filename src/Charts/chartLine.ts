@@ -70,9 +70,10 @@ export class ChartLine extends Chart {
     const svg = d3.create('svg')
       .attr('width',20)
       .attr('height',20)
+    const group = svg
       .append('g')
       .attr('tranfrom','translate(0, 10)')
-   const element = svg.append('line')
+    const element = group.append('line')
       .attr('x1', 0)
       .attr('x2', 20)
       .attr('y1', 0)

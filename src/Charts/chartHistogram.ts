@@ -92,9 +92,10 @@ export class ChartHistogram extends Chart {
     const svg = d3.create('svg')
       .attr('width',20)
       .attr('height',20)
+    const group = svg
       .append('g')
       .attr('transform', 'translate(10 0)')
-    const element = svg.append('line')
+    const element = group.append('line')
       .append('rect')
       .attr('x', 0)
       .attr('y', -5)

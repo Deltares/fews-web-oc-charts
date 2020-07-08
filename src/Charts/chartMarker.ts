@@ -121,9 +121,10 @@ export class ChartMarker extends Chart {
       .append('svg')
       .attr('width',20)
       .attr('height',20)
+    const group = svg
       .append('g')
       .attr('transform', 'translate(10 0)')
-    const element = svg.append('path')
+    const element = group.append('path')
       .attr('d', d3.symbol().type(d3.symbols[this.symbolId]))
       .style('stroke', style.getPropertyValue('stroke'))
       .style('fill', style.getPropertyValue('fill'))
