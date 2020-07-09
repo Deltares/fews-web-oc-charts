@@ -1,7 +1,7 @@
 import { Axis, PolarAxis } from '../Axis'
 import { Visitor } from './visitor'
 import * as d3 from 'd3'
-import merge from 'lodash/merge'
+import defaultsDeep from 'lodash/defaultsDeep'
 
 export interface DataFieldOptions {
   selector? : string
@@ -31,7 +31,7 @@ export class DataField implements Visitor {
   // TODO: we can provide an optional source element or axis where we look for the value
   constructor(container, options: DataFieldOptions, formatter?: any) {
     this.container = container
-    this.options = merge(this.options,
+    this.options = defaultsDeep({},
       {
         labelField : {dx: 0, dy: 0},
         valueField : {dx: 0, dy: 0, units: [{unit: '', factor: 1.0} ], precision: "0.1f" }
