@@ -46,7 +46,7 @@ export default {
 
     copy({
       assets: [
-        `./src/${libraryName}.css`,
+        `./src/${libraryName}-dark.css`,
         `./src/${libraryName}-light.css`,
         `./src/${libraryName}-print.css`,
       ],

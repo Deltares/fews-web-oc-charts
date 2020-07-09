@@ -1,7 +1,7 @@
 import { Axis, CartesianAxis, AxisType } from '../Axis'
 import { Visitor } from './visitor'
 import momenttz from 'moment-timezone';
-import merge from 'lodash/merge'
+import defaultsDeep from 'lodash/defaultsDeep'
 
 type DstIndicatorOptions = {
   [key in 'x' | 'y'] : { axisIndex: number }
@@ -16,11 +16,11 @@ export class DstIndicator implements Visitor {
 
   // tslint:disable-next-line:no-empty
   constructor(options: DstIndicatorOptions) {
-    this.options = merge(this.options,
+    this.options = defaultsDeep({},
+      options,
       {
         x: { axisIndex : 0 }
       },
-      options
     ) as DstIndicatorOptions
   }
 

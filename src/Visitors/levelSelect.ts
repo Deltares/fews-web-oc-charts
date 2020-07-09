@@ -1,7 +1,7 @@
 import * as d3 from 'd3'
 import { Axis, CartesianAxis } from '../Axis'
 import { Visitor } from './visitor'
-import merge from 'lodash/merge'
+import defaultsDeep from 'lodash/defaultsDeep'
 
 type LevelSelectOptions = {
   [key in 'x' | 'y'] : { axisIndex: number }
@@ -21,11 +21,11 @@ export class LevelSelect implements Visitor {
     this.value = value
     this.callback = callback
     this.format = d3.format('.2f')
-    this.options = merge(this.options,
+    defaultsDeep(this.options,
+      options,
       {
         y: { axisIndex : 0 }
       },
-      options
     ) as LevelSelectOptions
   }
 

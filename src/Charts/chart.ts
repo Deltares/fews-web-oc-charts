@@ -1,7 +1,7 @@
 import * as d3 from 'd3'
 import { SvgProperties } from 'csstype';
 import { Axis, AxisIndex, CartesianAxis, PolarAxis } from '../Axis'
-import merge from 'lodash/merge'
+import defaultsDeep from 'lodash/defaultsDeep'
 
 export const AUTO_SCALE = 1
 
@@ -40,15 +40,15 @@ export abstract class Chart {
 
   constructor(data: any, options: ChartOptions) {
     this.data = data
-    this.options = merge(this.options,
+    this.options = defaultsDeep({},
+      options,
       {
         radial: { includeInTooltip: true },
         angular: { includeInTooltip: true },
         x: { includeInTooltip: true },
         y: { includeInTooltip: true },
         transitionTime: 100
-      },
-      options
+      }
     )
     // https://github.com/d3/d3-scale-chromatic
     this.colorMap = d3.scaleSequential(d3.interpolateWarm)
