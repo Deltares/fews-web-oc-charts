@@ -2,6 +2,7 @@ import * as d3 from 'd3'
 import { Chart } from '../Charts'
 import { Visitor } from '../Visitors'
 import defaultsDeep from 'lodash/defaultsDeep'
+import merge from 'lodash/merge'
 
 export interface Margin {
   top?: number
@@ -91,7 +92,7 @@ export abstract class Axis {
   }
 
   setOptions (options: AxesOptions) {
-    defaultsDeep(this.options,
+    merge(this.options,
       options
     )
   }

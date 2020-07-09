@@ -264,7 +264,7 @@ updateYAxis (options: CartesianAxisOptions[]) {
     this.setCanvas()
     this.updateXAxis(this.options.x)
     this.updateYAxis(this.options.y)
-    this.updateLabels(this.options)
+    this.updateLabels()
     // if (this.options.transitionTime > 0 && !this.initialDraw) {
     //   let t = d3
     //     .transition()
@@ -299,10 +299,10 @@ updateYAxis (options: CartesianAxisOptions[]) {
     // this.initialDraw = false
   }
 
-  updateLabels (options) {
-    const g = this.canvas
-    if (options.y) {
-      if (options.y[0]?.label) {
+  updateLabels () {
+    const g = this.canvas.select('.axis.labels')
+    if (this.options.y) {
+      if (this.options.y[0]?.label) {
         g.select('.y0.label')
           .text(this.options.y[0].label)
       }
@@ -405,9 +405,10 @@ updateYAxis (options: CartesianAxisOptions[]) {
     g.append('g')
       .attr('class', 'axis y-axis-1')
 
+    let labelGroup = this.canvas.append('g').attr('class', 'axis labels')
     if (this.options.y) {
       if (this.options.y[0]?.label) {
-        g.append('text')
+        labelGroup.append('text')
         .attr('class','y0 label')
           .attr('x', 0)
           .attr('y', -9)
@@ -417,7 +418,7 @@ updateYAxis (options: CartesianAxisOptions[]) {
           .text(this.options.y[0].label)
       }
       if (this.options.y[0]?.unit) {
-        g.append('text')
+        labelGroup.append('text')
           .attr('class','y0 unit')
           .attr('x', -9)
           .attr('y', -9)
@@ -427,7 +428,7 @@ updateYAxis (options: CartesianAxisOptions[]) {
           .text(this.options.y[0].unit)
       }
       if (this.options.y[1]?.label) {
-        g.append('text')
+        labelGroup.append('text')
           .attr('class','y1 label')
           .attr('x', this.width)
           .attr('y', -9)
@@ -437,7 +438,7 @@ updateYAxis (options: CartesianAxisOptions[]) {
           .text(this.options.y[1].label)
       }
       if (this.options.y[1]?.unit) {
-        g.append('text')
+        labelGroup.append('text')
           .attr('class','y1 unit')
           .attr('x', this.width + 10)
           .attr('y', -9)
@@ -448,7 +449,7 @@ updateYAxis (options: CartesianAxisOptions[]) {
       }
     }
     if (this.options.x[0]?.label) {
-      g.append('text')
+      labelGroup.append('text')
         .attr('class','x0 label')
         .attr('x', this.width / 2)
         .attr('y', this.height + 30)
@@ -458,7 +459,7 @@ updateYAxis (options: CartesianAxisOptions[]) {
         .text(this.options.x[0].label)
     }
     if (this.options.x[0]?.unit) {
-      g.append('text')
+      labelGroup.append('text')
         .attr('class','x0 unit')
         .attr('x', this.width + 10)
         .attr('y', this.height + 9)
@@ -470,7 +471,7 @@ updateYAxis (options: CartesianAxisOptions[]) {
     }
 
     if (this.options.x[1]?.unit) {
-      g.append('text')
+      labelGroup.append('text')
         .attr('class','x1 unit')
         .attr('x', this.width + 10)
         .attr('y', -9)
