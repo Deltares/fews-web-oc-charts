@@ -1,19 +1,33 @@
 import * as d3 from 'd3'
 import { Chart } from '../Charts'
 import { Visitor } from '../Visitors'
-import merge from 'lodash/merge'
+import defaultsDeep from 'lodash/defaultsDeep'
 
 export interface Margin {
-  top: number
-  right: number
-  bottom: number
-  left: number
+  top?: number
+  right?: number
+  bottom?: number
+  left?: number
+}
+
+export enum AxisType {
+  time = 'time',
+  value = 'value',
+  degrees = 'degrees',
+  band = 'band'
+}
+
+export interface AxisOptions {
+  label?: string;
+  type?: AxisType;
+  unit?: string;
+  showGrid?: boolean;
+  format?: Function;
+  domain?: [number, number] | [Date, Date];
 }
 
 export interface AxesOptions {
   transitionTime?: number
-  x?: any[]
-  y?: any[]
   margin?: Margin
 }
 
@@ -40,7 +54,7 @@ export abstract class Axis {
   width: number
   height: number
   margin: { top: number; right: number; bottom: number; left: number }
-  options: AxesOptions
+  options: AxesOptions = {}
   chartGroup: any
   charts: Chart[]
   initialDraw: boolean = true
@@ -49,22 +63,23 @@ export abstract class Axis {
 
   constructor(container: HTMLElement, width: number, height: number, options: AxesOptions, defaultOptions: any) {
     this.container = container
-    this.options = merge(this.options,
-      this.options,
-      defaultOptions,
-      options
+    defaultsDeep(this.options,
+      options,
+      defaultOptions
     )
     this.timeZone = 'Europe/Amsterdam'
 
     this.margin = { ...{ top: 40, right: 40, bottom: 40, left: 40 }, ...options.margin }
-    this.setSize(height, width)
     this.svg = d3
       .select(container)
       .append('svg')
-      .attr('width', '100%')
-      .attr('height', '100%')
+      // .attr('width', '100%')
+      // .attr('height', '100%')
       .attr('class', 'wb-charts')
       .attr('overflow', 'visible')
+      // .attr('color', 'white')
+      // .attr('fill', 'white')
+    this.setSize(height, width)
 
     this.defs = this.svg.append('defs')
     this.canvas = this.svg
@@ -73,6 +88,12 @@ export abstract class Axis {
     this.createTooltip()
     this.charts = []
     this.visitors = []
+  }
+
+  setOptions (options: AxesOptions) {
+    defaultsDeep(this.options,
+      options
+    )
   }
 
   setSize(height?: number, width?: number) {
@@ -85,6 +106,11 @@ export abstract class Axis {
       this.height = 0
       this.width = 0
     }
+    this.svg
+      .attr('width', containerWidth)
+      .attr('height', containerHeight)
+      .attr('viewBox', `0 0 ${containerWidth} ${containerHeight}`)
+
   }
 
   resize() {

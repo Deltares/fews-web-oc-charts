@@ -14,6 +14,7 @@ function mean(x: number[] | number) {
 
 interface ChartOptionItem {
   includeInTooltip?: boolean;
+  format?: Function;
 }
 
 interface ChartOptions {
@@ -21,19 +22,19 @@ interface ChartOptions {
   y? : ChartOptionItem;
   radial? : ChartOptionItem;
   angular? : ChartOptionItem;
-  transitionTime: number
+  transitionTime?: number
   colorScale?: any
-  symbolId: number
+  symbolId?: number
 }
 
 export abstract class Chart {
-  _data: any
+  protected _data: any
+  protected _extent: any[]
   group: any
   colorMap: any
   id: string
   options: ChartOptions
   axisIndex: AxisIndex
-  _extent: any[]
   style: SvgProperties
   cssSelector: string
 
@@ -141,14 +142,14 @@ export abstract class Chart {
 
   abstract plotterCartesian(axis: CartesianAxis, dataKeys: any)
   abstract plotterPolar(axis: PolarAxis, dataKeys: any)
-  abstract drawLegendSymbol(entry: any)
+  abstract drawLegendSymbol(asSvgElement?: boolean)
 
   protected selectGroup(axis: Axis, cssClass: string) {
     if (this.group == null) {
       this.group = axis.chartGroup.append('g')
       if (axis instanceof PolarAxis) {
         let direction = -axis.direction
-        let intercept = 90 - axis.intercept
+        let intercept = 90 - 180 * axis.intercept / Math.PI
         this.group.attr('transform', 'rotate(' + intercept + ')scale(' + direction + ' ,1)')
       }
       this.group.attr('data-id', this.id)
@@ -159,7 +160,7 @@ export abstract class Chart {
         } else {
           this.group.attr('class', cssClass)
         }
-      } else {
+      } else if (this.style) {
         Object.entries(this.style).forEach(
           ([prop, val]) => this.group.style(prop, val))
       }

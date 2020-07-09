@@ -83,12 +83,19 @@ export class ChartHistogram extends Chart {
     console.error('plotterPolar is not implemented for ChartHistogram')
   }
 
-  drawLegendSymbol(entry) {
+  drawLegendSymbol(asSvgElement?: boolean) {
     let chartElement = this.group
       .select('path')
       .node() as Element
     let style = window.getComputedStyle(chartElement)
-    entry
+    let newElement = document.createElement('div')
+    const svg = d3.create('svg')
+      .attr('width',20)
+      .attr('height',20)
+    const group = svg
+      .append('g')
+      .attr('transform', 'translate(10 0)')
+    const element = group.append('line')
       .append('rect')
       .attr('x', 0)
       .attr('y', -5)
@@ -97,9 +104,11 @@ export class ChartHistogram extends Chart {
       .style('fill', style.getPropertyValue('fill'))
       .append('rect')
       .attr('x', 0)
-      .attr('y', -5)
+      .attr('y', -1)
       .attr('width', 10)
       .attr('height', 6)
       .style('fill', style.getPropertyValue('fill'))
+    if (asSvgElement) return element.node()
+    return svg.node()
   }
 }

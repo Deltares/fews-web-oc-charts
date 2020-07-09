@@ -62,13 +62,18 @@ export class ChartLine extends Chart {
     line.datum(this.data)
   }
 
-  drawLegendSymbol( entry ) {
+  drawLegendSymbol(asSvgElement?: boolean) {
     let chartElement = this.group
       .select('path')
       .node() as Element
     let style = window.getComputedStyle(chartElement)
-    entry
-      .append('line')
+    const svg = d3.create('svg')
+      .attr('width',20)
+      .attr('height',20)
+    const group = svg
+      .append('g')
+      .attr('transform','translate(0, 10)')
+    const element = group.append('line')
       .attr('x1', 0)
       .attr('x2', 20)
       .attr('y1', 0)
@@ -76,5 +81,7 @@ export class ChartLine extends Chart {
       .style('stroke', style.getPropertyValue('stroke'))
       .style('stroke-width', style.getPropertyValue('stroke-width'))
       .style('stroke-dasharray', style.getPropertyValue('stroke-dasharray'))
+    if (asSvgElement) return element.node()
+    return svg.node()
   }
 }

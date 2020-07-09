@@ -1,32 +1,22 @@
 import * as d3 from 'd3'
-import { Axis, AxesOptions, AxisIndex } from './axis'
+import { Axis, AxesOptions, AxisType, AxisOptions } from './axis'
+import { generateMultiFormat } from '../utils/date'
 import momenttz from 'moment-timezone'
 
-enum AxisPosition {
+export enum AxisPosition {
   Top = 'top',
   Bottom = 'bottom',
   Left = 'left',
   Right = 'right',
 }
 
-export enum AxisType {
-  value = 'value',
-  time = 'time',
-  degrees = 'degrees'
-}
-
-export interface AxisOptions {
-  label?: string;
-  type?: AxisType;
-  unit?: string;
-  showGrid?: boolean;
+export interface CartesianAxisOptions extends AxisOptions {
   position?: AxisPosition;
-  domain?: [number, number] | [Date, Date];
 }
 
 export interface CartesianAxesOptions extends AxesOptions {
-  x?: AxisOptions[]
-  y?: AxisOptions[]
+  x?: CartesianAxisOptions[]
+  y?: CartesianAxisOptions[]
 }
 
 export class CartesianAxis extends Axis {
@@ -36,6 +26,7 @@ export class CartesianAxis extends Axis {
   yScale: Array<any> = []
   clipPathId: string
   timeZoneOffset: number
+  options: CartesianAxesOptions
   static readonly defaultOptions = {
     x: [ { type: AxisType.value } ],
     y: [ { type: AxisType.value } ]
@@ -130,6 +121,7 @@ export class CartesianAxis extends Axis {
           }
         }
         scale.domain(extent)
+        if (options.nice === true) scale.nice()
       }
     }
   }
@@ -149,6 +141,7 @@ export class CartesianAxis extends Axis {
           }
         }
         scale.domain(extent)
+        if (options.nice === true) scale.nice()
       }
     }
   }
@@ -171,7 +164,7 @@ export class CartesianAxis extends Axis {
     this.zoom()
   }
 
-  updateXAxis (options: AxisOptions[]) {
+  updateXAxis (options: CartesianAxisOptions[]) {
     for (const key in this.xScale) {
       let scale = this.xScale[key]
       let axis = undefined
@@ -197,7 +190,7 @@ export class CartesianAxis extends Axis {
           return new Date(d.getTime() - m.utcOffset() * 60000);
         })
         axis.tickValues(offsetValues)
-        axis.tickFormat(this.generateMultiFormat())
+        axis.tickFormat(generateMultiFormat(this.timeZone))
         grid.tickValues(offsetValues)
       } else if (options[key].type === AxisType.degrees) {
         let domain = scale.domain()
@@ -219,7 +212,7 @@ export class CartesianAxis extends Axis {
     }
   }
 
-updateYAxis (options: AxisOptions[]) {
+updateYAxis (options: CartesianAxisOptions[]) {
   for (const key in this.yScale) {
     let scale = this.yScale[key]
     let axis = undefined
@@ -244,7 +237,7 @@ updateYAxis (options: AxisOptions[]) {
         return new Date(d.getTime() - m.utcOffset() * 60000);
       })
       axis.tickValues(offsetValues)
-      axis.tickFormat(this.generateMultiFormat())
+      axis.tickFormat(generateMultiFormat(this.timeZone))
       grid.tickValues(offsetValues)
     } else if (options[key].type === AxisType.degrees) {
       let domain = scale.domain()
@@ -271,7 +264,7 @@ updateYAxis (options: AxisOptions[]) {
     this.setCanvas()
     this.updateXAxis(this.options.x)
     this.updateYAxis(this.options.y)
-
+    this.updateLabels(this.options)
     // if (this.options.transitionTime > 0 && !this.initialDraw) {
     //   let t = d3
     //     .transition()
@@ -306,6 +299,48 @@ updateYAxis (options: AxisOptions[]) {
     // this.initialDraw = false
   }
 
+  updateLabels (options) {
+    const g = this.canvas
+    if (options.y) {
+      if (options.y[0]?.label) {
+        g.select('.y0.label')
+          .text(this.options.y[0].label)
+      }
+      if (this.options.y[0]?.unit) {
+        g.select('.y0.unit')
+          .text(this.options.y[0].unit)
+      }
+      if (this.options.y[1]?.label) {
+        g.select('.y1.label')
+          .attr('x', this.width)
+          .text(this.options.y[1].label)
+      }
+      if (this.options.y[1]?.unit) {
+        g.select('.y1.unit')
+          .attr('x', this.width + 10)
+          .text(this.options.y[1].unit)
+      }
+    }
+    if (this.options.x[0]?.label) {
+      g.select('.x0.label')
+      .attr('x', this.width / 2)
+        .attr('y', this.height + 30)
+        .text(this.options.x[0].label)
+    }
+    if (this.options.x[0]?.unit) {
+      g.select('.x0.unit')
+      .attr('x', this.width + 10)
+        .attr('y', this.height + 9)
+        .text(this.options.x[0].unit)
+    }
+
+    if (this.options.x[1]?.unit) {
+      g.select('.x1.unit')
+        .attr('x', this.width + 10)
+        .text(this.options.x[1].unit)
+    }
+  }
+
   showTooltip(html: string) {
     this.tooltip
       .transition()
@@ -317,7 +352,7 @@ updateYAxis (options: AxisOptions[]) {
       .style('top', d3.event.pageY + 'px')
   }
 
-  protected initXScales (options: AxisOptions[]) {
+  protected initXScales (options: CartesianAxisOptions[]) {
     for ( let key in options) {
       let scale
       switch (options[key].type) {
@@ -332,7 +367,7 @@ updateYAxis (options: AxisOptions[]) {
     }
   }
 
-  protected initYScales (options: AxisOptions[]) {
+  protected initYScales (options: CartesianAxisOptions[]) {
     for ( let key in options) {
       let scale
       switch (options[key].type) {
@@ -373,6 +408,7 @@ updateYAxis (options: AxisOptions[]) {
     if (this.options.y) {
       if (this.options.y[0]?.label) {
         g.append('text')
+        .attr('class','y0 label')
           .attr('x', 0)
           .attr('y', -9)
           .attr('text-anchor', 'start')
@@ -382,6 +418,7 @@ updateYAxis (options: AxisOptions[]) {
       }
       if (this.options.y[0]?.unit) {
         g.append('text')
+          .attr('class','y0 unit')
           .attr('x', -9)
           .attr('y', -9)
           .attr('text-anchor', 'end')
@@ -391,6 +428,7 @@ updateYAxis (options: AxisOptions[]) {
       }
       if (this.options.y[1]?.label) {
         g.append('text')
+          .attr('class','y1 label')
           .attr('x', this.width)
           .attr('y', -9)
           .attr('text-anchor', 'end')
@@ -400,6 +438,7 @@ updateYAxis (options: AxisOptions[]) {
       }
       if (this.options.y[1]?.unit) {
         g.append('text')
+          .attr('class','y1 unit')
           .attr('x', this.width + 10)
           .attr('y', -9)
           .attr('text-anchor', 'start')
@@ -410,6 +449,7 @@ updateYAxis (options: AxisOptions[]) {
     }
     if (this.options.x[0]?.label) {
       g.append('text')
+        .attr('class','x0 label')
         .attr('x', this.width / 2)
         .attr('y', this.height + 30)
         .attr('text-anchor', 'middle')
@@ -419,6 +459,7 @@ updateYAxis (options: AxisOptions[]) {
     }
     if (this.options.x[0]?.unit) {
       g.append('text')
+        .attr('class','x0 unit')
         .attr('x', this.width + 10)
         .attr('y', this.height + 9)
         .attr('dy', '0.71em')
@@ -430,34 +471,11 @@ updateYAxis (options: AxisOptions[]) {
 
     if (this.options.x[1]?.unit) {
       g.append('text')
+        .attr('class','x1 unit')
         .attr('x', this.width + 10)
         .attr('y', -9)
         .attr('text-anchor', 'start')
         .text(this.options.x[1].unit)
     }
   }
-
-  generateMultiFormat () {
-    let timeZone = this.timeZone
-    return function(date) {
-      let m = momenttz(date as Date).tz(timeZone)
-      let offsetDate = new Date ( date.getTime() + m.utcOffset()*60000)
-      return (d3.utcSecond(offsetDate) < offsetDate
-        ? m.format('.SSS')
-        : d3.utcMinute(offsetDate) < offsetDate
-          ? m.format(':ss')
-          : d3.utcHour(offsetDate) < offsetDate
-            ? m.format('HH:mm')
-            : d3.utcDay(offsetDate) < offsetDate
-              ? m.format('HH:mm')
-              : d3.utcMonth(offsetDate) < offsetDate
-                ? d3.utcWeek(offsetDate) < offsetDate
-                  ? m.format( 'dd DD')
-                  : m.format( 'MMM DD')
-                : d3.utcYear(offsetDate) < offsetDate
-                  ? m.format( 'MMMM')
-                  : m.format('YYYY'))
-    }
-  }
-
 }

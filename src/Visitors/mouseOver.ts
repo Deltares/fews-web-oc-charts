@@ -179,17 +179,22 @@ export class MouseOver implements Visitor {
       .selectAll('.mouse-per-line')
       .data(traces)
 
-    mousePerLine
+    const enter = mousePerLine
       .enter()
       .append('g')
       .attr('class', 'mouse-per-line')
+      .attr('data-id', d => d)
       .append('circle')
+
+    mousePerLine.enter()
+      .merge(mousePerLine)
+      .select('circle')
       .attr('r', 3)
       .style('fill', 'white')
       .style('stroke-width', '1px')
       .style('opacity', '0')
 
-      mousePerLine
+    mousePerLine
       .exit()
       .remove()
   }

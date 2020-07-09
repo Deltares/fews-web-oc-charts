@@ -1,3 +1,8 @@
+.wb-charts svg {
+  color: white;
+  fill: white;
+}
+
 .axis-canvas {
     fill:rgb(89, 89, 89);
 }
@@ -13,6 +18,11 @@
 }
 
 .grid text { display: none; }
+
+.charts g {
+  stroke: white;
+  color: white;
+}
 
 .view {
   fill: none;

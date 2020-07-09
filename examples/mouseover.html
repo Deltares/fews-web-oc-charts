@@ -90,6 +90,11 @@ border-color: transparent black transparent transparent;
             <div id="chart-container-1"></div>
             <div id="chart-legend-1"></div>
         </div>
+        <button type="button" data-id="median" onclick="toggleChart(this)">median</button>
+        <button type="button" data-id="control" onclick="toggleChart(this)">control</button>
+        <button type="button" data-id="percent50,percent90" onclick="toggleChart(this)">percentile</button>
+        <button type="button" data-id="ensemble" onclick="toggleChart(this)">ensemble</button>
+
         <script src="/dist/wb-charts.umd.js"></script>
         <script type="text/javascript">
 
@@ -222,6 +227,17 @@ border-color: transparent black transparent transparent;
     window.setTimeout(dataload,1000);
 
     window.onresize = function() { axis.resize();};
+
+    function toggleChart (element) {
+      console.log('toggle', element)
+      let ids = element.getAttribute('data-id').split(',');
+      // console.log()
+      for (const id of ids) {
+        console.log(id)
+        wbCharts.toggleChartVisisbility(axis, id)
+      }
+    }
+
     </script>
 
 
