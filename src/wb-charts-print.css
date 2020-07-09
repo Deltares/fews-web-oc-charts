@@ -1,12 +1,12 @@
+@media only print {
 
-/* .wb-charts svg {
-  color: black;
-  fill: black;
-} */
+.wb-charts g {
+  color: none;
+  fill: none;
+}
 
-.axis-canvas{
+g .axis-canvas  {
   fill: lightgray;
-  stroke: gray;
 }
 
 .axis path { stroke-width: 1px; stroke: black;}
@@ -15,8 +15,7 @@
 .grid {
     fill: none;
     stroke-width: 1px;
-    stroke: black;
-    color: black;
+    stroke: none;
     stroke-dasharray: 2px;
 }
 
@@ -78,3 +77,4 @@
   fill: black;
 }
 
+}
