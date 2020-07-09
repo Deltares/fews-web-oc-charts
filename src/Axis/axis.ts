@@ -1,7 +1,7 @@
 import * as d3 from 'd3'
 import { Chart } from '../Charts'
 import { Visitor } from '../Visitors'
-import merge from 'lodash/merge'
+import defaultsDeep from 'lodash/defaultsDeep'
 
 export interface Margin {
   top: number
@@ -40,7 +40,7 @@ export abstract class Axis {
   width: number
   height: number
   margin: { top: number; right: number; bottom: number; left: number }
-  options: AxesOptions
+  options: AxesOptions = {}
   chartGroup: any
   charts: Chart[]
   initialDraw: boolean = true
@@ -49,10 +49,9 @@ export abstract class Axis {
 
   constructor(container: HTMLElement, width: number, height: number, options: AxesOptions, defaultOptions: any) {
     this.container = container
-    this.options = merge(this.options,
-      this.options,
-      defaultOptions,
-      options
+    defaultsDeep(this.options,
+      options,
+      defaultOptions
     )
     this.timeZone = 'Europe/Amsterdam'
 
