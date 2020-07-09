@@ -64,8 +64,8 @@ export abstract class Axis {
   constructor(container: HTMLElement, width: number, height: number, options: AxesOptions, defaultOptions: any) {
     this.container = container
     defaultsDeep(this.options,
-      defaultOptions,
-      options
+      options,
+      defaultOptions
     )
     this.timeZone = 'Europe/Amsterdam'
 
