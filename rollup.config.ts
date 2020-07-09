@@ -1,7 +1,7 @@
 import resolve from '@rollup/plugin-node-resolve'
 import commonjs from '@rollup/plugin-commonjs'
 import sourceMaps from 'rollup-plugin-sourcemaps'
-import camelCase from 'lodash.camelcase'
+import camelCase from 'lodash/camelcase'
 import typescript from '@rollup/plugin-typescript';
 import json from '@rollup/plugin-json'
 import copy from 'rollup-plugin-copy-assets'
@@ -46,8 +46,9 @@ export default {
 
     copy({
       assets: [
-        `./src/${libraryName}.css`,
+        `./src/${libraryName}-dark.css`,
         `./src/${libraryName}-light.css`,
+        `./src/${libraryName}-print.css`,
       ],
     }),
 
