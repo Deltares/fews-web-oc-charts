@@ -1,6 +1,6 @@
 import * as d3 from 'd3'
 import { Axis, AxesOptions, AxisType, AxisOptions } from './axis'
-import merge from 'lodash/merge'
+import defaultsDeep from 'lodash/defaultsDeep'
 import momenttz from 'moment-timezone'
 
 // import { scaleLinear } from 'd3-scale'
@@ -45,8 +45,8 @@ export class PolarAxis extends Axis {
     radial: {}
   }
   private angularDomain: number[] | Date[]
-  angularAxisOptions: AngularAxisOptions
-  radialAxisOptions: RadialAxisOptions
+  angularAxisOptions: AngularAxisOptions = {}
+  radialAxisOptions: RadialAxisOptions = {}
 
 
   constructor(container: HTMLElement, width: number, height: number, options?: PolarAxisOptions) {
@@ -60,8 +60,8 @@ export class PolarAxis extends Axis {
     this.outerRadius = Math.min(this.width, this.height) / 2
     this.angularRange = options.angular.range ? options.angular.range : [0, 2 * Math.PI]
     this.angularDomain = options.angular.domain ? options.angular.domain : [0, 360]
-    this.angularAxisOptions = merge(this.angularAxisOptions, options.angular, { type: 'value'})
-    this.radialAxisOptions = merge(this.radialAxisOptions, options.radial, { type: 'value'})
+    defaultsDeep(this.angularAxisOptions, options.angular, { type: 'value'})
+    defaultsDeep(this.radialAxisOptions, options.radial, { type: 'value'})
 
     let startAngle = Math.PI/2  - this.intercept + this.angularRange[0]
     let endAngle =  Math.PI/2 - this.intercept + this.angularRange[1]
@@ -83,7 +83,6 @@ export class PolarAxis extends Axis {
           .startAngle(startAngle)
           .endAngle(endAngle)
       )
-
     this.setRange()
     this.initGrid()
     this.createChartGroup()
@@ -99,7 +98,6 @@ export class PolarAxis extends Axis {
         radialExtent = d3.extent(d3.merge([radialExtent, [].concat(...chartRadialExtent)]))
       }
     }
-    console.log(radialExtent)
     this.radialScale.domain(radialExtent)
     for (let chart of this.charts) {
       chart.plotter(this, chart.axisIndex)
