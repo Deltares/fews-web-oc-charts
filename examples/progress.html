@@ -36,7 +36,7 @@
   <script src="/js/d3js/d3.v5.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.2/FileSaver.min.js"></script>
   <link rel="stylesheet" href="/dist/wb-charts-print.css">
-  <link rel="stylesheet" media="screen" href="/dist/wb-charts.css">
+  <link rel="stylesheet" media="screen" href="/dist/wb-charts-dark.css">
 </head>
 
 <body>
@@ -109,6 +109,8 @@
       },
       innerRadius: 100
     });
+    var clockHands = new wbCharts.ClockHands({ hoursHand: 'classic', minutesHand: 'classic'})
+    polarAxis1.accept(clockHands)
 
     var container2 = document.getElementById("2");
     var polarAxis2 = new wbCharts.PolarAxis(container2, null, null, {
@@ -128,6 +130,8 @@
     innerRadius: 100,
     });
 
+    var clockHands2 = new wbCharts.ClockHands()
+    polarAxis2.accept(clockHands2)
 
 
     var planning = [
@@ -184,37 +188,39 @@
     ];
 
     var planned = new wbCharts.ChartProgress(planning, {
-      colorScale: wbCharts.AUTO_SCALE, t: { format: dateFormat }, style: { fill: 'none',
-      'stroke-width': '2px', stroke: 'currentColor', 'stroke-dasharray': '5 5'}
-    });
+      colorScale: wbCharts.AUTO_SCALE, t: { format: dateFormat }});
     var progress = new wbCharts.ChartProgress(progressData, {
       colorScale: wbCharts.AUTO_SCALE, t: { format: dateFormat }
     });
     var expected = new wbCharts.ChartProgress(expextedData, {
-      colorScale: wbCharts.AUTO_SCALE, t: { format: dateFormat }, style: { 'fill-opacity': '.1'}
-    });
+      colorScale: wbCharts.AUTO_SCALE, t: { format: dateFormat }});
 
-    expected.addTo(polarAxis1, {radial: { key: "x"}, angular: {key: "y"}, color: { key: 'v'}});
+    expected.addTo(polarAxis1, {radial: { key: "x"}, angular: {key: "y"}, color: { key:
+    'v'}},'expected', { 'fill-opacity': '.1'} );
     progress.addTo(polarAxis1, {radial: { key: "x"}, angular: {key: "y"}, color: { key: 'v'}});
-    planned.addTo(polarAxis1, {radial: { key: "x"}, angular: {key: "y"}, color: { key: 'v'}});
+    planned.addTo(polarAxis1, {radial: { key: "x"}, angular: {key: "y"}} ,
+    'planned',
+    { fill: 'none', 'stroke-width': '2px', stroke: 'white', 'stroke-dasharray': '5 5'}) ;
 
     polarAxis1.redraw()
 
     var planned2 = new wbCharts.ChartProgress(planning, {
-    colorScale: wbCharts.AUTO_SCALE, t: { format: dateFormat }, style: { fill: 'none',
-    'stroke-width': '2px', stroke: 'currentColor', 'stroke-dasharray': '5 5'}
+    colorScale: wbCharts.AUTO_SCALE, t: { format: dateFormat }
     });
     var progress2 = new wbCharts.ChartProgress(progressData, {
     colorScale: wbCharts.AUTO_SCALE, t: { format: dateFormat }
     });
 
     var expected2 = new wbCharts.ChartProgress(expextedData, {
-    colorScale: wbCharts.AUTO_SCALE, t: { format: dateFormat }, style: { 'fill-opacity': '.1'}
-    });
+    colorScale: wbCharts.AUTO_SCALE, t: { format: dateFormat }});
 
-    expected2.addTo(polarAxis1, {radial: { key: "x"}, angular: {key: "y"}, color: { key: 'v'}});
-    progress2.addTo(polarAxis1, {radial: { key: "x"}, angular: {key: "y"}, color: { key: 'v'}});
-    planned2.addTo(polarAxis1, {radial: { key: "x"}, angular: {key: "y"}, color: { key: 'v'}});
+    expected2.addTo(polarAxis2,
+      {radial: { key: "x"}, angular: {key: "y"}, color: { key: 'v'}},
+      'expected',
+      { 'fill-opacity': '.1'} );
+    progress2.addTo(polarAxis2, {radial: { key: "x"}, angular: {key: "y"}, color: { key: 'v'}});
+    planned2.addTo(polarAxis2, {radial: { key: "x"}, angular: {key: "y"}}, 'planned',
+    { fill: 'none', 'stroke-width': '2px', stroke: 'white', 'stroke-dasharray': '5 5'}) ;
     polarAxis2.redraw()
   </script>
 
