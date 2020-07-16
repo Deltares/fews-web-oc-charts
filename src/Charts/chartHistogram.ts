@@ -48,10 +48,10 @@ export class ChartHistogram extends Chart {
         return colorMap(colorScale(d[colorKey]))
       })
       .attr('y', function(d: any) {
-        return d[yKey] === null ? axis.height : yScale(d[yKey])
+        return d[yKey] === null ? yScale(0) : Math.min(yScale(d[yKey]), yScale(0))
       })
       .attr('height', function(d: any) {
-        return d[yKey] === null ? 0 : axis.height - yScale(d[yKey])
+        return d[yKey] === null ? 0 : Math.abs(yScale(0) - yScale(d[yKey]))
       })
 
       .merge(elements)
@@ -72,41 +72,49 @@ export class ChartHistogram extends Chart {
         return colorMap(colorScale(d[colorKey]))
       })
       .attr('y', function(d: any) {
-        return d[yKey] === null ? axis.height : yScale(d[yKey])
+        return d[yKey] === null ? yScale(0) : Math.min(yScale(d[yKey]), yScale(0))
       })
       .attr('height', function(d: any) {
-        return d[yKey] === null ? 0 : axis.height - yScale(d[yKey])
+        return d[yKey] === null ? 0 : Math.abs(yScale(0) - yScale(d[yKey]))
       })
   }
 
   plotterPolar(axis: PolarAxis, dataKeys: any) {
-    console.error('plotterPolar is not implemented for ChartHistogram')
+    throw new Error('plotterPolar is not implemented for ChartHistogram')
   }
 
   drawLegendSymbol(asSvgElement?: boolean) {
     let chartElement = this.group
-      .select('path')
+      .select('rect')
       .node() as Element
     let style = window.getComputedStyle(chartElement)
-    let newElement = document.createElement('div')
     const svg = d3.create('svg')
       .attr('width',20)
       .attr('height',20)
     const group = svg
       .append('g')
-      .attr('transform', 'translate(10 0)')
-    const element = group.append('line')
+      .attr('transform', 'translate(0, 10)')
+    const element = group.append('g')
+    element
       .append('rect')
       .attr('x', 0)
-      .attr('y', -5)
-      .attr('width', 10)
-      .attr('height', 10)
+      .attr('y', -8)
+      .attr('width', 5)
+      .attr('height', 18)
       .style('fill', style.getPropertyValue('fill'))
+    element
       .append('rect')
-      .attr('x', 0)
-      .attr('y', -1)
-      .attr('width', 10)
-      .attr('height', 6)
+      .attr('x', 5)
+      .attr('y', -6)
+      .attr('width', 5)
+      .attr('height', 16)
+      .style('fill', style.getPropertyValue('fill'))
+    element
+      .append('rect')
+      .attr('x', 10)
+      .attr('y', -5)
+      .attr('width', 5)
+      .attr('height', 15)
       .style('fill', style.getPropertyValue('fill'))
     if (asSvgElement) return element.node()
     return svg.node()
