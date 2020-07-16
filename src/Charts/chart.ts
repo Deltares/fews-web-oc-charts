@@ -169,7 +169,7 @@ export abstract class Chart {
   }
 
   get dataKeys () {
-    const dataKeys: {x?: string, y?: string, radial?: string, angular?: string, color?: string} = {}
+    const dataKeys: {x?: string, x1?: string, y?: string, radial?: string, angular?: string, color?: string} = {}
     for (let key in this.axisIndex) {
       dataKeys[key] = this.axisIndex[key].key ? this.axisIndex[key].key : key
     }
