@@ -6,4 +6,5 @@ export * from './chartRange'
 export * from './chartHistogram'
 export * from './chartProgress'
 export * from './chartBar'
+export * from './chartMatrix'
 

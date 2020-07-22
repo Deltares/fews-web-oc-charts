@@ -117,6 +117,7 @@ export class CartesianAxis extends Axis {
         for (let chart of this.charts) {
           if ( chart.axisIndex.x?.axisIndex === +key ) {
             extent = chart.data.map(d => d[chart.dataKeys.x])
+            break
           }
         }
         scale.domain(extent)
@@ -140,6 +141,15 @@ export class CartesianAxis extends Axis {
       const scale = this.yScale[key]
       if (this.options.y[key]?.domain) {
         scale.domain(this.options.y[key].domain)
+      } else if (this.options.y[key]?.type === AxisType.band) {
+        let extent = new Array(0)
+        for (let chart of this.charts) {
+          if ( chart.axisIndex.y?.axisIndex === +key ) {
+            extent = chart.data.map(d => d[chart.dataKeys.y])
+            break
+          }
+        }
+        scale.domain(extent)
       } else if (options.autoScale === true) {
         let extent = new Array(2)
         for (let chart of this.charts) {
@@ -369,6 +379,7 @@ updateYAxis (options: CartesianAxisOptions[]) {
           break
         case AxisType.band:
           scale = d3.scaleBand()
+          scale.padding(0.05)
           break
         default:
           scale = d3.scaleLinear()
@@ -388,6 +399,7 @@ updateYAxis (options: CartesianAxisOptions[]) {
           break
         case AxisType.band:
           scale = d3.scaleBand()
+          scale.padding(0.05)
           break
         default:
           scale = d3.scaleLinear()
