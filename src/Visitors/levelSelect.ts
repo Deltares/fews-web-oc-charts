@@ -4,7 +4,7 @@ import { Visitor } from './visitor'
 import defaultsDeep from 'lodash/defaultsDeep'
 
 type LevelSelectOptions = {
-  [key in 'x' | 'y'] : { axisIndex: number }
+  y : { axisIndex: number }
 }
 
 export class LevelSelect implements Visitor {
@@ -14,7 +14,9 @@ export class LevelSelect implements Visitor {
   value: number
   callback: Function
   format: any
-  options: LevelSelectOptions
+  options: LevelSelectOptions = {
+    y: { axisIndex : 0 }
+  }
 
   // use shared Visitor constuctor (Visitor should be a abstract class)
   constructor(value: number, callback: Function, options: LevelSelectOptions) {
@@ -22,10 +24,7 @@ export class LevelSelect implements Visitor {
     this.callback = callback
     this.format = d3.format('.2f')
     defaultsDeep(this.options,
-      options,
-      {
-        y: { axisIndex : 0 }
-      },
+      options
     ) as LevelSelectOptions
   }
 
