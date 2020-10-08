@@ -75,24 +75,17 @@ export class WarningLevels implements Visitor {
         return 'waarschuwing waardes' + escalationLevels[i].c + '' + d
       })
 
-    if (!this.sections) {
-      this.sections = this.axis.canvas
-        .select('.axis-canvas')
-        .append('g')
-        .attr('class', 'warning-sections')
-      this.sections
-        .selectAll('rect')
-        .data(this.warningAxis.tickValues())
-        .enter()
-        .append('rect')
-    }
+    this.sections = this.axis.canvas
+      .select('.axis-canvas')
+      .append('g')
+      .attr('class', 'warning-sections')
 
     this.redraw()
   }
 
   redraw() {
     let escalationLevels = this.escalationLevels
-    let scale = this.axis.yScale[this.options.y.axisIndex].copy()
+    let scale = this.axis.yScale[0].copy()
     let tickValues = escalationLevels
       .filter(function(el) {
         let domain = scale.domain()
@@ -103,6 +96,7 @@ export class WarningLevels implements Visitor {
       })
 
     this.warningAxis.tickValues(tickValues)
+    this.warningAxis.scale(scale)
 
     let transition = d3.transition().duration(this.transitionTime)
     this.group
@@ -113,32 +107,37 @@ export class WarningLevels implements Visitor {
 
     let that = this
     let escY = function(d, i) {
-      if (escalationLevels[i].c === '<') {
-        return that.scale(d)
+      if (d.c === '<') {
+        return scale(d.val)
       } else {
         if (i === escalationLevels.length - 1) return 0
-        return that.scale(escalationLevels[i + 1].val)
+        return scale(escalationLevels[i + 1].val)
       }
     }
 
     let escHeight = function(d, i) {
-      if (escalationLevels[i].c === '<') {
-        if (i === 0) return Math.max(0, that.axis.height - that.scale(d))
-        return Math.max(0, that.scale(escalationLevels[i - 1].val) - that.scale(d))
+      if (d.c === '<') {
+        if (i === 0) return Math.max(0, that.axis.height - scale(d.val))
+        return Math.max(0, scale(escalationLevels[i - 1].val) - scale(d.val))
       } else {
-        if (i === escalationLevels.length - 1) return Math.max(0, that.scale(d))
-        return Math.max(0, that.scale(d) - that.scale(escalationLevels[i + 1].val))
+        if (i === escalationLevels.length - 1) return Math.max(0, scale(d.val))
+        return Math.max(0, scale(d.val) - scale(escalationLevels[i + 1].val))
       }
     }
-    let escFill = function(d, i) {
-      return escalationLevels[i].color
-    }
 
-    this.sections
+    let rects = this.sections
       .selectAll('rect')
+      .data(this.escalationLevels)
+
+    rects
+      .enter()
+      .append('rect')
+      .merge(rects)
       .attr('y', escY)
       .attr('width', this.axis.width)
       .attr('height', escHeight)
-      .attr('fill', escFill)
+      .attr('fill', d => d.color)
+
+    rects.exit().remove()
   }
 }
