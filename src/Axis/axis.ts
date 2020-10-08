@@ -25,6 +25,7 @@ export interface AxisOptions {
   showGrid?: boolean;
   format?: Function;
   domain?: [number, number] | [Date, Date];
+  nice?: boolean;
 }
 
 export interface AxesOptions {
