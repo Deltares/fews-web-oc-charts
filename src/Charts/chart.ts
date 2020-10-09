@@ -1,5 +1,5 @@
 import * as d3 from 'd3'
-import { SvgProperties } from 'csstype';
+import { SvgPropertiesHyphen } from 'csstype';
 import { Axis, AxisIndex, CartesianAxis, PolarAxis } from '../Axis'
 import defaultsDeep from 'lodash/defaultsDeep'
 
@@ -35,7 +35,7 @@ export abstract class Chart {
   id: string
   options: ChartOptions
   axisIndex: AxisIndex
-  style: SvgProperties
+  style: SvgPropertiesHyphen
   cssSelector: string
 
   constructor(data: any, options: ChartOptions) {
@@ -80,7 +80,7 @@ export abstract class Chart {
     return this._extent
   }
 
-  addTo(axis: Axis, axisIndex: AxisIndex, id: string, style: SvgProperties | string) {
+  addTo(axis: Axis, axisIndex: AxisIndex, id: string, style: SvgPropertiesHyphen | string) {
     this.id = id ? id : ''
     if (typeof style === 'string') {
       this.cssSelector = style
