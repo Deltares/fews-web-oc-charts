@@ -2,6 +2,7 @@ import * as d3 from 'd3'
 import { SvgPropertiesHyphen } from 'csstype';
 import { Axis, AxisIndex, CartesianAxis, PolarAxis } from '../Axis'
 import defaultsDeep from 'lodash/defaultsDeep'
+import merge from 'lodash/merge'
 
 export const AUTO_SCALE = 1
 
@@ -15,16 +16,26 @@ function mean(x: number[] | number) {
 interface ChartOptionItem {
   includeInTooltip?: boolean;
   format?: Function;
+  paddingInner?: number;
+  paddingOuter?: number;
+}
+
+interface ColorOptionItem {
+  scale?: any;
+  range?: any;
+  map?: any;
 }
 
 interface ChartOptions {
   x? : ChartOptionItem;
+  x1? : ChartOptionItem;
   y? : ChartOptionItem;
   radial? : ChartOptionItem;
   angular? : ChartOptionItem;
-  transitionTime?: number
-  colorScale?: any
-  symbolId?: number
+  color?: ColorOptionItem;
+  transitionTime?: number;
+  colorScale?: any;
+  symbolId?: number;
 }
 
 export abstract class Chart {
@@ -104,6 +115,12 @@ export abstract class Chart {
     return this
   }
 
+  setAxisIndex (axisIndex: AxisIndex) {
+    merge(this.axisIndex,
+      axisIndex
+    )
+  }
+
   plotter(axis: Axis, axisIndex: AxisIndex) {
     if (axis instanceof CartesianAxis) {
       this.plotterCartesian(axis, axisIndex)
@@ -169,7 +186,7 @@ export abstract class Chart {
   }
 
   get dataKeys () {
-    const dataKeys: {x?: string, y?: string, radial?: string, angular?: string, color?: string} = {}
+    const dataKeys: {x?: string, x1?: string, y?: string, radial?: string, angular?: string, color?: string} = {}
     for (let key in this.axisIndex) {
       dataKeys[key] = this.axisIndex[key].key ? this.axisIndex[key].key : key
     }
