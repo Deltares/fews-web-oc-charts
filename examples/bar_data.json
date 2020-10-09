@@ -1,0 +1,211 @@
+[{
+  "Uitgifte": "08/02/2020 00:26",
+  "tijd HW/LW": "09 Feb 02:38",
+  "leadtime": 26.2,
+  "HWLW": "HW09 Feb 02:38",
+  "Model": "Waterstand (V6)",
+  "Value": 1.18
+}, {
+  "Uitgifte": "08/02/2020 08:26",
+  "tijd HW/LW": "09 Feb 02:38",
+  "leadtime": 18.2,
+  "HWLW": "HW09 Feb 02:38",
+  "Model": "Waterstand (V6)",
+  "Value": 1.08
+}, {
+  "Uitgifte": "08/02/2020 13:16",
+  "tijd HW/LW": "09 Feb 02:38",
+  "leadtime": 13.4,
+  "HWLW": "HW09 Feb 02:38",
+  "Model": "Waterstand (V6)",
+  "Value": 1.14
+}, {
+  "Uitgifte": "08/02/2020 19:06",
+  "tijd HW/LW": "09 Feb 02:38",
+  "leadtime": 7.5,
+  "HWLW": "HW09 Feb 02:38",
+  "Model": "Waterstand (V6)",
+  "Value": 1.09
+}, {
+  "Uitgifte": "09/02/2020 00:46",
+  "tijd HW/LW": "09 Feb 02:38",
+  "leadtime": 1.9,
+  "HWLW": "HW09 Feb 02:38",
+  "Model": "Waterstand (V6)",
+  "Value": 1.03
+}, {
+  "Uitgifte": "09/02/2020 08:06",
+  "tijd HW/LW": "09 Feb 02:38",
+  "leadtime": -5.5,
+  "HWLW": "HW09 Feb 02:38",
+  "Model": "Waterstand (V6)",
+  "Value": 1.04
+}, {
+  "Uitgifte": "08/02/2020 00:26",
+  "tijd HW/LW": "09 Feb 02:38",
+  "leadtime": 26.2,
+  "HWLW": "HW09 Feb 02:38",
+  "Model": "Waterstand (V6-Kf)",
+  "Value": 1.19
+}, {
+  "Uitgifte": "08/02/2020 08:26",
+  "tijd HW/LW": "09 Feb 02:38",
+  "leadtime": 18.2,
+  "HWLW": "HW09 Feb 02:38",
+  "Model": "Waterstand (V6-Kf)",
+  "Value": 1.1
+}, {
+  "Uitgifte": "08/02/2020 13:16",
+  "tijd HW/LW": "09 Feb 02:38",
+  "leadtime": 13.4,
+  "HWLW": "HW09 Feb 02:38",
+  "Model": "Waterstand (V6-Kf)",
+  "Value": 1.15
+}, {
+  "Uitgifte": "08/02/2020 19:06",
+  "tijd HW/LW": "09 Feb 02:38",
+  "leadtime": 7.5,
+  "HWLW": "HW09 Feb 02:38",
+  "Model": "Waterstand (V6-Kf)",
+  "Value": 1.12
+}, {
+  "Uitgifte": "09/02/2020 00:46",
+  "tijd HW/LW": "09 Feb 02:38",
+  "leadtime": 1.9,
+  "HWLW": "HW09 Feb 02:38",
+  "Model": "Waterstand (V6-Kf)",
+  "Value": 1.12
+}, {
+  "Uitgifte": "09/02/2020 08:06",
+  "tijd HW/LW": "09 Feb 02:38",
+  "leadtime": -5.5,
+  "HWLW": "HW09 Feb 02:38",
+  "Model": "Waterstand (V6-Kf)",
+  "Value": 1.08
+}, {
+  "Uitgifte": "08/02/2020 00:26",
+  "tijd HW/LW": "09 Feb 02:38",
+  "leadtime": 26.2,
+  "HWLW": "HW09 Feb 02:38",
+  "Model": "Waterstand (V6-ZUNO)",
+  "Value": 1.2
+}, {
+  "Uitgifte": "08/02/2020 08:26",
+  "tijd HW/LW": "09 Feb 02:38",
+  "leadtime": 18.2,
+  "HWLW": "HW09 Feb 02:38",
+  "Model": "Waterstand (V6-ZUNO)",
+  "Value": 1.11
+}, {
+  "Uitgifte": "08/02/2020 13:16",
+  "tijd HW/LW": "09 Feb 02:38",
+  "leadtime": 13.4,
+  "HWLW": "HW09 Feb 02:38",
+  "Model": "Waterstand (V6-ZUNO)",
+  "Value": 1.18
+}, {
+  "Uitgifte": "08/02/2020 19:06",
+  "tijd HW/LW": "09 Feb 02:38",
+  "leadtime": 7.5,
+  "HWLW": "HW09 Feb 02:38",
+  "Model": "Waterstand (V6-ZUNO)",
+  "Value": 1.12
+}, {
+  "Uitgifte": "09/02/2020 00:46",
+  "tijd HW/LW": "09 Feb 02:38",
+  "leadtime": 1.9,
+  "HWLW": "HW09 Feb 02:38",
+  "Model": "Waterstand (V6-ZUNO)",
+  "Value": 1.07
+}, {
+  "Uitgifte": "09/02/2020 08:06",
+  "tijd HW/LW": "09 Feb 02:38",
+  "leadtime": -5.5,
+  "HWLW": "HW09 Feb 02:38",
+  "Model": "Waterstand (V6-ZUNO)",
+  "Value": 1.07
+}, {
+  "Uitgifte": "08/02/2020 00:26",
+  "tijd HW/LW": "09 Feb 02:38",
+  "leadtime": 26.2,
+  "HWLW": "HW09 Feb 02:38",
+  "Model": "Waterstand (V6-ZUNO Kf)",
+  "Value": 1.19
+}, {
+  "Uitgifte": "08/02/2020 08:26",
+  "tijd HW/LW": "09 Feb 02:38",
+  "leadtime": 18.2,
+  "HWLW": "HW09 Feb 02:38",
+  "Model": "Waterstand (V6-ZUNO Kf)",
+  "Value": 1.11
+}, {
+  "Uitgifte": "08/02/2020 13:16",
+  "tijd HW/LW": "09 Feb 02:38",
+  "leadtime": 13.4,
+  "HWLW": "HW09 Feb 02:38",
+  "Model": "Waterstand (V6-ZUNO Kf)",
+  "Value": 1.14
+}, {
+  "Uitgifte": "08/02/2020 19:06",
+  "tijd HW/LW": "09 Feb 02:38",
+  "leadtime": 7.5,
+  "HWLW": "HW09 Feb 02:38",
+  "Model": "Waterstand (V6-ZUNO Kf)",
+  "Value": 1.14
+}, {
+  "Uitgifte": "09/02/2020 00:46",
+  "tijd HW/LW": "09 Feb 02:38",
+  "leadtime": 1.9,
+  "HWLW": "HW09 Feb 02:38",
+  "Model": "Waterstand (V6-ZUNO Kf)",
+  "Value": 1.15
+}, {
+  "Uitgifte": "09/02/2020 08:06",
+  "tijd HW/LW": "09 Feb 02:38",
+  "leadtime": -5.5,
+  "HWLW": "HW09 Feb 02:38",
+  "Model": "Waterstand (V6-ZUNO Kf)",
+  "Value": 1.1
+}, {
+  "Uitgifte": "08/02/2020 00:26",
+  "tijd HW/LW": "09 Feb 02:38",
+  "leadtime": 26.2,
+  "HWLW": "HW09 Feb 02:38",
+  "Model": "RWS Eindverwachting ",
+  "Value": 1.12
+}, {
+  "Uitgifte": "08/02/2020 08:26",
+  "tijd HW/LW": "09 Feb 02:38",
+  "leadtime": 18.2,
+  "HWLW": "HW09 Feb 02:38",
+  "Model": "RWS Eindverwachting ",
+  "Value": 1.19
+}, {
+  "Uitgifte": "08/02/2020 13:16",
+  "tijd HW/LW": "09 Feb 02:38",
+  "leadtime": 13.4,
+  "HWLW": "HW09 Feb 02:38",
+  "Model": "RWS Eindverwachting ",
+  "Value": 1.1
+}, {
+  "Uitgifte": "08/02/2020 19:06",
+  "tijd HW/LW": "09 Feb 02:38",
+  "leadtime": 7.5,
+  "HWLW": "HW09 Feb 02:38",
+  "Model": "RWS Eindverwachting ",
+  "Value": 1.13
+}, {
+  "Uitgifte": "09/02/2020 00:46",
+  "tijd HW/LW": "09 Feb 02:38",
+  "leadtime": 1.9,
+  "HWLW": "HW09 Feb 02:38",
+  "Model": "RWS Eindverwachting ",
+  "Value": 1.13
+}, {
+  "Uitgifte": "09/02/2020 08:06",
+  "tijd HW/LW": "09 Feb 02:38",
+  "leadtime": -5.5,
+  "HWLW": "HW09 Feb 02:38",
+  "Model": "RWS Eindverwachting ",
+  "Value": null
+}]
