@@ -63,7 +63,7 @@ export abstract class Axis {
   visitors: Visitor[]
   timeZone: string
 
-  constructor(container: HTMLElement, width: number, height: number, options: AxesOptions, defaultOptions: any) {
+  constructor(container: HTMLElement, width: number | null, height: number| null, options: AxesOptions, defaultOptions: any) {
     this.container = container
     defaultsDeep(this.options,
       options,

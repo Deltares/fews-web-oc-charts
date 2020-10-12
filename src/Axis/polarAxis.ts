@@ -49,7 +49,7 @@ export class PolarAxis extends Axis {
   radialAxisOptions: RadialAxisOptions = {}
 
 
-  constructor(container: HTMLElement, width: number, height: number, options?: PolarAxisOptions) {
+  constructor(container: HTMLElement, width: number | null, height: number | null, options?: PolarAxisOptions) {
     super(container, width, height, options, PolarAxis.defaultOptions)
     this.canvas = this.canvas
       .append('g')
