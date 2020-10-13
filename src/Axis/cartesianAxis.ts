@@ -123,11 +123,19 @@ export class CartesianAxis extends Axis {
         scale.domain(extent)
       } else if (options.autoScale === true) {
         let extent = new Array(2)
+        if (this.options.x[key]?.includeZero === true) {
+          extent[0] = 0
+        }
         for (let chart of this.charts) {
           if ( chart.axisIndex.x?.axisIndex === +key ) {
             let chartExtent = chart.extent[chart.dataKeys.x]
             extent = d3.extent(d3.merge([extent, [].concat(...chartExtent)]))
           }
+        }
+        if (this.options.x[key]?.symmetric === true) {
+          const max = Math.max(Math.abs(extent[0]), Math.abs(extent[1]))
+          extent[0] = -max
+          extent[1] = max
         }
         scale.domain(extent)
         if (this.options.x[key]?.nice === true) scale.nice()
@@ -152,11 +160,19 @@ export class CartesianAxis extends Axis {
         scale.domain(extent)
       } else if (options.autoScale === true) {
         let extent = new Array(2)
+        if (this.options.y[key]?.includeZero === true) {
+          extent[0] = 0
+        }
         for (let chart of this.charts) {
           if ( chart.axisIndex.y?.axisIndex === +key ) {
             let chartExtent = chart.extent[chart.dataKeys.y]
             extent = d3.extent(d3.merge([extent, [].concat(...chartExtent)]))
           }
+        }
+        if (this.options.y[key]?.symmetric === true) {
+          const max = Math.max(Math.abs(extent[0]), Math.abs(extent[1]))
+          extent[0] = -max
+          extent[1] = max
         }
         scale.domain(extent)
         if (this.options.y[key]?.nice === true) scale.nice()

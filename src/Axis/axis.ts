@@ -26,6 +26,8 @@ export interface AxisOptions {
   format?: Function;
   domain?: [number, number] | [Date, Date];
   nice?: boolean;
+  includeZero?: boolean;
+  symmetric?: boolean;
 }
 
 export interface AxesOptions {
