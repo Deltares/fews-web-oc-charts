@@ -47,9 +47,13 @@ export class ChartBar extends Chart {
       .data(data)
       .join("rect")
         .attr("x", (d) => {return x0(d[xKey]) + x1(d[x1Key])})
-        .attr("y", d => yScale(d[yKey]))
+        .attr('y', function(d: any) {
+          return d[yKey] === null ? yScale(0) : Math.min(yScale(d[yKey]), yScale(0))
+        })
         .attr("width", x1.bandwidth())
-        .attr("height", d => yScale(0) - yScale(d[yKey]))
+        .attr('height', function(d: any) {
+          return d[yKey] === null ? 0 : Math.abs(yScale(0) - yScale(d[yKey]))
+        })
         .attr("fill", d => d[colorKey] !== null ? colorMap(d[colorKey]) : 'none' )
 
       bar.data(data)
