@@ -115,6 +115,12 @@ export abstract class Chart {
     return this
   }
 
+  setOptions (options: ChartOptions) {
+    merge(this.options,
+      options
+    )
+  }
+
   setAxisIndex (axisIndex: AxisIndex) {
     merge(this.axisIndex,
       axisIndex
