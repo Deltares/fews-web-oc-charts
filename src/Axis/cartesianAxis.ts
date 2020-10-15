@@ -4,6 +4,7 @@ import { generateMultiFormat } from '../utils/date'
 import momenttz from 'moment-timezone'
 
 export enum AxisPosition {
+  AtZero = 'atzero',
   Top = 'top',
   Bottom = 'bottom',
   Left = 'left',
@@ -236,7 +237,11 @@ export class CartesianAxis extends Axis {
         grid.tickValues(d3.range(start, stop, step))
       }
       let x = 0
-      let y = ( options[key].position !== AxisPosition.Top ) ? this.height : 0
+      let y = ( options[key].position === AxisPosition.AtZero )
+        ? this.yScale[0](0)
+        : ( options[key].position === AxisPosition.Bottom )
+          ? this.height
+          : 0
       let translateString = `translate(${x},${y})`
       this.canvas
       .select(`.x-axis-${key}`)
@@ -282,7 +287,11 @@ updateYAxis (options: CartesianAxisOptions[]) {
       axis.tickValues(d3.range(start, stop, step))
       grid.tickValues(d3.range(start, stop, step))
     }
-    let x = ( options[key].position === AxisPosition.Right ) ? this.width : 0
+    let x = ( options[key].position === AxisPosition.AtZero )
+    ? this.xScale[0](0)
+    : ( options[key].position === AxisPosition.Right )
+      ? this.width
+      : 0
     let y = 0
     let translateString = `translate(${x},${y})`
     this.canvas
