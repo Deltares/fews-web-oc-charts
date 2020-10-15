@@ -22,7 +22,7 @@ export class ChartBar extends Chart {
     console.log(filterKeys)
     let x1 = d3.scaleBand()
       .domain(filterKeys)
-      .rangeRound([0, x0.bandwidth()])
+      .range([0, x0.bandwidth()])
 
     this.setPadding(x0, this.options.x)
     this.setPadding(x1, this.options.x1)
