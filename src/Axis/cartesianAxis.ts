@@ -46,13 +46,14 @@ export class CartesianAxis extends Axis {
     this.initXScales(this.options.x)
     this.initYScales(this.options.y)
     this.setRange()
+    this.initGrid()
     this.setClipPath()
     this.chartGroup = this.chartGroup
       .append('g')
       .attr('class', 'group')
       .attr('clip-path', 'url(#' + this.clipPathId + ')')
       .append('g')
-    this.initGrid()
+    this.initAxis()
   }
 
   setCanvas() {
@@ -443,6 +444,10 @@ updateYAxis (options: CartesianAxisOptions[]) {
     let g = this.canvas
     let yGrid = g.append('g').attr('class', 'grid y-grid')
     let xGrid = g.append('g').attr('class', 'grid x-grid')
+  }
+
+  protected initAxis() {
+    let g = this.canvas
     g.append('g')
       .attr('class', 'axis x-axis-0')
       .attr('font-size','12')
