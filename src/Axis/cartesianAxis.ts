@@ -1,6 +1,6 @@
 import * as d3 from 'd3'
 import { Axis, AxesOptions, AxisType, AxisOptions } from './axis'
-import { generateMultiFormat } from '../utils/date'
+import { generateMultiFormat } from '../Utils/date'
 import momenttz from 'moment-timezone'
 
 export enum AxisPosition {
