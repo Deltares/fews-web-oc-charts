@@ -1,11 +1,11 @@
 import * as d3 from 'd3'
-import { CartesianAxis, PolarAxis } from '../Axis'
+import { AxisIndex, CartesianAxis, PolarAxis } from '../Axis'
 import { Chart, AUTO_SCALE } from './chart'
 
 export class ChartBar extends Chart {
   static readonly GROUP_CLASS: 'chart-bar'
 
-  plotterCartesian(axis: CartesianAxis, axisIndex: any) {
+  plotterCartesian(axis: CartesianAxis, axisIndex: AxisIndex) {
     let xKey = this.dataKeys.x
     let yKey = this.dataKeys.y
     let x1Key = this.dataKeys.x1

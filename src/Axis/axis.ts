@@ -41,6 +41,7 @@ interface AxisIndexItem {
 
 export interface AxisIndex {
   x?: AxisIndexItem;
+  x1?: AxisIndexItem;
   y?: AxisIndexItem;
   radial?: AxisIndexItem;
   angular?: AxisIndexItem;

@@ -26,7 +26,7 @@ interface ColorOptionItem {
   map?: any;
 }
 
-interface ChartOptions {
+export interface ChartOptions {
   x? : ChartOptionItem;
   x1? : ChartOptionItem;
   y? : ChartOptionItem;
