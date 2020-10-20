@@ -36,6 +36,7 @@ export interface ChartOptions {
   transitionTime?: number;
   colorScale?: any;
   symbolId?: number;
+  toolTipFormatter: (d: any) => string;
 }
 
 export abstract class Chart {
@@ -135,7 +136,7 @@ export abstract class Chart {
     }
   }
 
-  protected toolTipFormatterCartesian(d) {
+  protected defaultToolTipFormatterCartesian(d) {
     const xKey = this.dataKeys.x
     const yKey = this.dataKeys.y
     let html = ''
@@ -149,7 +150,23 @@ export abstract class Chart {
     return html
   }
 
+  protected toolTipFormatterCartesian(d) {
+    if (this.options.toolTipFormatter === undefined) {
+      return this.defaultToolTipFormatterCartesian(d)
+    } else {
+      return this.options.toolTipFormatter(d)
+    }
+  }
+
   protected toolTipFormatterPolar(d) {
+    if (this.options.toolTipFormatter === undefined) {
+      return this.defaultToolTipFormatterPolar(d)
+    } else {
+      return this.options.toolTipFormatter(d)
+    }
+  }
+
+  protected defaultToolTipFormatterPolar(d) {
     const rKey = this.dataKeys.x
     const tKey = this.dataKeys.y
     let html = ''

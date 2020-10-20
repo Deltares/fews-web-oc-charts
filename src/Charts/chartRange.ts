@@ -35,7 +35,7 @@ export class ChartRange extends Chart {
     return this._extent
   }
 
-  toolTipFormatterCartesian(d) {
+  defaultToolTipFormatterCartesian(d) {
     const xKey = this.dataKeys.x
     const yKey = this.dataKeys.y
     let html = ''
@@ -52,7 +52,7 @@ export class ChartRange extends Chart {
     return html
   }
 
-  toolTipFormatterPolar(d) {
+  defaultToolTipFormatterPolar(d) {
     const tKey = this.dataKeys.angular
     const rKey = this.dataKeys.radial
     let html = ''
