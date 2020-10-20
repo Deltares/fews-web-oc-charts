@@ -36,7 +36,7 @@ export interface ChartOptions {
   transitionTime?: number;
   colorScale?: any;
   symbolId?: number;
-  toolTipFormatter: (d: any) => string;
+  toolTipFormatter?: (d: any) => string;
 }
 
 export abstract class Chart {
