@@ -42,6 +42,7 @@ export class ChartBar extends Chart {
       .transition()
       .duration(this.options.transitionTime)
 
+    const that = this
     const bar = this.group
       .selectAll("rect")
       .data(data)
@@ -55,6 +56,16 @@ export class ChartBar extends Chart {
           return d[yKey] === null ? 0 : Math.abs(yScale(0) - yScale(d[yKey]))
         })
         .attr("fill", d => d[colorKey] !== null ? colorMap(d[colorKey]) : 'none' )
+        .on('mouseover', function(d: any) {
+          axis.showTooltip(
+            that.toolTipFormatterCartesian(d),
+            axis.margin.left + x0(d[xKey]) + x1(d[x1Key]) + x1.bandwidth() / 2 ,
+            axis.margin.top + Math.min(yScale(d[yKey]), yScale(0))
+          )
+        })
+        .on('mouseout', (d: any) => {
+          axis.hideTooltip(d)
+        })
 
       bar.data(data)
           .order()

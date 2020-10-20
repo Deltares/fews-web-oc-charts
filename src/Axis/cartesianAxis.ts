@@ -384,15 +384,17 @@ updateYAxis (options: CartesianAxisOptions[]) {
     }
   }
 
-  showTooltip(html: string) {
+  showTooltip(html: string, x?: number, y?: number) {
+    const tX = x ? x : d3.event.pageX
+    const tY = y ? y : d3.event.pageY
     this.tooltip
       .transition()
-      .duration(50)
-      .style('opacity', 0.9)
-    this.tooltip
+      .duration(100)
+      .style('opacity', 1)
+      .style('left', tX + 'px')
+      .style('top', tY + 'px')
+    this.tooltipText
       .html(html)
-      .style('left', d3.event.pageX + 'px')
-      .style('top', d3.event.pageY + 'px')
   }
 
   protected initXScales (options: CartesianAxisOptions[]) {

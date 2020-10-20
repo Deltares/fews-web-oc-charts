@@ -144,7 +144,7 @@ export abstract class Chart {
       html += xKey + ': ' + d[xKey] + '<br/>'
     }
     if (this.options.y.includeInTooltip) {
-      html += yKey + 'y: ' + d[yKey]
+      html += yKey + ': ' + d[yKey]
     }
     return html
   }
@@ -155,10 +155,10 @@ export abstract class Chart {
     let html = ''
     // TODO: supply formatter
     if (this.options.angular.includeInTooltip) {
-      html += 't: ' + d[tKey] + '<br/>'
+      html += tKey + ': ' + d[tKey] + '<br/>'
     }
     if (this.options.radial.includeInTooltip) {
-      html += 'r: ' + d[rKey]
+      html += rKey + ': ' + d[rKey]
     }
     return html
   }

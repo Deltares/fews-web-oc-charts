@@ -40,10 +40,7 @@ export class PolarAxis extends Axis {
   intercept: number
   direction: number
   private angularRange: number[]
-  static readonly defaultOptions = {
-    angular: {},
-    radial: {}
-  }
+  static readonly defaultOptions = {}
   private angularDomain: number[] | Date[]
   angularAxisOptions: AngularAxisOptions = {}
   radialAxisOptions: RadialAxisOptions = {}
@@ -60,8 +57,8 @@ export class PolarAxis extends Axis {
     this.outerRadius = Math.min(this.width, this.height) / 2
     this.angularRange = options.angular.range ? options.angular.range : [0, 2 * Math.PI]
     this.angularDomain = options.angular.domain ? options.angular.domain : [0, 360]
-    defaultsDeep(this.angularAxisOptions, options.angular, { type: 'value'})
-    defaultsDeep(this.radialAxisOptions, options.radial, { type: 'value'})
+    this.angularAxisOptions = defaultsDeep(this.angularAxisOptions, options.angular, { type: 'value'})
+    this.radialAxisOptions = defaultsDeep(this.radialAxisOptions, options.radial, { type: 'value'})
 
     let startAngle = Math.PI/2  - this.intercept + this.angularRange[0]
     let endAngle =  Math.PI/2 - this.intercept + this.angularRange[1]
@@ -240,15 +237,17 @@ export class PolarAxis extends Axis {
       .attr('transform', textRotate)
   }
 
-  showTooltip(html: string) {
+  showTooltip(html: string, x?: number, y?: number) {
+    const tX = x ? x : d3.event.pageX
+    const tY = y ? y : d3.event.pageY
     this.tooltip
       .transition()
-      .duration(50)
-      .style('opacity', 0.9)
-    this.tooltip
+      .duration(100)
+      .style('opacity', 1)
+      .style('left', tX + 'px')
+      .style('top', tY + 'px')
+    this.tooltipText
       .html(html)
-      .style('left', d3.event.pageX + 'px')
-      .style('top', d3.event.pageY + 'px')
   }
 
   protected setRange() {

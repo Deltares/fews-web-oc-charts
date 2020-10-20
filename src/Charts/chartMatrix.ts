@@ -45,15 +45,16 @@ export class ChartMatrix extends Chart {
         .attr("stroke-width", 0)
         .attr("shape-rendering", "auto")
         .attr("fill", d => d[colorKey] !== null ? colorMap(d[colorKey]) : 'none' )
-
         .on('mouseover', function(d: any) {
           axis.showTooltip(
-            that.toolTipFormatterCartesian(d))
+            that.toolTipFormatterCartesian(d),
+            axis.margin.left + x0(d[xKey]) + x0.bandwidth() / 2 ,
+            axis.margin.top + y0(d[yKey])
+          )
         })
         .on('mouseout', (d: any) => {
           axis.hideTooltip(d)
         })
-
 
       matrix.data(data)
           .order()

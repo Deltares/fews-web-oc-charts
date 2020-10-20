@@ -50,6 +50,7 @@ export interface AxisIndex {
 
 export abstract class Axis {
   tooltip: any = null
+  tooltipText: any = null
   type: string
   view: any
   defs: any
@@ -68,7 +69,8 @@ export abstract class Axis {
 
   constructor(container: HTMLElement, width: number | null, height: number| null, options: AxesOptions, defaultOptions: any) {
     this.container = container
-    defaultsDeep(this.options,
+    this.options = defaultsDeep(
+      this.options,
       options,
       defaultOptions
     )
@@ -164,9 +166,12 @@ export abstract class Axis {
       .append('div')
       .attr('class', 'tooltip')
       .style('opacity', 0)
+    this.tooltipText = this.tooltip
+      .append('div')
+      .attr('class', 'tooltiptext top')
   }
 
-  abstract showTooltip(html: string): void
+  abstract showTooltip(html: string, x?: number, y?: number): void
 
   hideTooltip(d: any) {
     this.tooltip
