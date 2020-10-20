@@ -385,8 +385,8 @@ updateYAxis (options: CartesianAxisOptions[]) {
   }
 
   showTooltip(html: string, x?: number, y?: number) {
-    const tX = x ? x : d3.event.pageX
-    const tY = y ? y : d3.event.pageY
+    const tX = x !== undefined ? x : d3.event.pageX
+    const tY = y !== undefined ? y : d3.event.pageY
     this.tooltip
       .transition()
       .duration(100)
