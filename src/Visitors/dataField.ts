@@ -32,10 +32,11 @@ export class DataField implements Visitor {
   constructor(container, options: DataFieldOptions, formatter?: any) {
     this.container = container
     this.options = defaultsDeep({},
+      options,
       {
         labelField : {dx: 0, dy: 0},
         valueField : {dx: 0, dy: 0, units: [{unit: '', factor: 1.0} ], precision: "0.1f" }
-      }, options )
+      })
     this.formatter = formatter !== undefined ? formatter : this.valueFormatter
   }
 
