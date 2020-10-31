@@ -4,6 +4,7 @@ import { generateMultiFormat } from '../Utils/date'
 import momenttz from 'moment-timezone'
 
 export enum AxisPosition {
+  AtZero = 'atzero',
   Top = 'top',
   Bottom = 'bottom',
   Left = 'left',
@@ -47,12 +48,12 @@ export class CartesianAxis extends Axis {
     this.setRange()
     this.initGrid()
     this.setClipPath()
-
     this.chartGroup = this.chartGroup
       .append('g')
       .attr('class', 'group')
       .attr('clip-path', 'url(#' + this.clipPathId + ')')
       .append('g')
+    this.initAxis()
   }
 
   setCanvas() {
@@ -112,13 +113,30 @@ export class CartesianAxis extends Axis {
       const scale = this.xScale[key]
       if (this.options.x[key]?.domain) {
         scale.domain(this.options.x[key].domain)
+      } else if (this.options.x[key]?.type === AxisType.band) {
+        let extent = new Array(0)
+        for (let chart of this.charts) {
+          if ( chart.axisIndex.x?.axisIndex === +key ) {
+            extent = chart.data.map(d => d[chart.dataKeys.x])
+            break
+          }
+        }
+        scale.domain(extent)
       } else if (options.autoScale === true) {
         let extent = new Array(2)
+        if (this.options.x[key]?.includeZero === true) {
+          extent[0] = 0
+        }
         for (let chart of this.charts) {
           if ( chart.axisIndex.x?.axisIndex === +key ) {
             let chartExtent = chart.extent[chart.dataKeys.x]
             extent = d3.extent(d3.merge([extent, [].concat(...chartExtent)]))
           }
+        }
+        if (this.options.x[key]?.symmetric === true) {
+          const max = Math.max(Math.abs(extent[0]), Math.abs(extent[1]))
+          extent[0] = -max
+          extent[1] = max
         }
         scale.domain(extent)
         if (this.options.x[key]?.nice === true) scale.nice()
@@ -132,13 +150,30 @@ export class CartesianAxis extends Axis {
       const scale = this.yScale[key]
       if (this.options.y[key]?.domain) {
         scale.domain(this.options.y[key].domain)
+      } else if (this.options.y[key]?.type === AxisType.band) {
+        let extent = new Array(0)
+        for (let chart of this.charts) {
+          if ( chart.axisIndex.y?.axisIndex === +key ) {
+            extent = chart.data.map(d => d[chart.dataKeys.y])
+            break
+          }
+        }
+        scale.domain(extent)
       } else if (options.autoScale === true) {
         let extent = new Array(2)
+        if (this.options.y[key]?.includeZero === true) {
+          extent[0] = 0
+        }
         for (let chart of this.charts) {
           if ( chart.axisIndex.y?.axisIndex === +key ) {
             let chartExtent = chart.extent[chart.dataKeys.y]
             extent = d3.extent(d3.merge([extent, [].concat(...chartExtent)]))
           }
+        }
+        if (this.options.y[key]?.symmetric === true) {
+          const max = Math.max(Math.abs(extent[0]), Math.abs(extent[1]))
+          extent[0] = -max
+          extent[1] = max
         }
         scale.domain(extent)
         if (this.options.y[key]?.nice === true) scale.nice()
@@ -202,7 +237,11 @@ export class CartesianAxis extends Axis {
         grid.tickValues(d3.range(start, stop, step))
       }
       let x = 0
-      let y = ( options[key].position !== AxisPosition.Top ) ? this.height : 0
+      let y = ( options[key].position === AxisPosition.AtZero )
+        ? this.yScale[0](0)
+        : ( options[key].position === AxisPosition.Bottom )
+          ? this.height
+          : 0
       let translateString = `translate(${x},${y})`
       this.canvas
       .select(`.x-axis-${key}`)
@@ -248,7 +287,11 @@ updateYAxis (options: CartesianAxisOptions[]) {
       axis.tickValues(d3.range(start, stop, step))
       grid.tickValues(d3.range(start, stop, step))
     }
-    let x = ( options[key].position === AxisPosition.Right ) ? this.width : 0
+    let x = ( options[key].position === AxisPosition.AtZero )
+    ? this.xScale[0](0)
+    : ( options[key].position === AxisPosition.Right )
+      ? this.width
+      : 0
     let y = 0
     let translateString = `translate(${x},${y})`
     this.canvas
@@ -341,15 +384,17 @@ updateYAxis (options: CartesianAxisOptions[]) {
     }
   }
 
-  showTooltip(html: string) {
+  showTooltip(html: string, x?: number, y?: number) {
+    const tX = x !== undefined ? x : d3.event.pageX
+    const tY = y !== undefined ? y : d3.event.pageY
     this.tooltip
       .transition()
-      .duration(50)
-      .style('opacity', 0.9)
-    this.tooltip
+      .duration(100)
+      .style('opacity', 1)
+      .style('left', tX + 'px')
+      .style('top', tY + 'px')
+    this.tooltipText
       .html(html)
-      .style('left', d3.event.pageX + 'px')
-      .style('top', d3.event.pageY + 'px')
   }
 
   protected initXScales (options: CartesianAxisOptions[]) {
@@ -358,6 +403,9 @@ updateYAxis (options: CartesianAxisOptions[]) {
       switch (options[key].type) {
         case AxisType.time:
           scale = d3.scaleUtc()
+          break
+        case AxisType.band:
+          scale = d3.scaleBand()
           break
         default:
           scale = d3.scaleLinear()
@@ -373,6 +421,9 @@ updateYAxis (options: CartesianAxisOptions[]) {
       switch (options[key].type) {
         case AxisType.time:
           scale = d3.scaleUtc()
+          break
+        case AxisType.band:
+          scale = d3.scaleBand()
           break
         default:
           scale = d3.scaleLinear()
@@ -395,6 +446,10 @@ updateYAxis (options: CartesianAxisOptions[]) {
     let g = this.canvas
     let yGrid = g.append('g').attr('class', 'grid y-grid')
     let xGrid = g.append('g').attr('class', 'grid x-grid')
+  }
+
+  protected initAxis() {
+    let g = this.canvas
     g.append('g')
       .attr('class', 'axis x-axis-0')
       .attr('font-size','12')

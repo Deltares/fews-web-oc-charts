@@ -2,6 +2,7 @@ import * as d3 from 'd3'
 import { SvgPropertiesHyphen } from 'csstype';
 import { Axis, AxisIndex, CartesianAxis, PolarAxis } from '../Axis'
 import defaultsDeep from 'lodash/defaultsDeep'
+import merge from 'lodash/merge'
 
 export const AUTO_SCALE = 1
 
@@ -15,16 +16,27 @@ function mean(x: number[] | number) {
 interface ChartOptionItem {
   includeInTooltip?: boolean;
   format?: Function;
+  paddingInner?: number;
+  paddingOuter?: number;
 }
 
-interface ChartOptions {
+interface ColorOptionItem {
+  scale?: any;
+  range?: any;
+  map?: any;
+}
+
+export interface ChartOptions {
   x? : ChartOptionItem;
+  x1? : ChartOptionItem;
   y? : ChartOptionItem;
   radial? : ChartOptionItem;
   angular? : ChartOptionItem;
-  transitionTime?: number
-  colorScale?: any
-  symbolId?: number
+  color?: ColorOptionItem;
+  transitionTime?: number;
+  colorScale?: any;
+  symbolId?: number;
+  toolTipFormatter?: (d: any) => string;
 }
 
 export abstract class Chart {
@@ -104,6 +116,18 @@ export abstract class Chart {
     return this
   }
 
+  setOptions (options: ChartOptions) {
+    merge(this.options,
+      options
+    )
+  }
+
+  setAxisIndex (axisIndex: AxisIndex) {
+    merge(this.axisIndex,
+      axisIndex
+    )
+  }
+
   plotter(axis: Axis, axisIndex: AxisIndex) {
     if (axis instanceof CartesianAxis) {
       this.plotterCartesian(axis, axisIndex)
@@ -112,7 +136,7 @@ export abstract class Chart {
     }
   }
 
-  protected toolTipFormatterCartesian(d) {
+  protected defaultToolTipFormatterCartesian(d) {
     const xKey = this.dataKeys.x
     const yKey = this.dataKeys.y
     let html = ''
@@ -121,21 +145,37 @@ export abstract class Chart {
       html += xKey + ': ' + d[xKey] + '<br/>'
     }
     if (this.options.y.includeInTooltip) {
-      html += yKey + 'y: ' + d[yKey]
+      html += yKey + ': ' + d[yKey]
     }
     return html
   }
 
+  protected toolTipFormatterCartesian(d) {
+    if (this.options.toolTipFormatter === undefined) {
+      return this.defaultToolTipFormatterCartesian(d)
+    } else {
+      return this.options.toolTipFormatter(d)
+    }
+  }
+
   protected toolTipFormatterPolar(d) {
+    if (this.options.toolTipFormatter === undefined) {
+      return this.defaultToolTipFormatterPolar(d)
+    } else {
+      return this.options.toolTipFormatter(d)
+    }
+  }
+
+  protected defaultToolTipFormatterPolar(d) {
     const rKey = this.dataKeys.x
     const tKey = this.dataKeys.y
     let html = ''
     // TODO: supply formatter
     if (this.options.angular.includeInTooltip) {
-      html += 't: ' + d[tKey] + '<br/>'
+      html += tKey + ': ' + d[tKey] + '<br/>'
     }
     if (this.options.radial.includeInTooltip) {
-      html += 'r: ' + d[rKey]
+      html += rKey + ': ' + d[rKey]
     }
     return html
   }
@@ -169,7 +209,7 @@ export abstract class Chart {
   }
 
   get dataKeys () {
-    const dataKeys: {x?: string, y?: string, radial?: string, angular?: string, color?: string} = {}
+    const dataKeys: {x?: string, x1?: string, y?: string, radial?: string, angular?: string, color?: string} = {}
     for (let key in this.axisIndex) {
       dataKeys[key] = this.axisIndex[key].key ? this.axisIndex[key].key : key
     }

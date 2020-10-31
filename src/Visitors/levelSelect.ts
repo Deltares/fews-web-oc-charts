@@ -23,7 +23,7 @@ export class LevelSelect implements Visitor {
     this.value = value
     this.callback = callback
     this.format = d3.format('.2f')
-    defaultsDeep(this.options,
+    this.options = defaultsDeep(this.options,
       options
     ) as LevelSelectOptions
   }

@@ -155,3 +155,46 @@
 .legend-entry {
   cursor: pointer;
 }
+
+.tooltip {
+  position: absolute;
+  display: flex;
+  flex-direction: row;
+  top: 0px;
+  left: 0px;
+  pointer-events: none;
+}
+
+.tooltip .tooltiptext {
+  background-color: black;
+  color: #fff;
+  font: 12px sans-serif;
+  text-align: center;
+  border-radius: 6px;
+  padding: 5px;
+  z-index: 1;
+}
+.tooltip .tooltiptext.top {
+  transform: translate(-50%, calc(-100% - 5px));
+}
+.tooltip .tooltiptext.bottom {
+  transform: translate(-50%, 5px);
+}
+.tooltip .tooltiptext::after {
+  content: "";
+  position: absolute;
+  border-width: 5px;
+  border-style: solid;
+}
+.tooltip .tooltiptext.top::after {
+  top: 100%;
+  left: 50%;
+  margin-left: -5px;
+  border-color: black transparent transparent transparent;
+}
+.tooltip .tooltiptext.bottom::after {
+  top: -10px;
+  left: 50%;
+  margin-left: -5px;
+  border-color: transparent transparent black transparent;
+}
