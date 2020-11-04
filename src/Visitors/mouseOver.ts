@@ -1,6 +1,7 @@
 import * as d3 from 'd3'
 import { Axis, CartesianAxis } from '../Axis'
 import { Visitor } from './visitor'
+import { TooltipPosition } from '../Tooltip'
 import { dateFormatter } from '../Utils'
 
 export class MouseOver implements Visitor {
@@ -59,7 +60,7 @@ export class MouseOver implements Visitor {
         that.group.select('.mouse-line').style('opacity', '0')
         that.group.selectAll('.mouse-per-line circle').style('opacity', '0')
         that.group.selectAll('.mouse-x text').style('fill-opacity', '0')
-        axis.hideTooltip(null)
+        axis.tooltip.hide(null)
       })
       .on('mouseover', function() {
         // on mouse in show line, circles and text
@@ -77,10 +78,6 @@ export class MouseOver implements Visitor {
             return stroke
           })
         that.group.select('.mouse-x text').style('fill-opacity', '1')
-        axis.tooltip
-          .transition()
-          .duration(50)
-          .style('opacity', 0.9)
       })
       .on('mousemove', function() {
         // mouse moving over canvas
@@ -154,7 +151,7 @@ export class MouseOver implements Visitor {
           .select('text')
           .text(dateFormatter(axis.xScale[0].invert(mouse[0]), 'YYYY-MM-DD HH:mm z',{timeZone: that.axis.timeZone} ) )
         if (allHidden) {
-          axis.hideTooltip(null)
+          axis.tooltip.hide(null)
           return
         }
         let htmlContent = ''
@@ -163,10 +160,7 @@ export class MouseOver implements Visitor {
           htmlContent += '<span style="color:' + v.color + ' ">' + '   ' + v.y + '</span><br/>'
         }
 
-        let div = axis.tooltip.html(htmlContent)
-        let h = div.node().clientHeight / 2
-
-        div.style('left', d3.event.pageX + 'px').style('top', d3.event.pageY - h + 'px')
+        let div = axis.tooltip.update(htmlContent, TooltipPosition.Right, d3.event.pageX, d3.event.pageY)
       })
   }
 

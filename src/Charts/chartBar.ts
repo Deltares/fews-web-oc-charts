@@ -1,5 +1,6 @@
 import * as d3 from 'd3'
 import { AxisIndex, CartesianAxis, PolarAxis } from '../Axis'
+import { TooltipPosition } from '../Tooltip'
 import { Chart, AUTO_SCALE } from './chart'
 
 export class ChartBar extends Chart {
@@ -57,14 +58,15 @@ export class ChartBar extends Chart {
         })
         .attr("fill", d => d[colorKey] !== null ? colorMap(d[colorKey]) : 'none' )
         .on('mouseover', function(d: any) {
-          axis.showTooltip(
+          axis.tooltip.update(
             that.toolTipFormatterCartesian(d),
+            TooltipPosition.Top,
             axis.margin.left + x0(d[xKey]) + x1(d[x1Key]) + x1.bandwidth() / 2 ,
             axis.margin.top + Math.min(yScale(d[yKey]), yScale(0))
           )
         })
         .on('mouseout', (d: any) => {
-          axis.hideTooltip(d)
+          axis.tooltip.hide(d)
         })
 
       bar.data(data)

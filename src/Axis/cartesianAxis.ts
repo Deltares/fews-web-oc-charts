@@ -1,6 +1,7 @@
 import * as d3 from 'd3'
 import { Axis, AxesOptions, AxisType, AxisOptions } from './axis'
 import { generateMultiFormat } from '../Utils/date'
+import { TooltipPosition } from '../Tooltip'
 import momenttz from 'moment-timezone'
 
 export enum AxisPosition {
@@ -382,19 +383,6 @@ updateYAxis (options: CartesianAxisOptions[]) {
         .attr('x', this.width + 10)
         .text(this.options.x[1].unit)
     }
-  }
-
-  showTooltip(html: string, x?: number, y?: number) {
-    const tX = x !== undefined ? x : d3.event.pageX
-    const tY = y !== undefined ? y : d3.event.pageY
-    this.tooltip
-      .transition()
-      .duration(100)
-      .style('opacity', 1)
-      .style('left', tX + 'px')
-      .style('top', tY + 'px')
-    this.tooltipText
-      .html(html)
   }
 
   protected initXScales (options: CartesianAxisOptions[]) {
