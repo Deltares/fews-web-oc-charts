@@ -44,7 +44,7 @@ export class Legend implements Visitor {
     }
     let entries = this.group.selectAll('g').data(this.labels)
     let that = this
-    let maxWidth = 0
+    let maxWidth = 1
 
     entries.exit().remove()
 
@@ -79,6 +79,7 @@ export class Legend implements Visitor {
           let entryNode = symbol.node() as Element
           entryNode.appendChild(svgElement)
           if (that.configuredLabels){
+            entry.style('cursor', 'pointer')
             entry.on('click', function() {
               let display = style.getPropertyValue('visibility')
               if (display === 'visible') {
@@ -115,24 +116,32 @@ export class Legend implements Visitor {
         maxWidth = Math.max(maxWidth, entry.node().getBoundingClientRect().width)
       })
     // update
-    let columns = Math.min(1, Math.floor(this.axis.width / maxWidth))
-    if (columns >= this.labels.length) columns = this.labels.length
-    else {
-      let rows = Math.ceil(this.labels.length / columns)
-      let lastRow = this.labels.length % columns
-      if (columns - lastRow > rows - 1) columns--
-    }
-    let rows = Math.ceil(this.labels.length / columns)
-    let dx = Math.floor(this.axis.width / columns)
-    let y = 10
-    let dy = 25
-    this.svg
-      .attr('height', rows * dy)
 
-    updateSelection.attr('transform', function(d, i) {
-      let column = Math.floor(i / rows)
-      let row = i % rows
-      return 'translate(' + column * dx + ',' + (y + row * dy) + ')'
-    })
+    if ( this.labels.length > 0) {
+      const {columns, rows} = this.optimalColumnsRows(this.axis.width, maxWidth, this.labels.length)
+      let dx = this.axis.width / columns
+      let y = 15
+      let dy = 25
+      this.svg.attr('height', rows* dy)
+      updateSelection.attr('transform', function(d, i) {
+        let column = Math.floor(i / rows)
+        let row = i % rows
+        return 'translate(' + column * dx + ',' + (y + row * dy) + ')'
+      })
+
+    }
+  }
+
+  optimalColumnsRows(width: number, elementWidth: number, elementCount: number) {
+    let columns = Math.floor( width / elementWidth)
+    let rows = 1
+    if (columns >= elementCount) {
+      columns = elementCount
+    }
+    else {
+      rows = Math.ceil(elementCount / columns)
+      columns = Math.ceil(elementCount / rows)
+    }
+    return {columns, rows}
   }
 }

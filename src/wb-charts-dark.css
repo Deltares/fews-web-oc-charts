@@ -147,10 +147,6 @@
   fill: white;
 }
 
-.legend-entry {
-  cursor: pointer;
-}
-
 .tooltip {
   position: absolute;
   display: flex;
