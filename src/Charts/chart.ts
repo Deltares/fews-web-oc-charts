@@ -49,6 +49,7 @@ export abstract class Chart {
   axisIndex: AxisIndex
   style: SvgPropertiesHyphen
   cssSelector: string
+  legend: any[] = []
 
   constructor(data: any, options: ChartOptions) {
     this.data = data
@@ -182,6 +183,11 @@ export abstract class Chart {
 
   abstract plotterCartesian(axis: CartesianAxis, dataKeys: any)
   abstract plotterPolar(axis: PolarAxis, dataKeys: any)
+
+  legendId (item: string) {
+    return this.legend.findIndex((x) => x === item)
+  }
+
   abstract drawLegendSymbol(legendId?: string, asSvgElement?: boolean)
 
   protected selectGroup(axis: Axis, cssClass: string) {
