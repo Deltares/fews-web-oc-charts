@@ -72,7 +72,7 @@ export class ChartArea extends Chart {
     console.error('plotterPolar is not implemented for ChartArea')
   }
 
-  drawLegendSymbol(asSvgElement?: boolean) {
+  drawLegendSymbol(legendId?: string, asSvgElement?: boolean) {
     let chartElement = this.group
       .select('path')
       .node() as Element

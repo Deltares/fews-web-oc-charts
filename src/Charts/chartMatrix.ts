@@ -72,7 +72,7 @@ export class ChartMatrix extends Chart {
     throw new Error('plotterPolar is not implemented for ChartBar')
   }
 
-  drawLegendSymbol(asSvgElement?: boolean) {
+  drawLegendSymbol(legendId?: string, asSvgElement?: boolean) {
     let chartElement = this.group
       .select('rect')
       .node() as Element

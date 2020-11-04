@@ -16,11 +16,11 @@ export class ChartBar extends Chart {
     const yScale = axis.yScale[axisIndex.y.axisIndex]
 
     const filterKeys: string[] = Array.from(new Set(data.map((item) => {return item[x1Key]}) ) )
+    this.legend = filterKeys
 
     let x0 = xScale.copy()
     x0.domain(data.map(d => d[xKey]))
 
-    console.log(filterKeys)
     let x1 = d3.scaleBand()
       .domain(filterKeys)
       .range([0, x0.bandwidth()])
@@ -48,6 +48,7 @@ export class ChartBar extends Chart {
       .selectAll("rect")
       .data(data)
       .join("rect")
+        .attr("data-legend-id", (d) => this.legendId( d[x1Key]))
         .attr("x", (d) => {return x0(d[xKey]) + x1(d[x1Key])})
         .attr('y', function(d: any) {
           return d[yKey] === null ? yScale(0) : Math.min(yScale(d[yKey]), yScale(0))
@@ -81,9 +82,9 @@ export class ChartBar extends Chart {
     throw new Error('plotterPolar is not implemented for ChartBar')
   }
 
-  drawLegendSymbol(asSvgElement?: boolean) {
+  drawLegendSymbol(legendId?: string, asSvgElement?: boolean) {
     let chartElement = this.group
-      .select('rect')
+      .select(`[data-legend-id="${legendId}"]`)
       .node() as Element
     let style = window.getComputedStyle(chartElement)
     const svg = d3.create('svg')
@@ -95,25 +96,12 @@ export class ChartBar extends Chart {
     const element = group.append('g')
     element
       .append('rect')
-      .attr('x', 0)
-      .attr('y', -8)
-      .attr('width', 5)
-      .attr('height', 18)
-      .style('fill', style.getPropertyValue('fill'))
-    element
-      .append('rect')
       .attr('x', 5)
-      .attr('y', -6)
-      .attr('width', 5)
-      .attr('height', 16)
-      .style('fill', style.getPropertyValue('fill'))
-    element
-      .append('rect')
-      .attr('x', 10)
       .attr('y', -5)
-      .attr('width', 5)
-      .attr('height', 15)
+      .attr('width', 10)
+      .attr('height', 10)
       .style('fill', style.getPropertyValue('fill'))
+
     if (asSvgElement) return element.node()
     return svg.node()
   }
