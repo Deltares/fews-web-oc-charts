@@ -11,6 +11,13 @@ export enum AxisPosition {
   Right = 'right',
 }
 
+export enum TooltipPosition {
+  Top = 'top',
+  Bottom = 'bottom',
+  Left = 'left',
+  Right = 'right',
+}
+
 export interface CartesianAxisOptions extends AxisOptions {
   position?: AxisPosition;
 }
@@ -384,7 +391,7 @@ updateYAxis (options: CartesianAxisOptions[]) {
     }
   }
 
-  showTooltip(html: string, x?: number, y?: number) {
+  showTooltip(html: string, position: string = TooltipPosition.Top, x?: number, y?: number) {
     const tX = x !== undefined ? x : d3.event.pageX
     const tY = y !== undefined ? y : d3.event.pageY
     this.tooltip
@@ -394,6 +401,7 @@ updateYAxis (options: CartesianAxisOptions[]) {
       .style('left', tX + 'px')
       .style('top', tY + 'px')
     this.tooltipText
+      .attr('class', `tooltiptext ${position}`)
       .html(html)
   }
 

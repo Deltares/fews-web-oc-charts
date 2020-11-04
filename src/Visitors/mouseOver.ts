@@ -1,5 +1,5 @@
 import * as d3 from 'd3'
-import { Axis, CartesianAxis } from '../Axis'
+import { Axis, CartesianAxis, TooltipPosition } from '../Axis'
 import { Visitor } from './visitor'
 import { dateFormatter } from '../Utils'
 
@@ -163,10 +163,7 @@ export class MouseOver implements Visitor {
           htmlContent += '<span style="color:' + v.color + ' ">' + '   ' + v.y + '</span><br/>'
         }
 
-        let div = axis.tooltip.html(htmlContent)
-        let h = div.node().clientHeight / 2
-
-        div.style('left', d3.event.pageX + 'px').style('top', d3.event.pageY - h + 'px')
+        let div = axis.showTooltip(htmlContent, TooltipPosition.Right, d3.event.pageX, d3.event.pageY)
       })
   }
 

@@ -1,5 +1,5 @@
 import * as d3 from 'd3'
-import { CartesianAxis, PolarAxis } from '../Axis'
+import { CartesianAxis, PolarAxis, TooltipPosition } from '../Axis'
 import { Chart, AUTO_SCALE } from './chart'
 
 export class ChartMatrix extends Chart {
@@ -48,6 +48,7 @@ export class ChartMatrix extends Chart {
         .on('mouseover', function(d: any) {
           axis.showTooltip(
             that.toolTipFormatterCartesian(d),
+            TooltipPosition.Top,
             axis.margin.left + x0(d[xKey]) + x0.bandwidth() / 2 ,
             axis.margin.top + y0(d[yKey])
           )

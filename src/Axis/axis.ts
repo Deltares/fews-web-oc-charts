@@ -168,10 +168,10 @@ export abstract class Axis {
       .style('opacity', 0)
     this.tooltipText = this.tooltip
       .append('div')
-      .attr('class', 'tooltiptext top')
+      .attr('class', 'tooltiptext right')
   }
 
-  abstract showTooltip(html: string, x?: number, y?: number): void
+  abstract showTooltip(html: string, position: string, x?: number, y?: number): void
 
   hideTooltip(d: any) {
     this.tooltip

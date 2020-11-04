@@ -92,8 +92,6 @@
 }
 
 .current-time-indicator>text {
-  font-family: sans-serif;
-  font-size: 10px;
   visibility: hidden;
   stroke:none;
   fill:white;
@@ -106,8 +104,8 @@
 .dst-indicator:hover>text {
   visibility: visible;
 }
-  font-family: sans-serif;
-  font-size: 10px;
+
+.dst-indicator>text {
   visibility: hidden;
   stroke: none;
   fill: white;
@@ -177,6 +175,14 @@
 .tooltip .tooltiptext.bottom {
   transform: translate(-50%, 5px);
 }
+
+.tooltip .tooltiptext.left {
+  transform: translate(calc(-100% - 5px), -50%);
+}
+.tooltip .tooltiptext.right {
+  transform: translate(5px, -50%);
+}
+
 .tooltip .tooltiptext::after {
   content: "";
   position: absolute;
@@ -194,4 +200,17 @@
   left: 50%;
   margin-left: -5px;
   border-color: transparent transparent black transparent;
+}
+
+.tooltip .tooltiptext.left::after {
+  top: 50%;
+  left: 100%;
+  margin-top: -5px;
+  border-color: transparent transparent transparent black;
+}
+.tooltip .tooltiptext.right::after {
+  top: 50%;
+  left: -10px;
+  margin-top: -5px;
+  border-color: transparent black transparent transparent;
 }
