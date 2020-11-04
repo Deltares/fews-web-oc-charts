@@ -182,7 +182,7 @@ export abstract class Chart {
 
   abstract plotterCartesian(axis: CartesianAxis, dataKeys: any)
   abstract plotterPolar(axis: PolarAxis, dataKeys: any)
-  abstract drawLegendSymbol(asSvgElement?: boolean)
+  abstract drawLegendSymbol(legendId?: string, asSvgElement?: boolean)
 
   protected selectGroup(axis: Axis, cssClass: string) {
     if (this.group == null) {

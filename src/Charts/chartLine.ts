@@ -62,7 +62,7 @@ export class ChartLine extends Chart {
     line.datum(this.data)
   }
 
-  drawLegendSymbol(asSvgElement?: boolean) {
+  drawLegendSymbol(legendId?: string, asSvgElement?: boolean) {
     let chartElement = this.group
       .select('path')
       .node() as Element

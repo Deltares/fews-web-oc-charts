@@ -113,7 +113,7 @@ export class ChartMarker extends Chart {
     this.previousData = this.data
   }
 
-  drawLegendSymbol(asSvgElement?: boolean) {
+  drawLegendSymbol(legendId?: string, asSvgElement?: boolean) {
     let chartElement = this.group
       .select('path')
       .node() as Element

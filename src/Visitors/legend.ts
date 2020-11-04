@@ -47,8 +47,8 @@ export class Legend implements Visitor {
           .node() as Element
         if (chartElement) {
           let style = window.getComputedStyle(chartElement)
-          let chart = that.axis.charts.filter(x => x.id === d.selector)
-          let svgElement = chart[0].drawLegendSymbol(true)
+          let chart = that.axis.charts.find(x => x.id === d.selector)
+          let svgElement = chart.drawLegendSymbol('legendId',true)
           const symbol = entry.append('g')
             .attr('transfrom','translate(0, -10)')
           let entryNode = symbol.node() as Element

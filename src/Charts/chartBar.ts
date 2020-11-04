@@ -48,6 +48,7 @@ export class ChartBar extends Chart {
       .selectAll("rect")
       .data(data)
       .join("rect")
+        .attr("data-legend-id", x1Key)
         .attr("x", (d) => {return x0(d[xKey]) + x1(d[x1Key])})
         .attr('y', function(d: any) {
           return d[yKey] === null ? yScale(0) : Math.min(yScale(d[yKey]), yScale(0))
@@ -81,7 +82,7 @@ export class ChartBar extends Chart {
     throw new Error('plotterPolar is not implemented for ChartBar')
   }
 
-  drawLegendSymbol(asSvgElement?: boolean) {
+  drawLegendSymbol(legendId?: string, asSvgElement?: boolean) {
     let chartElement = this.group
       .select('rect')
       .node() as Element

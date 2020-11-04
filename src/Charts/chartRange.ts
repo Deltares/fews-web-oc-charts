@@ -247,7 +247,7 @@ export class ChartRange extends Chart {
     }
   }
 
-  drawLegendSymbol(asSvgElement?: boolean) {
+  drawLegendSymbol(legendId?: string, asSvgElement?: boolean) {
     let chartElement = this.group
       .select('path')
       .node() as Element
