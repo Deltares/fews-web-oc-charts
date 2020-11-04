@@ -31,4 +31,5 @@ module.exports = {
       },
     ],
   },
+  externals: ['d3']
 }
