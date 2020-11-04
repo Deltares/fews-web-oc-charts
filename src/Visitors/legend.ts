@@ -1,7 +1,6 @@
 import * as d3 from 'd3'
 import { Axis, CartesianAxis } from '../Axis'
 import { Visitor } from './visitor'
-import { ChartLine, ChartArea, ChartMarker } from '../Charts'
 
 export class Legend implements Visitor {
   private container: HTMLElement
@@ -43,7 +42,7 @@ export class Legend implements Visitor {
       .each(function(d, i) {
         let entry = d3.select(this)
         let chartElement = that.axis.chartGroup
-          .select(`[data-id="${d.selector}"]`)
+          .select(`[data-chart-id="${d.selector}"]`)
           .select('path')
           .node() as Element
         if (chartElement) {
@@ -57,10 +56,10 @@ export class Legend implements Visitor {
           entry.on('click', function() {
             let display = style.getPropertyValue('visibility')
             if (display === 'visible') {
-              that.axis.chartGroup.selectAll(`[data-id="${d.selector}"]`).style('visibility', 'hidden')
+              that.axis.chartGroup.selectAll(`[data-chart-id="${d.selector}"]`).style('visibility', 'hidden')
               entry.style('opacity', 0.5)
             } else {
-              that.axis.chartGroup.selectAll(`[data-id="${d.selector}"]`).style('visibility', 'visible')
+              that.axis.chartGroup.selectAll(`[data-chart-id="${d.selector}"]`).style('visibility', 'visible')
               entry.style('opacity', 1.0)
             }
           })

@@ -140,7 +140,7 @@ export abstract class Axis {
       }
     }
     this.charts.splice(i, 1)
-    this.chartGroup.selectAll(`[data-id="${id}"]`).remove()
+    this.chartGroup.selectAll(`[data-chart-id="${id}"]`).remove()
   }
 
   removeAllCharts() {

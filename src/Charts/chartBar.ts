@@ -58,6 +58,7 @@ export class ChartBar extends Chart {
         })
         .attr("fill", d => d[colorKey] !== null ? colorMap(d[colorKey]) : 'none' )
         .on('mouseover', function(d: any) {
+          axis.tooltip.show()
           axis.tooltip.update(
             that.toolTipFormatterCartesian(d),
             TooltipPosition.Top,
@@ -66,7 +67,7 @@ export class ChartBar extends Chart {
           )
         })
         .on('mouseout', (d: any) => {
-          axis.tooltip.hide(d)
+          axis.tooltip.hide()
         })
 
       bar.data(data)

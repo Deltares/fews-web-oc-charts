@@ -60,16 +60,17 @@ export class MouseOver implements Visitor {
         that.group.select('.mouse-line').style('opacity', '0')
         that.group.selectAll('.mouse-per-line circle').style('opacity', '0')
         that.group.selectAll('.mouse-x text').style('fill-opacity', '0')
-        axis.tooltip.hide(null)
+        axis.tooltip.hide()
       })
       .on('mouseover', function() {
         // on mouse in show line, circles and text
+        axis.tooltip.show()
         that.group.select('.mouse-line').style('opacity', '1')
         that.group
           .selectAll('.mouse-per-line circle')
           .style('opacity', '1')
           .style('fill', function(d: any, i) {
-            const selector = `[data-id="${d}"]`
+            const selector = `[data-chart-id="${d}"]`
             let element = that.axis.chartGroup.select(selector).select('path')
             if (element.node() === null ) return
             let stroke = window
@@ -87,7 +88,7 @@ export class MouseOver implements Visitor {
         let allHidden = true
         axis.canvas.selectAll('.mouse-per-line').attr('transform', function(d, i) {
           // let element = d3.select(d).select('path')
-          const selector = `[data-id="${d}"]`
+          const selector = `[data-chart-id="${d}"]`
           let chart = axis.charts.find(chart => chart.id === d)
           let xIndex = chart.axisIndex.x.axisIndex
           let xScale = axis.xScale[xIndex]
@@ -151,7 +152,7 @@ export class MouseOver implements Visitor {
           .select('text')
           .text(dateFormatter(axis.xScale[0].invert(mouse[0]), 'YYYY-MM-DD HH:mm z',{timeZone: that.axis.timeZone} ) )
         if (allHidden) {
-          axis.tooltip.hide(null)
+          axis.tooltip.hide()
           return
         }
         let htmlContent = ''
@@ -159,7 +160,6 @@ export class MouseOver implements Visitor {
           let v = popupData[label]
           htmlContent += '<span style="color:' + v.color + ' ">' + '   ' + v.y + '</span><br/>'
         }
-
         let div = axis.tooltip.update(htmlContent, TooltipPosition.Right, d3.event.pageX, d3.event.pageY)
       })
   }
@@ -177,7 +177,7 @@ export class MouseOver implements Visitor {
       .enter()
       .append('g')
       .attr('class', 'mouse-per-line')
-      .attr('data-id', d => d)
+      .attr('data-mouse-id', d => d)
       .append('circle')
       .attr('r', 3)
       .style('fill', 'white')

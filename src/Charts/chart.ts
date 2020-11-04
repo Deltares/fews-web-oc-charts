@@ -192,7 +192,7 @@ export abstract class Chart {
         let intercept = 90 - 180 * axis.intercept / Math.PI
         this.group.attr('transform', 'rotate(' + intercept + ')scale(' + direction + ' ,1)')
       }
-      this.group.attr('data-id', this.id)
+      this.group.attr('data-chart-id', this.id)
       if ( this.cssSelector ) {
         if (this.cssSelector.lastIndexOf('#', 0) === 0) this.group.attr('id', this.cssSelector.substr(1))
         if (this.cssSelector.lastIndexOf('.', 0) === 0) {

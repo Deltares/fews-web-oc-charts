@@ -28,22 +28,25 @@ export class Tooltip {
       .attr('class', 'tooltiptext right')
   }
 
+  show() {
+    this.tooltip
+      .transition()
+      .duration(50)
+      .style('opacity', 1)
+  }
+
   update(html: string, position: string = TooltipPosition.Top, x?: number, y?: number) {
     const tX = x !== undefined ? x : d3.event.pageX
     const tY = y !== undefined ? y : d3.event.pageY
     this.tooltip
       .style('left', tX + 'px')
       .style('top', tY + 'px')
-      .transition()
-      .duration(100)
-      .style('opacity', 1)
-
     this.tooltipText
       .attr('class', `tooltiptext ${position}`)
       .html(html)
   }
 
-  hide(d: any) {
+  hide() {
     this.tooltip
       .transition()
       .duration(50)

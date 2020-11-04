@@ -47,6 +47,7 @@ export class ChartMatrix extends Chart {
         .attr("shape-rendering", "auto")
         .attr("fill", d => d[colorKey] !== null ? colorMap(d[colorKey]) : 'none' )
         .on('mouseover', function(d: any) {
+          axis.tooltip.show()
           axis.tooltip.update(
             that.toolTipFormatterCartesian(d),
             TooltipPosition.Top,
@@ -55,7 +56,7 @@ export class ChartMatrix extends Chart {
           )
         })
         .on('mouseout', (d: any) => {
-          axis.tooltip.hide(d)
+          axis.tooltip.hide()
         })
 
       matrix.data(data)

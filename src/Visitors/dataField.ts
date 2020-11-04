@@ -69,7 +69,7 @@ export class DataField implements Visitor {
 
   redraw() {
     //TODO this only works with unique ids
-    let element = d3.select(`[data-id="${this.options.selector}"]`).select('path')
+    let element = d3.select(`[data-chart-id="${this.options.selector}"]`).select('path')
     let data = element.datum()
     let style = window.getComputedStyle(element.node() as Element)
 

@@ -124,12 +124,13 @@ export class ChartProgress extends Chart {
       .enter()
       .append('path')
       .attr('d', arcGenerator)
-      .attr('data-id', (d) => { return d[rKey] })
+      .attr('data-chart-element-id', (d) => { return d[rKey] })
       .on('mouseover', function(d: any) {
+        axis.tooltip.show()
         axis.tooltip.update(that.toolTipFormatterPolar(d))
       })
       .on('mouseout', function(d: any) {
-        axis.tooltip.hide(d)
+        axis.tooltip.hide()
       })
 
     if (colorKey) {
