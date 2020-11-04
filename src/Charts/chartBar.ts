@@ -39,9 +39,6 @@ export class ChartBar extends Chart {
 
     let colorMap = this.getColorMap(colorScale)
     this.group = this.selectGroup(axis, ChartBar.GROUP_CLASS)
-    let t = d3
-      .transition()
-      .duration(this.options.transitionTime)
 
     const that = this
     const bar = this.group
@@ -73,8 +70,6 @@ export class ChartBar extends Chart {
 
       bar.data(data)
           .order()
-        .transition(t)
-          .delay((d, i) => i * 25)
           .attr("x", d => x0(d[xKey]) + x1(d[x1Key]));
   }
 
