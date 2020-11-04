@@ -452,7 +452,6 @@ updateYAxis (options: CartesianAxisOptions[]) {
     let g = this.canvas
     g.append('g')
       .attr('class', 'axis x-axis-0')
-      .attr('font-size','12')
     g.append('g')
       .attr('class', 'axis x-axis-1')
     g.append('g')
@@ -468,8 +467,6 @@ updateYAxis (options: CartesianAxisOptions[]) {
           .attr('x', 0)
           .attr('y', -9)
           .attr('text-anchor', 'start')
-          .attr('font-family', 'sans-serif')
-          .attr('font-size', '10px')
           .text(this.options.y[0].label)
       }
       if (this.options.y[0]?.unit) {
@@ -478,8 +475,6 @@ updateYAxis (options: CartesianAxisOptions[]) {
           .attr('x', -9)
           .attr('y', -9)
           .attr('text-anchor', 'end')
-          .attr('font-family', 'sans-serif')
-          .attr('font-size', '10px')
           .text(this.options.y[0].unit)
       }
       if (this.options.y[1]?.label) {
@@ -488,8 +483,6 @@ updateYAxis (options: CartesianAxisOptions[]) {
           .attr('x', this.width)
           .attr('y', -9)
           .attr('text-anchor', 'end')
-          .attr('font-family', 'sans-serif')
-          .attr('font-size', '10px')
           .text(this.options.y[1].label)
       }
       if (this.options.y[1]?.unit) {
@@ -498,8 +491,6 @@ updateYAxis (options: CartesianAxisOptions[]) {
           .attr('x', this.width + 10)
           .attr('y', -9)
           .attr('text-anchor', 'start')
-          .attr('font-family', 'sans-serif')
-          .attr('font-size', '10px')
           .text(this.options.y[1].unit)
       }
     }
@@ -509,8 +500,6 @@ updateYAxis (options: CartesianAxisOptions[]) {
         .attr('x', this.width / 2)
         .attr('y', this.height + 30)
         .attr('text-anchor', 'middle')
-        .attr('font-family', 'sans-serif')
-        .attr('font-size', '10px')
         .text(this.options.x[0].label)
     }
     if (this.options.x[0]?.unit) {
@@ -520,8 +509,6 @@ updateYAxis (options: CartesianAxisOptions[]) {
         .attr('y', this.height + 9)
         .attr('dy', '0.71em')
         .attr('text-anchor', 'start')
-        .attr('font-family', 'sans-serif')
-        .attr('font-size', '10px')
         .text(this.options.x[0].unit)
     }
 

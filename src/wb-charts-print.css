@@ -3,6 +3,8 @@
 .wb-charts g {
   color: none;
   fill: none;
+  font-size: 12px;
+  font-style: sans-serif;
 }
 
 g .axis-canvas  {
@@ -54,8 +56,6 @@ g .axis-canvas  {
 }
 
 .current-time-indicator>text {
-  font-family: sans-serif;
-  font-size: 10px;
   visibility: hidden;
   stroke:none;
   fill:black;
@@ -70,8 +70,6 @@ g .axis-canvas  {
 }
 
 .dst-indicator>text {
-  font-family: sans-serif;
-  font-size: 10px;
   visibility: hidden;
   stroke: none;
   fill: black;

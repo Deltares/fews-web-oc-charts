@@ -280,8 +280,6 @@ export class PolarAxis extends Axis {
     let angularAxis = this.canvas
       .append('g')
       .attr('class', 'axis t-axis')
-      .attr('font-size', '10')
-      .attr('font-family', 'sans-serif')
       .attr('transform', 'rotate(' + -this.intercept * 180 / Math.PI + ')')
     this.updateGrid()
   }
