@@ -4,7 +4,7 @@
   "description": "Chart Library",
   "keywords": [],
   "main": "./dist/wb-charts.umd.js",
-  "typings": "./dist/types/index.d.ts",
+  "typings": "./dist/types/wb-charts.d.ts",
   "files": [
     "dist/*",
     "src/*"
