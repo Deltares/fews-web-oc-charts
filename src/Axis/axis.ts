@@ -3,6 +3,7 @@ import { Chart } from '../Charts'
 import { Visitor } from '../Visitors'
 import defaultsDeep from 'lodash/defaultsDeep'
 import merge from 'lodash/merge'
+import { Tooltip } from '../Tooltip'
 
 export interface Margin {
   top?: number
@@ -49,8 +50,7 @@ export interface AxisIndex {
 }
 
 export abstract class Axis {
-  tooltip: any = null
-  tooltipText: any = null
+  tooltip: Tooltip
   type: string
   view: any
   defs: any
@@ -92,7 +92,7 @@ export abstract class Axis {
     this.canvas = this.svg
       .append('g')
       .attr('transform', 'translate(' + this.margin.left + ',' + this.margin.top + ')')
-    this.createTooltip()
+    this.tooltip = new Tooltip(container)
     this.charts = []
     this.visitors = []
   }
@@ -158,26 +158,6 @@ export abstract class Axis {
 
   createChartGroup() {
     this.chartGroup = this.canvas.append('g').attr('class', 'charts')
-  }
-
-  createTooltip() {
-    this.tooltip = d3
-      .select(this.container)
-      .append('div')
-      .attr('class', 'tooltip')
-      .style('opacity', 0)
-    this.tooltipText = this.tooltip
-      .append('div')
-      .attr('class', 'tooltiptext right')
-  }
-
-  abstract showTooltip(html: string, position: string, x?: number, y?: number): void
-
-  hideTooltip(d: any) {
-    this.tooltip
-      .transition()
-      .duration(50)
-      .style('opacity', 0)
   }
 
   protected abstract setRange() : void

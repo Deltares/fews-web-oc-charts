@@ -1,6 +1,7 @@
 import * as d3 from 'd3'
-import { CartesianAxis, PolarAxis, TooltipPosition } from '../Axis'
+import { CartesianAxis, PolarAxis } from '../Axis'
 import { Chart, AUTO_SCALE } from './chart'
+import { TooltipPosition } from '../Tooltip'
 
 export class ChartMatrix extends Chart {
   static readonly GROUP_CLASS: 'chart-matrix'
@@ -46,7 +47,7 @@ export class ChartMatrix extends Chart {
         .attr("shape-rendering", "auto")
         .attr("fill", d => d[colorKey] !== null ? colorMap(d[colorKey]) : 'none' )
         .on('mouseover', function(d: any) {
-          axis.showTooltip(
+          axis.tooltip.update(
             that.toolTipFormatterCartesian(d),
             TooltipPosition.Top,
             axis.margin.left + x0(d[xKey]) + x0.bandwidth() / 2 ,
@@ -54,7 +55,7 @@ export class ChartMatrix extends Chart {
           )
         })
         .on('mouseout', (d: any) => {
-          axis.hideTooltip(d)
+          axis.tooltip.hide(d)
         })
 
       matrix.data(data)

@@ -116,10 +116,10 @@ export class ChartRange extends Chart {
         return yScale(d[yKey][0] - d[yKey][1])
       })
       .on('mouseover', function(d: any) {
-        axis.showTooltip(that.toolTipFormatterCartesian(d))
+        axis.tooltip.update(that.toolTipFormatterCartesian(d))
       })
       .on('mouseout', function(d: any) {
-        axis.hideTooltip(d)
+        axis.tooltip.hide(d)
       })
 
     if (colorKey) {
@@ -200,10 +200,10 @@ export class ChartRange extends Chart {
       .append('path')
       .attr('d', arcGenerator)
       .on('mouseover', function(d: any) {
-        axis.showTooltip(that.toolTipFormatterPolar(d))
+        axis.tooltip.update(that.toolTipFormatterPolar(d))
       })
       .on('mouseout', function(d: any) {
-        axis.hideTooltip(d)
+        axis.tooltip.hide(d)
       })
 
     if (colorKey) {

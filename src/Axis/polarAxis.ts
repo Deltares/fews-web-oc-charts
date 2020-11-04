@@ -2,7 +2,7 @@ import * as d3 from 'd3'
 import { Axis, AxesOptions, AxisType, AxisOptions } from './axis'
 import defaultsDeep from 'lodash/defaultsDeep'
 import momenttz from 'moment-timezone'
-import { TooltipPosition } from './cartesianAxis'
+import { TooltipPosition } from '../Tooltip'
 
 // import { scaleLinear } from 'd3-scale'
 
@@ -236,20 +236,6 @@ export class PolarAxis extends Axis {
       .attr('y', 0)
       .text(labelFormat)
       .attr('transform', textRotate)
-  }
-
-  showTooltip(html: string, position: string = TooltipPosition.Top, x?: number, y?: number) {
-    const tX = x !== undefined ? x : d3.event.pageX
-    const tY = y !== undefined ? y : d3.event.pageY
-    this.tooltip
-      .transition()
-      .duration(100)
-      .style('opacity', 1)
-      .style('left', tX + 'px')
-      .style('top', tY + 'px')
-    this.tooltipText
-      .attr('class', `tooltiptext ${position}`)
-      .html(html)
   }
 
   protected setRange() {

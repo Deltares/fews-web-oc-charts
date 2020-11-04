@@ -40,10 +40,10 @@ export class ChartMarker extends Chart {
       .append('path')
       .on('mouseover', function(d: any) {
         const v = { x: d[xKey], y: d[yKey] }
-        axis.showTooltip(that.toolTipFormatterCartesian(v))
+        axis.tooltip.update(that.toolTipFormatterCartesian(v))
       })
       .on('mouseout', function(d: any) {
-        axis.hideTooltip(d)
+        axis.tooltip.hide(d)
       })
       .attr('d', d3.symbol().type(d3.symbols[this.symbolId]))
       .merge(elements)
@@ -95,10 +95,10 @@ export class ChartMarker extends Chart {
       .attr('d', d3.symbol().type(d3.symbols[this.symbolId]))
       .on('mouseover', function(d: any) {
         const v = { r: d[rKey], t: d[tKey] }
-        axis.showTooltip(that.toolTipFormatterPolar(v))
+        axis.tooltip.update(that.toolTipFormatterPolar(v))
       })
       .on('mouseout', function(d: any) {
-        axis.hideTooltip(d)
+        axis.tooltip.hide(d)
       })
       .merge(elements)
 
