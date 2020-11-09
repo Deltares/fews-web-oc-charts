@@ -82,7 +82,7 @@ export class MouseOver implements Visitor {
       })
       .on('mousemove', function() {
         // mouse moving over canvas
-        let mouse = d3.mouse(this)
+        const mouse = d3.mouse(this)
         let popupData = {}
         let posx = mouse[0]
         let allHidden = true
@@ -160,7 +160,7 @@ export class MouseOver implements Visitor {
           let v = popupData[label]
           htmlContent += '<span style="color:' + v.color + ' ">' + '   ' + v.y + '</span><br/>'
         }
-        let div = axis.tooltip.update(htmlContent, TooltipPosition.Right, d3.event.pageX, d3.event.pageY)
+        axis.tooltip.update(htmlContent, TooltipPosition.Right, mouse[0] + axis.margin.left, mouse[1] + axis.margin.top)
       })
   }
 
