@@ -1,8 +1,8 @@
 import * as d3 from 'd3'
 import { Axis, AxesOptions, AxisType, AxisOptions } from './axis'
 import { generateMultiFormat } from '../Utils/date'
-import { TooltipPosition } from '../Tooltip'
 import momenttz from 'moment-timezone'
+import merge from 'lodash/merge'
 
 export enum AxisPosition {
   AtZero = 'atzero',
@@ -57,6 +57,12 @@ export class CartesianAxis extends Axis {
     this.initAxis()
   }
 
+  setOptions(options?: CartesianAxesOptions) {
+    merge(this.options,
+      options
+    )
+  }
+
   setCanvas() {
     let rect = this.canvas.select('.axis-canvas')
     if (rect.size() === 0) {
@@ -94,17 +100,6 @@ export class CartesianAxis extends Axis {
         .select('rect')
         .attr('height', this.height)
         .attr('width', this.width)
-    }
-  }
-
-  zoom() {
-    for (let chart of this.charts) {
-      chart.plotter(this, chart.axisIndex)
-    }
-    this.updateGrid()
-    // FIXME: move to Axis.ts?
-    for (let visitor of this.visitors) {
-      visitor.redraw()
     }
   }
 
@@ -198,6 +193,17 @@ export class CartesianAxis extends Axis {
     this.setSize()
     this.setRange()
     this.zoom()
+  }
+
+  zoom() {
+    for (let chart of this.charts) {
+      chart.plotter(this, chart.axisIndex)
+    }
+    this.updateGrid()
+    // FIXME: move to Axis.ts?
+    for (let visitor of this.visitors) {
+      visitor.redraw()
+    }
   }
 
   updateXAxis (options: CartesianAxisOptions[]) {
