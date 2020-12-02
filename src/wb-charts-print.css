@@ -13,7 +13,6 @@ g .axis-canvas  {
 
 .axis path { stroke-width: 1px; stroke: black;}
 .axis .tick line { stroke-width: 1px; stroke: black;}
-.axis .tick.zero-crossing line { stroke-dasharray: none;}
 .axis .tick text { stroke-width: 1px; fill: black;}
 .grid {
     fill: none;
@@ -23,6 +22,8 @@ g .axis-canvas  {
 }
 
 .grid text { display: none; }
+.grid .tick line { stroke: black;}
+.grid .tick.zero-crossing line { stroke-dasharray: none; stroke: black;}
 
 .charts > path {
   stroke: black;

@@ -7,10 +7,9 @@
     fill:rgb(89, 89, 89);
 }
 
-.axis path { stroke-width: 1px; stroke: black;}
-.axis .tick line { stroke-width: 1px; stroke: black;}
-.axis .tick.zero-crossing line { stroke-dasharray: none; stroke: white;}
-.axis .tick text { stroke-width: 1px; fill: black;}
+.axis path { stroke-width: 1px; stroke: white;}
+.axis .tick line { stroke-width: 1px; stroke: white;}
+.axis .tick text { stroke-width: 1px; fill: white;}
 .grid {
     fill: none;
     stroke-width: 1px;
@@ -19,6 +18,8 @@
 }
 
 .grid text { display: none; }
+.grid .tick line { stroke: black;}
+.grid .tick.zero-crossing line { stroke-dasharray: 'none'; stroke: white;}
 
 .charts g {
   stroke: white;
