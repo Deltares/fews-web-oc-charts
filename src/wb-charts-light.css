@@ -9,6 +9,7 @@
 
 .axis path { stroke-width: 1px; stroke: black;}
 .axis .tick line { stroke-width: 1px; stroke: black;}
+.axis .tick.zero-crossing line { stroke-dasharray: none; stroke: white;}
 .axis .tick text { stroke-width: 1px; fill: black;}
 .grid {
     fill: none;
