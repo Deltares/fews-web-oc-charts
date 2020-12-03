@@ -22,6 +22,8 @@ g .axis-canvas  {
 }
 
 .grid text { display: none; }
+.grid .tick line { stroke: black;}
+.grid .tick.zero-crossing line { stroke-dasharray: none; stroke: black;}
 
 .charts > path {
   stroke: black;

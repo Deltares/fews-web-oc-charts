@@ -18,6 +18,8 @@
 }
 
 .grid text { display: none; }
+.grid .tick line { stroke: black;}
+.grid .tick.zero-crossing line { stroke-dasharray: 'none'; stroke: white;}
 
 .charts g {
   stroke: white;
