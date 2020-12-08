@@ -254,7 +254,10 @@ export class CartesianAxis extends Axis {
       .select(`.x-axis-${key}`)
       .attr('transform', translateString )
         .call(axis)
-      if (options[key].showGrid) this.canvas.select('.x-grid').call(grid)
+      if (options[key].showGrid) this.canvas.select('.x-grid')
+        .call(grid)
+        .call(g => g.selectAll(".tick line")
+        .attr("class", (d) => { return d === 0 ? 'tick zero-crossing' : 'tick'} ))
     }
   }
 
@@ -305,7 +308,10 @@ updateYAxis (options: CartesianAxisOptions[]) {
     .select(`.y-axis-${key}`)
     .attr('transform', translateString)
     .call(axis)
-    if (options[key].showGrid) this.canvas.select('.y-grid').call(grid)
+    if (options[key].showGrid) this.canvas.select('.y-grid')
+      .call(grid)
+      .call(g => g.selectAll(".tick")
+        .attr("class", (d) => { return d === 0 ? 'tick zero-crossing' : 'tick'} ))
   }
 }
 

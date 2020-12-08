@@ -19,6 +19,8 @@
 }
 
 .grid text { display: none; }
+.grid .tick line { stroke-dasharray: none; stroke: white;}
+.grid .tick.zero-crossing line { stroke-dasharray: none; stroke: black;}
 
 .charts > path {
   stroke: black;
