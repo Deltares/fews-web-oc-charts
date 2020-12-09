@@ -156,9 +156,15 @@ export class MouseOver implements Visitor {
           }
           const xValue = xScale.invert(xPos)
           let idx = bisect(datum, xValue)
+          // before first point
           if (idx === 0 && datum[idx][xKey] >= xValue) {
             return 'translate(0,' + -window.innerHeight + ')'
           }
+          // after last first point
+          if (idx === datum.length-1 && xValue >= datum[idx][xKey]) {
+            return 'translate(0,' + -window.innerHeight + ')'
+          }
+
           if (!datum[idx] || datum[idx][yKey] === null) {
             return 'translate(0,' + -window.innerHeight + ')'
           }
@@ -175,7 +181,6 @@ export class MouseOver implements Visitor {
             valy = datum[idx-1][yKey]
           }
           let posy = yScale(valy)
-
           // labels
           let yLabel
           if (Array.isArray(posy)) {
