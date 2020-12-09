@@ -167,6 +167,11 @@
   padding: 5px;
   z-index: 1;
 }
+
+.tooltip .tooltiptext:empty {
+  display: none;
+}
+
 .tooltip .tooltiptext.top {
   transform: translate(-50%, calc(-100% - 5px));
 }
