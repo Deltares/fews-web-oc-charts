@@ -85,6 +85,7 @@ export class ZoomHandler implements Visitor {
         .on('mouseup', function() {
           document.removeEventListener('mouseup', documentMouseUp)
           that.endSelection(d3.mouse(this))
+          that.mouseGroup.dispatch('mouseover')
         })
         .on('dblclick', function() {
           that.resetZoom(d3.mouse(this))
