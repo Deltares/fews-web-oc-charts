@@ -178,12 +178,12 @@ export class MouseOver implements Visitor {
           if (Array.isArray(posy)) {
             let labels = posy
             for (let i = 0; i < posy.length; i++) {
-              labels[i] = yScale.invert(posy[i]).toFixed(2)
+              labels[i] = Number(yScale.invert(posy[i])).toFixed(2)
             }
             yLabel = labels.join(':')
             posy = posy[0]
           } else {
-            yLabel = valy.toFixed(2)
+            yLabel = Number(valy).toFixed(2)
           }
           posy =
             posy < yScale.range()[1] || posy > yScale.range()[0]
@@ -209,8 +209,7 @@ export class MouseOver implements Visitor {
         let htmlContent = ''
         for (let label in popupData) {
           let v = popupData[label]
-          let symbol = v.interpolated ? '~' : ''
-          htmlContent += `<span style="color: ${v.color}"> ${symbol}${v.y} </span><br/>`
+          htmlContent += `<span style="color: ${v.color}"> ${v.y} </span><br/>`
         }
         axis.tooltip.update(htmlContent, TooltipPosition.Right, mouse[0] + axis.margin.left, mouse[1] + axis.margin.top)
       })
