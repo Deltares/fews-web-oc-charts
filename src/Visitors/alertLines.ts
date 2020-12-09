@@ -19,17 +19,14 @@ export class AlertLines implements Visitor {
 
   create(axis: CartesianAxis) {
 
-    this.group = this.axis.canvas
-      .select('.axis-canvas')
+    this.group =this.axis.canvas.select('.front')
       .append('g')
       .attr('class', 'warning-sections')
-
     this.redraw()
   }
 
   redraw() {
     this.group.selectAll('g').remove()
-    console.log('options', this.options)
     if ( this.options === undefined || this.options.length === 0) {
       return
     }
