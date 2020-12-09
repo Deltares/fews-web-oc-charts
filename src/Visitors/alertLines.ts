@@ -1,5 +1,3 @@
-import * as d3 from 'd3'
-import { values } from 'lodash'
 import { Axis, CartesianAxis } from '../Axis'
 import { Visitor } from './visitor'
 
@@ -54,6 +52,7 @@ export class AlertLines implements Visitor {
         const yScale = this.axis.yScale[d.yAxisIndex]
         return yScale(d.value)})
     enter.append('text')
+      .filter(function (d) { return xScale(d.x1) >= this.axis.width - 10 })
       .attr('text-anchor', 'end')
       .attr("x", (d: any) => {
         const x = xScale(d.x2);
