@@ -27,7 +27,6 @@ export class AlertLines implements Visitor {
 
   redraw() {
     this.group.selectAll('g').remove()
-    console.log('options', this.options)
     if ( this.options === undefined || this.options.length === 0) {
       return
     }
