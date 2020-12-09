@@ -19,11 +19,9 @@ export class AlertLines implements Visitor {
 
   create(axis: CartesianAxis) {
 
-    this.group = this.axis.canvas
-      .select('.axis-canvas')
+    this.group =this.axis.canvas.select('.front')
       .append('g')
       .attr('class', 'warning-sections')
-
     this.redraw()
   }
 

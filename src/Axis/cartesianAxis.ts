@@ -42,18 +42,21 @@ export class CartesianAxis extends Axis {
   ) {
     super(container, width, height, options, CartesianAxis.defaultOptions)
     this.view = this.canvas
-    this.chartGroup = this.canvas
     this.setCanvas()
     this.initXScales(this.options.x)
     this.initYScales(this.options.y)
     this.setRange()
     this.initGrid()
     this.setClipPath()
-    this.chartGroup = this.chartGroup
+    this.chartGroup = this.canvas
       .append('g')
       .attr('class', 'group')
       .attr('clip-path', 'url(#' + this.clipPathId + ')')
       .append('g')
+    this.canvas
+      .append('g')
+      .attr('class', 'front')
+      .attr('clip-path', 'url(#' + this.clipPathId + ')')
     this.initAxis()
   }
 
