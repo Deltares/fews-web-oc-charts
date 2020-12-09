@@ -108,7 +108,6 @@ export class MouseOver implements Visitor {
               }).right
               let datum = element.datum() as any
               let idx = bisect(datum, mouseValue)
-              console.log(idx)
               if ( idx -1 >= 0 && datum[idx-1][yKey] !== null) {
                 let x0 = xScale(datum[idx-1][xKey])
                 let r0 = (x0 - mouse[0] ) ** 2
