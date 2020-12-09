@@ -108,6 +108,7 @@ export class MouseOver implements Visitor {
               }).right
               let datum = element.datum() as any
               let idx = bisect(datum, mouseValue)
+              console.log(idx)
               if ( idx -1 >= 0 && datum[idx-1][yKey] !== null) {
                 let x0 = xScale(datum[idx-1][xKey])
                 let r0 = (x0 - mouse[0] ) ** 2
@@ -164,13 +165,11 @@ export class MouseOver implements Visitor {
           if (idx === datum.length-1 && xValue >= datum[idx][xKey]) {
             return 'translate(0,' + -window.innerHeight + ')'
           }
-
-          if (!datum[idx] || datum[idx][yKey] === null) {
+          if (!datum[idx] || datum[idx][yKey] === null || datum[idx-1][yKey] === null) {
             return 'translate(0,' + -window.innerHeight + ')'
           }
 
           // find closest point
-          let valy = datum[idx][yKey]
           let x0 = xPos
           const x1 = xScale(datum[idx-1][xKey])
           const x2 = xScale(datum[idx][xKey])
@@ -178,8 +177,10 @@ export class MouseOver implements Visitor {
             x0 = x2
           } else {
             x0 = x1
-            valy = datum[idx-1][yKey]
+            idx = idx -1
           }
+
+          let valy = datum[idx][yKey]
           let posy = yScale(valy)
           // labels
           let yLabel
@@ -201,6 +202,9 @@ export class MouseOver implements Visitor {
           popupData[d] = { x: xScale.invert(x0), y: yLabel, color: stroke }
           return 'translate(' + x0 + ',' + posy + ')'
         })
+
+        // if no data present for any chart show mouse postion
+        if (Object.keys(popupData).length === 0) xPos = mouse[0]
 
         // update line
         that.group.select('.mouse-line').attr('transform', 'translate(' + xPos + ',' + 0 + ')')
