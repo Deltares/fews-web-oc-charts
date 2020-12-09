@@ -86,7 +86,7 @@ export class MouseOver implements Visitor {
         let popupData = {}
         let allHidden = true
         let rMin = Infinity
-        let xPos = null
+        let xPos = -window.innerWidth
         // determine closest point over all lines
         axis.canvas.selectAll('.mouse-per-line').each(function(d, i) {
           // let element = d3.select(d).select('path')
@@ -155,43 +155,55 @@ export class MouseOver implements Visitor {
             return 'translate(0,' + -window.innerHeight + ')'
           }
           const xValue = xScale.invert(xPos)
-
           let idx = bisect(datum, xValue)
+          // before first point
           if (idx === 0 && datum[idx][xKey] >= xValue) {
             return 'translate(0,' + -window.innerHeight + ')'
           }
-          if (!datum[idx] || datum[idx][yKey] === null) {
+          // after last first point
+          if (idx === datum.length-1 && xValue >= datum[idx][xKey]) {
             return 'translate(0,' + -window.innerHeight + ')'
           }
-          let valy = datum[idx][yKey]
-          let interpolated = false
-          if( Math.abs(xPos - xScale(datum[idx][xKey])) > 1 ) {
-            interpolated = true
-            let y0 = datum[idx-1][yKey]
-            let y1 = datum[idx][yKey]
-            let x0 = xScale(datum[idx-1][xKey])
-            let x1 = xScale(datum[idx][xKey])
-            valy = y0 + (y1- y0) / (x1 - x0) * (xPos - x0)
+          if (!datum[idx] || datum[idx][yKey] === null || datum[idx-1][yKey] === null) {
+            return 'translate(0,' + -window.innerHeight + ')'
           }
+
+          // find closest point
+          let x0 = xPos
+          const x1 = xScale(datum[idx-1][xKey])
+          const x2 = xScale(datum[idx][xKey])
+          if ((xPos - x1) > (x2 - xPos)) {
+            x0 = x2
+          } else {
+            x0 = x1
+            idx = idx -1
+          }
+
+          let valy = datum[idx][yKey]
           let posy = yScale(valy)
+          // labels
           let yLabel
           if (Array.isArray(posy)) {
             let labels = posy
             for (let i = 0; i < posy.length; i++) {
-              labels[i] = yScale.invert(posy[i]).toFixed(2)
+              labels[i] = Number(yScale.invert(posy[i])).toFixed(2)
             }
             yLabel = labels.join(':')
             posy = posy[0]
           } else {
-            yLabel = valy.toFixed(2)
+            yLabel = Number(valy).toFixed(2)
           }
+          // outside range
           posy =
             posy < yScale.range()[1] || posy > yScale.range()[0]
               ? -window.innerHeight
               : posy
-          popupData[d] = { x: xScale.invert(xPos), y: yLabel, color: stroke, interpolated }
-          return 'translate(' + xPos + ',' + posy + ')'
+          popupData[d] = { x: xScale.invert(x0), y: yLabel, color: stroke }
+          return 'translate(' + x0 + ',' + posy + ')'
         })
+
+        // if no data present for any chart show mouse postion
+        if (Object.keys(popupData).length === 0) xPos = mouse[0]
 
         // update line
         that.group.select('.mouse-line').attr('transform', 'translate(' + xPos + ',' + 0 + ')')
@@ -209,8 +221,7 @@ export class MouseOver implements Visitor {
         let htmlContent = ''
         for (let label in popupData) {
           let v = popupData[label]
-          let symbol = v.interpolated ? '~' : ''
-          htmlContent += `<span style="color: ${v.color}"> ${symbol}${v.y} </span><br/>`
+          htmlContent += `<span style="color: ${v.color}"> ${v.y} </span><br/>`
         }
         axis.tooltip.update(htmlContent, TooltipPosition.Right, mouse[0] + axis.margin.left, mouse[1] + axis.margin.top)
       })
