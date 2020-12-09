@@ -19,7 +19,7 @@
 }
 
 .grid text { display: none; }
-.grid .tick line { stroke-dasharray: none; stroke: white;}
+.grid .tick line { stroke: white;}
 .grid .tick.zero-crossing line { stroke-dasharray: none; stroke: black;}
 
 .charts > path {
