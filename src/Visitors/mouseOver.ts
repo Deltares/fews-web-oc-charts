@@ -86,7 +86,7 @@ export class MouseOver implements Visitor {
         let popupData = {}
         let allHidden = true
         let rMin = Infinity
-        let xPos = null
+        let xPos = -window.innerWidth
         // determine closest point over all lines
         axis.canvas.selectAll('.mouse-per-line').each(function(d, i) {
           // let element = d3.select(d).select('path')
@@ -155,7 +155,6 @@ export class MouseOver implements Visitor {
             return 'translate(0,' + -window.innerHeight + ')'
           }
           const xValue = xScale.invert(xPos)
-
           let idx = bisect(datum, xValue)
           if (idx === 0 && datum[idx][xKey] >= xValue) {
             return 'translate(0,' + -window.innerHeight + ')'
@@ -163,17 +162,21 @@ export class MouseOver implements Visitor {
           if (!datum[idx] || datum[idx][yKey] === null) {
             return 'translate(0,' + -window.innerHeight + ')'
           }
+
+          // find closest point
           let valy = datum[idx][yKey]
-          let interpolated = false
-          if( Math.abs(xPos - xScale(datum[idx][xKey])) > 1 ) {
-            interpolated = true
-            let y0 = datum[idx-1][yKey]
-            let y1 = datum[idx][yKey]
-            let x0 = xScale(datum[idx-1][xKey])
-            let x1 = xScale(datum[idx][xKey])
-            valy = y0 + (y1- y0) / (x1 - x0) * (xPos - x0)
+          let x0 = xPos
+          const x1 = xScale(datum[idx-1][xKey])
+          const x2 = xScale(datum[idx][xKey])
+          if ((xPos - x1) > (x2 - xPos)) {
+            x0 = x2
+          } else {
+            x0 = x1
+            valy = datum[idx-1][yKey]
           }
           let posy = yScale(valy)
+
+          // labels
           let yLabel
           if (Array.isArray(posy)) {
             let labels = posy
@@ -185,12 +188,13 @@ export class MouseOver implements Visitor {
           } else {
             yLabel = Number(valy).toFixed(2)
           }
+          // outside range
           posy =
             posy < yScale.range()[1] || posy > yScale.range()[0]
               ? -window.innerHeight
               : posy
-          popupData[d] = { x: xScale.invert(xPos), y: yLabel, color: stroke, interpolated }
-          return 'translate(' + xPos + ',' + posy + ')'
+          popupData[d] = { x: xScale.invert(x0), y: yLabel, color: stroke }
+          return 'translate(' + x0 + ',' + posy + ')'
         })
 
         // update line
