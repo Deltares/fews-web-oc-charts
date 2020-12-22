@@ -39,6 +39,7 @@ export class ChartMatrix extends Chart {
       .selectAll("rect")
       .data(data)
       .join("rect")
+        .filter(d => d[colorKey] !== null)
         .attr("x", d => x0(d[xKey]))
         .attr("y", d => y0(d[yKey]))
         .attr("width", x0.bandwidth())
@@ -58,14 +59,6 @@ export class ChartMatrix extends Chart {
         .on('mouseout', (d: any) => {
           axis.tooltip.hide()
         })
-
-      matrix.data(data)
-          .order()
-        .transition(t)
-          .attr("x", d => x0(d[xKey]))
-          .attr("y", d => y0(d[yKey]))
-          .attr("width", x0.bandwidth())
-          .attr("height", y0.bandwidth())
   }
 
   plotterPolar(axis: PolarAxis, dataKeys: any) {
