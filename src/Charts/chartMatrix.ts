@@ -40,7 +40,7 @@ export class ChartMatrix extends Chart {
       .selectAll("rect")
       .data(data)
       .join("rect")
-        .filter(d => d[valueKey] !== null)
+        .attr('display', d => { return d[valueKey] === null ? 'none' : undefined })
         .attr("x", d => x0(d[xKey]))
         .attr("y", d => y0(d[yKey]))
         .attr("width", x0.bandwidth())

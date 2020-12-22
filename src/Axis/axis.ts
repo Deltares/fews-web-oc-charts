@@ -46,6 +46,7 @@ export interface AxisIndex {
   y?: AxisIndexItem;
   radial?: AxisIndexItem;
   angular?: AxisIndexItem;
+  value?: { key: string}
   color?: { key: string}
 }
 
