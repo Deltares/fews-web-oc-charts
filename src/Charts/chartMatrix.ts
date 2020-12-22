@@ -10,6 +10,7 @@ export class ChartMatrix extends Chart {
     let xKey = this.dataKeys.x
     let yKey = this.dataKeys.y
     let colorKey = this.dataKeys.color
+    let valueKey = this.dataKeys.value ?  this.dataKeys.value : this.dataKeys.color
     let data = this.data
     const xScale = axis.xScale[axisIndex.x.axisIndex]
     const yScale = axis.yScale[axisIndex.y.axisIndex]
@@ -39,7 +40,7 @@ export class ChartMatrix extends Chart {
       .selectAll("rect")
       .data(data)
       .join("rect")
-        .filter(d => d[colorKey] !== null)
+        .filter(d => d[valueKey] !== null)
         .attr("x", d => x0(d[xKey]))
         .attr("y", d => y0(d[yKey]))
         .attr("width", x0.bandwidth())
