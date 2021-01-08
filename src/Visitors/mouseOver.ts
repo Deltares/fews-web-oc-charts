@@ -80,9 +80,9 @@ export class MouseOver implements Visitor {
           })
         that.group.select('.mouse-x text').style('fill-opacity', '1')
       })
-      .on('mousemove', function() {
+      .on('mousemove', (event) => {
         // mouse moving over canvas
-        const mouse = d3.mouse(this)
+        const mouse = d3.pointer(event)
         let popupData = {}
         let allHidden = true
         let rMin = Infinity

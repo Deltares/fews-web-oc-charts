@@ -36,8 +36,9 @@ export class Tooltip {
   }
 
   update(html: string, position: string = TooltipPosition.Top, x?: number, y?: number) {
-    const tX = x !== undefined ? x : d3.event.pageX
-    const tY = y !== undefined ? y : d3.event.pageY
+    const pointer = d3.pointer(this.container)
+    const tX = x !== undefined ? x : pointer[0]
+    const tY = y !== undefined ? y : pointer[1]
     this.tooltip
       .style('left', tX + 'px')
       .style('top', tY + 'px')
