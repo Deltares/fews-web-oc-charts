@@ -37,7 +37,6 @@ export class LevelSelect implements Visitor {
     if (!this.group) {
       this.group = axis.canvas.append('g').attr('class', 'level-select')
       this.group.append('line')
-      let that = this
       this.group
         .append('polygon')
         .attr('points', '0,0 -5,-5 -8,-5 -8,5 -5,5')
@@ -45,14 +44,14 @@ export class LevelSelect implements Visitor {
         .call(
           d3
             .drag()
-            .on('start', function() {
-              that.start(d3.event)
+            .on('start', (event) => {
+              this.start(event)
             })
-            .on('drag', function() {
-              that.drag(d3.event)
+            .on('drag', (event) => {
+              this.drag(event)
             })
-            .on('end', function() {
-              that.end(d3.event)
+            .on('end', (event) => {
+              this.end(event)
             })
         )
     }
