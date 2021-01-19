@@ -56,9 +56,6 @@
   },
   "devDependencies": {
     "@types/d3": "^6.2.0",
-    "@types/d3-scale": "^3.2.2",
-    "@types/d3-scale-chromatic": "^2.0.0",
-    "@types/d3-shape": "^2.0.0",
     "@types/jest": "^26.0.15",
     "@types/lodash": "^4.14.157",
     "@types/node": "^14.0.20",
@@ -78,9 +75,6 @@
   "dependencies": {
     "csstype": "^2.6.11",
     "d3": "^6.2.0",
-    "d3-scale": "^3.2.2",
-    "d3-scale-chromatic": "^2.0.0",
-    "d3-shape": "^2.0.0",
     "lodash": "^4.17.19",
     "moment": "^2.27.0",
     "moment-timezone": "^0.5.31"
