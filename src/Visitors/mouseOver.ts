@@ -181,17 +181,22 @@ export class MouseOver implements Visitor {
 
           let valy = datum[idx][yKey]
           let posy = yScale(valy)
+
+          const extent = chart.extent.y
+          let p = d3.precisionRound (Math.round( (extent[1] - extent[0]) / 100 ) , Math.max( Math.abs(extent[0]),  Math.abs(extent[1])))
+          let format = d3.format("." + p + "r")
+
           // labels
           let yLabel
           if (Array.isArray(posy)) {
             let labels = posy
             for (let i = 0; i < posy.length; i++) {
-              labels[i] = Number(yScale.invert(posy[i])).toFixed(2)
+              labels[i] = format(yScale.invert(posy[i]))
             }
             yLabel = labels.join(':')
             posy = posy[0]
           } else {
-            yLabel = Number(valy).toFixed(2)
+            yLabel = format(valy)
           }
           // outside range
           posy =
