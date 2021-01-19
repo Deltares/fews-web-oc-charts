@@ -55,32 +55,9 @@ export class MouseOver implements Visitor {
 
     let that = this
     this.mouseGroup
-      .on('mouseout', function() {
-        // on mouse out hide line, circles and text
-        that.group.select('.mouse-line').style('opacity', '0')
-        that.group.selectAll('.mouse-per-line circle').style('opacity', '0')
-        that.group.selectAll('.mouse-x text').style('fill-opacity', '0')
-        axis.tooltip.hide()
-      })
-      .on('mouseover', function() {
-        // on mouse in show line, circles and text
-        axis.tooltip.show()
-        that.group.select('.mouse-line').style('opacity', '1')
-        that.group
-          .selectAll('.mouse-per-line circle')
-          .style('opacity', '1')
-          .style('fill', function(d: any, i) {
-            const selector = `[data-chart-id="${d}"]`
-            let element = that.axis.chartGroup.select(selector).select('path')
-            if (element.node() === null ) return
-            let stroke = window
-              .getComputedStyle(element.node() as Element)
-              .getPropertyValue('stroke')
-            return stroke
-          })
-        that.group.select('.mouse-x text').style('fill-opacity', '1')
-      })
-      .on('mousemove', (event) => {
+      .on('pointerout', () => this.onPointerout())
+      .on('pointerover',() => this.onPointerover())
+      .on('pointermove', (event) => {
         // mouse moving over canvas
         const mouse = d3.pointer(event)
         let popupData = {}
@@ -230,6 +207,35 @@ export class MouseOver implements Visitor {
         }
         axis.tooltip.update(htmlContent, TooltipPosition.Right, mouse[0] + axis.margin.left, mouse[1] + axis.margin.top)
       })
+  }
+
+  // pointer event handlers
+  onPointerout () {
+    // on mouse out hide line, circles and text
+    this.group.select('.mouse-line').style('opacity', '0')
+    this.group.selectAll('.mouse-per-line circle').style('opacity', '0')
+    this.group.selectAll('.mouse-x text').style('fill-opacity', '0')
+    this.axis.tooltip.hide()
+  }
+
+
+  onPointerover () {
+    // on mouse in show line, circles and text
+    this.axis.tooltip.show()
+    this.group.select('.mouse-line').style('opacity', '1')
+    this.group
+      .selectAll('.mouse-per-line circle')
+      .style('opacity', '1')
+      .style('fill', (d: any, i) => {
+        const selector = `[data-chart-id="${d}"]`
+        let element = this.axis.chartGroup.select(selector).select('path')
+        if (element.node() === null ) return
+        let stroke = window
+          .getComputedStyle(element.node() as Element)
+          .getPropertyValue('stroke')
+        return stroke
+      })
+    this.group.select('.mouse-x text').style('fill-opacity', '1')
   }
 
   updateLineIndicators () {
