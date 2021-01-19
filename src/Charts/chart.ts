@@ -41,7 +41,7 @@ export interface ChartOptions {
 
 export abstract class Chart {
   protected _data: any
-  protected _extent: any[]
+  protected _extent: any
   group: any
   colorMap: any
   id: string
@@ -76,11 +76,11 @@ export abstract class Chart {
     return this._data
   }
 
-  set extent(extent: any[]) {
+  set extent(extent: any) {
     this._extent = extent
   }
 
-  get extent(): any[] {
+  get extent(): any {
     if (!this._extent) {
       this._extent = Array()
       for (let axisKey in this.axisIndex) {

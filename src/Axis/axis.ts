@@ -77,6 +77,15 @@ export abstract class Axis {
     )
     this.timeZone = 'Europe/Amsterdam'
 
+
+    // Using the d3.formatLocale is not easy for generic plotting
+    d3.formatDefaultLocale({
+      decimal: '.',
+      thousands: '\u2009',
+      grouping: [3],
+      currency: ['$', '']
+    })
+
     this.margin = { ...{ top: 40, right: 40, bottom: 40, left: 40 }, ...options.margin }
     this.svg = d3
       .select(container)
