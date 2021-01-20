@@ -102,7 +102,7 @@ export class ZoomHandler implements Visitor {
     this.lastPoint = null
     this.mode = SelectionMode.CANCEL
     let that = this
-    this.mouseGroup.dispatch('mouseout')
+    this.mouseGroup.dispatch('pointerout')
     this.mouseGroup.select('.overlay').on('mousemove', (event) => {
       that.updateSelection(d3.pointer(event))
     })
@@ -228,7 +228,7 @@ export class ZoomHandler implements Visitor {
       }
     }
     this.brushGroup.selectAll('*').attr('visibility', 'hidden')
-    this.mouseGroup.dispatch('mouseover')
+    this.mouseGroup.dispatch('pointerover')
     this.axis.zoom()
   }
 
