@@ -60,6 +60,10 @@ export class MouseOver implements Visitor {
       .on('pointermove', (event) => {
         // mouse moving over canvas
         const mouse = d3.pointer(event)
+        let offsetY = 0
+        if ( event.pointerType !== "mouse" ) {
+          offsetY = mouse[1] > axis.height/2 ? -50 : 50
+        }
         let popupData = {}
         let allHidden = true
         let rMin = Infinity
@@ -205,7 +209,7 @@ export class MouseOver implements Visitor {
           let v = popupData[label]
           htmlContent += `<span style="color: ${v.color}"> ${v.y} </span><br/>`
         }
-        axis.tooltip.update(htmlContent, TooltipPosition.Right, mouse[0] + axis.margin.left, mouse[1] + axis.margin.top)
+        axis.tooltip.update(htmlContent, TooltipPosition.Right, mouse[0] + axis.margin.left, mouse[1] + offsetY + axis.margin.top)
       })
   }
 
