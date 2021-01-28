@@ -3,9 +3,7 @@ import { Visitor } from './visitor'
 import momenttz from 'moment-timezone';
 import defaultsDeep from 'lodash/defaultsDeep'
 
-type DstIndicatorOptions = {
-  [key in 'x' | 'y'] : { axisIndex: number }
-}
+type DstIndicatorOptions = { x: { axisIndex: number } } | { y: { axisIndex: number } }
 
 export class DstIndicator implements Visitor {
   private group: any
@@ -15,7 +13,7 @@ export class DstIndicator implements Visitor {
   private options: DstIndicatorOptions
 
   // tslint:disable-next-line:no-empty
-  constructor(options: DstIndicatorOptions) {
+  constructor(options: DstIndicatorOptions ) {
     this.options = defaultsDeep({},
       options,
       {
@@ -26,11 +24,13 @@ export class DstIndicator implements Visitor {
 
   visit(axis: Axis) {
     this.axis = axis as CartesianAxis
-    let axisIndex = this.options.x.axisIndex
-    if (this.axis.options.x[axisIndex] && this.axis.options.x[axisIndex].type === AxisType.time) {
-      this.create(axis as CartesianAxis)
-    } else {
-      throw new Error (`x-axis [${axisIndex}] does not exist or is not of type 'time'`)
+    if ("x" in this.options) {
+      let axisIndex = this.options.x.axisIndex
+      if (this.axis.options.x[axisIndex] && this.axis.options.x[axisIndex].type === AxisType.time) {
+        this.create(axis as CartesianAxis)
+      } else {
+        throw new Error (`x-axis [${axisIndex}] does not exist or is not of type 'time'`)
+      }
     }
   }
 
@@ -42,30 +42,32 @@ export class DstIndicator implements Visitor {
   }
 
   redraw() {
-    const axisIndex = this.options.x.axisIndex
-    const scale = this.axis.xScale[axisIndex]
-    const domain = scale.domain()
-    let startMoment = momenttz(domain[0]).tz(this.axis.timeZone)
-    let endMoment = momenttz(domain[1]).tz(this.axis.timeZone)
-    if (startMoment.isDST() !== endMoment.isDST() ) {
-      this.dstDate = this.findDst(startMoment,endMoment)
-      let x = scale(this.dstDate)
-        this.group.attr('display', 'initial')
-        if (!this.indicator) {
-          this.indicator = this.group.append('g').attr('class', 'dst-indicator')
-          this.indicator.append('polygon').attr('points', '0,0 6,6 -6,6')
-          this.indicator.append('text')
-        }
-        this.indicator.attr('transform', 'translate(' + x + ',' + this.axis.height + ')')
-        this.indicator
-          .select('text')
-          .attr('x', 5)
-          .attr('y', -5)
-          .attr('text-anchor','middle')
-          .text('dst transition')
+    if ("x" in this.options) {
+      const axisIndex = this.options.x.axisIndex
+      const scale = this.axis.xScale[axisIndex]
+      const domain = scale.domain()
+      let startMoment = momenttz(domain[0]).tz(this.axis.timeZone)
+      let endMoment = momenttz(domain[1]).tz(this.axis.timeZone)
+      if (startMoment.isDST() !== endMoment.isDST() ) {
+        this.dstDate = this.findDst(startMoment,endMoment)
+        let x = scale(this.dstDate)
+          this.group.attr('display', 'initial')
+          if (!this.indicator) {
+            this.indicator = this.group.append('g').attr('class', 'dst-indicator')
+            this.indicator.append('polygon').attr('points', '0,0 6,6 -6,6')
+            this.indicator.append('text')
+          }
+          this.indicator.attr('transform', 'translate(' + x + ',' + this.axis.height + ')')
+          this.indicator
+            .select('text')
+            .attr('x', 5)
+            .attr('y', -5)
+            .attr('text-anchor','middle')
+            .text('dst transition')
 
-    } else {
-      this.group.attr('display', 'none')
+      } else {
+        this.group.attr('display', 'none')
+      }
     }
   }
 
