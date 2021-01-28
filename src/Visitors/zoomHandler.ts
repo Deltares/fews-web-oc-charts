@@ -84,11 +84,11 @@ export class ZoomHandler implements Visitor {
         .on('mouseup', (event) => {
           document.removeEventListener('mouseup', documentMouseUp)
           this.endSelection(d3.pointer(event))
-          this.mouseGroup.dispatch('mouseover')
+          this.mouseGroup.dispatch('pointerover')
         })
         .on('dblclick', (event) => {
           this.resetZoom(d3.pointer(event))
-          this.mouseGroup.dispatch('mouseover')
+          this.mouseGroup.dispatch('pointerover')
         })
     }
     let mouseRect = this.mouseGroup
