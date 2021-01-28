@@ -1,7 +1,7 @@
 import * as d3 from 'd3'
 import { Axis, AxesOptions, AxisType, AxisOptions } from './axis'
 import { generateMultiFormat } from '../Utils/date'
-import momenttz from 'moment-timezone'
+import { DateTime } from 'luxon'
 import merge from 'lodash/merge'
 
 export enum AxisPosition {
@@ -225,14 +225,14 @@ export class CartesianAxis extends Axis {
       if (options[key].type === AxisType.time ) {
 
         let offsetDomain = scale.domain().map((d) => {
-          let m = momenttz(d as Date).tz(this.timeZone)
-          return new Date(d.getTime() + m.utcOffset() * 60000);
+          const m = DateTime.fromJSDate(d as Date).setZone(this.timeZone)
+          return new Date(d.getTime() + m.offset * 60000);
         })
         let offsetScale = d3.scaleUtc().domain(offsetDomain)
         let tickValues = offsetScale.ticks(5)
         let offsetValues = tickValues.map((d) => {
-          let m = momenttz(d as Date).tz(this.timeZone)
-          return new Date(d.getTime() - m.utcOffset() * 60000);
+          const m = DateTime.fromJSDate(d as Date).setZone(this.timeZone)
+          return new Date(d.getTime() - m.offset * 60000);
         })
         axis.tickValues(offsetValues)
         axis.tickFormat(generateMultiFormat(this.timeZone))
@@ -279,14 +279,14 @@ updateYAxis (options: CartesianAxisOptions[]) {
     grid.ticks(5).tickSize(this.width)
     if (options[key].type === AxisType.time ) {
       let offsetDomain = scale.domain().map((d) => {
-        let m = momenttz(d as Date).tz(this.timeZone)
-        return new Date(d.getTime() + m.utcOffset() * 60000);
+        const m = DateTime.fromJSDate(d as Date).setZone(this.timeZone)
+        return new Date(d.getTime() + m.offset * 60000);
       })
       let offsetScale = d3.scaleUtc().domain(offsetDomain)
       let tickValues = offsetScale.ticks(5)
       let offsetValues = tickValues.map((d) => {
-        let m = momenttz(d as Date).tz(this.timeZone)
-        return new Date(d.getTime() - m.utcOffset() * 60000);
+        const m = DateTime.fromJSDate(d as Date).setZone(this.timeZone)
+        return new Date(d.getTime() - m.offset * 60000);
       })
       axis.tickValues(offsetValues)
       axis.tickFormat(generateMultiFormat(this.timeZone))

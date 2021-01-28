@@ -1,7 +1,7 @@
 import * as d3 from 'd3'
 import { Axis, AxesOptions, AxisType, AxisOptions } from './axis'
 import defaultsDeep from 'lodash/defaultsDeep'
-import momenttz from 'moment-timezone'
+import { DateTime } from 'luxon'
 import { TooltipPosition } from '../Tooltip'
 
 // import { scaleLinear } from 'd3-scale'
@@ -144,14 +144,14 @@ export class PolarAxis extends Axis {
     if (this.angularAxisOptions.type === AxisType.time) {
       const scale = this.angularScale.copy()
       let offsetDomain = scale.domain().map((d) => {
-        let m = momenttz(d as Date).tz(this.timeZone)
-        return new Date(d.getTime() + m.utcOffset() * 60000);
+        const m = DateTime.fromJSDate(d as Date).setZone(this.timeZone)
+        return new Date(d.getTime() + m.offset * 60000);
       })
       let offsetScale = d3.scaleUtc().domain(offsetDomain)
       let tickValues = offsetScale.ticks(10)
       let offsetValues = tickValues.map((d) => {
-        let m = momenttz(d as Date).tz(this.timeZone)
-        return new Date(d.getTime() - m.utcOffset() * 60000);
+        const m = DateTime.fromJSDate(d as Date).setZone(this.timeZone)
+        return new Date(d.getTime() - m.offset * 60000);
       })
       angularTicks = offsetValues
     } else {
