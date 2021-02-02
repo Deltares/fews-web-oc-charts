@@ -195,7 +195,7 @@ export class MouseOver implements Visitor {
           .select('.mouse-x')
           .attr('transform', 'translate(' + ( xPos + 2) + ',' + (axis.height - 5) + ')')
           .select('text')
-          .text(dateFormatter(axis.xScale[0].invert(xPos), 'YYYY-MM-DD HH:mm z', { timeZone: that.axis.timeZone } ) )
+          .text(dateFormatter(axis.xScale[0].invert(xPos), 'yyyy-MM-dd HH:mm ZZZZ', { timeZone: that.axis.timeZone } ) )
         if (allHidden) {
           axis.tooltip.hide()
           return

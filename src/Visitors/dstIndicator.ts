@@ -1,6 +1,6 @@
 import { Axis, CartesianAxis, AxisType } from '../Axis'
 import { Visitor } from './visitor'
-import momenttz from 'moment-timezone';
+import { DateTime, Duration } from 'luxon'
 import defaultsDeep from 'lodash/defaultsDeep'
 
 type DstIndicatorOptions = { x: { axisIndex: number } } | { y: { axisIndex: number } }
@@ -46,10 +46,10 @@ export class DstIndicator implements Visitor {
       const axisIndex = this.options.x.axisIndex
       const scale = this.axis.xScale[axisIndex]
       const domain = scale.domain()
-      let startMoment = momenttz(domain[0]).tz(this.axis.timeZone)
-      let endMoment = momenttz(domain[1]).tz(this.axis.timeZone)
-      if (startMoment.isDST() !== endMoment.isDST() ) {
-        this.dstDate = this.findDst(startMoment,endMoment)
+      let startDate = DateTime.fromJSDate(domain[0]).setZone(this.axis.timeZone)
+      let endDate = DateTime.fromJSDate(domain[1]).setZone(this.axis.timeZone)
+      if (startDate.isInDST !== endDate.isInDST ) {
+        this.dstDate = this.findDst(startDate, endDate)
         let x = scale(this.dstDate)
           this.group.attr('display', 'initial')
           if (!this.indicator) {
@@ -71,20 +71,21 @@ export class DstIndicator implements Visitor {
     }
   }
 
-  findDst(startMoment, endMoment) : Date {
-    let m1 = startMoment.clone()
-    let m2 = endMoment.clone()
-    let duration = momenttz.duration(m2.diff(m1)).asMinutes()
-    while (duration > 1) {
-      let intermediate = m1.clone().add(duration/2, "minutes")
-      if (m1.utcOffset() === intermediate.utcOffset() ) {
-        m1 = intermediate
+  findDst(startDate: DateTime, endDate: DateTime) : Date {
+    let d1 = startDate
+    let d2 = endDate
+    let duration = d2.diff(d1)
+    while (duration.as('minutes') > 1) {
+      let intermediate = d1.plus(Duration.fromMillis(duration.valueOf()/2))
+      if (d1.offset === intermediate.offset ) {
+        d1 = intermediate
       } else {
-        m2 = intermediate
+        d2 = intermediate
       }
-      duration = momenttz.duration(m2.diff(m1)).asMinutes()
+      duration = duration = d2.diff(d1)
+
     }
-    return m2.seconds(0).toDate()
+    return d2.set({ second: 0 }).toJSDate()
   }
 
 
