@@ -10,6 +10,32 @@ function mean(x: number[] | number) {
 }
 
 export class ChartArea extends Chart {
+
+  set extent(extent: any[]) {
+    this._extent = extent
+  }
+
+  //FIXME: implement for x-axis
+  get extent(): any[] {
+    if (!this._extent) {
+      this._extent = Array()
+      for (let key in this.dataKeys) {
+        if (key !== 'y') continue
+        let path = this.dataKeys[key]
+        let min = d3.min(this._data, function(d: any) {
+          if (d[path] === null) return undefined
+          return d3.min(d[path])
+        })
+        let max = d3.max(this._data, function(d: any) {
+          if (d[path] === null) return undefined
+          return d3.max(d[path])
+        })
+        this._extent[path] = [min, max]
+      }
+    }
+    return this._extent
+  }
+
   plotterCartesian(axis: CartesianAxis, axisIndex: AxisIndex) {
     let xKey = this.dataKeys.x
     let yKey = this.dataKeys.y

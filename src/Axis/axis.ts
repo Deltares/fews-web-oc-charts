@@ -166,6 +166,21 @@ export abstract class Axis {
     v.visit(this)
   }
 
+  get extent(): any {
+    const _extent = {}
+    for (let chart of this.charts) {
+      const chartExtent = chart.extent
+      for (const path in chartExtent) {
+        if ( !(path in _extent) ) {
+          _extent[path] = chartExtent[path]
+        } else {
+          _extent[path] = d3.extent([ ..._extent[path], ...chartExtent[path]])
+        }
+      }
+    }
+    return _extent
+  }
+
   createChartGroup() {
     this.chartGroup = this.canvas.append('g').attr('class', 'charts')
   }

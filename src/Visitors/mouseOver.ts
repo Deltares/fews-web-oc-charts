@@ -105,6 +105,10 @@ export class MouseOver implements Visitor {
           }
         })
 
+        const yExtent = this.axis.extent.y
+        const p = d3.precisionRound (Math.round( (yExtent[1] - yExtent[0]) / 100 ) , Math.max( Math.abs(yExtent[0]),  Math.abs(yExtent[1])))
+        const formatY = d3.format("." + p + "r")
+
         axis.canvas.selectAll('.mouse-per-line').attr('transform', function(d, i) {
           // let element = d3.select(d).select('path')
           const selector = `[data-chart-id="${d}"]`
@@ -159,21 +163,17 @@ export class MouseOver implements Visitor {
           let valy = datum[idx][yKey]
           let posy = yScale(valy)
 
-          const extent = chart.extent.y
-          let p = d3.precisionRound (Math.round( (extent[1] - extent[0]) / 100 ) , Math.max( Math.abs(extent[0]),  Math.abs(extent[1])))
-          let format = d3.format("." + p + "r")
-
           // labels
           let yLabel
           if (Array.isArray(posy)) {
             let labels = posy
             for (let i = 0; i < posy.length; i++) {
-              labels[i] = format(yScale.invert(posy[i]))
+              labels[i] = formatY(yScale.invert(posy[i]))
             }
             yLabel = labels.join(':')
             posy = posy[0]
           } else {
-            yLabel = format(valy)
+            yLabel = formatY(valy)
           }
           // outside range
           posy =
