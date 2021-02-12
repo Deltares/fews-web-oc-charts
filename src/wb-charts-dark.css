@@ -4,7 +4,7 @@
 }
 
 .axis-canvas {
-    fill:rgb(89, 89, 89);
+    fill: rgb(54, 54, 54);
 }
 
 .axis path { stroke-width: 1px; stroke: white;}
@@ -163,7 +163,7 @@
   color: #fff;
   text-align: center;
   border-radius: 6px;
-  padding: 5px;
+  padding: 5px 10px;
   z-index: 1;
 }
 
