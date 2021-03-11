@@ -23,11 +23,13 @@ export class ChartRange extends Chart {
         let path = this.dataKeys[key]
         let min = d3.min(this._data, function(d: any) {
           if (d[path] === null) return undefined
-          return d3.min(d[path])
+          if (Array.isArray(d[path])) return d3.min(d[path])
+          return d[path]
         })
         let max = d3.max(this._data, function(d: any) {
           if (d[path] === null) return undefined
-          return d3.max(d[path])
+          if (Array.isArray(d[path])) return d3.min(d[path])
+          return d[path]
         })
         this._extent[path] = [min, max]
       }
