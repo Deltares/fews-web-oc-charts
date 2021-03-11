@@ -190,7 +190,7 @@ export abstract class Chart {
 
   abstract drawLegendSymbol(legendId?: string, asSvgElement?: boolean)
 
-  protected selectGroup(axis: Axis, cssClass: string) {
+  protected selectGroup(axis: CartesianAxis|PolarAxis, cssClass: string) {
     if (this.group == null) {
       this.group = axis.chartGroup.append('g')
       if (axis instanceof PolarAxis) {
