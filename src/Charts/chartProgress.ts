@@ -125,7 +125,7 @@ export class ChartProgress extends Chart {
       .append('path')
       .attr('d', arcGenerator)
       .attr('data-chart-element-id', (d) => { return d[rKey] })
-      .on('pointerover', function(_e: any, [d]) {
+      .on('pointerover', function(_e: any, d) {
         axis.tooltip.show()
         axis.tooltip.update(that.toolTipFormatterPolar(d))
       })

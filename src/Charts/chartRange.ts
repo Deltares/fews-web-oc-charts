@@ -117,7 +117,7 @@ export class ChartRange extends Chart {
       .attr('height', function(d: any) {
         return yScale(d[yKey][0] - d[yKey][1])
       })
-      .on('pointerover', function(_e: any, [d]) {
+      .on('pointerover', function(_e: any, d) {
         axis.tooltip.show()
         axis.tooltip.update(that.toolTipFormatterCartesian(d))
       })
@@ -202,7 +202,7 @@ export class ChartRange extends Chart {
       .enter()
       .append('path')
       .attr('d', arcGenerator)
-      .on('pointerover', function(_e: any, [d]) {
+      .on('pointerover', function(_e: any, d) {
         axis.tooltip.show()
         axis.tooltip.update(that.toolTipFormatterPolar(d))
       })

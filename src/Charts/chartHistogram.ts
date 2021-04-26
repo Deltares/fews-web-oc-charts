@@ -58,7 +58,7 @@ export class ChartHistogram extends Chart {
       .attr('x', function(d: any) {
         return histScale(d[xKey])
       })
-      .on('pointerover', function(_e: any, [d]) {
+      .on('pointerover', function(_e: any, d) {
         axis.tooltip.show()
         axis.tooltip.update(that.toolTipFormatterCartesian(d))
       })

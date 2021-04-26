@@ -38,7 +38,7 @@ export class ChartMarker extends Chart {
     elements
       .enter()
       .append('path')
-      .on('pointerover', function(_e: any, [d]) {
+      .on('pointerover', function(_e: any, d) {
         const v = { x: d[xKey], y: d[yKey] }
         axis.tooltip.show()
         axis.tooltip.update(that.toolTipFormatterCartesian(v))
@@ -94,7 +94,7 @@ export class ChartMarker extends Chart {
         return 'translate(' + -r * Math.sin(-t) + ',' + -r * Math.cos(-t) + ')'
       })
       .attr('d', d3.symbol().type(d3.symbols[this.symbolId]))
-      .on('pointerover', function(e: any, [d]) {
+      .on('pointerover', function(e: any, d) {
         const v = { r: d[rKey], t: d[tKey] }
         axis.tooltip.update(that.toolTipFormatterPolar(v))
       })
