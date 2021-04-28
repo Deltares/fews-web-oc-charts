@@ -55,7 +55,7 @@
     "singleQuote": true
   },
   "devDependencies": {
-    "@types/d3": "^6.2.0",
+    "@types/d3": "^6.3.0",
     "@types/jest": "^26.0.15",
     "@types/lodash": "^4.14.157",
     "@types/luxon": "^1.25.1",
@@ -75,7 +75,7 @@
   },
   "dependencies": {
     "csstype": "^2.6.11",
-    "d3": "^6.2.0",
+    "d3": "^6.7.0",
     "lodash": "^4.17.19",
     "luxon": "^1.25.0"
   }

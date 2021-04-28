@@ -55,7 +55,7 @@ export class ChartBar extends Chart {
           return d[yKey] === null ? 0 : Math.abs(yScale(0) - yScale(d[yKey]))
         })
         .attr("fill", d => d[colorKey] !== null ? colorMap(d[colorKey]) : 'none' )
-        .on('mouseover', function(d: any) {
+        .on('pointerover', function(_e: any, d) {
           axis.tooltip.show()
           axis.tooltip.update(
             that.toolTipFormatterCartesian(d),
@@ -64,7 +64,7 @@ export class ChartBar extends Chart {
             axis.margin.top + Math.min(yScale(d[yKey]), yScale(0))
           )
         })
-        .on('mouseout', (d: any) => {
+        .on('pointerout', () => {
           axis.tooltip.hide()
         })
 

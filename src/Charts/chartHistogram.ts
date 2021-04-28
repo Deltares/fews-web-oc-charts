@@ -58,11 +58,11 @@ export class ChartHistogram extends Chart {
       .attr('x', function(d: any) {
         return histScale(d[xKey])
       })
-      .on('mouseover', function(d: any) {
+      .on('pointerover', function(_e: any, d) {
         axis.tooltip.show()
         axis.tooltip.update(that.toolTipFormatterCartesian(d))
       })
-      .on('mouseout', function(d: any) {
+      .on('pointerout', function() {
         axis.tooltip.hide()
       })
       .attr('width', histScale.bandwidth())
