@@ -10,7 +10,7 @@ function mean(x: number[] | number) {
 }
 
 const DefaultSymbolOptions: SymbolOptions = {
-  id: 1,
+  id: 0,
   size: 10
 }
 export class ChartMarker extends Chart {
