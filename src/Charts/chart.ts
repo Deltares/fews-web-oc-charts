@@ -26,6 +26,11 @@ interface ColorOptionItem {
   map?: any;
 }
 
+export interface SymbolOptions {
+  id: number
+  size: number
+}
+
 export interface ChartOptions {
   x? : ChartOptionItem;
   x1? : ChartOptionItem;
@@ -35,7 +40,7 @@ export interface ChartOptions {
   color?: ColorOptionItem;
   transitionTime?: number;
   colorScale?: any;
-  symbolId?: number;
+  symbol?: SymbolOptions;
   toolTipFormatter?: (d: any) => string;
 }
 
