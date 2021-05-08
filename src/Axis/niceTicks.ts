@@ -1,9 +1,10 @@
 import * as d3 from 'd3'
+import { AxisType } from './axis'
 
 const valueSteps = [1, 2, 2.5, 5, 10 ] // keep the 10 at the end
-// const degreeSteeps = [1, 5, 15, 45, 90] // keep the 10 at the end
+const degreeSteeps = [1, 5, 15, 30, 45, 60, 90] // keep the 10 at the end
 
-export function niceDomain(scale: any, count: number)
+export function niceDomain(scale: any, count: number, axisType = AxisType.value)
 {
     // Minimal increment to avoid round extreme values to be on the edge of the chart
 
@@ -17,12 +18,16 @@ export function niceDomain(scale: any, count: number)
 
   // First approximation
   let roughStep = range / (count - 1)
-
+  let step = 1
   // Normalize rough step to find the normalized one that fits best
-  let stepPower = Math.pow(10, -Math.floor(Math.log10( Math.abs(roughStep))))
-  var normalizedStep = roughStep * stepPower
-  let goodNormalizedStep = valueSteps.find(n => n >= normalizedStep)
-  const step = goodNormalizedStep / stepPower
+  if (axisType === AxisType.degrees) {
+    step = degreeSteeps.find(n => n >= roughStep)
+  } else {
+    let stepPower = Math.pow(10, -Math.floor(Math.log10(Math.abs(roughStep))))
+    var normalizedStep = roughStep * stepPower
+    let goodNormalizedStep = valueSteps.find(n => n >= normalizedStep)
+    step = goodNormalizedStep / stepPower
+  }
 
   // Determine the scale limits based on the chosen step.
   let scaleMax = Math.ceil(max / step) * step
