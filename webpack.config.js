@@ -2,8 +2,7 @@ const path = require('path')
 const CopyPlugin = require('copy-webpack-plugin');
 
 module.exports = {
-  mode: 'development',
-
+  mode: 'production',
   entry: './src/wb-charts.ts',
   output: {
     path: path.resolve(__dirname, 'dist'),
