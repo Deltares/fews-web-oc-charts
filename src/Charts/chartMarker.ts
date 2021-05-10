@@ -1,6 +1,6 @@
 import * as d3 from 'd3'
 import { CartesianAxis, PolarAxis } from '../Axis'
-import { Chart } from './chart'
+import { Chart, SymbolOptions } from './chart'
 
 function mean(x: number[] | number) {
   if (x instanceof Array) {
@@ -9,13 +9,17 @@ function mean(x: number[] | number) {
   return x
 }
 
+const DefaultSymbolOptions: SymbolOptions = {
+  id: 0,
+  size: 10
+}
 export class ChartMarker extends Chart {
   private previousData: any[] = []
-  symbolId!: number
+  symbol!: SymbolOptions
 
   constructor(data: any, options: any) {
     super(data, options)
-    this.symbolId = this.options.symbolId ? this.options.symbolId : 0
+    this.symbol = { ...this.options.symbol, ...DefaultSymbolOptions}
   }
 
   plotterCartesian(axis: CartesianAxis, axisIndex: any) {
@@ -46,7 +50,7 @@ export class ChartMarker extends Chart {
       .on('pointerout', function() {
         axis.tooltip.hide()
       })
-      .attr('d', d3.symbol().type(d3.symbols[this.symbolId]))
+      .attr('d', d3.symbol(d3.symbols[this.symbol.id], this.symbol.size))
       .merge(elements)
       .attr('transform', function (d: any, i: number) {
         return 'translate(' + xScale(d[xKey]) + ',' + yScale(d[yKey]) + ')'
@@ -93,7 +97,7 @@ export class ChartMarker extends Chart {
         const t: number = axis.angularScale(d[tKey])
         return 'translate(' + -r * Math.sin(-t) + ',' + -r * Math.cos(-t) + ')'
       })
-      .attr('d', d3.symbol().type(d3.symbols[this.symbolId]))
+      .attr('d', d3.symbol(d3.symbols[this.symbol.id], this.symbol.size))
       .on('pointerover', function(e: any, d) {
         const v = { r: d[rKey], t: d[tKey] }
         axis.tooltip.update(that.toolTipFormatterPolar(v))
@@ -124,9 +128,9 @@ export class ChartMarker extends Chart {
       .attr('height',20)
     const group = svg
       .append('g')
-      .attr('transform', 'translate(10 0)')
+      .attr('transform', 'translate(10 10)')
     const element = group.append('path')
-      .attr('d', d3.symbol().type(d3.symbols[this.symbolId]))
+      .attr('d', d3.symbol(d3.symbols[this.symbol.id], this.symbol.size))
       .style('stroke', style.getPropertyValue('stroke'))
       .style('fill', style.getPropertyValue('fill'))
     if (asSvgElement) return element.node()
