@@ -3,6 +3,7 @@ import { Axis, AxesOptions, AxisType, AxisOptions } from './axis'
 import { generateMultiFormat } from '../Utils/date'
 import { DateTime } from 'luxon'
 import merge from 'lodash/merge'
+import { niceDomain } from './niceTicks'
 
 export enum AxisPosition {
   AtZero = 'atzero',
@@ -138,7 +139,7 @@ export class CartesianAxis extends Axis {
           extent[1] = max
         }
         scale.domain(extent)
-        if (this.options.x[key]?.nice === true) scale.nice()
+        if (this.options.x[key]?.nice === true) niceDomain(scale, 12)
       }
     }
   }
@@ -175,7 +176,7 @@ export class CartesianAxis extends Axis {
           extent[1] = max
         }
         scale.domain(extent)
-        if (this.options.y[key]?.nice === true) scale.nice()
+        if (this.options.y[key]?.nice === true) niceDomain(scale, 12)
       }
     }
   }
