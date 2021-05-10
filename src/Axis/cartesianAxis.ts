@@ -3,7 +3,7 @@ import { Axis, AxesOptions, AxisType, AxisOptions } from './axis'
 import { generateMultiFormat } from '../Utils/date'
 import { DateTime } from 'luxon'
 import merge from 'lodash/merge'
-import { niceDomain } from './niceTicks'
+import { niceDomain } from './niceDomain'
 
 export enum AxisPosition {
   AtZero = 'atzero',

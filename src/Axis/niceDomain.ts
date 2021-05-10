@@ -30,7 +30,7 @@ export function niceDomain(scale: any, count: number, axisType = AxisType.value)
   }
 
   // Determine the scale limits based on the chosen step.
-  let scaleMax = Math.ceil(max / step) * step
-  let scaleMin = Math.floor(min / step) * step
+  let scaleMax = Math.abs( domain[1] ) <  epsilon ? 0 : Math.ceil(max / step) * step
+  let scaleMin = Math.abs( domain[0] ) <  epsilon ? 0 : Math.floor(min / step) * step
   scale.domain([scaleMin, scaleMax])
 }
