@@ -4,7 +4,8 @@
 }
 
 .axis-canvas {
-  fill: rgb(179, 179, 179);
+  /* 0.87 * 255 = 223 */
+  fill: rgba(223, 223, 223);
 }
 
 .axis path { stroke-width: 1px; stroke: black;}
@@ -157,7 +158,6 @@
   top: 0px;
   left: 0px;
   pointer-events: none;
-  white-space: nowrap;
 }
 
 .tooltip .tooltiptext {
