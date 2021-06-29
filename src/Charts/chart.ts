@@ -48,6 +48,7 @@ export interface ChartOptions {
   colorScale?: any;
   symbol?: SymbolOptions;
   text?: TextOptions;
+  textFormatter?: (d: any) => string;
   toolTipFormatter?: (d: any) => string;
 }
 
