@@ -1,6 +1,7 @@
 import * as d3 from 'd3'
 import { CartesianAxis, PolarAxis, AxisIndex } from '../Axis'
 import { Chart, AUTO_SCALE } from './chart'
+import { TooltipPosition } from '../Tooltip'
 
 function mean(x: number[] | number) {
   if (x instanceof Array) {
@@ -119,9 +120,14 @@ export class ChartRange extends Chart {
       })
       .on('pointerover', function(_e: any, d) {
         axis.tooltip.show()
-        axis.tooltip.update(that.toolTipFormatterCartesian(d))
+        axis.tooltip.update(
+          that.toolTipFormatterCartesian(d),
+          TooltipPosition.Top,
+          axis.margin.left + xScale((d[xKey][1] + d[xKey][0])/2),
+          axis.margin.top + yScale((d[yKey][1] + d[yKey][0])/2),
+        )
       })
-      .on('pointerout', function() {
+      .on('pointerout', () => {
         axis.tooltip.hide()
       })
 
@@ -202,11 +208,17 @@ export class ChartRange extends Chart {
       .enter()
       .append('path')
       .attr('d', arcGenerator)
-      .on('pointerover', function(_e: any, d) {
+      .on('pointerover', function(e: any, d) {
+        const pointer = d3.pointer(e, axis.container)
         axis.tooltip.show()
-        axis.tooltip.update(that.toolTipFormatterPolar(d))
+        axis.tooltip.update(
+          that.toolTipFormatterPolar(d),
+          TooltipPosition.Top,
+          pointer[0],
+          pointer[1]
+        )
       })
-      .on('pointerout', function() {
+      .on('pointerout', () => {
         axis.tooltip.hide()
       })
 

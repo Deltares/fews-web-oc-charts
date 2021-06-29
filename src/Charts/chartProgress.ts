@@ -1,5 +1,6 @@
 import * as d3 from 'd3'
 import { CartesianAxis, PolarAxis } from '../Axis'
+import { TooltipPosition } from '../Tooltip'
 import { Chart, AUTO_SCALE } from './chart'
 
 function mean(x: number[] | number) {
@@ -125,9 +126,12 @@ export class ChartProgress extends Chart {
       .append('path')
       .attr('d', arcGenerator)
       .attr('data-chart-element-id', (d) => { return d[rKey] })
-      .on('pointerover', function(_e: any, d) {
+      .on('pointerover', function(e: any, d) {
+        const pointer = d3.pointer(e, axis.container)
+        const x = pointer[0]
+        const y = pointer[1]
         axis.tooltip.show()
-        axis.tooltip.update(that.toolTipFormatterPolar(d))
+        axis.tooltip.update(that.toolTipFormatterPolar(d), TooltipPosition.Top, x, y)
       })
       .on('pointerout', function() {
         axis.tooltip.hide()
