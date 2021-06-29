@@ -112,6 +112,18 @@
         paddingOuter: 0.05,
         paddingInner: 0.05
       },
+      text: {
+        dy: -2,
+        attributes: {
+          'text-anchor':  'middle',
+          'alignment-baseline': 'baseline',
+          'pointer-events': 'none',
+          'stroke': 'none',
+          'fill': 'white',
+          'font-size': '.7rem'
+        },
+        formatter: (d) => { return d['Value'] }
+      },
     });
 
     plotBars.addTo(axis1, {
@@ -157,6 +169,17 @@
           paddingOuter: 0.05,
           paddingInner: 0.05
         },
+        text: {
+          attributes: {
+            'text-anchor':  'middle',
+            'alignment-baseline': 'middle',
+            'pointer-events': 'none',
+            'stroke': 'none',
+            'fill': 'black'
+          },
+          formatter: (d) => { return d['Value']}
+        }
+
       });
       plotMatrix.addTo(axis3, {
         x: {

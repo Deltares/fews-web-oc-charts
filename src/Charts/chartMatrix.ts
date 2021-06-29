@@ -2,6 +2,7 @@ import * as d3 from 'd3'
 import { CartesianAxis, PolarAxis } from '../Axis'
 import { Chart, AUTO_SCALE } from './chart'
 import { TooltipPosition } from '../Tooltip'
+import { keyBy } from 'lodash'
 
 export class ChartMatrix extends Chart {
   static readonly GROUP_CLASS: 'chart-matrix'
@@ -60,10 +61,31 @@ export class ChartMatrix extends Chart {
         .on('pointerout', () => {
           axis.tooltip.hide()
         })
+
+    if (this.options.text !== undefined) {
+      const textSelection = this.group
+        .selectAll("text")
+        .data(data)
+        .join("text")
+
+      textSelection
+        .attr("x", d => x0(d[xKey]) + x0.bandwidth()/2)
+        .attr("y", d => y0(d[yKey]) + y0.bandwidth()/2)
+        .attr("dx", this.options.text.dx)
+        .attr("dy", this.options.text.dy)
+        .text(d => {
+          return this.options.text.formatter(d)
+        })
+
+      for (const [key, value] of Object.entries(this.options.text.attributes)) {
+        textSelection
+        .attr(key, value)
+      }
+    } 
   }
 
   plotterPolar(axis: PolarAxis, dataKeys: any) {
-    throw new Error('plotterPolar is not implemented for ChartBar')
+    throw new Error('plotterPolar is not implemented for ChartMatrix')
   }
 
   drawLegendSymbol(legendId?: string, asSvgElement?: boolean) {
