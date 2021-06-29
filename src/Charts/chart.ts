@@ -35,6 +35,7 @@ export interface TextOptions {
   dx?: number
   dy?: number
   attributes: SvgPropertiesHyphen;
+  formatter?: (d: unknown) => string;
 }
 
 export interface ChartOptions {
@@ -48,7 +49,6 @@ export interface ChartOptions {
   colorScale?: any;
   symbol?: SymbolOptions;
   text?: TextOptions;
-  textFormatter?: (d: any) => string;
   toolTipFormatter?: (d: any) => string;
 }
 

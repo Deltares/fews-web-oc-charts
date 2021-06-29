@@ -74,7 +74,7 @@ export class ChartMatrix extends Chart {
         .attr("dx", this.options.text.dx)
         .attr("dy", this.options.text.dy)
         .text(d => {
-          return this.options.textFormatter(d)
+          return this.options.text.formatter(d)
         })
 
       for (const [key, value] of Object.entries(this.options.text.attributes)) {

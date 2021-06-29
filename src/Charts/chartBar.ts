@@ -68,9 +68,31 @@ export class ChartBar extends Chart {
           axis.tooltip.hide()
         })
 
-      bar.data(data)
-          .order()
-          .attr("x", d => x0(d[xKey]) + x1(d[x1Key]));
+        bar.data(data)
+        .order()
+        .attr("x", d => x0(d[xKey]) + x1(d[x1Key]));
+
+        if (this.options.text !== undefined) {
+          console.log(this.options)
+          const textSelection = this.group
+            .selectAll("text")
+            .data(data)
+            .join("text")
+    
+          textSelection
+            .attr("x", d =>  x0(d[xKey]) + x1(d[x1Key]) + x1.bandwidth() / 2)
+            .attr("y", d => Math.min(yScale(d[yKey]), yScale(0)) )
+            .attr("dx", this.options.text.dx)
+            .attr("dy", this.options.text.dy)
+            .text(d => {
+              return this.options.text.formatter(d)
+            })
+    
+          for (const [key, value] of Object.entries(this.options.text.attributes)) {
+            textSelection
+            .attr(key, value)
+          }
+        }
   }
 
   plotterPolar(axis: PolarAxis, dataKeys: any) {

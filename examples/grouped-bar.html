@@ -112,6 +112,18 @@
         paddingOuter: 0.05,
         paddingInner: 0.05
       },
+      text: {
+        dy: -2,
+        attributes: {
+          'text-anchor':  'middle',
+          'alignment-baseline': 'baseline',
+          'pointer-events': 'none',
+          'stroke': 'none',
+          'fill': 'white',
+          'font-size': '.7rem'
+        },
+        formatter: (d) => { return d['Value'] }
+      },
     });
 
     plotBars.addTo(axis1, {
@@ -165,7 +177,7 @@
             'stroke': 'none',
             'fill': 'black'
           },
-          textFormatter: (d) => { return d['Value']}
+          formatter: (d) => { return d['Value']}
         }
 
       });
