@@ -1,165 +1,200 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <meta charset="UTF-8" />
-        <title>Ensemble Tech Demo</title>
-        <style>
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Ensemble Tech Demo</title>
+  <style>
+    body {
+      background-color: rgb(44, 44, 44);
+      color: white;
+    }
 
 
-            body {
-                background-color : rgb(44,44,44);
-                color: white;
-            }
+    #chart-container-1 {
+      position: relative;
+      display: block;
+      height: 400px;
+      width: 800px;
+    }
 
+    #chart-matrix {
+      position: relative;
+      display: block;
+      height: 580px;
+      width: 800px;
+    }
 
-            #chart-container-1 {
-                display: block;
-                height: 400px;
-                width: 800px;
-            }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/6.3.0/d3.js"></script>
+  <link rel="stylesheet" href="../dist/wb-charts-dark.css">
+</head>
 
-            #chart-matrix {
-                display: block;
-                height: 580px;
-                width: 800px;
-            }
+<body>
 
+  <span>
+    <label for="cars">x-key:</label>
+    <select name="x" id="x" onchange="changed(this)">
+      <option selected value="Uitgifte">Uitgifte</option>
+      <option value="leadtime">leadtime</option>
+      <option value="Model">Model</option>
+    </select>
+  </span>
 
-            /* .tooltip { background: #eee;
-            box-shadow: 0 0 5px #999999;
-            color: #333;
-            display: none;
-            font-size: 12px;
-            left: 130px;
-            padding: 10px;
-            position: absolute;
-            text-align: center;
-            top: 95px;
-            width: 80px;
-            z-index: 10; } */
+  <span>
+    <label for="cars">x1-key:</label>
+    <select name="x1" id="x1" onchange="changed(this)">
+      <option value="Uitgifte">Uitgifte</option>
+      <option value="leadtime">leadtime</option>
+      <option selected value="Model">Model</option>
+    </select>
+  </span>
 
-            div.tooltip { position: absolute; text-align: center; width: 60px; height: 28px; padding: 2px; font: 12px sans-serif; background:
-lightgray; border: 0px; border-radius: 8px; pointer-events: none; }
+  <div id="chart-container-1"></div>
+  <div id="chart-matrix"></div>
 
-        </style>
-        <script src="https://d3js.org/d3.v5.min.js"></script>
-        <link rel="stylesheet" href="/dist/wb-charts-dark.css">
-    </head>
-    <body>
+  <script src="../dist/wb-charts.umd.js"></script>
+  <script type="text/javascript">
+    let keys = {
+      x: "Uitgifte",
+      x1: "Model",
+    }
 
-        <span>
-        <label for="cars">x-key:</label>
-        <select name="x" id="x" onchange="changed(this)" >
-          <option selected value="Uitgifte">Uitgifte</option>
-          <option value="leadtime">leadtime</option>
-          <option value="Model">Model</option>
-        </select>
-        </span>
+    changed = function (element) {
+      keys[element.id] = element.value
+      update()
+    }
 
-        <span>
-        <label for="cars">x1-key:</label>
-        <select name="x1" id="x1" onchange="changed(this)">
-          <option value="Uitgifte">Uitgifte</option>
-          <option value="leadtime">leadtime</option>
-          <option selected value="Model">Model</option>
-        </select>
-        </span>
+    // set constants
+    var colorMap = d3.scaleSequential(d3.interpolateRdYlGn).domain([1.4, 1])
 
-        <div id="chart-container-1"></div>
-        <div id="chart-matrix"></div>
+    var container1 = document.getElementById("chart-container-1");
+    var axis1 = new wbCharts.CartesianAxis(container1, null, null, {
+      x: [{
+        type: 'band'
+      }],
+      y: [{
+        type: 'value',
+        label: 'Waterstand',
+        unit: 'm',
+        domain: [0, 2]
+      }],
+      margin: {
+        left: 100,
+        right: 100
+      }
+    });
 
-        <script src="/dist/wb-charts.umd.js"></script>
-        <script type="text/javascript">
+    var containerMatrix = document.getElementById("chart-matrix");
+    var axis3 = new wbCharts.CartesianAxis(containerMatrix, null, null, {
+      x: [{
+        type: 'band',
+        position: 'top'
+      }],
+      y: [{
+        type: 'band'
+      }],
+      margin: {
+        left: 100,
+        right: 100
+      },
+    });
 
-let keys = {
-  x: "Uitgifte",
-  x1: "Model",
-}
+    var plotBars = new wbCharts.ChartBar([], {
+      color: {
+        map: colorMap
+      },
+      x: {
+        paddingOuter: 0.05,
+        paddingInner: 0.05
+      },
+      x1: {
+        paddingOuter: 0.05,
+        paddingInner: 0.05
+      },
+    });
 
-changed = function (element) {
-  console.log(element.id, element.value)
-  keys[element.id] = element.value
-  console.log(keys)
-  update()
-}
+    plotBars.addTo(axis1, {
+        x: {
+          key: keys.x,
+          axisIndex: 0
+        },
+        x1: {
+          key: keys.x1
+        },
+        y: {
+          key: "Value",
+          axisIndex: 0
+        },
+        color: {
+          key: 'Value'
+        }
+      },
+      'bars', {});
 
-// set constants
-var colorMap = d3.scaleSequential(d3.interpolateRdYlGn).domain([1.4, 1])
+    d3.json("bar_data.json").then((data) => {
 
-var container1 = document.getElementById("chart-container-1");
-var axis1 = new wbCharts.CartesianAxis(container1, null, null,
-  {
-    x : [ {type: 'band' } ],
-    y : [ {type: 'value', label: 'Waterstand', unit:'m', domain: [0, 2]} ],
-    margin: {left: 100, right: 100 }
-  }
-);
+      plotBars.data = data
 
-var containerMatrix = document.getElementById("chart-matrix");
-var axis3 = new wbCharts.CartesianAxis(containerMatrix, null, null,
-  {
-    x : [ {type: 'band', position: 'top'} ],
-    y : [ {type: 'band' } ],
-    margin: {left: 100, right: 100 },
-  }
-);
+      axis1.redraw({
+        x: {
+          autoScale: true
+        },
+        y: {
+          autoScale: true
+        }
+      });
 
-var plotBars = new wbCharts.ChartBar([], {
-    color: { map: colorMap},
-    x: { paddingOuter: 0.05, paddingInner: 0.05},
-    x1: { paddingOuter: 0.05, paddingInner: 0.05},
-  });
+      var plotMatrix = new wbCharts.ChartMatrix(data, {
+        color: {
+          map: colorMap
+        },
+        x: {
+          paddingOuter: 0.05,
+          paddingInner: 0.05
+        },
+        y: {
+          paddingOuter: 0.05,
+          paddingInner: 0.05
+        },
+      });
+      plotMatrix.addTo(axis3, {
+        x: {
+          key: "Uitgifte",
+          axisIndex: 0
+        },
+        y: {
+          key: "Model",
+          axisIndex: 0
+        },
+        color: {
+          key: 'Value'
+        }
+      }, 'matrix', {
 
-plotBars.addTo(axis1, {
-  x: { key: keys.x, axisIndex: 0},
-  x1: { key: keys.x1},
-  y: {key: "Value", axisIndex: 0 },
-  color: {key: 'Value'} },
-  'bars', {});
+      });
+      axis3.redraw({});
+    });
 
-d3.json("bar_data.json").then((data) => {
-  // var plotBars = new wbCharts.ChartBar(data, {
-  //   color: { map: colorMap},
-  //   x: { paddingOuter: 0.05, paddingInner: 0.05},
-  //   x1: { paddingOuter: 0.05, paddingInner: 0.05},
-  // });
-
-  plotBars.data = data
-
-  // plotBars.addTo(axis1, {
-  //   x: { key: keys.x, axisIndex: 0},
-  //   x1: { key: keys.x1},
-  //   y: {key: "Value", axisIndex: 0 },
-  //   color: {key: 'Value'} },
-  //   'bars', {});
-  axis1.redraw({x:{ autoScale: true}, y: {autoScale: true} });
-
-  var plotMatrix = new wbCharts.ChartMatrix(data, {
-    color: { map: colorMap},
-    x: { paddingOuter: 0.05, paddingInner: 0.05},
-    y: { paddingOuter: 0.05, paddingInner: 0.05},
-  });
-  plotMatrix.addTo(axis3, {
-    x: { key: "Uitgifte", axisIndex: 0},
-    y: {key: "Model", axisIndex: 0 },
-    color: {key: 'Value'}
-  }, 'matrix', {
-
-  });
-  axis3.redraw({});
-});
-
-update = function() {
-  plotBars.setAxisIndex({
-  x: { key: keys.x, axisIndex: 0},
-  x1: { key: keys.x1}} );
-  axis1.redraw({x:{ autoScale: true}, y: {autoScale: true} });
-}
-
-
-
-        </script>
-
-
-    </body>
+    update = function () {
+      plotBars.setAxisIndex({
+        x: {
+          key: keys.x,
+          axisIndex: 0
+        },
+        x1: {
+          key: keys.x1
+        }
+      });
+      axis1.redraw({
+        x: {
+          autoScale: true
+        },
+        y: {
+          autoScale: true
+        }
+      });
+    }
+  </script>
+</body>
 </html>
