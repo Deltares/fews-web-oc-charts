@@ -1,6 +1,7 @@
 import * as d3 from 'd3'
 import { CartesianAxis, PolarAxis } from '../Axis'
 import { Chart, AUTO_SCALE } from './chart'
+import { TooltipPosition } from '../Tooltip'
 
 export class ChartHistogram extends Chart {
   plotterCartesian(axis: CartesianAxis, axisIndex: any) {
@@ -11,13 +12,13 @@ export class ChartHistogram extends Chart {
     const xScale = axis.xScale[axisIndex.x.axisIndex]
     const yScale = axis.yScale[axisIndex.y.axisIndex]
 
-    let histScale = d3.scaleBand().domain(
+    let x1 = d3.scaleBand().domain(
       data.map(function(d: any) {
         return d[xKey]
       })
     )
-    histScale.range(xScale.range())
-    histScale.padding(0.05)
+    x1.range(xScale.range())
+    x1.padding(0.05)
 
     let colorScale = d3.scaleLinear().domain([0, 1])
     if (this.options.colorScale === AUTO_SCALE) {
@@ -56,16 +57,21 @@ export class ChartHistogram extends Chart {
 
       .merge(elements)
       .attr('x', function(d: any) {
-        return histScale(d[xKey])
+        return x1(d[xKey])
       })
       .on('pointerover', function(_e: any, d) {
         axis.tooltip.show()
-        axis.tooltip.update(that.toolTipFormatterCartesian(d))
+        axis.tooltip.update(
+          that.toolTipFormatterCartesian(d),
+          TooltipPosition.Top,
+          axis.margin.left + x1(d[xKey]) + x1.bandwidth() / 2 ,
+          axis.margin.top + Math.min(yScale(d[yKey]), yScale(0))
+        )
       })
-      .on('pointerout', function() {
+      .on('pointerout', () => {
         axis.tooltip.hide()
       })
-      .attr('width', histScale.bandwidth())
+      .attr('width', x1.bandwidth())
 
     elements
       .transition(t)

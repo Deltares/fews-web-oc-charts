@@ -1,5 +1,6 @@
 import * as d3 from 'd3'
 import { CartesianAxis, PolarAxis } from '../Axis'
+import { TooltipPosition } from '../Tooltip'
 import { Chart, SymbolOptions } from './chart'
 
 function mean(x: number[] | number) {
@@ -42,10 +43,11 @@ export class ChartMarker extends Chart {
     elements
       .enter()
       .append('path')
-      .on('pointerover', function(_e: any, d) {
+      .on('pointerover', function(e: any, d) {
         const v = { x: d[xKey], y: d[yKey] }
         axis.tooltip.show()
-        axis.tooltip.update(that.toolTipFormatterCartesian(v))
+        const pointer = d3.pointer(e, axis.container)
+        axis.tooltip.update(that.toolTipFormatterPolar(d), TooltipPosition.Top, pointer[0], pointer[1])
       })
       .on('pointerout', function() {
         axis.tooltip.hide()
@@ -100,7 +102,11 @@ export class ChartMarker extends Chart {
       .attr('d', d3.symbol(d3.symbols[this.symbol.id], this.symbol.size))
       .on('pointerover', function(e: any, d) {
         const v = { r: d[rKey], t: d[tKey] }
-        axis.tooltip.update(that.toolTipFormatterPolar(v))
+        const pointer = d3.pointer(e, axis.container)
+        const x = pointer[0]
+        const y = pointer[1]
+        axis.tooltip.show()
+        axis.tooltip.update(that.toolTipFormatterPolar(d), TooltipPosition.Top, x, y)
       })
       .on('pointerout', function() {
         axis.tooltip.hide()

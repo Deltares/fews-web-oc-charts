@@ -35,13 +35,10 @@ export class Tooltip {
       .style('opacity', 1)
   }
 
-  update(html: string, position: string = TooltipPosition.Top, x?: number, y?: number) {
-    const pointer = d3.pointer(this.container)
-    const tX = x !== undefined ? x : pointer[0]
-    const tY = y !== undefined ? y : pointer[1]
+  update(html: string, position: string = TooltipPosition.Top, x: number, y: number) {
     this.tooltip
-      .style('left', tX + 'px')
-      .style('top', tY + 'px')
+      .style('left', x + 'px')
+      .style('top', y + 'px')
     this.tooltipText
       .attr('class', `tooltiptext ${position}`)
       .html(html)
