@@ -139,7 +139,7 @@ export class CartesianAxis extends Axis {
           extent[1] = max
         }
         scale.domain(extent)
-        if (this.options.x[key]?.nice === true) niceDomain(scale, 12)
+        if (this.options.x[key]?.nice === true) niceDomain(scale, 16)
       }
     }
   }
@@ -176,7 +176,7 @@ export class CartesianAxis extends Axis {
           extent[1] = max
         }
         scale.domain(extent)
-        if (this.options.y[key]?.nice === true) niceDomain(scale, 12)
+        if (this.options.y[key]?.nice === true) niceDomain(scale, 16)
       }
     }
   }
