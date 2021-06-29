@@ -11,7 +11,14 @@ export function niceDomain(scale: any, count: number, axisType = AxisType.value)
   const domain = scale.domain()
   let max = domain[1]
   let min = domain[0]
-  const epsilon = (max - min) / 1e6
+  if (min === max) {
+    if ( min === 0 ) { max = 1 }
+    else { 
+      min = min * ( 1 - Math.sign(min) * 0.1)
+      max = max * ( 1 + Math.sign(max) * 0.1)
+    }
+  }
+  const epsilon = (max - min) * 1e-6
   max += epsilon
   min -= epsilon
   let range = max - min
@@ -30,7 +37,7 @@ export function niceDomain(scale: any, count: number, axisType = AxisType.value)
   }
 
   // Determine the scale limits based on the chosen step.
-  let scaleMax = Math.abs( domain[1] ) <  epsilon ? 0 : Math.ceil(max / step) * step
-  let scaleMin = Math.abs( domain[0] ) <  epsilon ? 0 : Math.floor(min / step) * step
+  let scaleMax = Math.abs( domain[1] ) <  epsilon ? 0 : (Math.ceil(max / step) +1 )  * step
+  let scaleMin = Math.abs( domain[0] ) <  epsilon ? 0 : (Math.floor(min / step) -1 ) * step
   scale.domain([scaleMin, scaleMax])
 }
