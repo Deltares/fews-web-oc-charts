@@ -1,130 +1,222 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <meta charset="UTF-8" />
-        <title>Wind Rose Tech Demo</title>
-        <style>
 
-
-            body {
-                background-color : rgb(44,44,44);
-            }
-
-            title {
-                stroke: black;
-            }
-
-            .axis-canvas {
-                fill:rgb(89, 89, 89);
-            }
-
-            #chart-container-1 {
-                display: inline-block;
-                width: 400px;
-                height: 400px;
-            }
-
-            #chart-container-2 {
-                display: inline-block;
-                width: 400px;
-                height: 400px;
-            }
-
-            #polar-dot {
-                fill: #999999;
-                stroke: white;
-            }
-
-            #polar-line { fill: none; stroke: white; }
-
-            #cartesian-dot { fill: #999999; stroke: white; }
-
-            #cartesian-line { fill: none; stroke: white; }
-
-            div.tooltip { position: absolute;
-                text-align: center;
-                width: 60px;
-                height: 28px;
-                padding: 2px;
-                font: 12px sans-serif;
-                color: #fff;
-                background: black;
-                border: 0px;
-                border-radius: 8px;
-                pointer-events: none; }
-
-        </style>
-        <script src="https://d3js.org/d3.v4.min.js"></script>
-        <link rel="stylesheet" href="/dist/wb-charts.css">
-    </head>
-    <body>
-
-        <div id="chart-container-1"></div>
-        <div id="chart-container-2"></div>
-        <div>
-        <input id="slider" type="range" name="points" min="0" max="10">
-        </div>
-        <script src="/dist/wb-charts.umd.js"></script>
-        <script type="text/javascript">
-        function randomSpectrum(a) {
-    var spectrum = [];
-    for (var i = 0; i < 50; i++) {
-        spectrum.push({ x: 50 + i * 100, y: a * d3.randomUniform()() });
+<head>
+  <meta charset="UTF-8" />
+  <title>Wind Rose Tech Demo</title>
+  <style>
+    body {
+      background-color: rgb(44, 44, 44);
     }
-    return spectrum;
-}
-// set constants
-var container1 = document.getElementById("chart-container-1");
-var polarAxis = new wbCharts.PolarAxis(container1, null, null,  { angular: { direction: wbCharts.CLOCKWISE, }, innerRadius: 40 });
-var polarData = [
-    [
-        { x: [1, 2], y: [35, 85], v: 0 },
-        { x: [2, 3], y: [30, 75], v: 0.5 },
-        { x: [3, 4], y: [40, 65], v: 1 },
-        { x: [4, 5], y: [50, 95], v: 2 },
-        { x: [5, 6], y: [45, 90], v: 0.5 },
-        { x: [6, 7], y: [-10, 15], v: 0 }
-    ],
-    [
-        { x: [.1, .2], y: [15, 75], v: 0 },
-        { x: [.2, .3], y: [10, 85], v: 7.5 },
-        { x: [.3, .4], y: [10, 85], v: 8.5 },
-        { x: [.4, .5], y: [10, 85], v: 10 },
-        { x: [.5, .6], y: [15, 80], v: 10.5 },
-    ]
-];
-var plot = new wbCharts.ChartRange(polarData[0], {colorScale: wbCharts.AUTO_SCALE});
-var random = [];
-for (var i = 0; i < 100; i++) {
-    random.push({ x: d3.randomUniform(0, 1)(), y: d3.randomUniform(0, 360)() });
-}
 
-var spectra = randomSpectrum(1);
-var plot4 = new wbCharts.ChartHistogram(spectra, { colorScale: wbCharts.AUTO_SCALE });
-plot.addTo(polarAxis, { radial: { key: "x", axisIndex: 0} , angular: { key: "y", axisIndex: 0}, color: {key: 'v'} });
-var container2 = document.getElementById("chart-container-2");
-var axis = new wbCharts.CartesianAxis(container2, null, null, {
-    x: [{ position: 'bottom', axisIndex: 0}],
-    y: [{ position: 'left', axisIndex: 0}]
-});
+    title {
+      stroke: black;
+    }
 
-plot4.addTo(axis, { x: { key: "x", axisIndex: 0} , y: { key: "y", axisIndex: 0}, color: {key: 'y'}}, 'histogram', '#cartesian-histogram');
-axis.redraw({ x: {autoScale: true} , y: {autoScale: true}})
-polarAxis.redraw()
-var count = 0;
-var updateCharts = function (event) {
-    var newData = randomSpectrum(count + 1);
-    plot4.data = newData;
-    axis.redraw({y: {autoScale: true }});
-    count++;
-    plot.data = polarData[count % 2];
-    polarAxis.redraw();
-};
-var input = document.getElementById("slider");
-input.onchange = function (event) { updateCharts(event); };
+    #chart-container-1 {
+      display: inline-block;
+      width: 400px;
+      height: 400px;
+    }
 
+    #chart-container-2 {
+      display: inline-block;
+      width: 400px;
+      height: 400px;
+    }
 
-        </script>
+    #polar-dot {
+      fill: #999999;
+      stroke: white;
+    }
 
-    </body>
+    #polar-line {
+      fill: none;
+      stroke: white;
+    }
+
+    #cartesian-dot {
+      fill: #999999;
+      stroke: white;
+    }
+
+    #cartesian-line {
+      fill: none;
+      stroke: white;
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/6.3.0/d3.js"></script>
+  <link rel="stylesheet" href="../dist/wb-charts-dark.css">
+</head>
+
+<body>
+
+  <div id="chart-container-1"></div>
+  <div id="chart-container-2"></div>
+  <div>
+    <input id="slider" type="range" name="points" min="0" max="10">
+  </div>
+  <script src="..//dist/wb-charts.umd.js"></script>
+  <script type="text/javascript">
+    function randomSpectrum(a) {
+      var spectrum = [];
+      for (var i = 0; i < 50; i++) {
+        spectrum.push({
+          x: 50 + i * 100,
+          y: a * d3.randomUniform()()
+        });
+      }
+      return spectrum;
+    }
+    // set constants
+    var container1 = document.getElementById("chart-container-1");
+    var polarAxis = new wbCharts.PolarAxis(container1, null, null, {
+      angular: {
+        direction: wbCharts.CLOCKWISE,
+      },
+      innerRadius: 40
+    });
+    var polarData = [
+      [{
+          x: [1, 2],
+          y: [35, 85],
+          v: 0
+        },
+        {
+          x: [2, 3],
+          y: [30, 75],
+          v: 0.5
+        },
+        {
+          x: [3, 4],
+          y: [40, 65],
+          v: 1
+        },
+        {
+          x: [4, 5],
+          y: [50, 95],
+          v: 2
+        },
+        {
+          x: [5, 6],
+          y: [45, 90],
+          v: 0.5
+        },
+        {
+          x: [6, 7],
+          y: [-10, 15],
+          v: 0
+        }
+      ],
+      [{
+          x: [.1, .2],
+          y: [15, 75],
+          v: 0
+        },
+        {
+          x: [.2, .3],
+          y: [10, 85],
+          v: 7.5
+        },
+        {
+          x: [.3, .4],
+          y: [10, 85],
+          v: 8.5
+        },
+        {
+          x: [.4, .5],
+          y: [10, 85],
+          v: 10
+        },
+        {
+          x: [.5, .6],
+          y: [15, 80],
+          v: 10.5
+        },
+      ]
+    ];
+    var plot = new wbCharts.ChartRange(polarData[0], {
+      colorScale: wbCharts.AUTO_SCALE
+    });
+    var random = [];
+    for (var i = 0; i < 100; i++) {
+      random.push({
+        x: d3.randomUniform(0, 1)(),
+        y: d3.randomUniform(0, 360)()
+      });
+    }
+
+    var spectra = randomSpectrum(1);
+    var plot4 = new wbCharts.ChartHistogram(spectra, {
+      colorScale: wbCharts.AUTO_SCALE
+    });
+    plot.addTo(polarAxis, {
+      radial: {
+        key: "x",
+        axisIndex: 0
+      },
+      angular: {
+        key: "y",
+        axisIndex: 0
+      },
+      color: {
+        key: 'v'
+      }
+    });
+    var container2 = document.getElementById("chart-container-2");
+    var axis = new wbCharts.CartesianAxis(container2, null, null, {
+      x: [{
+        position: 'bottom',
+        axisIndex: 0
+      }],
+      y: [{
+        position: 'left',
+        axisIndex: 0
+      }]
+    });
+
+    plot4.addTo(axis, {
+      x: {
+        key: "x",
+        axisIndex: 0
+      },
+      y: {
+        key: "y",
+        axisIndex: 0
+      },
+      color: {
+        key: 'y'
+      }
+    }, 'histogram', '#cartesian-histogram');
+    axis.redraw({
+      x: {
+        autoScale: true
+      },
+      y: {
+        autoScale: true
+      }
+    })
+    polarAxis.redraw()
+    var count = 0;
+    var updateCharts = function (event) {
+      var newData = randomSpectrum(count + 1);
+      plot4.data = newData;
+      axis.redraw({
+        y: {
+          autoScale: true
+        }
+      });
+      count++;
+      plot.data = polarData[count % 2];
+      polarAxis.redraw();
+    };
+    var input = document.getElementById("slider");
+    input.onchange = function (event) {
+      updateCharts(event);
+    };
+
+  </script>
+
+</body>
+
 </html>
