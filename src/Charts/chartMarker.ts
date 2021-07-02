@@ -1,4 +1,5 @@
 import * as d3 from 'd3'
+import defaultsDeep from 'lodash/defaultsDeep'
 import { CartesianAxis, PolarAxis } from '../Axis'
 import { TooltipPosition } from '../Tooltip'
 import { Chart, SymbolOptions } from './chart'
@@ -16,11 +17,10 @@ const DefaultSymbolOptions: SymbolOptions = {
 }
 export class ChartMarker extends Chart {
   private previousData: any[] = []
-  symbol!: SymbolOptions
 
   constructor(data: any, options: any) {
     super(data, options)
-    this.symbol = { ...this.options.symbol, ...DefaultSymbolOptions}
+    this.options = defaultsDeep(this.options, this.options, { symbol: DefaultSymbolOptions })
   }
 
   plotterCartesian(axis: CartesianAxis, axisIndex: any) {
@@ -29,11 +29,11 @@ export class ChartMarker extends Chart {
     const xScale = axis.xScale[axisIndex.x.axisIndex]
     const yScale = axis.yScale[axisIndex.y.axisIndex]
 
-    let mappedData = this.mapDataCartesian(xScale.domain())
+    let mappedData = this.mapDataCartesian(xScale.domain()).filter((d, i) => { return i % 10 === 0 })
 
     this.group = this.selectGroup(axis, 'chart-marker')
       .datum(mappedData)
-    let elements = this.group.selectAll('path').data(d => d)
+    let elements = this.group.selectAll<SVGPathElement, any>('path').data(d => d)
 
     // exit selection
     elements.exit().remove()
@@ -52,7 +52,7 @@ export class ChartMarker extends Chart {
       .on('pointerout', function() {
         axis.tooltip.hide()
       })
-      .attr('d', d3.symbol(d3.symbols[this.symbol.id], this.symbol.size))
+      .attr('d', d3.symbol(d3.symbols[this.options.symbol.id], this.options.symbol.size))
       .merge(elements)
       .attr('transform', function (d: any, i: number) {
         return 'translate(' + xScale(d[xKey]) + ',' + yScale(d[yKey]) + ')'
@@ -64,7 +64,7 @@ export class ChartMarker extends Chart {
     let rKey = this.dataKeys.radial
     let tKey = this.dataKeys.angular
 
-    let elements = this.group.selectAll('path').data(this.data)
+    let elements = this.group.selectAll<SVGPathElement, any>('path').data(this.data)
 
     function arcTranslation(p) {
       // We only use 'd', but list d,i,a as params just to show can have them as params.
@@ -99,7 +99,7 @@ export class ChartMarker extends Chart {
         const t: number = axis.angularScale(d[tKey])
         return 'translate(' + -r * Math.sin(-t) + ',' + -r * Math.cos(-t) + ')'
       })
-      .attr('d', d3.symbol(d3.symbols[this.symbol.id], this.symbol.size))
+      .attr('d', d3.symbol(d3.symbols[this.options.symbol.id], this.options.symbol.size))
       .on('pointerover', function(e: any, d) {
         const v = { r: d[rKey], t: d[tKey] }
         const pointer = d3.pointer(e, axis.container)
@@ -134,12 +134,12 @@ export class ChartMarker extends Chart {
       .attr('height',20)
     const group = svg
       .append('g')
-      .attr('transform', 'translate(10 10)')
+      .attr('transform', 'translate(10, 0)')
     const element = group.append('path')
-      .attr('d', d3.symbol(d3.symbols[this.symbol.id], this.symbol.size))
+      .attr('d', d3.symbol(d3.symbols[this.options.symbol.id], this.options.symbol.size))
       .style('stroke', style.getPropertyValue('stroke'))
       .style('fill', style.getPropertyValue('fill'))
-    if (asSvgElement) return element.node()
+    if (asSvgElement) return group.node()
     return svg.node()
   }
 

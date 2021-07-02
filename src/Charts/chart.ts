@@ -55,7 +55,7 @@ export interface ChartOptions {
 export abstract class Chart {
   protected _data: any
   protected _extent: any
-  group: any
+  group: d3.Selection<SVGElement, any, SVGElement, any>
   colorMap: any
   id: string
   options: ChartOptions
@@ -205,6 +205,7 @@ export abstract class Chart {
 
   protected selectGroup(axis: CartesianAxis|PolarAxis, cssClass: string) {
     if (this.group == null) {
+      const grop = axis.chartGroup.append('g')
       this.group = axis.chartGroup.append('g')
       if (axis instanceof PolarAxis) {
         let direction = -axis.direction

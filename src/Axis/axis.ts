@@ -62,7 +62,7 @@ export abstract class Axis {
   height: number
   margin: { top: number; right: number; bottom: number; left: number }
   options: AxesOptions = {}
-  chartGroup: any
+  chartGroup: d3.Selection<SVGElement,any,SVGElement,any>
   charts: Chart[]
   initialDraw: boolean = true
   visitors: Visitor[]
