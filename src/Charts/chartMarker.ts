@@ -13,7 +13,8 @@ function mean(x: number[] | number) {
 
 const DefaultSymbolOptions: SymbolOptions = {
   id: 0,
-  size: 10
+  size: 10,
+  skip: 1,
 }
 export class ChartMarker extends Chart {
   private previousData: any[] = []
@@ -29,7 +30,8 @@ export class ChartMarker extends Chart {
     const xScale = axis.xScale[axisIndex.x.axisIndex]
     const yScale = axis.yScale[axisIndex.y.axisIndex]
 
-    let mappedData = this.mapDataCartesian(xScale.domain()).filter((d, i) => { return i % 10 === 0 })
+    const skip = this.options.symbol.skip
+    let mappedData = this.mapDataCartesian(xScale.domain()).filter((d, i) => { return i % skip === 0 })
 
     this.group = this.selectGroup(axis, 'chart-marker')
       .datum(mappedData)

@@ -29,6 +29,7 @@ interface ColorOptionItem {
 export interface SymbolOptions {
   id: number
   size: number
+  skip: number
 }
 
 export interface TextOptions {

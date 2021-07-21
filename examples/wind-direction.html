@@ -57,6 +57,24 @@
       background:gray;
     }
 
+    @keyframes christmasLights {
+      0% {
+        fill: red;
+      }
+      25% {
+        fill: green;
+      }
+      50% {
+        fill: blue;
+      }
+      75% {
+        fill: yellow;
+      }
+      100% {
+        fill: red;
+      }
+    }
+
     .data-field{
       font-family: sans-serif;
       font-size: 12px;
@@ -130,8 +148,27 @@
 
 
     #wind-line-time { fill: none; stroke: rgb(0, 128, 255);; stroke-width: 1px;}
-    #winddirection-line-time{stroke: rgb(0, 102, 204); stroke-width: 1px;}
+    #winddirection-line-time > path{
+      stroke: white;
+      stroke-width: 1px;
+      animation: christmasLights 4s step-start infinite;
+      /* animation-timing-function: steps(5); */
+    }
     #directionforecast-time {stroke: rgb(255, 128, 255); stroke-width: 1px; }
+
+    #winddirection-line-time > path:nth-child(4n) {
+      animation-delay: 0s;
+    }
+    #winddirection-line-time > path:nth-child(4n+1) {
+      animation-delay: 1s;
+    }
+
+    #winddirection-line-time > path:nth-child(4n+2) {
+      animation-delay: 2s;
+    }
+    #winddirection-line-time > path:nth-child(4n+3) {
+      animation-delay: 3s;
+    }
 
     #stoot-line { fill: none; stroke: rgb(170, 30, 30); stroke-width: 3px;}
 
@@ -452,7 +489,7 @@
         windSpeedTimeM = new wbCharts.ChartLine( [ {t: 0, y: 0}, {t: 1, y: 0} ], {transitionTime: transitionTime});
         windSpeedTimeF = new wbCharts.ChartLine( [ {t: 0, y: 0}, {t: 1, y: 0} ], {transitionTime: transitionTime});
         windStootTimeM = new wbCharts.ChartLine( [ {t: 0, y: 0}, {t: 1, y: 0} ], {transitionTime: transitionTime});
-        windDirectionTimeM = new wbCharts.ChartDirection( [ {t: 0, y: 0, d: 0}, {t: 1, y: 0, d: 0} ], {transitionTime: transitionTime, symbol: { size: 64 }});
+        windDirectionTimeM = new wbCharts.ChartMarker( [ {t: 0, y: 0, d: 0}, {t: 1, y: 0, d: 0} ], {transitionTime: transitionTime, symbol: { size: 32 }, skip: 1});
         windDirectionTimeF = new wbCharts.ChartDirection( [ {t: 0, y: 0, d: 0}, {t: 1, y: 0, d: 0} ], {transitionTime: transitionTime, symbol: { size: 64 }});
 
 
@@ -460,7 +497,7 @@
           { x: { key: "t", axisIndex: 0 } , y: {key: "y", axisIndex: 0}}, 'wind', '#wind-line-time');
         windStootTimeM.addTo(windTimeAxis,{ x: { key: "t",axisIndex: 0  } , y: {key: "y", axisIndex: 0} }, 'windstoot', '#windstoot-line-time');
         windSpeedTimeF.addTo(windTimeAxis,{ x: { key: "t", axisIndex: 0 } , y: {key: "y", axisIndex: 0} }, 'wind-forecast', '#forecast-time');
-        windDirectionTimeM.addTo(windTimeAxis, { x: { key: "t", axisIndex: 0 } , y: {key: "d", axisIndex: 0}, value: {key: 'y'} }, 'winddirection', '#winddirection-line-time');
+        windDirectionTimeM.addTo(windTimeAxis, { x: { key: "t", axisIndex: 0 } , y: {key: "y", axisIndex: 0}, value: {key: 'y'} }, 'wind', '#winddirection-line-time');
         windDirectionTimeF.addTo(windTimeAxis, { x: { key: "t",axisIndex: 0 } , y: {key: "d", axisIndex: 0},  value: {key: 'y'} }, 'winddirection-forecast', '#directionforecast-time');
 
 
@@ -468,7 +505,6 @@
         {selector: 'windstoot', label :'Windstoot meting'},
         {selector: 'wind', label : 'Windsnelheid meting'},
         {selector: 'wind-forecast', label :'Windsnelheid verwachting'},
-        {selector: 'winddirection', label :'Windrichting meting'},
         {selector: 'winddirection-forecast', label :'Windrichting verwachting'},
         ],
         document.getElementById("legend-wind-speed-time")
@@ -518,12 +554,12 @@
         windSpeedTimeM.data = windSpeedTimeSeriesM;
         windSpeedTimeF.data = windSpeedTimeSeriesF;
         windStootTimeM.data = windStootTimeSeriesM;
-        windDirectionTimeM.data = windDirectionTimeSeriesM;
+        windDirectionTimeM.data = windSpeedTimeSeriesM;
         windDirectionTimeF.data = windDirectionTimeSeriesF;
 
         windTimeAxis.redraw({ x: {autoScale: true}});
         windTimeAxis.accept(new wbCharts.ZoomHandler());
-        var mouseOverWindTime = new wbCharts.MouseOver(['windstoot','wind','wind-forecast', 'winddirection', 'winddirection-forecast']);
+        var mouseOverWindTime = new wbCharts.MouseOver(['windstoot','wind','wind-forecast', 'winddirection-forecast']);
         windTimeAxis.accept(mouseOverWindTime);
         windTimeAxis.accept(new wbCharts.CurrentTime({ x: {axisIndex: 0 }}));
       }

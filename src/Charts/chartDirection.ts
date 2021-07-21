@@ -15,7 +15,8 @@ function mean(x: number[] | number) {
 
 const DefaultSymbolOptions: SymbolOptions = {
   id: 0,
-  size: 10
+  size: 10,
+  skip: 0
 }
 export class ChartDirection extends Chart {
   private previousData: any[] = []
@@ -35,8 +36,8 @@ export class ChartDirection extends Chart {
     const range = xScale.range()
     let mappedData = this.mapDataCartesian(xScale.domain())
     let skip = 1
-    if (mappedData.length > 2) {
-      skip = Math.ceil(1 / (xScale(mappedData[1][xKey]) - xScale(mappedData[0][xKey])) * Math.sqrt(this.options.symbol.size) * 4)
+    if (mappedData.length > 2 && this.options.symbol.skip === 0) {
+      skip = Math.ceil(1 / (xScale(mappedData[1][xKey]) - xScale(mappedData[0][xKey])) * Math.sqrt(this.options.symbol.size) * 2)
     }
 
     this.group = this.selectGroup(axis, 'chart-marker')
@@ -73,7 +74,7 @@ export class ChartDirection extends Chart {
         })
         .attr('d', d3.symbol().type(symbolArrow).size(this.options.symbol.size))
         .attr('transform', function (d: any, i: number) {
-          return `rotate(${d[dKey]})`
+          return `rotate(${d[dKey] - 180})`
         })
 
     elements
@@ -83,7 +84,7 @@ export class ChartDirection extends Chart {
       .select('path')
         .attr('d', d3.symbol().type(symbolArrow).size(this.options.symbol.size))
         .attr('transform', function (d: any, i: number) {
-          return `rotate(${d[dKey]})`
+          return `rotate(${d[dKey] - 180})`
         })
   }
 
