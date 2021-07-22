@@ -22,7 +22,7 @@ export class ChartArea extends Chart {
         if (key === 'x') {
           let path = this.dataKeys[key]
           this._extent[path] = d3.extent(this._data, (d) => d[path])
-        } else if (key === 'x') {
+        } else if (key === 'y') {
           let path = this.dataKeys[key]
           let min = d3.min(this._data, function(d: any) {
             if (d[path] === null) return undefined
