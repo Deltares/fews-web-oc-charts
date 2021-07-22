@@ -1,8 +1,10 @@
 import * as d3 from 'd3'
-import defaultsDeep from 'lodash/defaultsDeep'
 import { CartesianAxis, PolarAxis } from '../Axis'
 import { TooltipPosition } from '../Tooltip'
 import { Chart, SymbolOptions } from './chart'
+
+import { symbolArrow } from '../Symbols'
+import defaultsDeep from 'lodash/defaultsDeep'
 
 function mean(x: number[] | number) {
   if (x instanceof Array) {
@@ -14,28 +16,40 @@ function mean(x: number[] | number) {
 const DefaultSymbolOptions: SymbolOptions = {
   id: 0,
   size: 10,
-  skip: 1,
+  skip: 0
 }
-export class ChartMarker extends Chart {
+export class ChartDirection extends Chart {
   private previousData: any[] = []
 
   constructor(data: any, options: any) {
     super(data, options)
-    this.options = defaultsDeep(this.options, this.options, { symbol: DefaultSymbolOptions })
+    this.options = defaultsDeep(this.options, this.options, { symbol: DefaultSymbolOptions})
   }
 
   plotterCartesian(axis: CartesianAxis, axisIndex: any) {
     let xKey = this.dataKeys.x
-    let yKey = this.dataKeys.y
+    let yKey = this.dataKeys.value
+    let dKey = this.dataKeys.y
     const xScale = axis.xScale[axisIndex.x.axisIndex]
     const yScale = axis.yScale[axisIndex.y.axisIndex]
 
-    const skip = this.options.symbol.skip
-    let mappedData = this.mapDataCartesian(xScale.domain()).filter((d, i) => { return i % skip === 0 })
+    const range = xScale.range()
+    let mappedData = this.mapDataCartesian(xScale.domain())
+    let skip = 1
+    if (mappedData.length > 2 && this.options.symbol.skip === 0) {
+      skip = Math.ceil(1 / (xScale(mappedData[1][xKey]) - xScale(mappedData[0][xKey])) * Math.sqrt(this.options.symbol.size) * 2)
+    }
 
     this.group = this.selectGroup(axis, 'chart-marker')
       .datum(mappedData)
-    let elements = this.group.selectAll<SVGPathElement, any>('path').data(d => d)
+
+    let elements = this.group.selectAll<SVGGElement, any>('g')
+      .data(
+        (d) => d.filter(
+          (e, i) =>
+            ((i + 1) % skip === 0) ? e : undefined
+          )
+        )
 
     // exit selection
     elements.exit().remove()
@@ -44,21 +58,34 @@ export class ChartMarker extends Chart {
     // enter + update selection
     elements
       .enter()
-      .append('path')
-      .on('pointerover', function(e: any, d) {
-        const v = { x: d[xKey], y: d[yKey] }
-        axis.tooltip.show()
-        const pointer = d3.pointer(e, axis.container)
-        axis.tooltip.update(that.toolTipFormatterPolar(d), TooltipPosition.Top, pointer[0], pointer[1])
-      })
-      .on('pointerout', function() {
-        axis.tooltip.hide()
-      })
-      .attr('d', d3.symbol(d3.symbols[this.options.symbol.id], this.options.symbol.size))
-      .merge(elements)
+      .append('g')
+        .attr('transform', function (d: any, i: number) {
+          return 'translate(' + xScale(d[xKey]) + ',' + yScale(d[yKey]) + ')'
+        })
+        .append('path')
+        .on('pointerover', function (e: any, d) {
+          const v = { x: d[xKey], y: d[yKey] }
+          axis.tooltip.show()
+          const pointer = d3.pointer(e, axis.container)
+          axis.tooltip.update(that.toolTipFormatterPolar(d), TooltipPosition.Top, pointer[0], pointer[1])
+        })
+        .on('pointerout', function () {
+          axis.tooltip.hide()
+        })
+        .attr('d', d3.symbol().type(symbolArrow).size(this.options.symbol.size))
+        .attr('transform', function (d: any, i: number) {
+          return `rotate(${d[dKey] - 180})`
+        })
+
+    elements
       .attr('transform', function (d: any, i: number) {
         return 'translate(' + xScale(d[xKey]) + ',' + yScale(d[yKey]) + ')'
       })
+      .select('path')
+        .attr('d', d3.symbol().type(symbolArrow).size(this.options.symbol.size))
+        .attr('transform', function (d: any, i: number) {
+          return `rotate(${d[dKey] - 180})`
+        })
   }
 
   plotterPolar(axis: PolarAxis, dataKeys: any) {
@@ -101,7 +128,7 @@ export class ChartMarker extends Chart {
         const t: number = axis.angularScale(d[tKey])
         return 'translate(' + -r * Math.sin(-t) + ',' + -r * Math.cos(-t) + ')'
       })
-      .attr('d', d3.symbol(d3.symbols[this.options.symbol.id], this.options.symbol.size))
+      .attr('d', d3.symbol().type(symbolArrow).size(this.options.symbol.size))
       .on('pointerover', function(e: any, d) {
         const v = { r: d[rKey], t: d[tKey] }
         const pointer = d3.pointer(e, axis.container)
@@ -138,7 +165,7 @@ export class ChartMarker extends Chart {
       .append('g')
       .attr('transform', 'translate(10, 0)')
     const element = group.append('path')
-      .attr('d', d3.symbol(d3.symbols[this.options.symbol.id], this.options.symbol.size))
+      .attr('d', d3.symbol().type(symbolArrow).size(this.options.symbol.size))
       .style('stroke', style.getPropertyValue('stroke'))
       .style('fill', style.getPropertyValue('fill'))
     if (asSvgElement) return group.node()

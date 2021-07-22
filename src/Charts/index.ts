@@ -1,6 +1,7 @@
 export * from './chart'
 export * from './chartArea'
 export * from './chartBar'
+export * from './chartDirection'
 export * from './chartHistogram'
 export * from './chartLine'
 export * from './chartMarker'
