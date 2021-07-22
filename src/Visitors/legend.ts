@@ -72,12 +72,19 @@ export class Legend implements Visitor {
 
         if (chartElement) {
           let style = window.getComputedStyle(chartElement)
-          let chart = that.axis.charts.find(x => x.id === d.selector)
-          let svgElement = chart.drawLegendSymbol(d.legendId, true)
+          let charts = that.axis.charts.filter(x => x.id === d.selector)
+
           const symbol = entry.append('g')
-            .attr('transfrom','translate(0, -10)')
+            .attr('transfrom', 'translate(0, -10)')
           let entryNode = symbol.node() as Element
-          entryNode.appendChild(svgElement)
+          const types = []
+
+          for ( let i = 0 ; i < charts.length ; i++) {
+            if ( types.includes( charts[i].constructor.name)) continue
+            const svgElement = charts[i].drawLegendSymbol(d.legendId, true)
+            entryNode.appendChild(svgElement)
+          }
+
           if (that.configuredLabels){
             entry.style('cursor', 'pointer')
             entry.on('click', function() {
