@@ -357,7 +357,7 @@
       for (let i = 0; i < document.styleSheets.length; i++) {
         const s = document.styleSheets[i]
         console.log(s.href)
-        if (s.href ? .match(/wb-charts-dark\.css/)) {
+        if (s.href !== undefined && s.href.match(/wb-charts-dark\.css/)) {
           s.disabled = !s.disabled
           status = s.disabled
         }
@@ -365,7 +365,7 @@
       for (let i = 0; i < document.styleSheets.length; i++) {
         const s = document.styleSheets[i]
         console.log(s.href)
-        if (s.href ? .match(/wb-charts-print\.css/)) {
+        if (s.href !== undefined && s.href.match(/wb-charts-print\.css/)) {
           s.disabled = !status
           console.log(s.disabled)
         }

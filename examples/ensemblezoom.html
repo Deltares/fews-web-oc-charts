@@ -29,40 +29,21 @@
 
             .chart-line { fill: none; stroke: skyblue; }
             #control-line { fill: none; stroke: red; stroke-dasharray : 4,2; stroke-width: 2px; }
-
             #median-line { fill: none; stroke: black; stroke-width: 2px; }
-
             #percent90 { fill: skyblue; stroke: skyblue; }
             #percent50 { fill: deepskyblue; stroke: deepskyblue; }
 
-
-            /* .tooltip { background: #eee;
-            box-shadow: 0 0 5px #999999;
-            color: #333;
-            display: none;
-            font-size: 12px;
-            left: 130px;
-            padding: 10px;
-            position: absolute;
-            text-align: center;
-            top: 95px;
-            width: 80px;
-            z-index: 10; } */
-
-            div.tooltip { position: absolute; text-align: center; width: 60px; height: 28px; padding: 2px; font: 12px sans-serif; background:
-lightgray; border: 0px; border-radius: 8px; pointer-events: none; }
-
         </style>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/5.16.0/d3.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/6.7.0/d3.js"></script>
         <script src="https://d3js.org/d3-selection-multi.v1.min.js"></script>
-        <link rel="stylesheet" href="/dist/wb-charts-light.css">
+        <link rel="stylesheet" href="../dist/wb-charts-light.css">
     </head>
     <body>
 
         <div id="chart-container-1"></div>
 
         <div id="chart-container-2"></div>
-        <script src="/dist/wb-charts.umd.js"></script>
+        <script src="../dist/wb-charts.umd.js"></script>
         <script type="text/javascript">
 
 // set constants
@@ -70,9 +51,23 @@ var height = null;
 var width = null;
 var container1 = document.getElementById("chart-container-1");
 
-var axis1 = new wbCharts.CartesianAxis(container1, width, height, { x : {time: true }});
+var axis1 = new wbCharts.CartesianAxis(container1, width, height, 
+    {   x: [{
+            type: wbCharts.AxisType.time,
+            label: 'datum',
+            position: wbCharts.AxisPosition.AtZero,
+            showGrid: false,
+        }, ],
+    });
 var container2 = document.getElementById("chart-container-2");
-var axis = new wbCharts.CartesianAxis(container2, width, height, { x : {time: true }});
+var axis = new wbCharts.CartesianAxis(container2, width, height,
+    {   x: [{
+            type: wbCharts.AxisType.time,
+            label: 'datum',
+            position: wbCharts.AxisPosition.AtZero,
+            showGrid: false,
+        }, ],
+    });
 
 percentile = function(p, data) {
     var points = data;
@@ -121,12 +116,12 @@ d3.json("ensemble.json").then(function (data) {
 
     for (i = 1; i< nEnsemble; i++) {
         var plotEnsemble = new wbCharts.ChartLine(members[i], {});
-        plotEnsemble.addTo(axis1, { xkey: "x", ykey: "y" }, 'ensemble-line', '.nsemble-line');
+        plotEnsemble.addTo(axis1, { x: { key: "x", axisIndex: 0 }, y: {key: "y", axisIndex: 0} }, 'ensemble-line', '.nsemble-line');
     }
     var plotMedian = new wbCharts.ChartLine(percentiles[0], {});
     var plotControl = new wbCharts.ChartLine(members[0], {});
-    plotControl.addTo(axis1, { xkey: "x", ykey: "y" }, 'control', '#control-line');
-    plotMedian.addTo(axis1, { xkey: "x", ykey: "y" }, 'median', '#median-line');
+    plotControl.addTo(axis1,  { x: { key: "x", axisIndex: 0 }, y: {key: "y", axisIndex: 0} }, 'control', '#control-line');
+    plotMedian.addTo(axis1,  { x: { key: "x", axisIndex: 0 }, y: {key: "y", axisIndex: 0} }, 'median', '#median-line');
     axis1.redraw({x:{ autoScale: true}, y: {autoScale: true} });
 
     var plotControl1 = new wbCharts.ChartLine(members[0], {});
@@ -134,10 +129,10 @@ d3.json("ensemble.json").then(function (data) {
     var plotPercentile50 = new wbCharts.ChartArea(percentiles[1], {});
     var plotPercentile90 = new wbCharts.ChartArea(percentiles[2], {});
 
-    plotPercentile90.addTo(axis, { xkey: "x", ykey: "y" },'percent90', '#percent90');
-    plotPercentile50.addTo(axis, { xkey: "x", ykey: "y" },'percent50', '#percent50');
-    plotControl1.addTo(axis, { xkey: "x", ykey: "y" }, 'control', '#control-line');
-    plotMedian1.addTo(axis, { xkey: "x", ykey: "y" }, 'median', '#median-line');
+    plotPercentile90.addTo(axis,  { x: { key: "x", axisIndex: 0 }, y: {key: "y", axisIndex: 0} },'percent90', '#percent90');
+    plotPercentile50.addTo(axis,  { x: { key: "x", axisIndex: 0 }, y: {key: "y", axisIndex: 0} },'percent50', '#percent50');
+    plotControl1.addTo(axis,  { x: { key: "x", axisIndex: 0 }, y: {key: "y", axisIndex: 0} }, 'control', '#control-line');
+    plotMedian1.addTo(axis,  { x: { key: "x", axisIndex: 0 }, y: {key: "y", axisIndex: 0} }, 'median', '#median-line');
     axis.redraw({x:{ autoScale: true}, y: {autoScale: true} });
 
     window.onresize = function(){axis.resize(); axis1.resize()};
