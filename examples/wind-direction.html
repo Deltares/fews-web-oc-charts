@@ -540,7 +540,7 @@
         var sliderdt = document.getElementById("slider-datetime");
         // var timezone = 'Etc/GMT' + windTimeAxis.timeZoneOffset/60;
         var dateFormatter = wbCharts.dateFormatter;
-        sliderdt.innerHTML = dateFormatter(new Date(times[0] * 1000), 'YYYY-MM-DD HH:mm zz', {timeZone: 'Europe/Amsterdam'});
+        sliderdt.innerHTML = dateFormatter(new Date(times[0] * 1000), 'yyyy-MM-DD HH:mm ZZZZ', {timeZone: 'Europe/Amsterdam'});
       }
 
 
@@ -606,7 +606,7 @@
           var sliderdt = document.getElementById("slider-datetime");
           var date = new Date(times[position]*1000);
           var dateFormatter = wbCharts.dateFormatter;
-          sliderdt.innerHTML = dateFormatter(new Date(times[position] * 1000),  'YYYY-MM-DD HH:mm zz', {timeZone: 'Europe/Amsterdam'});
+          sliderdt.innerHTML = dateFormatter(new Date(times[position] * 1000),  'yyyy-MM-DD HH:mm ZZZZ', {timeZone: 'Europe/Amsterdam'});
         };
         var input = document.getElementById("slider");
         input.onchange = function (event) { updateCharts(event); };
