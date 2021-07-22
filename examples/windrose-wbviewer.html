@@ -362,7 +362,7 @@ pointer-events: none;
         var containerWindrose = document.getElementById("chart-wind-rose");
         polarAxis = new wbCharts.PolarAxis(containerWindrose, null, null, {
           angular: {
-            direction: wbCharts.CLOCKWISE,
+            direction: wbCharts.Direction.CLOCKWISE,
             intercept: 90
           },
           innerRadius: 80
@@ -484,7 +484,7 @@ pointer-events: none;
           { x: { key: "t", axisIndex: 0 } , y: {key: "y", axisIndex: 0}}, 'wind', '#wind-line-time');
 
         windStootTimeM.addTo(windTimeAxis,{ x: { key: "t",axisIndex: 0  } , y: {key: "y", axisIndex: 0} }, 'windstoot', '#windstoot-line-time');
-// 
+//
         windSpeedTimeF.addTo(windTimeAxis,{ x: { key: "t", axisIndex: 0 } , y: {key: "y", axisIndex: 0} }, 'wind-forecast', '#forecast-time');
 
         var legendWindTime = new wbCharts.Legend( [

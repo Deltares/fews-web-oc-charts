@@ -49,8 +49,8 @@
                 pointer-events: none; }
 
         </style>
-        <script src="https://d3js.org/d3.v4.min.js"></script>
-        <link rel="stylesheet" href="/dist/wb-charts.css">
+        <script src="https://d3js.org/d3.v6.min.js"></script>
+        <link rel="stylesheet" href="../dist/wb-charts-dark.css">
     </head>
     <body>
         <div style="display: flex;">
@@ -76,39 +76,39 @@
 // set constants
 var container1 = document.getElementById("1");
 var polarAxis1 = new wbCharts.PolarAxis(container1, null, null, { angular: { direction:
-wbCharts.CLOCKWISE, range: [0, Math.PI], intercept: Math.PI/2 }, innerRadius: 50 });
+wbCharts.Direction.CLOCKWISE, range: [0, Math.PI], intercept: Math.PI/2 }, innerRadius: 50 });
 
 var container2 = document.getElementById("2");
 var polarAxis2 = new wbCharts.PolarAxis(container2, null, null, { angular: { direction:
-wbCharts.CLOCKWISE, range: [0, Math.PI], intercept: Math.PI/ 4 }, innerRadius: 50 });
+wbCharts.Direction.CLOCKWISE, range: [0, Math.PI], intercept: Math.PI/ 4 }, innerRadius: 50 });
 
 var container3 = document.getElementById("3");
 var polarAxis3 = new wbCharts.PolarAxis(container3, null, null, { angular: { direction:
-wbCharts.CLOCKWISE, range: [0, Math.PI], intercept: 0 }, innerRadius: 50 });
+wbCharts.Direction.CLOCKWISE, range: [0, Math.PI], intercept: 0 }, innerRadius: 50 });
 
 var container4 = document.getElementById("4");
 var polarAxis4 = new wbCharts.PolarAxis(container4, null, null, { angular: { direction:
-wbCharts.ANTICLOCKWISE, range: [0, Math.PI], intercept: Math.PI/2 }, innerRadius: 50 });
+wbCharts.Direction.ANTICLOCKWISE, range: [0, Math.PI], intercept: Math.PI/2 }, innerRadius: 50 });
 
 var container5 = document.getElementById("5");
 var polarAxis5 = new wbCharts.PolarAxis(container5, null, null, { angular: { direction:
-wbCharts.ANTICLOCKWISE, range: [0, Math.PI], intercept: Math.PI/ 4 }, innerRadius: 50 });
+wbCharts.Direction.ANTICLOCKWISE, range: [0, Math.PI], intercept: Math.PI/ 4 }, innerRadius: 50 });
 
 var container6= document.getElementById("6");
 var polarAxis6 = new wbCharts.PolarAxis(container6, null, null, { angular: { direction:
-wbCharts.ANTICLOCKWISE, range: [0, Math.PI], intercept: 0 }, innerRadius: 50 });
+wbCharts.Direction.ANTICLOCKWISE, range: [0, Math.PI], intercept: 0 }, innerRadius: 50 });
 
 var container7 = document.getElementById("7");
 var polarAxis7 = new wbCharts.PolarAxis(container7, null, null, { angular: { direction:
-wbCharts.CLOCKWISE, range: [Math.PI/8, 7*Math.PI/8], intercept: Math.PI/2 }, innerRadius: 50 });
+wbCharts.Direction.CLOCKWISE, range: [Math.PI/8, 7*Math.PI/8], intercept: Math.PI/2 }, innerRadius: 50 });
 
 var container8 = document.getElementById("8");
 var polarAxis8 = new wbCharts.PolarAxis(container8, null, null, { angular: { direction:
-wbCharts.ANTICLOCKWISE, range: [Math.PI/8, 7*Math.PI/8], intercept: Math.PI/ 2}, innerRadius: 50 });
+wbCharts.Direction.ANTICLOCKWISE, range: [Math.PI/8, 7*Math.PI/8], intercept: Math.PI/ 2}, innerRadius: 50 });
 
 var container9= document.getElementById("9");
 var polarAxis9 = new wbCharts.PolarAxis(container9, null, null, { angular: { direction:
-wbCharts.CLOCKWISE, range: [-Math.PI/4, 5*Math.PI/4], intercept: Math.PI/ 2 }, innerRadius: 50 });
+wbCharts.Direction.CLOCKWISE, range: [-Math.PI/4, 5*Math.PI/4], intercept: Math.PI/ 2 }, innerRadius: 50 });
 
 
 var polarData = [
