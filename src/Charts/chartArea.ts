@@ -15,22 +15,25 @@ export class ChartArea extends Chart {
     this._extent = extent
   }
 
-  //FIXME: implement for x-axis
   get extent(): any[] {
     if (!this._extent) {
       this._extent = Array()
       for (let key in this.dataKeys) {
-        if (key !== 'y') continue
-        let path = this.dataKeys[key]
-        let min = d3.min(this._data, function(d: any) {
-          if (d[path] === null) return undefined
-          return d3.min(d[path])
-        })
-        let max = d3.max(this._data, function(d: any) {
-          if (d[path] === null) return undefined
-          return d3.max(d[path])
-        })
-        this._extent[path] = [min, max]
+        if (key === 'x') {
+          let path = this.dataKeys[key]
+          this._extent[path] = d3.extent(this._data, (d) => d[path])
+        } else if (key === 'x') {
+          let path = this.dataKeys[key]
+          let min = d3.min(this._data, function(d: any) {
+            if (d[path] === null) return undefined
+            return d3.min(d[path])
+          })
+          let max = d3.max(this._data, function(d: any) {
+            if (d[path] === null) return undefined
+            return d3.max(d[path])
+          })
+          this._extent[path] = [min, max]
+        }
       }
     }
     return this._extent
