@@ -78,7 +78,7 @@ export abstract class Chart {
       }
     )
     // https://github.com/d3/d3-scale-chromatic
-    this.colorMap = d3.scaleSequential(d3.interpolateWarm)
+    this.colorMap = d3.scaleSequential(d3.interpolateCool)
   }
 
   set data(d: any) {
