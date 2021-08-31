@@ -82,6 +82,21 @@
   cursor: pointer;
 }
 
+.cross-section-select {
+  stroke: red;
+}
+
+.cross-section-select > text {
+  stroke: none;
+  fill: red;
+}
+
+.cross-section-select-handle {
+  stroke: red;
+  fill: red;
+  cursor: pointer;
+}
+
 .current-time {
   stroke: red;
 }
