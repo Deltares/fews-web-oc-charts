@@ -31,8 +31,8 @@ export class CartesianAxis extends Axis {
   timeZoneOffset: number
   options: CartesianAxesOptions
   static readonly defaultOptions = {
-    x: [ { type: AxisType.value } ],
-    y: [ { type: AxisType.value } ]
+    x: [ { type: AxisType.value, labelAngle: 0 } ],
+    y: [ { type: AxisType.value, labelAngle: 0 } ]
   }
 
   constructor(
@@ -254,10 +254,40 @@ export class CartesianAxis extends Axis {
           ? this.height
           : 0
       let translateString = `translate(${x},${y})`
-      this.canvas
-      .select(`.x-axis-${key}`)
-      .attr('transform', translateString )
+
+      const angle = options[key].labelAngle
+      let normalizedAngle = options[key].position === AxisPosition.Top ? 180 : 0
+      normalizedAngle = options[key].labelAngle + normalizedAngle 
+       - 360 * Math.floor( (options[key].labelAngle + normalizedAngle) / 360)
+
+      const axisHandle = this.canvas
+        .select(`.x-axis-${key}`)
+        .attr('transform', translateString)
         .call(axis)
+
+      switch(angle) {
+        case 0:
+          break
+        case 180:
+          axisHandle
+            .selectAll("text")
+            .attr("transform", `rotate(${angle})`);
+          break
+        default:
+          const anchor = normalizedAngle < 180 ? 'start' : 
+          normalizedAngle > 180 ? 'end' : 'middle'
+          const offset = options[key].position === AxisPosition.Top ? -15 : 15
+          axisHandle
+            .selectAll("text")
+            .attr("x", undefined)
+            .attr("dx", undefined)
+            .attr("y", undefined)
+            .attr("dy", undefined)
+            .attr("text-anchor", anchor)
+            .attr("dominant-baseline", "middle")
+            .attr("transform", `translate(0, ${offset}) rotate(${angle})`);
+      }
+
       if (options[key].showGrid) this.canvas.select('.x-grid')
         .call(grid)
         .call(g => g.selectAll(".tick line")
@@ -308,10 +338,39 @@ updateYAxis (options: CartesianAxisOptions[]) {
       : 0
     let y = 0
     let translateString = `translate(${x},${y})`
-    this.canvas
-    .select(`.y-axis-${key}`)
-    .attr('transform', translateString)
-    .call(axis)
+
+    const angle = options[key].labelAngle
+    let normalizedAngle = options[key].position === AxisPosition.Right ? -90 : + 90
+    normalizedAngle = options[key].labelAngle + normalizedAngle 
+     - 360 * Math.floor( (options[key].labelAngle + normalizedAngle) / 360)
+
+     const axisHandle = this.canvas
+      .select(`.y-axis-${key}`)
+      .attr('transform', translateString)
+      .call(axis)
+
+    switch(angle) {
+      case 0:
+        break
+      case 180:
+        axisHandle
+          .selectAll("text")
+          .attr("transform", `rotate(${angle})`);
+        break
+      default:
+        const anchor = normalizedAngle < 180 ? 'end' : 
+          normalizedAngle > 180 ? 'start' : 'middle'
+        const offset = options[key].position === AxisPosition.Right ? 15 : -15
+        axisHandle
+          .selectAll("text")
+          .attr("x", undefined)
+          .attr("dx", undefined)
+          .attr("y", undefined)
+          .attr("dy", undefined)
+          .attr("text-anchor", anchor)
+          .attr("dominant-baseline", "middle")
+          .attr("transform", `translate(${offset}, 0) rotate(${angle})`);
+    }
     if (options[key].showGrid) this.canvas.select('.y-grid')
       .call(grid)
       .call(g => g.selectAll(".tick")

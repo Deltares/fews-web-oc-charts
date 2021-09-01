@@ -21,6 +21,7 @@ export enum AxisType {
 
 export interface AxisOptions {
   label?: string;
+  labelAngle?: number;
   type?: AxisType;
   unit?: string;
   showGrid?: boolean;

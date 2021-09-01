@@ -68,19 +68,24 @@
     // set constants
     var colorMap = d3.scaleSequential(d3.interpolateRdYlGn).domain([1.4, 1])
 
+    const labelAngle = -45
+
     var container1 = document.getElementById("chart-container-1");
     var axis1 = new wbCharts.CartesianAxis(container1, null, null, {
       x: [{
         type: 'band',
-        position: 'bottom'
+        position: 'bottom',
+        labelAngle
       }],
       y: [{
         type: 'value',
         label: 'Waterstand',
         unit: 'm',
-        domain: [0, 2]
+        domain: [0, 2],
+        labelAngle
       }],
       margin: {
+        bottom: 100,
         left: 100,
         right: 100
       }
@@ -90,15 +95,19 @@
     var axis3 = new wbCharts.CartesianAxis(containerMatrix, null, null, {
       x: [{
         type: 'band',
-        position: 'top'
+        position: 'top',
+        labelAngle
       }],
       y: [{
-        type: 'band'
+        type: 'band',
+        position: 'right',
+        labelAngle
       }],
       margin: {
+        top: 100,
         left: 100,
         right: 100
-      },
+      }
     });
 
     var plotBars = new wbCharts.ChartBar([], {
@@ -123,7 +132,7 @@
           'fill': 'white',
           'font-size': '.7rem'
         },
-        formatter: (d) => { return d['Value'] }
+        formatter: (d) => { return d['Value'] === null ? '' :d3.format('0.1f')(d['Value'])}
       },
     });
 
@@ -178,7 +187,7 @@
             'stroke': 'none',
             'fill': 'black'
           },
-          formatter: (d) => { return d['Value']}
+          formatter: (d) => { return d['Value'] === null ? '' :d3.format('0.1f')(d['Value'])}
         }
 
       });

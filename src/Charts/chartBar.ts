@@ -73,7 +73,6 @@ export class ChartBar extends Chart {
         .attr("x", d => x0(d[xKey]) + x1(d[x1Key]));
 
         if (this.options.text !== undefined) {
-          console.log(this.options)
           const textSelection = this.group
             .selectAll("text")
             .data(data)
