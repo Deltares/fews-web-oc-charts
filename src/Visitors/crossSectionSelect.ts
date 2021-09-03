@@ -12,7 +12,7 @@ export class CrossSectionSelect implements Visitor {
   group: any
   line: any
   axis: CartesianAxis
-  value: number
+  value: number | Date
   callback: Function
   format: Function
   options: CrossSectionSelectOptions = {
@@ -20,7 +20,7 @@ export class CrossSectionSelect implements Visitor {
   }
 
   // use shared Visitor constuctor (Visitor should be a abstract class)
-  constructor(value: number, callback: Function, options: CrossSectionSelectOptions) {
+  constructor(value: number | Date, callback: Function, options: CrossSectionSelectOptions) {
     this.value = value
     this.callback = callback
     this.format = d3.format('.2f')

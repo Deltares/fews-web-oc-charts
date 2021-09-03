@@ -352,8 +352,6 @@
     }
 
     function moveLine(dx) {
-      const axisIndex = crossSectionSelect.options.x.axisIndex
-      const scale = crossSectionSelect.axis.xScale[axisIndex]
       crossSectionSelect.value = new Date(crossSectionSelect.value.getTime()+dx)
       crossSectionSelect.redraw()
       crossSectionSelect.end()
