@@ -68,6 +68,10 @@ export class CrossSectionSelect implements Visitor {
     const scale = axis.xScale[axisIndex]
     let xPos = scale(this.value)
     xPos = (xPos === undefined) ? scale.range()[1] : xPos
+    // stay within chart limits
+    xPos = xPos > scale.range()[1]  ? scale.range()[1] : xPos
+    xPos = xPos < scale.range()[0]  ? scale.range()[0] : xPos
+    this.value = scale.invert(xPos)
     let timeString = this.format(this.value)
     // line
     this.group
@@ -111,18 +115,14 @@ export class CrossSectionSelect implements Visitor {
         }
         const xValue = xScale.invert(xPos)
         let idx = bisect(datum, xValue)
-        // before first point
-        if (idx === 0 && datum[idx][xKey] >= xValue) {
+        // line before first point
+        if (idx === 0 && datum[idx][xKey] >= xValue ) {
           return 'translate(0,' + -window.innerHeight + ')'
         }
-        // after last first point
-        if (idx === datum.length-1 && xValue >= datum[idx][xKey]) {
-          return 'translate(0,' + -window.innerHeight + ')'
-        }
+        // empty data
         if (!datum[idx] || datum[idx][yKey] === null || datum[idx-1][yKey] === null) {
           return 'translate(0,' + -window.innerHeight + ')'
         }
-
         // find closest point to left of line
         let x0 = xPos
         const x1 = xScale(datum[idx-1][xKey])
@@ -133,11 +133,14 @@ export class CrossSectionSelect implements Visitor {
           x0 = x1
           idx = idx -1
         }
-
+        // point outside range
+        if (x0 < scale.range()[0] ) {
+          return 'translate(0,' + -window.innerHeight + ')'
+        }
+        
         // get corresponding y-value
         let valy = datum[idx][yKey]
         let posy = yScale(valy)
-
         // outside range
         posy =
           posy < yScale.range()[1] || posy > yScale.range()[0]
