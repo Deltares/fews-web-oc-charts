@@ -57,6 +57,10 @@ g .axis-canvas  {
   fill: red;
 }
 
+.cross-section-select > .data-point-per-line {
+  stroke: none;
+}
+
 .cross-section-select-handle {
   stroke: red;
   fill: red;
