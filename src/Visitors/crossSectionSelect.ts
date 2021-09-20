@@ -58,7 +58,6 @@ export class CrossSectionSelect implements Visitor {
         )
       this.group.append('g').attr('class', 'data-point-per-line')
     }
-    this.setDataPoint()
     this.redraw()
   }
 
@@ -86,6 +85,8 @@ export class CrossSectionSelect implements Visitor {
       .text(timeString)
     // handle
     this.group.select('polygon').attr('transform', 'translate(' + xPos + ',' + this.axis.height + ')')
+    // data points
+    this.updateDataPoints()
     // determine closest data point for each line
     this.group.select('.data-point-per-line')
       .selectAll('circle')
@@ -179,7 +180,7 @@ export class CrossSectionSelect implements Visitor {
     }
   }
 
-  setDataPoint () {
+  updateDataPoints () {
     let traces = (this.trace !== undefined)
     ? this.trace
     : this.axis.charts.map( (chart) => {return chart.id})
