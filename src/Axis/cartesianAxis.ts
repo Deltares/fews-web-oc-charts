@@ -290,7 +290,7 @@ export class CartesianAxis extends Axis {
 
       if (options[key].showGrid) this.canvas.select('.x-grid')
         .call(grid)
-        .call(g => g.selectAll(".tick line")
+        .call(g => g.selectAll(".tick")
         .attr("class", (d) => { return d === 0 ? 'tick zero-crossing' : 'tick'} ))
     }
   }
