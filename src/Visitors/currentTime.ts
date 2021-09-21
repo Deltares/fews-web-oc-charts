@@ -14,7 +14,6 @@ export class CurrentTime implements Visitor {
   private indicator: any
   private axis: CartesianAxis
   private options: CurrentTimeOptions
-  private transition: any
   private datetime: Date
   static readonly REFRESH_INTERVAL: number = 10000
 
@@ -23,17 +22,16 @@ export class CurrentTime implements Visitor {
     this.options = options
   }
 
-  setDateTime(dt: Date) {
+  setDateTime(dt: Date): void {
     this.datetime = dt
   }
 
   visit(axis: Axis) {
     this.axis = axis as CartesianAxis
     this.create(axis as CartesianAxis)
-    let that = this
     this.redraw()
-    this.timer = d3.interval(function(elapsed: number) {
-      that.redraw()
+    this.timer = d3.interval(() => {
+      this.redraw()
     }, CurrentTime.REFRESH_INTERVAL)
   }
 
@@ -46,26 +44,24 @@ export class CurrentTime implements Visitor {
   }
 
   redraw() {
-    let currentDate = this.datetime || new Date()
+    const currentDate = this.datetime || new Date()
     let scale
     if (this.options.x) {
-      let index = this.options.x.axisIndex
+      const index = this.options.x.axisIndex
       scale = this.axis.xScale[index]
     } else if (this.options.x) {
-      let index = this.options.y.axisIndex
+      const index = this.options.y.axisIndex
       scale = this.axis.yScale[index]
     } else {
       return
     }
 
-    let x = scale(currentDate)
-    let domain = scale.domain()
+    const x = scale(currentDate)
+    const domain = scale.domain()
     if (!this.line) {
       this.line = this.group.append('line')
     }
-    if (currentDate < domain[0] || currentDate > domain[1]) {
-      this.group.attr('display', 'none')
-    } else {
+    if (currentDate > domain[0] && currentDate < domain[1]) {
       this.group.attr('display', 'initial')
       this.line
         .attr('x1', x)
@@ -83,6 +79,8 @@ export class CurrentTime implements Visitor {
         .attr('x', 5)
         .attr('y', -5)
         .text(dateFormatter(currentDate, 'yyyy-MM-dd HH:mm ZZZZ', {timeZone: this.axis.timeZone} ))
+    } else {
+      this.group.attr('display', 'none')
     }
   }
 }
