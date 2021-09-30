@@ -62,29 +62,14 @@ export class CrossSectionSelect implements Visitor {
   }
 
   redraw(): void {
-    const axisIndex = this.options.x.axisIndex
     const axis = this.axis
+    const axisIndex = this.options.x.axisIndex
     const scale = axis.xScale[axisIndex]
-    let xPos = scale(this.value)
-    xPos = (xPos === undefined) ? scale.range()[1] : xPos
-    // stay within chart limits
-    xPos = xPos > scale.range()[1]  ? scale.range()[1] : xPos
-    xPos = xPos < scale.range()[0]  ? scale.range()[0] : xPos
-    this.value = scale.invert(xPos)
-    const timeString = this.format(this.value)
-    // line
-    this.group
-      .select('line')
-      .attr('y1', 0)
-      .attr('y2', this.axis.height)
-      .attr('transform', 'translate(' + xPos + ', 0)')
-    // text
-    this.group
-      .select('text')
-      .attr('x', xPos)
-      .text(timeString)
+    this.limitValue()
+    const xPos = scale(this.value)
+    this.updateLine(xPos)
+
     // handle
-    this.group.select('polygon').attr('transform', 'translate(' + xPos + ',' + this.axis.height + ')')
     // data points
     this.updateDataPoints()
     // determine closest data point for each line
@@ -135,7 +120,7 @@ export class CrossSectionSelect implements Visitor {
           idx = idx -1
         }
         // point outside range
-        if (x0 < scale.range()[0] ) {
+        if (x0 < xScale.range()[0] ) {
           return 'translate(0,' + -window.innerHeight + ')'
         }
 
@@ -180,10 +165,26 @@ export class CrossSectionSelect implements Visitor {
     }
   }
 
+  updateLine(xPos: number): void {
+    // line
+    const timeString = this.format(this.value)
+    this.group
+      .select('line')
+      .attr('y1', 0)
+      .attr('y2', this.axis.height)
+      .attr('transform', 'translate(' + xPos + ', 0)')
+    // text
+    this.group
+      .select('text')
+      .attr('x', xPos)
+      .text(timeString)
+    // handle
+    this.group.select('polygon').attr('transform', 'translate(' + xPos + ',' + this.axis.height + ')')
+  }
+
+
   updateDataPoints (): void {
-    const traces = (this.trace !== undefined)
-    ? this.trace
-    : this.axis.charts.map( (chart) => {return chart.id})
+    const traces = this.trace || this.axis.charts.map( (chart) => {return chart.id})
 
     this.group.select('.data-point-per-line')
       .selectAll('circle')
@@ -191,8 +192,7 @@ export class CrossSectionSelect implements Visitor {
       .join('circle')
       .attr('data-point-id', d => d)
       .attr('r', 3)
-      .style('fill', 'blue')
-      .style('fill', (d: any, i) => {
+      .style('fill', (d: any) => {
         const selector = `[data-chart-id="${d}"]`
         const element = this.axis.chartGroup.select(selector).select('path')
         if (element.node() === null ) return
@@ -204,4 +204,16 @@ export class CrossSectionSelect implements Visitor {
       .style('stroke-width', '1px')
       .style('opacity', '1')
   }
+
+  limitValue(): void {
+    const axisIndex = this.options.x.axisIndex
+    const axis = this.axis
+    const scale = axis.xScale[axisIndex]
+    let xPos = scale(this.value)
+    xPos = (xPos === undefined) ? scale.range()[1] : xPos
+    xPos = Math.min(xPos, scale.range()[1])
+    xPos = Math.max(xPos, scale.range()[0])
+    this.value = scale.invert(xPos)
+  }
+
 }
