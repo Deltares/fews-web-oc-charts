@@ -5,7 +5,7 @@ import defaultsDeep from 'lodash/defaultsDeep'
 
 
 type CrossSectionSelectOptions = {
-  x : { axisIndex: number }
+  x: { axisIndex: number };
 }
 
 export class CrossSectionSelect implements Visitor {
@@ -30,12 +30,12 @@ export class CrossSectionSelect implements Visitor {
     ) as CrossSectionSelectOptions
   }
 
-  visit(axis: Axis) {
+  visit(axis: Axis): void {
     this.axis = axis as CartesianAxis
     this.create(axis as CartesianAxis)
   }
 
-  create(axis: CartesianAxis) {
+  create(axis: CartesianAxis): void {
     if (!this.group) {
       this.group = axis.canvas.append('g').attr('class', 'cross-section-select')
       this.group.append('line')
@@ -52,7 +52,7 @@ export class CrossSectionSelect implements Visitor {
             .on('drag', (event) => {
               this.drag(event)
             })
-            .on('end', (event) => {
+            .on('end', () => {
               this.end()
             })
         )
@@ -61,7 +61,7 @@ export class CrossSectionSelect implements Visitor {
     this.redraw()
   }
 
-  redraw() {
+  redraw(): void {
     const axisIndex = this.options.x.axisIndex
     const axis = this.axis
     const scale = axis.xScale[axisIndex]
@@ -71,7 +71,7 @@ export class CrossSectionSelect implements Visitor {
     xPos = xPos > scale.range()[1]  ? scale.range()[1] : xPos
     xPos = xPos < scale.range()[0]  ? scale.range()[0] : xPos
     this.value = scale.invert(xPos)
-    let timeString = this.format(this.value)
+    const timeString = this.format(this.value)
     // line
     this.group
       .select('line')
@@ -92,25 +92,25 @@ export class CrossSectionSelect implements Visitor {
       .selectAll('circle')
       .attr('transform', function(d, i) {
         const selector = `[data-chart-id="${d}"]`
-        let chart = axis.charts.find(chart => chart.id === d)
-        let xIndex = chart.axisIndex.x.axisIndex
-        let xScale = axis.xScale[xIndex]
-        let yIndex = chart.axisIndex.y.axisIndex
-        let yScale = axis.yScale[yIndex]
-        let xKey = chart.dataKeys.x
-        let yKey = chart.dataKeys.y
-        let bisect = d3.bisector(function(d: any) {
+        const chart = axis.charts.find(chart => chart.id === d)
+        const xIndex = chart.axisIndex.x.axisIndex
+        const xScale = axis.xScale[xIndex]
+        const yIndex = chart.axisIndex.y.axisIndex
+        const yScale = axis.yScale[yIndex]
+        const xKey = chart.dataKeys.x
+        const yKey = chart.dataKeys.y
+        const bisect = d3.bisector(function(d: any) {
           return d[xKey]
         }).left
 
-        let element = axis.canvas.select(selector).select('path')
+        const element = axis.canvas.select(selector).select('path')
         if (element.node() === null) return 'translate(0,' + -window.innerHeight + ')'
-        let style = window.getComputedStyle(element.node() as Element)
+        const style = window.getComputedStyle(element.node() as Element)
         if (style === null || style.getPropertyValue('visibility') === 'hidden') {
           return 'translate(0,' + -window.innerHeight + ')'
         }
         // let stroke = style.getPropertyValue('stroke')
-        let datum = element.datum() as any
+        const datum = element.datum() as any
         if (datum === null || datum.length === 0) {
           return 'translate(0,' + -window.innerHeight + ')'
         }
@@ -138,21 +138,21 @@ export class CrossSectionSelect implements Visitor {
         if (x0 < scale.range()[0] ) {
           return 'translate(0,' + -window.innerHeight + ')'
         }
-        
+
         // get corresponding y-value
-        let valy = datum[idx][yKey]
+        const valy = datum[idx][yKey]
         let posy = yScale(valy)
         // outside range
         posy =
           posy < yScale.range()[1] || posy > yScale.range()[0]
             ? -window.innerHeight
             : posy
-          
+
         return 'translate(' + x0 + ',' + posy + ')'
       })
   }
 
-  start(event) {
+  start(event): void {
     const axisIndex = this.options.x.axisIndex
     const scale = this.axis.xScale[axisIndex]
     this.value = scale.invert(event.x)
@@ -166,22 +166,22 @@ export class CrossSectionSelect implements Visitor {
     this.redraw()
   }
 
-  drag(event) {
+  drag(event): void {
     const axisIndex = this.options.x.axisIndex
     const scale = this.axis.xScale[axisIndex]
     this.value = scale.invert(event.x)
     this.redraw()
   }
 
-  end() {
+  end(): void {
     this.group.select('text').remove()
     if (typeof this.callback === 'function') {
       this.callback(this.value)
     }
   }
 
-  updateDataPoints () {
-    let traces = (this.trace !== undefined)
+  updateDataPoints (): void {
+    const traces = (this.trace !== undefined)
     ? this.trace
     : this.axis.charts.map( (chart) => {return chart.id})
 
@@ -194,9 +194,9 @@ export class CrossSectionSelect implements Visitor {
       .style('fill', 'blue')
       .style('fill', (d: any, i) => {
         const selector = `[data-chart-id="${d}"]`
-        let element = this.axis.chartGroup.select(selector).select('path')
+        const element = this.axis.chartGroup.select(selector).select('path')
         if (element.node() === null ) return
-        let stroke = window
+        const stroke = window
           .getComputedStyle(element.node() as Element)
           .getPropertyValue('stroke')
         return stroke
