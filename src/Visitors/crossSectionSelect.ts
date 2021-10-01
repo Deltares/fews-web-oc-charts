@@ -67,74 +67,20 @@ export class CrossSectionSelect implements Visitor {
     const scale = axis.xScale[axisIndex]
     this.limitValue()
     const xPos = scale(this.value)
+
     this.updateLine(xPos)
 
-    // handle
-    // data points
-    this.updateDataPoints()
-    // determine closest data point for each line
-    this.group.select('.data-point-per-line')
-      .selectAll('circle')
-      .attr('transform', function(d, i) {
-        const selector = `[data-chart-id="${d}"]`
-        const chart = axis.charts.find(chart => chart.id === d)
-        const xIndex = chart.axisIndex.x.axisIndex
-        const xScale = axis.xScale[xIndex]
-        const yIndex = chart.axisIndex.y.axisIndex
-        const yScale = axis.yScale[yIndex]
-        const xKey = chart.dataKeys.x
-        const yKey = chart.dataKeys.y
-        const bisect = d3.bisector(function(d: any) {
-          return d[xKey]
-        }).left
+    // find values
+    const traces = this.trace || this.axis.charts.map((chart) => { return chart.id })
+    const points = []
+    for (const chartId of traces ) {
+      const chart = axis.charts.find(chart => chart.id === chartId)
+      points.push(this.findNearestPoint(chart, xPos))
+    }
 
-        const element = axis.canvas.select(selector).select('path')
-        if (element.node() === null) return 'translate(0,' + -window.innerHeight + ')'
-        const style = window.getComputedStyle(element.node() as Element)
-        if (style === null || style.getPropertyValue('visibility') === 'hidden') {
-          return 'translate(0,' + -window.innerHeight + ')'
-        }
-        // let stroke = style.getPropertyValue('stroke')
-        const datum = element.datum() as any
-        if (datum === null || datum.length === 0) {
-          return 'translate(0,' + -window.innerHeight + ')'
-        }
-        const xValue = xScale.invert(xPos)
-        let idx = bisect(datum, xValue)
-        // line before first point
-        if (idx === 0 && datum[idx][xKey] >= xValue ) {
-          return 'translate(0,' + -window.innerHeight + ')'
-        }
-        // empty data
-        if (!datum[idx] || datum[idx][yKey] === null || datum[idx-1][yKey] === null) {
-          return 'translate(0,' + -window.innerHeight + ')'
-        }
-        // find closest point to left of line
-        let x0 = xPos
-        const x1 = xScale(datum[idx-1][xKey])
-        const x2 = xScale(datum[idx][xKey])
-        if (x2 <= xPos) {
-          x0 = x2
-        } else {
-          x0 = x1
-          idx = idx -1
-        }
-        // point outside range
-        if (x0 < xScale.range()[0] ) {
-          return 'translate(0,' + -window.innerHeight + ')'
-        }
-
-        // get corresponding y-value
-        const valy = datum[idx][yKey]
-        let posy = yScale(valy)
-        // outside range
-        posy =
-          posy < yScale.range()[1] || posy > yScale.range()[0]
-            ? -window.innerHeight
-            : posy
-
-        return 'translate(' + x0 + ',' + posy + ')'
-      })
+    this.updateDataPoints(points)
+    this.updateLabels(points)
+    return
   }
 
   start(event): void {
@@ -143,6 +89,7 @@ export class CrossSectionSelect implements Visitor {
     this.value = scale.invert(event.x)
     this.group
       .append('text')
+      .classed('date-label', true)
       .attr('x', event.x)
       .attr('y', this.axis.height)
       .attr('dx', 10)
@@ -159,7 +106,7 @@ export class CrossSectionSelect implements Visitor {
   }
 
   end(): void {
-    this.group.select('text').remove()
+    this.group.select('.date-label').remove()
     if (typeof this.callback === 'function') {
       this.callback(this.value)
     }
@@ -175,7 +122,7 @@ export class CrossSectionSelect implements Visitor {
       .attr('transform', 'translate(' + xPos + ', 0)')
     // text
     this.group
-      .select('text')
+      .select('.date-label')
       .attr('x', xPos)
       .text(timeString)
     // handle
@@ -183,17 +130,16 @@ export class CrossSectionSelect implements Visitor {
   }
 
 
-  updateDataPoints (): void {
-    const traces = this.trace || this.axis.charts.map( (chart) => {return chart.id})
-
+  updateDataPoints (points): void {
     this.group.select('.data-point-per-line')
       .selectAll('circle')
-      .data(traces)
+      .data(points)
       .join('circle')
-      .attr('data-point-id', d => d)
+      .filter((d) => d.y !== undefined)
+      .attr('data-point-id', d => d.id)
       .attr('r', 3)
       .style('fill', (d: any) => {
-        const selector = `[data-chart-id="${d}"]`
+        const selector = `[data-chart-id="${d.id}"]`
         const element = this.axis.chartGroup.select(selector).select('path')
         if (element.node() === null ) return
         const stroke = window
@@ -203,6 +149,81 @@ export class CrossSectionSelect implements Visitor {
       })
       .style('stroke-width', '1px')
       .style('opacity', '1')
+      .attr('transform', (d: any) => `translate( ${d.x}, ${d.y})`)
+  }
+
+  updateLabels(points): void {
+    // const traces = this.trace || this.axis.charts.map( (chart) => {return chart.id})
+    const nodes = []
+    const links = []
+    const labelLinks = []
+
+
+    let i = 0
+    for (const p of points) {
+      if (p.y === undefined) continue
+      // label
+      nodes.push({ x: p.x, y: p.y, height: 50, width: 50, label: p.d })
+      // point
+      nodes.push({ fx: p.x0, fy: p.y0 })
+      nodes.push({ fx: p.x, fy: p.y })
+      nodes.push({ fx: p.x1, fy: p.y1 })
+      // links.push({ source: i + 1, target: i})
+      links.push({ source: i + 2, target: i, label: p.d })
+      // links.push({ source: i + 3, target: i})
+      // for (let s = 0 ; s < i; s = s + 4 ) {
+      //   labelLinks.push({ source: s, target: i + 2 })
+      // }
+      i = i + 4
+    }
+
+
+    const link = this.group
+      .selectAll(".link")
+      .data(links)
+      .join("line")
+      .classed("link", true)
+
+    const labels = this.group.selectAll(".label")
+      .data(nodes)
+      .join("text")
+      .filter( (d) => d.label )
+      .classed("label", true)
+
+    const node = this.group
+      .selectAll(".node")
+      .data(nodes)
+      .join("circle")
+      .attr("r", 2)
+      .classed("node", true)
+      .classed("hidden", d => d.fx === undefined);
+
+    function tick(): void {
+      link
+        .attr("x1", d => d.source.x)
+        .attr("y1", d => d.source.y)
+        .attr("x2", d => d.target.x)
+        .attr("y2", d => d.target.y);
+      node
+        .attr("x", d => d.x)
+        .attr("y", d => d.y)
+      labels
+        .attr("x", d => d.x)
+        .attr("y", d => d.y)
+        .attr("text-anchor", "middle")
+        .attr("domina-baseline", "middle")
+        .text(d => d.label)
+    }
+
+    const simulation = d3
+      .forceSimulation()
+      .nodes(nodes)
+      .force("charge", d3.forceManyBody().strength(-20))
+      .force("center", d3.forceCollide(10))
+      .force("link", d3.forceLink(links))
+      .on("tick", tick);
+
+    simulation.tick(100);
   }
 
   limitValue(): void {
@@ -214,6 +235,35 @@ export class CrossSectionSelect implements Visitor {
     xPos = Math.min(xPos, scale.range()[1])
     xPos = Math.max(xPos, scale.range()[0])
     this.value = scale.invert(xPos)
+  }
+
+  findNearestPoint(chart, xPos): any {
+    const axis = this.axis
+    const xIndex = chart.axisIndex.x.axisIndex
+    const xScale = axis.xScale[xIndex]
+    const yIndex = chart.axisIndex.y.axisIndex
+    const yScale = axis.yScale[yIndex]
+    const xKey = chart.dataKeys.x
+    const yKey = chart.dataKeys.y
+    const bisect = d3.bisector(function (d: any) {
+      return d[xKey]
+    }).left
+
+    const xValue = xScale.invert(xPos)
+    const data = chart.data
+    const idx = bisect(data, xValue) - 1
+    // find closest point to left of line
+    const x0 = xScale(data[idx-1][xKey])
+    const x = xScale(data[idx][xKey])
+    const x1 = xScale(data[idx+1][xKey])
+
+
+    // get corresponding y-value
+    const y0 = yScale(data[idx-5][yKey])
+    const y = yScale(data[idx][yKey])
+    const y1 = yScale(data[idx+5][yKey])
+    const d = data[idx]
+    return { id: chart.id, x0, x, x1, y0, y, y1, d: d[yKey]}
   }
 
 }
