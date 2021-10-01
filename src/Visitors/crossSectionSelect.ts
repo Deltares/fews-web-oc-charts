@@ -233,7 +233,6 @@ export class CrossSectionSelect implements Visitor {
     xPos = (xPos === undefined) ? scale.range()[1] : xPos
     xPos = Math.min(xPos, scale.range()[1])
     xPos = Math.max(xPos, scale.range()[0])
-    this.value = scale.invert(xPos)
   }
 
   findNearestPoint(chart, xPos): any {
