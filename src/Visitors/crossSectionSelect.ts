@@ -249,7 +249,10 @@ export class CrossSectionSelect implements Visitor {
 
     const xValue = xScale.invert(xPos)
     const data = chart.data
-    const idx = bisect(data, xValue) - 1
+    let idx = bisect(data, xValue)
+    if ( idx === -1) {
+      return { id: chart.id, x: undefined, y: undefined }
+    }
     // find closest point to left of line
     const s = 3
     const x0 = xScale(data[idx-s][xKey])
