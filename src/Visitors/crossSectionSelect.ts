@@ -196,7 +196,6 @@ export class CrossSectionSelect implements Visitor {
       .join("circle")
       .attr("r", 2)
       .classed("node", true)
-      .classed("hidden", d => d.fx === undefined);
 
     function tick(): void {
       link
@@ -205,8 +204,8 @@ export class CrossSectionSelect implements Visitor {
         .attr("x2", d => d.target.x)
         .attr("y2", d => d.target.y);
       node
-        .attr("x", d => d.x)
-        .attr("y", d => d.y)
+        .attr("cx", d => d.x)
+        .attr("cy", d => d.y)
       labels
         .attr("x", d => d.x)
         .attr("y", d => d.y)
@@ -218,9 +217,9 @@ export class CrossSectionSelect implements Visitor {
     const simulation = d3
       .forceSimulation()
       .nodes(nodes)
-      .force("charge", d3.forceManyBody().strength(-20))
+      .force("charge", d3.forceManyBody().strength(-100))
       .force("center", d3.forceCollide(10))
-      .force("link", d3.forceLink(links))
+      .force("link", d3.forceLink(links).distance(20))
       .on("tick", tick);
 
     simulation.tick(100);
@@ -253,15 +252,16 @@ export class CrossSectionSelect implements Visitor {
     const data = chart.data
     const idx = bisect(data, xValue) - 1
     // find closest point to left of line
-    const x0 = xScale(data[idx-1][xKey])
+    const s = 3
+    const x0 = xScale(data[idx-s][xKey])
     const x = xScale(data[idx][xKey])
-    const x1 = xScale(data[idx+1][xKey])
+    const x1 = xScale(data[idx+s][xKey])
 
 
     // get corresponding y-value
-    const y0 = yScale(data[idx-5][yKey])
+    const y0 = yScale(data[idx-s][yKey])
     const y = yScale(data[idx][yKey])
-    const y1 = yScale(data[idx+5][yKey])
+    const y1 = yScale(data[idx+s][yKey])
     const d = data[idx]
     return { id: chart.id, x0, x, x1, y0, y, y1, d: d[yKey]}
   }
