@@ -7,7 +7,7 @@
   <style>
     body {
       background-color: rgb(44, 44, 44);
-      font: 16px sans-serif;
+      font: 12px sans-serif;
       margin: 20px;
     }
 
@@ -22,10 +22,6 @@
       height: 100vh;
       max-height: 414px;
       fill: white;
-    }
-
-    .wb-charts {
-        font-size: 0.825em;
     }
 
     #polar-dot {
@@ -312,9 +308,9 @@
         axis.accept(escalationsVisitor);
         axis.accept(currentTime);
         axis.accept(dstIndicator);
-        axis.accept(crossSectionSelect);
         axis.accept(zoom);
-        // axis.accept(mouseOver);
+        axis.accept(crossSectionSelect);
+        axis.accept(mouseOver);
       });
     }
     window.setTimeout(dataload, 1000);
