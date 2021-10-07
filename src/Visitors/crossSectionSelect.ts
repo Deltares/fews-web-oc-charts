@@ -2,9 +2,6 @@ import * as d3 from 'd3'
 import { Axis, CartesianAxis } from '../Axis'
 import { Visitor } from './visitor'
 import defaultsDeep from 'lodash/defaultsDeep'
-import { resolveTxt } from 'dns'
-import { update } from 'lodash'
-
 
 type CrossSectionSelectOptions = {
   x: { axisIndex: number };
@@ -13,7 +10,7 @@ type CrossSectionSelectOptions = {
 export class CrossSectionSelect implements Visitor {
   trace: string[]
   group: any
-  private mouseGroup: any
+  mouseGroup: any
   line: any
   simulation: d3.Simulation<any,any>
   axis: CartesianAxis
@@ -78,7 +75,6 @@ export class CrossSectionSelect implements Visitor {
     const axis = this.axis
     const axisIndex = this.options.x.axisIndex
     const scale = axis.xScale[axisIndex]
-    if (this.limitValue()) return
     const xPos = scale(this.value)
     this.updateLine(xPos)
     // find values
@@ -112,6 +108,7 @@ export class CrossSectionSelect implements Visitor {
     const axisIndex = this.options.x.axisIndex
     const scale = this.axis.xScale[axisIndex]
     this.value = scale.invert(event.x)
+    this.limitValue()
     this.redraw()
   }
 
@@ -148,7 +145,7 @@ export class CrossSectionSelect implements Visitor {
       .filter((d) => d.y !== undefined)
       .attr('data-point-id', d => d.id)
       .attr('r', 3)
-      .style('fill', (d: any) => {
+      .style('fill', (d) => {
         const selector = `[data-chart-id="${d.id}"]`
         const element = this.axis.chartGroup.select(selector).select('path')
         if (element.node() === null ) return
@@ -159,7 +156,7 @@ export class CrossSectionSelect implements Visitor {
       })
       .style('stroke-width', '1px')
       .style('opacity', '1')
-      .attr('transform', (d: any) => `translate( ${d.x}, ${d.y})`)
+      .attr('transform', (d) => `translate( ${d.x}, ${d.y})`)
   }
 
   updateLabels(points): void {
@@ -185,15 +182,9 @@ export class CrossSectionSelect implements Visitor {
     const rectSelection = this.group.selectAll(".back")
       .data(nodes.filter((d) => d.label) )
 
-    console.log('#rects', rectSelection.size())
-
     const rectsUpdate = rectSelection
       .join("rect")
       .classed("back", true)
-      .attr("rx", 10)
-      .attr("ry", 10)
-      .attr("width", 40)
-      .attr("height", 20)
       .attr("fill", "rgb(0, 0 , 0)")
       .attr("stroke", "none")
 
@@ -203,44 +194,44 @@ export class CrossSectionSelect implements Visitor {
     const labelsUpdate = labelsSelection
       .join("text")
       .classed("label", true)
-      .attr("text-anchor", "middle")
       .attr("dominant-baseline", "middle")
-      .attr('fill', (d: any) => {
+      .attr('fill', (d) => {
         const selector = `[data-chart-id="${d.id}"]`
         const element = this.axis.chartGroup.select(selector).select('path')
-        console.log(d.id, element)
         if (element.node() === null ) return
         const stroke = window
           .getComputedStyle(element.node() as Element)
           .getPropertyValue('stroke')
-        console.log(stroke)
         return stroke
       })
       .attr('stroke', 'none')
       .text(d => d.label)
 
-    // const node = this.group
-    //   .selectAll(".node")
-    //   .data(nodes)
-    //   .join("circle")
-    //   .filter( (d) => !d.label )
-    //   .attr("r", 2)
-    //   .classed("node", true)
+    let width = 0
+    labelsUpdate.each(function(this) {
+      width = Math.max(width, this.getBoundingClientRect().width)
+    })
 
-    const tick = () => {
-      console.log('tick')
+    const margin = 4
+    const bbox = labelsUpdate.node().getBoundingClientRect()
+    const height = bbox.height + 2 * margin
+    width = width + height
+
+    rectsUpdate
+      .attr("rx", height / 2)
+      .attr("ry", height / 2)
+      .attr("width", width)
+      .attr("height", height)
+
+    const tick = (): void => {
       link
         .attr("x1", d => d.source.x)
         .attr("y1", d => d.source.y)
         .attr("x2", d => d.target.x)
         .attr("y2", d => d.target.y);
       rectsUpdate
-        .attr("x", d => d.x - 20)
-        .attr("y", d => d.y - 10)
-
-      // node
-      //   .attr("cx", d => d.x)
-      //   .attr("cy", d => d.y)
+        .attr("x", d => d.x - height/2)
+        .attr("y", d => d.y - height/2)
       labelsUpdate
         .attr("x", d => d.x)
         .attr("y", d => d.y)
@@ -252,7 +243,7 @@ export class CrossSectionSelect implements Visitor {
       .alphaDecay(0.2)
       .nodes(nodes)
       .force("center", d3.forceCollide(10))
-      .force("link", d3.forceLink(links).distance(20))
+      .force("link", d3.forceLink(links).distance(height))
       .on("tick", tick)
     this.simulation.tick(20)
   }
@@ -272,7 +263,7 @@ export class CrossSectionSelect implements Visitor {
     return false
   }
 
-  findNearestPoint(chart, xPos): any {
+  findNearestPoint(chart, xPos): {id: string; x: number; y: number; value?: number} {
     const axis = this.axis
     const xIndex = chart.axisIndex.x.axisIndex
     const xScale = axis.xScale[xIndex]
@@ -280,13 +271,13 @@ export class CrossSectionSelect implements Visitor {
     const yScale = axis.yScale[yIndex]
     const xKey = chart.dataKeys.x
     const yKey = chart.dataKeys.y
-    const bisect = d3.bisector(function (d: any) {
+    const bisect = d3.bisector(function (d) {
       return d[xKey]
     }).left
 
     const xValue = xScale.invert(xPos)
     const data = chart.data
-    let idx = bisect(data, xValue)
+    const idx = bisect(data, xValue)
     if ( idx === -1) {
       return { id: chart.id, x: undefined, y: undefined }
     }
