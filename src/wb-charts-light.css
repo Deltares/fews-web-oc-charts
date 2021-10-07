@@ -83,12 +83,16 @@
 }
 
 .cross-section-select {
-  stroke: red;
+  stroke: black;
+}
+
+.cross-section-select > line {
+  stroke-dasharray: 2 2;
 }
 
 .cross-section-select > text {
   stroke: none;
-  fill: red;
+  fill: black;
 }
 
 .cross-section-select > .data-point-per-line {

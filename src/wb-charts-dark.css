@@ -82,12 +82,16 @@
 }
 
 .cross-section-select {
-  stroke: red;
+  stroke: white;
+}
+
+.cross-section-select > line {
+  stroke-dasharray: 2 2;
 }
 
 .cross-section-select > text {
   stroke: none;
-  fill: red;
+  fill: white;
 }
 
 .cross-section-select > .data-point-per-line {
@@ -95,8 +99,8 @@
 }
 
 .cross-section-select-handle {
-  stroke: red;
-  fill: red;
+  stroke: white;
+  fill: white;
   cursor: pointer;
 }
 

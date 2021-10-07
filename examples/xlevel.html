@@ -214,7 +214,6 @@
         for (s = 0; s < nEnsemble; s++) {
           members[s] = Array();
         }
-        var plotEnsemble = [];
         var medianTime = (data.times[0] + data.times[data.times.length - 1]) / 2;
         console.log(new Date(medianTime * 1000))
 
@@ -245,7 +244,6 @@
         var plotMedian = new wbCharts.ChartLine(percentiles[0], {});
         var plotControl = new wbCharts.ChartLine(members[0], {});
 
-        var plotControl1 = new wbCharts.ChartLine(members[0], {});
         var plotPercentile50 = new wbCharts.ChartArea(percentiles[1], {});
         var plotPercentile90 = new wbCharts.ChartArea(percentiles[2], {});
 
@@ -282,7 +280,7 @@
           }
         }, 'percent50', style50);
 
-        plotControl1.addTo(axis, {
+        plotControl.addTo(axis, {
           x: {
             key: "x",
             axisIndex: 0
@@ -311,13 +309,12 @@
           }
         });
         axis.zoom();
+        axis.accept(escalationsVisitor);
         axis.accept(currentTime);
         axis.accept(dstIndicator);
-        axis.accept(levelSelect);
         axis.accept(crossSectionSelect);
-        axis.accept(escalationsVisitor);
         axis.accept(zoom);
-        axis.accept(mouseOver);
+        // axis.accept(mouseOver);
       });
     }
     window.setTimeout(dataload, 1000);

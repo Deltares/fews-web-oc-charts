@@ -2,6 +2,8 @@ import * as d3 from 'd3'
 import { Axis, CartesianAxis } from '../Axis'
 import { Visitor } from './visitor'
 import defaultsDeep from 'lodash/defaultsDeep'
+import { resolveTxt } from 'dns'
+import { update } from 'lodash'
 
 
 type CrossSectionSelectOptions = {
@@ -11,7 +13,9 @@ type CrossSectionSelectOptions = {
 export class CrossSectionSelect implements Visitor {
   trace: string[]
   group: any
+  private mouseGroup: any
   line: any
+  simulation: d3.Simulation<any,any>
   axis: CartesianAxis
   value: number | Date
   callback: Function
@@ -36,28 +40,37 @@ export class CrossSectionSelect implements Visitor {
   }
 
   create(axis: CartesianAxis): void {
-    if (!this.group) {
-      this.group = axis.canvas.append('g').attr('class', 'cross-section-select')
-      this.group.append('line')
-      this.group
-        .append('polygon')
-        .attr('points', '0,0 -5,5 -5,8 5,8 5,5')
-        .attr('class', 'cross-section-select-handle')
-        .call(
-          d3
-            .drag()
-            .on('start', (event) => {
-              this.start(event)
-            })
-            .on('drag', (event) => {
-              this.drag(event)
-            })
-            .on('end', () => {
-              this.end()
-            })
-        )
-      this.group.append('g').attr('class', 'data-point-per-line')
+    this.mouseGroup = axis.canvas.select('.mouse-events')
+    if (this.mouseGroup.size() === 0) {
+      this.mouseGroup = axis.canvas
+        .append('g')
+        .attr('class', 'mouse-events')
+        .append('rect')
+        .attr('width', axis.width)
+        .attr('height', axis.height)
+        .attr('fill', 'none')
+        .attr('pointer-events', 'all')
     }
+    this.group = axis.canvas.insert('g', '.mouse-events').attr('class', 'cross-section-select')
+    this.group.append('line')
+    this.group
+      .append('polygon')
+      .attr('points', '0,0 -5,5 -5,8 5,8 5,5')
+      .attr('class', 'cross-section-select-handle')
+      .call(
+        d3
+          .drag()
+          .on('start', (event) => {
+            this.start(event)
+          })
+          .on('drag', (event) => {
+            this.drag(event)
+          })
+          .on('end', () => {
+            this.end()
+          })
+      )
+    this.group.append('g').attr('class', 'data-point-per-line')
     this.redraw()
   }
 
@@ -65,11 +78,9 @@ export class CrossSectionSelect implements Visitor {
     const axis = this.axis
     const axisIndex = this.options.x.axisIndex
     const scale = axis.xScale[axisIndex]
-    this.limitValue()
+    if (this.limitValue()) return
     const xPos = scale(this.value)
-
     this.updateLine(xPos)
-
     // find values
     const traces = this.trace || this.axis.charts.map((chart) => { return chart.id })
     const points = []
@@ -77,9 +88,8 @@ export class CrossSectionSelect implements Visitor {
       const chart = axis.charts.find(chart => chart.id === chartId)
       points.push(this.findNearestPoint(chart, xPos))
     }
-
-    this.updateDataPoints(points)
     this.updateLabels(points)
+    this.updateDataPoints(points)
     return
   }
 
@@ -156,27 +166,15 @@ export class CrossSectionSelect implements Visitor {
     // const traces = this.trace || this.axis.charts.map( (chart) => {return chart.id})
     const nodes = []
     const links = []
-    const labelLinks = []
-
 
     let i = 0
     for (const p of points) {
       if (p.y === undefined) continue
-      // label
-      nodes.push({ x: p.x, y: p.y, height: 50, width: 50, label: p.d })
-      // point
-      nodes.push({ fx: p.x0, fy: p.y0 })
+      nodes.push({ id: p.id, fx: p.x + 50, y: p.y, height: 50, width: 50, label: p.value })
       nodes.push({ fx: p.x, fy: p.y })
-      nodes.push({ fx: p.x1, fy: p.y1 })
-      // links.push({ source: i + 1, target: i})
-      links.push({ source: i + 2, target: i, label: p.d })
-      // links.push({ source: i + 3, target: i})
-      // for (let s = 0 ; s < i; s = s + 4 ) {
-      //   labelLinks.push({ source: s, target: i + 2 })
-      // }
-      i = i + 4
+      links.push({ source: i + 1, target: i, label: p.value })
+      i = i + 2
     }
-
 
     const link = this.group
       .selectAll(".link")
@@ -184,55 +182,94 @@ export class CrossSectionSelect implements Visitor {
       .join("line")
       .classed("link", true)
 
-    const labels = this.group.selectAll(".label")
-      .data(nodes)
+    const rectSelection = this.group.selectAll(".back")
+      .data(nodes.filter((d) => d.label) )
+
+    console.log('#rects', rectSelection.size())
+
+    const rectsUpdate = rectSelection
+      .join("rect")
+      .classed("back", true)
+      .attr("rx", 10)
+      .attr("ry", 10)
+      .attr("width", 40)
+      .attr("height", 20)
+      .attr("fill", "rgb(0, 0 , 0)")
+      .attr("stroke", "none")
+
+    const labelsSelection = this.group.selectAll(".label")
+      .data(nodes.filter((d) => d.label) )
+
+    const labelsUpdate = labelsSelection
       .join("text")
-      .filter( (d) => d.label )
       .classed("label", true)
+      .attr("text-anchor", "middle")
+      .attr("dominant-baseline", "middle")
+      .attr('fill', (d: any) => {
+        const selector = `[data-chart-id="${d.id}"]`
+        const element = this.axis.chartGroup.select(selector).select('path')
+        console.log(d.id, element)
+        if (element.node() === null ) return
+        const stroke = window
+          .getComputedStyle(element.node() as Element)
+          .getPropertyValue('stroke')
+        console.log(stroke)
+        return stroke
+      })
+      .attr('stroke', 'none')
+      .text(d => d.label)
 
-    const node = this.group
-      .selectAll(".node")
-      .data(nodes)
-      .join("circle")
-      .attr("r", 2)
-      .classed("node", true)
+    // const node = this.group
+    //   .selectAll(".node")
+    //   .data(nodes)
+    //   .join("circle")
+    //   .filter( (d) => !d.label )
+    //   .attr("r", 2)
+    //   .classed("node", true)
 
-    function tick(): void {
+    const tick = () => {
+      console.log('tick')
       link
         .attr("x1", d => d.source.x)
         .attr("y1", d => d.source.y)
         .attr("x2", d => d.target.x)
         .attr("y2", d => d.target.y);
-      node
-        .attr("cx", d => d.x)
-        .attr("cy", d => d.y)
-      labels
+      rectsUpdate
+        .attr("x", d => d.x - 20)
+        .attr("y", d => d.y - 10)
+
+      // node
+      //   .attr("cx", d => d.x)
+      //   .attr("cy", d => d.y)
+      labelsUpdate
         .attr("x", d => d.x)
         .attr("y", d => d.y)
-        .attr("text-anchor", "middle")
-        .attr("domina-baseline", "middle")
-        .text(d => d.label)
     }
 
-    const simulation = d3
+    if ( this.simulation !== undefined) this.simulation.stop()
+    this.simulation = d3
       .forceSimulation()
+      .alphaDecay(0.2)
       .nodes(nodes)
-      .force("charge", d3.forceManyBody().strength(-100))
       .force("center", d3.forceCollide(10))
       .force("link", d3.forceLink(links).distance(20))
-      .on("tick", tick);
-
-    simulation.tick(100);
+      .on("tick", tick)
+    this.simulation.tick(20)
   }
 
-  limitValue(): void {
+  limitValue(): boolean {
     const axisIndex = this.options.x.axisIndex
     const axis = this.axis
     const scale = axis.xScale[axisIndex]
-    let xPos = scale(this.value)
-    xPos = (xPos === undefined) ? scale.range()[1] : xPos
-    xPos = Math.min(xPos, scale.range()[1])
-    xPos = Math.max(xPos, scale.range()[0])
+    const domain = scale.domain()
+    if ( this.value < domain[0]) {
+      this.value = domain[0]
+      return true
+    } else if(this.value > domain[1]) {
+      this.value = domain[1]
+      return true
+    }
+    return false
   }
 
   findNearestPoint(chart, xPos): any {
@@ -253,19 +290,10 @@ export class CrossSectionSelect implements Visitor {
     if ( idx === -1) {
       return { id: chart.id, x: undefined, y: undefined }
     }
-    // find closest point to left of line
-    const s = 3
-    const x0 = xScale(data[idx-s][xKey])
     const x = xScale(data[idx][xKey])
-    const x1 = xScale(data[idx+s][xKey])
-
-
-    // get corresponding y-value
-    const y0 = yScale(data[idx-s][yKey])
     const y = yScale(data[idx][yKey])
-    const y1 = yScale(data[idx+s][yKey])
     const d = data[idx]
-    return { id: chart.id, x0, x, x1, y0, y, y1, d: d[yKey]}
+    return { id: chart.id, x, y, value: d[yKey]}
   }
 
 }
