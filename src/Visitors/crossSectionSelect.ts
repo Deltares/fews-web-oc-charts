@@ -170,9 +170,9 @@ export class CrossSectionSelect implements Visitor {
     let i = 0
     for (const p of points) {
       if (p.y === undefined) continue
-      nodes.push({ fx: p.x + 50, y: p.y, height: 50, width: 50, label: p.d })
+      nodes.push({ id: p.id, fx: p.x + 50, y: p.y, height: 50, width: 50, label: p.value })
       nodes.push({ fx: p.x, fy: p.y })
-      links.push({ source: i + 1, target: i, label: p.d })
+      links.push({ source: i + 1, target: i, label: p.value })
       i = i + 2
     }
 
@@ -190,6 +190,12 @@ export class CrossSectionSelect implements Visitor {
     const rectsUpdate = rectSelection
       .join("rect")
       .classed("back", true)
+      .attr("rx", 10)
+      .attr("ry", 10)
+      .attr("width", 40)
+      .attr("height", 20)
+      .attr("fill", "rgb(0, 0 , 0)")
+      .attr("stroke", "none")
 
     const labelsSelection = this.group.selectAll(".label")
       .data(nodes.filter((d) => d.label) )
@@ -197,6 +203,21 @@ export class CrossSectionSelect implements Visitor {
     const labelsUpdate = labelsSelection
       .join("text")
       .classed("label", true)
+      .attr("text-anchor", "middle")
+      .attr("dominant-baseline", "middle")
+      .attr('fill', (d: any) => {
+        const selector = `[data-chart-id="${d.id}"]`
+        const element = this.axis.chartGroup.select(selector).select('path')
+        console.log(d.id, element)
+        if (element.node() === null ) return
+        const stroke = window
+          .getComputedStyle(element.node() as Element)
+          .getPropertyValue('stroke')
+        console.log(stroke)
+        return stroke
+      })
+      .attr('stroke', 'none')
+      .text(d => d.label)
 
     // const node = this.group
     //   .selectAll(".node")
@@ -206,7 +227,7 @@ export class CrossSectionSelect implements Visitor {
     //   .attr("r", 2)
     //   .classed("node", true)
 
-    function tick(): void {
+    const tick = () => {
       console.log('tick')
       link
         .attr("x1", d => d.source.x)
@@ -216,12 +237,6 @@ export class CrossSectionSelect implements Visitor {
       rectsUpdate
         .attr("x", d => d.x - 20)
         .attr("y", d => d.y - 10)
-        .attr("rx", 10)
-        .attr("ry", 10)
-        .attr("width", 40)
-        .attr("height", 20)
-        .attr("fill", "rgb(0, 0 , 0)")
-        .attr("stroke", "none")
 
       // node
       //   .attr("cx", d => d.x)
@@ -229,9 +244,6 @@ export class CrossSectionSelect implements Visitor {
       labelsUpdate
         .attr("x", d => d.x)
         .attr("y", d => d.y)
-        .attr("text-anchor", "middle")
-        .attr("dominant-baseline", "middle")
-        .text(d => d.label)
     }
 
     if ( this.simulation !== undefined) this.simulation.stop()
@@ -281,7 +293,7 @@ export class CrossSectionSelect implements Visitor {
     const x = xScale(data[idx][xKey])
     const y = yScale(data[idx][yKey])
     const d = data[idx]
-    return { id: chart.id, x, y, d: d[yKey]}
+    return { id: chart.id, x, y, value: d[yKey]}
   }
 
 }
