@@ -90,7 +90,7 @@
   stroke-dasharray: 2 2;
 }
 
-.cross-section-select > text {
+.cross-section-select > text.date-label {
   stroke: none;
   fill: black;
 }
