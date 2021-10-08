@@ -15,12 +15,12 @@ export class MouseOver implements Visitor {
     this.trace = trace
   }
 
-  visit(axis: Axis) {
+  visit(axis: Axis): void {
     this.axis = axis as CartesianAxis
     this.create(axis as CartesianAxis)
   }
 
-  create(axis: CartesianAxis) {
+  create(axis: CartesianAxis): void {
     this.mouseGroup = axis.canvas.select('.mouse-events')
     if (this.mouseGroup.size() === 0) {
       this.mouseGroup = axis.canvas
@@ -53,14 +53,13 @@ export class MouseOver implements Visitor {
 
     this.updateLineIndicators()
 
-    let that = this
     this.mouseGroup
       .on('pointerout', () => this.onPointerout())
       .on('pointerover',() => this.onPointerover())
       .on('pointermove', (event) => {
         // mouse moving over canvas
         const mouse = d3.pointer(event)
-        let popupData = {}
+        const popupData = {}
         let allHidden = true
         let rMin = Infinity
         let xPos = -window.innerWidth
@@ -68,34 +67,34 @@ export class MouseOver implements Visitor {
         axis.canvas.selectAll('.mouse-per-line').each(function(d, i) {
           // let element = d3.select(d).select('path')
           const selector = `[data-chart-id="${d}"]`
-          let element = axis.canvas.select(selector).select('path')
+          const element = axis.canvas.select(selector).select('path')
           if (element.node() !== null) {
-            let style = window.getComputedStyle(element.node() as Element)
+            const style = window.getComputedStyle(element.node() as Element)
             if (style === null || style.getPropertyValue('visibility') === 'hidden') {
               //skip
             } else {
-              let chart = axis.charts.find(chart => chart.id === d)
-              let xIndex = chart.axisIndex.x.axisIndex
-              let xScale = axis.xScale[xIndex]
-              let mouseValue = xScale.invert(mouse[0])
-              let xKey = chart.dataKeys.x
-              let yKey = chart.dataKeys.y
-              let bisect = d3.bisector(function(d: any) {
+              const chart = axis.charts.find(chart => chart.id === d)
+              const xIndex = chart.axisIndex.x.axisIndex
+              const xScale = axis.xScale[xIndex]
+              const mouseValue = xScale.invert(mouse[0])
+              const xKey = chart.dataKeys.x
+              const yKey = chart.dataKeys.y
+              const bisect = d3.bisector(function(d) {
                 return d[xKey]
               }).right
-              let datum = element.datum() as any
-              let idx = bisect(datum, mouseValue)
+              const datum = element.datum()
+              const idx = bisect(datum, mouseValue)
               if ( idx -1 >= 0 && datum[idx-1][yKey] !== null) {
-                let x0 = xScale(datum[idx-1][xKey])
-                let r0 = (x0 - mouse[0] ) ** 2
+                const x0 = xScale(datum[idx-1][xKey])
+                const r0 = (x0 - mouse[0] ) ** 2
                 if ( r0 < rMin) {
                   rMin = r0
                   xPos = xScale(datum[idx-1][xKey])
                 }
               }
               if ( idx < datum.length && datum[idx][yKey] !== null) {
-                let x1 = xScale(datum[idx][xKey])
-                let r1 = ( x1 - mouse[0]) ** 2
+                const x1 = xScale(datum[idx][xKey])
+                const r1 = ( x1 - mouse[0]) ** 2
                 if ( r1 < rMin) {
                   rMin = r1
                   xPos = xScale(datum[idx][xKey])
@@ -109,29 +108,29 @@ export class MouseOver implements Visitor {
         const s = d3.formatSpecifier("f")
         s.precision = d3.precisionFixed((yExtent[1] - yExtent[0]) / 1000 )
 
-        axis.canvas.selectAll('.mouse-per-line').attr('transform', function(d, i) {
+        axis.canvas.selectAll('.mouse-per-line').attr('transform', (d) => {
           // let element = d3.select(d).select('path')
           const selector = `[data-chart-id="${d}"]`
-          let chart = axis.charts.find(chart => chart.id === d)
-          let xIndex = chart.axisIndex.x.axisIndex
-          let xScale = axis.xScale[xIndex]
-          let yIndex = chart.axisIndex.y.axisIndex
-          let yScale = axis.yScale[yIndex]
-          let xKey = chart.dataKeys.x
-          let yKey = chart.dataKeys.y
-          let bisect = d3.bisector(function(d: any) {
+          const chart = axis.charts.find(chart => chart.id === d)
+          const xIndex = chart.axisIndex.x.axisIndex
+          const xScale = axis.xScale[xIndex]
+          const yIndex = chart.axisIndex.y.axisIndex
+          const yScale = axis.yScale[yIndex]
+          const xKey = chart.dataKeys.x
+          const yKey = chart.dataKeys.y
+          const bisect = d3.bisector(function(d) {
             return d[xKey]
           }).left
 
-          let element = axis.canvas.select(selector).select('path')
+          const element = axis.canvas.select(selector).select('path')
           if (element.node() === null) return 'translate(0,' + -window.innerHeight + ')'
-          let style = window.getComputedStyle(element.node() as Element)
+          const style = window.getComputedStyle(element.node() as Element)
           if (style === null || style.getPropertyValue('visibility') === 'hidden') {
             return 'translate(0,' + -window.innerHeight + ')'
           }
           allHidden = false
-          let stroke = style.getPropertyValue('stroke')
-          let datum = element.datum() as any
+          const stroke = style.getPropertyValue('stroke')
+          const datum = element.datum()
           if (datum === null || datum.length === 0) {
             return 'translate(0,' + -window.innerHeight + ')'
           }
@@ -160,13 +159,13 @@ export class MouseOver implements Visitor {
             idx = idx -1
           }
 
-          let valy = datum[idx][yKey]
+          const valy = datum[idx][yKey]
           let posy = yScale(valy)
 
           // labels
           let yLabel
           if (Array.isArray(posy)) {
-            let labels = posy
+            const labels = posy
             for (let i = 0; i < posy.length; i++) {
               labels[i] = d3.format(s.toString())(yScale.invert(posy[i]))
             }
@@ -188,21 +187,21 @@ export class MouseOver implements Visitor {
         if (Object.keys(popupData).length === 0) xPos = mouse[0]
 
         // update line
-        that.group.select('.mouse-line').attr('transform', 'translate(' + xPos + ',' + 0 + ')')
+        this.group.select('.mouse-line').attr('transform', 'translate(' + xPos + ',' + 0 + ')')
 
         // update x-value
-        that.group
+        this.group
           .select('.mouse-x')
           .attr('transform', 'translate(' + ( xPos + 2) + ',' + (axis.height - 5) + ')')
           .select('text')
-          .text(dateFormatter(axis.xScale[0].invert(xPos), 'yyyy-MM-dd HH:mm ZZZZ', { timeZone: that.axis.timeZone } ) )
+          .text(dateFormatter(axis.xScale[0].invert(xPos), 'yyyy-MM-dd HH:mm ZZZZ', { timeZone: this.axis.timeZone } ) )
         if (allHidden) {
           axis.tooltip.hide()
           return
         }
         let htmlContent = ''
-        for (let label in popupData) {
-          let v = popupData[label]
+        for (const label in popupData) {
+          const v = popupData[label]
           htmlContent += `<span style="color: ${v.color}"> ${v.y} </span><br/>`
         }
         axis.tooltip.update(htmlContent, TooltipPosition.Right, mouse[0] + axis.margin.left, mouse[1] + axis.margin.top)
@@ -210,7 +209,7 @@ export class MouseOver implements Visitor {
   }
 
   // pointer event handlers
-  onPointerout () {
+  onPointerout (): void {
     // on mouse out hide line, circles and text
     this.group.select('.mouse-line').style('opacity', '0')
     this.group.selectAll('.mouse-per-line circle').style('opacity', '0')
@@ -219,18 +218,18 @@ export class MouseOver implements Visitor {
   }
 
 
-  onPointerover () {
+  onPointerover (): void {
     // on mouse in show line, circles and text
     this.axis.tooltip.show()
     this.group.select('.mouse-line').style('opacity', '1')
     this.group
       .selectAll('.mouse-per-line circle')
       .style('opacity', '1')
-      .style('fill', (d: any, i) => {
+      .style('fill', (d: string) => {
         const selector = `[data-chart-id="${d}"]`
-        let element = this.axis.chartGroup.select(selector).select('path')
+        const element = this.axis.chartGroup.select(selector).select('path')
         if (element.node() === null ) return
-        let stroke = window
+        const stroke = window
           .getComputedStyle(element.node() as Element)
           .getPropertyValue('stroke')
         return stroke
@@ -238,12 +237,12 @@ export class MouseOver implements Visitor {
     this.group.select('.mouse-x text').style('fill-opacity', '1')
   }
 
-  updateLineIndicators () {
-    let traces = (this.trace !== undefined)
+  updateLineIndicators (): void {
+    const traces = (this.trace !== undefined)
     ? this.trace
     : this.axis.charts.map( (chart) => {return chart.id})
 
-    let mousePerLine = this.group
+    const mousePerLine = this.group
       .selectAll('.mouse-per-line')
       .data(traces)
 
@@ -263,7 +262,7 @@ export class MouseOver implements Visitor {
       .remove()
   }
 
-  redraw() {
+  redraw(): void {
     this.updateLineIndicators()
     // FIXME: should resize mouse-events group (is now done by zoomHandler)
     // this.mouseGroup
@@ -271,9 +270,8 @@ export class MouseOver implements Visitor {
     //   .attr('height', this.axis.height)
     //   .attr('width', this.axis.width)
 
-    let that = this
-    this.group.select('.mouse-line').attr('d', function() {
-      let d = 'M' + 0 + ',' + that.axis.height
+    this.group.select('.mouse-line').attr('d', () => {
+      let d = 'M' + 0 + ',' + this.axis.height
       d += ' ' + 0 + ',' + 0
       return d
     })
