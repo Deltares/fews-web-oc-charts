@@ -13,9 +13,11 @@ export class ChartLine extends Chart {
     const xScale = axis.xScale[axisIndex.x.axisIndex]
     const yScale = axis.yScale[axisIndex.y.axisIndex]
     console.log(xScale.range())
+    console.log(xScale.domain())
     console.log(yScale.range())
 
     let mappedData = this.mapDataCartesian(xScale.domain())
+    console.log(mappedData)
     let lineGenerator = d3
       .line()
       .x(function(d: any) {

@@ -82,6 +82,7 @@ export abstract class Chart {
   }
 
   set data(d: any) {
+    console.log('set data', d)
     this._data = d
     this.extent = null
   }
