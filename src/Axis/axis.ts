@@ -6,10 +6,10 @@ import merge from 'lodash/merge'
 import { Tooltip } from '../Tooltip'
 
 export interface Margin {
-  top?: number
-  right?: number
-  bottom?: number
-  left?: number
+  top?: number;
+  right?: number;
+  bottom?: number;
+  left?: number;
 }
 
 export enum AxisType {
@@ -33,12 +33,12 @@ export interface AxisOptions {
 }
 
 export interface AxesOptions {
-  transitionTime?: number
-  margin?: Margin
+  transitionTime?: number;
+  margin?: Margin;
 }
 
 interface AxisIndexItem {
-  key: string; axisIndex: number
+  key: string; axisIndex: number;
 }
 
 export interface AxisIndex {
@@ -47,8 +47,8 @@ export interface AxisIndex {
   y?: AxisIndexItem;
   radial?: AxisIndexItem;
   angular?: AxisIndexItem;
-  value?: { key: string}
-  color?: { key: string}
+  value?: { key: string};
+  color?: { key: string};
 }
 
 export abstract class Axis {
@@ -57,7 +57,7 @@ export abstract class Axis {
   view: any
   defs: any
   canvas: any
-  svg: any
+  svg: d3.Selection<SVGElement, any, SVGElement, any>
   container: HTMLElement
   width: number
   height: number
@@ -65,7 +65,7 @@ export abstract class Axis {
   options: AxesOptions = {}
   chartGroup: d3.Selection<SVGElement,any,SVGElement,any>
   charts: Chart[]
-  initialDraw: boolean = true
+  initialDraw = true
   visitors: Visitor[]
   timeZone: string
 
@@ -91,12 +91,8 @@ export abstract class Axis {
     this.svg = d3
       .select(container)
       .append('svg')
-      // .attr('width', '100%')
-      // .attr('height', '100%')
       .attr('class', 'wb-charts')
       .attr('overflow', 'visible')
-      // .attr('color', 'white')
-      // .attr('fill', 'white')
     this.setSize(height, width)
 
     this.defs = this.svg.append('defs')
@@ -108,16 +104,16 @@ export abstract class Axis {
     this.visitors = []
   }
 
-  setOptions (options: AxesOptions) {
+  setOptions(options: AxesOptions): void {
     merge(this.options,
       options
     )
   }
 
-  setSize(height?: number, width?: number) {
+  setSize(height?: number, width?: number): void {
     // FIXME: does not work for arguments
-    let containerWidth = width == null ? this.container.offsetWidth : width
-    let containerHeight = height == null ? this.container.offsetHeight : height
+    const containerWidth = width == null ? this.container.offsetWidth : width
+    const containerHeight = height == null ? this.container.offsetHeight : height
     this.height = containerHeight - this.margin.top - this.margin.bottom
     this.width = containerWidth - this.margin.left - this.margin.right
     if (this.height < 0 || this.width < 0) {
@@ -131,18 +127,18 @@ export abstract class Axis {
 
   }
 
-  resize() {
+  resize(): void {
     this.setSize()
     this.setRange()
     this.updateGrid()
     this.redraw()
   }
 
-  abstract redraw() : void
+  abstract redraw(): void
 
-  abstract updateGrid() : void
+  abstract updateGrid(): void
 
-  removeChart(id: string) {
+  removeChart(id: string): void {
     let i: number
     for (i = 0; i < this.charts.length; i++) {
       if ( this.charts[i].id === id) {
@@ -154,7 +150,7 @@ export abstract class Axis {
     this.chartGroup.selectAll(`[data-chart-id="${id}"]`).remove()
   }
 
-  removeAllCharts() {
+  removeAllCharts(): void {
     for (let i=0; i< this.charts.length;i++) {
       this.charts[i].group = null
     }
@@ -162,14 +158,14 @@ export abstract class Axis {
     this.chartGroup.selectAll('g').remove()
   }
 
-  accept(v: Visitor) {
+  accept(v: Visitor): void {
     this.visitors.push(v)
     v.visit(this)
   }
 
   get extent(): any {
     const _extent = {}
-    for (let chart of this.charts) {
+    for (const chart of this.charts) {
       const chartExtent = chart.extent
       for (const path in chartExtent) {
         if ( !(path in _extent) ) {
@@ -182,10 +178,10 @@ export abstract class Axis {
     return _extent
   }
 
-  createChartGroup() {
+  createChartGroup(): void {
     this.chartGroup = this.canvas.append('g').attr('class', 'charts')
   }
 
-  protected abstract setRange() : void
-  protected abstract initGrid() : void
+  protected abstract setRange(): void
+  protected abstract initGrid(): void
 }

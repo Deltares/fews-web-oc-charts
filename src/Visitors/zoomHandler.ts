@@ -21,12 +21,12 @@ export class ZoomHandler implements Visitor {
 
   constructor() {}
 
-  visit(axis: Axis) {
+  visit(axis: Axis): void {
     this.axis = axis as CartesianAxis
     this.createHandler(axis as CartesianAxis)
   }
 
-  createHandler(axis: CartesianAxis) {
+  createHandler(axis: CartesianAxis): void {
     this.svg = axis.canvas
     if (!this.brushGroup) {
       this.brushGroup = this.svg.append('g').attr('class', 'brush')
@@ -66,12 +66,12 @@ export class ZoomHandler implements Visitor {
         .append('g')
         .attr('class', 'mouse-events')
         .attr('pointer-events', 'all')
-      let documentMouseUp = (event) => {
-        this.endSelection(null)
-        document.removeEventListener('mouseup', documentMouseUp)
-      }
+        const documentMouseUp = (): void => {
+          this.endSelection(null)
+          document.removeEventListener('mouseup', documentMouseUp)
+        }
 
-      let mouseRect = this.mouseGroup
+      const mouseRect = this.mouseGroup
         .append('rect')
         .attr('class', 'overlay')
         .attr('pointer-events', 'all')
@@ -86,25 +86,24 @@ export class ZoomHandler implements Visitor {
           this.endSelection(d3.pointer(event))
           this.mouseGroup.dispatch('pointerover')
         })
-        .on('dblclick', (event) => {
-          this.resetZoom(d3.pointer(event))
+        .on('dblclick', () => {
+          this.resetZoom()
           this.mouseGroup.dispatch('pointerover')
         })
     }
-    let mouseRect = this.mouseGroup
+    this.mouseGroup
       .select('rect')
       .attr('height', this.axis.height)
       .attr('width', this.axis.width)
   }
 
-  initSelection(point: [number, number]) {
+  initSelection(point: [number, number]): void {
     this.brushStartPoint = point
     this.lastPoint = null
     this.mode = SelectionMode.CANCEL
-    let that = this
     this.mouseGroup.dispatch('pointerout')
     this.mouseGroup.select('.overlay').on('mousemove', (event) => {
-      that.updateSelection(d3.pointer(event))
+      this.updateSelection(d3.pointer(event))
     })
     this.brushGroup
       .select('.select-rect')
@@ -115,17 +114,17 @@ export class ZoomHandler implements Visitor {
       .attr('y', 0)
   }
 
-  updateSelection(point: [number, number]) {
+  updateSelection(point: [number, number]): void {
     if (!this.brushStartPoint) return
     this.lastPoint = point
-    let m = [0, 0]
+    const m = [0, 0]
     m[0] = point[0] - this.brushStartPoint[0]
     m[1] = point[1] - this.brushStartPoint[1]
     let x = this.brushStartPoint[0]
     let y = this.brushStartPoint[1]
-    let width = Math.abs(m[0])
-    let height = Math.abs(m[1])
-    let selectRect = this.brushGroup.select('.select-rect')
+    const width = Math.abs(m[0])
+    const height = Math.abs(m[1])
+    const selectRect = this.brushGroup.select('.select-rect')
     if (m[0] < 0) x = this.brushStartPoint[0] + m[0]
     if (m[1] < 0) y = this.brushStartPoint[1] + m[1]
     if (Math.abs(m[0]) <= this.MINMOVE && Math.abs(m[1]) <= this.MINMOVE) {
@@ -184,37 +183,37 @@ export class ZoomHandler implements Visitor {
     }
   }
 
-  endSelection(point: [number, number]) {
+  endSelection(point: [number, number]): void {
     if (!this.brushStartPoint) return
     point = point !== null ? point : this.lastPoint
     this.mouseGroup.select('.overlay').on('mousemove', null)
     this.brushGroup.select('.select-rect').attr('visibility', 'hidden')
     switch (this.mode) {
       case SelectionMode.X: {
-        for ( let key in this.axis.xScale) {
+        for ( const key in this.axis.xScale) {
           const scale = this.axis.xScale[key]
-          let extent = d3.extent([point[0], this.brushStartPoint[0]].map(scale.invert))
+          const extent = d3.extent([point[0], this.brushStartPoint[0]].map(scale.invert))
           scale.domain(extent)
         }
         break
       }
       case SelectionMode.Y: {
-        for ( let key in this.axis.yScale) {
+        for ( const key in this.axis.yScale) {
           const scale = this.axis.yScale[key]
-          let extent = d3.extent([point[1], this.brushStartPoint[1]].map(scale.invert))
+          const extent = d3.extent([point[1], this.brushStartPoint[1]].map(scale.invert))
           scale.domain(extent)
         }
         break
       }
       case SelectionMode.XY: {
-        for ( let key in this.axis.xScale) {
+        for ( const key in this.axis.xScale) {
           const scale = this.axis.xScale[key]
-          let extent = d3.extent([point[0], this.brushStartPoint[0]].map(scale.invert))
+          const extent = d3.extent([point[0], this.brushStartPoint[0]].map(scale.invert))
           scale.domain(extent)
         }
-        for ( let key in this.axis.yScale) {
+        for ( const key in this.axis.yScale) {
           const scale = this.axis.yScale[key]
-          let extent = d3.extent([point[1], this.brushStartPoint[1]].map(scale.invert))
+          const extent = d3.extent([point[1], this.brushStartPoint[1]].map(scale.invert))
           scale.domain(extent)
         }
         break
@@ -232,12 +231,12 @@ export class ZoomHandler implements Visitor {
     this.axis.zoom()
   }
 
-  resetZoom(point: [number, number]) {
+  resetZoom(): void {
     this.axis.redraw({ x: { autoScale: true }, y: { autoScale: true } })
   }
 
   // FIXME: remove when IDrawble is introduced
-  redraw() {
+  redraw(): void {
     this.mouseGroup
       .select('rect')
       .attr('height', this.axis.height)

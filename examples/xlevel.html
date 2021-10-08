@@ -7,7 +7,7 @@
   <style>
     body {
       background-color: rgb(44, 44, 44);
-      font: 10px sans-serif;
+      font: 12px sans-serif;
       margin: 20px;
     }
 
@@ -79,7 +79,7 @@
       x: [{
         type: wbCharts.AxisType.time,
         label: 'datum',
-        position: wbCharts.AxisPosition.AtZero,
+        position: wbCharts.AxisPosition.Bottom,
         showGrid: false,
       }, ],
       y: [{
@@ -112,10 +112,6 @@
         selector: 'percent50',
         label: '50% interval'
       },
-      {
-        selector: 'ensemble',
-        label: 'Verstoord'
-      },
     ], document.getElementById("chart-legend-1"));
 
     var currentTime = new wbCharts.CurrentTime({
@@ -131,13 +127,25 @@
     var levelSelect = new wbCharts.LevelSelect(function (x) {
       console.log(x)
     });
-    var crossSectionSelect = new wbCharts.CrossSectionSelect(new Date(), function (x) {
-      console.log(x)
+
+    function getRoundedDate(minutes, d = new Date()) {
+        let ms = 1000 * 60 * minutes; // convert minutes to ms
+        let roundedDate = new Date(Math.round(d.getTime() / ms) * ms);
+        return roundedDate
+    }
+
+    var crossSectionSelect1 = new wbCharts.CrossSectionSelect(getRoundedDate(10, new Date()), function (x) {
+      console.log('1:', x)
     });
+    var crossSectionSelect2= new wbCharts.CrossSectionSelect(getRoundedDate(10, new Date(new Date().getTime() + 24 * 60 * 60 * 1000)), function (x) {
+      console.log('2:', x)
+    });
+
     formatTime = function(timestamp) {
       return wbCharts.dateFormatter(timestamp, 'yyyy-MM-dd HH:mm ZZZZ', { timeZone: axis.timeZone } )
     }
-    crossSectionSelect.format = formatTime
+    crossSectionSelect1.format = formatTime
+    crossSectionSelect2.format = formatTime
     percentile = function (p, data) {
       var points = data;
       points.sort(function (a, b) {
@@ -161,7 +169,7 @@
     };
 
     // var refDate = new Date(2019,02,31);
-    var refDate = new Date();
+    var refDate = getRoundedDate( 10, new Date());
     var mouseOver = new wbCharts.MouseOver(['control', 'median', 'percent90']);
     var escalationLevels = [{
         id: 'laag',
@@ -207,7 +215,6 @@
         for (s = 0; s < nEnsemble; s++) {
           members[s] = Array();
         }
-        var plotEnsemble = [];
         var medianTime = (data.times[0] + data.times[data.times.length - 1]) / 2;
         console.log(new Date(medianTime * 1000))
 
@@ -238,8 +245,6 @@
         var plotMedian = new wbCharts.ChartLine(percentiles[0], {});
         var plotControl = new wbCharts.ChartLine(members[0], {});
 
-        var plotControl1 = new wbCharts.ChartLine(members[0], {});
-        var plotMedian1 = new wbCharts.ChartMarker(percentiles[0], {});
         var plotPercentile50 = new wbCharts.ChartArea(percentiles[1], {});
         var plotPercentile90 = new wbCharts.ChartArea(percentiles[2], {});
 
@@ -276,28 +281,7 @@
           }
         }, 'percent50', style50);
 
-        for (i = 1; i < nEnsemble; i++) {
-          var plotEnsemble = new wbCharts.ChartLine(members[i], {});
-          let declaration = {
-            'stroke': 'green',
-            'stroke-width': '1px',
-            'fill': 'none',
-            'opacity': '.5'
-          }
-
-          plotEnsemble.addTo(axis, {
-            x: {
-              key: "x",
-              axisIndex: 0
-            },
-            y: {
-              key: "y",
-              axisIndex: 0
-            }
-          }, 'ensemble', declaration);
-        }
-
-        plotControl1.addTo(axis, {
+        plotControl.addTo(axis, {
           x: {
             key: "x",
             axisIndex: 0
@@ -307,7 +291,7 @@
             axisIndex: 0
           }
         }, 'control', '#control-line');
-        plotMedian1.addTo(axis, {
+        plotMedian.addTo(axis, {
           x: {
             key: "x",
             axisIndex: 0
@@ -326,13 +310,12 @@
           }
         });
         axis.zoom();
+        axis.accept(escalationsVisitor);
         axis.accept(currentTime);
         axis.accept(dstIndicator);
-        axis.accept(levelSelect);
-        axis.accept(crossSectionSelect);
-        axis.accept(escalationsVisitor);
         axis.accept(zoom);
-        axis.accept(mouseOver);
+        axis.accept(crossSectionSelect1);
+        axis.accept(crossSectionSelect2);
       });
     }
     window.setTimeout(dataload, 1000);
@@ -349,13 +332,14 @@
         console.log(id)
         wbCharts.toggleChartVisisbility(axis, id)
       }
-      crossSectionSelect.redraw()
+      crossSectionSelect1.redraw()
+      crossSectionSelect2.redraw()
     }
 
     function moveLine(dx) {
-      crossSectionSelect.value = new Date(crossSectionSelect.value.getTime()+dx)
-      crossSectionSelect.redraw()
-      crossSectionSelect.end()
+      crossSectionSelect1.value = new Date(crossSectionSelect1.value.getTime()+dx)
+      crossSectionSelect1.redraw()
+      crossSectionSelect1.end()
     }
 
   </script>
