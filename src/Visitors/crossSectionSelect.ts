@@ -79,11 +79,12 @@ export class CrossSectionSelect implements Visitor {
     this.updateLine(xPos)
     // find values
     const traces = this.trace || this.axis.charts.map((chart) => { return chart.id })
-    const points = []
+    let points = []
     for (const chartId of traces ) {
       const chart = axis.charts.find(chart => chart.id === chartId)
       points.push(this.findNearestPoint(chart, xPos))
     }
+    points = points.filter( (p) => p.y !== undefined )
     this.updateLabels(points)
     this.updateDataPoints(points)
     return
@@ -138,7 +139,7 @@ export class CrossSectionSelect implements Visitor {
 
 
   updateDataPoints (points): void {
-    this.group.select('.data-point-per-line')
+    this.group.selectAll('.data-point-per-line')
       .selectAll('circle')
       .data(points)
       .join('circle')
@@ -207,14 +208,14 @@ export class CrossSectionSelect implements Visitor {
       .attr('stroke', 'none')
       .text(d => d.label)
 
-    let width = 0
+    let width = 0, height = 0
     labelsUpdate.each(function(this) {
       width = Math.max(width, this.getBoundingClientRect().width)
+      height = Math.max(height, this.getBoundingClientRect().height)
     })
 
     const margin = 4
-    const bbox = labelsUpdate.node().getBoundingClientRect()
-    const height = bbox.height + 2 * margin
+    height = height + 2 * margin
     width = width + height
 
     rectsUpdate
@@ -242,8 +243,8 @@ export class CrossSectionSelect implements Visitor {
       .forceSimulation()
       .alphaDecay(0.2)
       .nodes(nodes)
-      .force("center", d3.forceCollide(10))
-      .force("link", d3.forceLink(links).distance(height))
+      .force("center", d3.forceCollide(height / 2))
+      .force("link", d3.forceLink(links).distance(20))
       .on("tick", tick)
     this.simulation.tick(20)
   }
@@ -271,14 +272,15 @@ export class CrossSectionSelect implements Visitor {
     const yScale = axis.yScale[yIndex]
     const xKey = chart.dataKeys.x
     const yKey = chart.dataKeys.y
+    const data = chart.data
     const bisect = d3.bisector(function (d) {
       return d[xKey]
     }).left
 
     const xValue = xScale.invert(xPos)
-    const data = chart.data
     const idx = bisect(data, xValue)
-    if ( idx === -1) {
+    const yValue = data[idx][yKey]
+    if (idx === -1 || yValue < yScale.domain()[0] || yValue > yScale.domain()[1]) {
       return { id: chart.id, x: undefined, y: undefined }
     }
     const x = xScale(data[idx][xKey])
