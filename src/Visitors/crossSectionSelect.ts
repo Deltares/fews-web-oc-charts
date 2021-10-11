@@ -266,6 +266,7 @@ export class CrossSectionSelect implements Visitor {
 
   findNearestPoint(chart, xPos): {id: string; x: number; y: number; value?: number} {
     const axis = this.axis
+    if (chart.data.length < 2) return { id: chart.id, x: undefined, y: undefined }
     const xIndex = chart.axisIndex.x.axisIndex
     const xScale = axis.xScale[xIndex]
     const yIndex = chart.axisIndex.y.axisIndex
