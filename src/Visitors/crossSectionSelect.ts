@@ -211,8 +211,9 @@ export class CrossSectionSelect implements Visitor {
     const widths = [], heights = []
     const margin = 2
     labelsUpdate.each(function(this) {
-      widths.push(this.getBoundingClientRect().width)
-      heights.push(this.getBoundingClientRect().height + 2 * margin)
+      const height = this.getBoundingClientRect().height + 2 * margin
+      heights.push(height)
+      widths.push(this.getBoundingClientRect().width + height)
     })
 
     rectsUpdate
