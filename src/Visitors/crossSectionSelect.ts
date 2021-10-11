@@ -208,10 +208,11 @@ export class CrossSectionSelect implements Visitor {
       .attr('stroke', 'none')
       .text(d => d.label)
 
-    let widths = [], heights = []
+    const widths = [], heights = []
+    const margin = 2
     labelsUpdate.each(function(this) {
       widths.push(this.getBoundingClientRect().width)
-      heights.push(this.getBoundingClientRect().height)
+      heights.push(this.getBoundingClientRect().height + 2 * margin)
     })
 
     rectsUpdate
