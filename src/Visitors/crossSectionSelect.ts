@@ -227,8 +227,8 @@ export class CrossSectionSelect implements Visitor {
         .attr("x2", d => d.target.x)
         .attr("y2", d => d.target.y);
       rectsUpdate
-        .attr("x", (d, i) => heights[i] / 2)
-        .attr("y", (d, i) => heights[i] / 2)
+        .attr("x", (d, i) => d.x - heights[i] / 2)
+        .attr("y", (d, i) => d.y - heights[i] / 2)
       labelsUpdate
         .attr("x", d => d.x)
         .attr("y", d => d.y)
