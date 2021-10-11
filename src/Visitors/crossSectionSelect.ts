@@ -270,6 +270,7 @@ export class CrossSectionSelect implements Visitor {
     const xScale = axis.xScale[xIndex]
     const yIndex = chart.axisIndex.y.axisIndex
     const yScale = axis.yScale[yIndex]
+    console.log(chart)
     const xKey = chart.dataKeys.x
     const yKey = chart.dataKeys.y
     const data = chart.data
