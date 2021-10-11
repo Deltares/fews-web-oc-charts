@@ -208,21 +208,17 @@ export class CrossSectionSelect implements Visitor {
       .attr('stroke', 'none')
       .text(d => d.label)
 
-    let width = 0, height = 0
+    let widths = [], heights = []
     labelsUpdate.each(function(this) {
-      width = Math.max(width, this.getBoundingClientRect().width)
-      height = Math.max(height, this.getBoundingClientRect().height)
+      widths.push(this.getBoundingClientRect().width)
+      heights.push(this.getBoundingClientRect().height)
     })
 
-    const margin = 4
-    height = height + 2 * margin
-    width = width + height
-
     rectsUpdate
-      .attr("rx", height / 2)
-      .attr("ry", height / 2)
-      .attr("width", width)
-      .attr("height", height)
+      .attr("rx", (d, i) => heights[i] / 2)
+      .attr("ry", (d, i) => heights[i] / 2)
+      .attr("width", (d, i) => widths[i])
+      .attr("height",(d, i) => heights[i])
 
     const tick = (): void => {
       link
@@ -231,8 +227,8 @@ export class CrossSectionSelect implements Visitor {
         .attr("x2", d => d.target.x)
         .attr("y2", d => d.target.y);
       rectsUpdate
-        .attr("x", d => d.x - height/2)
-        .attr("y", d => d.y - height/2)
+        .attr("x", (d, i) => heights[i] / 2)
+        .attr("y", (d, i) => heights[i] / 2)
       labelsUpdate
         .attr("x", d => d.x)
         .attr("y", d => d.y)
