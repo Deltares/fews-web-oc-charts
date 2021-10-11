@@ -210,8 +210,10 @@ export class CrossSectionSelect implements Visitor {
 
     const widths = [], heights = []
     const margin = 2
+    let maxHeight = 0
     labelsUpdate.each(function(this) {
       const height = this.getBoundingClientRect().height + 2 * margin
+      maxHeight = Math.max(maxHeight, height)
       heights.push(height)
       widths.push(this.getBoundingClientRect().width + height)
     })
@@ -241,7 +243,7 @@ export class CrossSectionSelect implements Visitor {
       .forceSimulation()
       .alphaDecay(0.2)
       .nodes(nodes)
-      .force("center", d3.forceCollide(heights[0] / 2))
+      .force("center", d3.forceCollide(maxHeight / 2))
       .force("link", d3.forceLink(links).distance(20))
       .on("tick", tick)
     this.simulation.tick(20)
