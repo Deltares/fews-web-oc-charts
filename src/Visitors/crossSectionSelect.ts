@@ -239,7 +239,7 @@ export class CrossSectionSelect implements Visitor {
       .forceSimulation()
       .alphaDecay(0.2)
       .nodes(nodes)
-      .force("center", d3.forceCollide(height / 2))
+      .force("center", d3.forceCollide(heights[0] / 2))
       .force("link", d3.forceLink(links).distance(20))
       .on("tick", tick)
     this.simulation.tick(20)
