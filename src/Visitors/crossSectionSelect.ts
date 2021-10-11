@@ -278,10 +278,20 @@ export class CrossSectionSelect implements Visitor {
     }).left
 
     const xValue = xScale.invert(xPos)
-    const idx = bisect(data, xValue)
+    let idx = bisect(data, xValue)
     if (idx < 0 || idx > data.length-1) return { id: chart.id, x: undefined, y: undefined }
-    const yValue = data[idx][yKey]
-    if (yValue < yScale.domain()[0] || yValue > yScale.domain()[1]) {
+    let yValue = data[idx][yKey]
+    // look back
+    if (yValue === null) {
+      for(let i = idx; i >= 0; i--) {
+        yValue = data[i][yKey]
+        if (yValue !== null) {
+          idx = i
+          break
+        }
+      }
+    }
+    if (yValue === null || yValue < yScale.domain()[0] || yValue > yScale.domain()[1]) {
       return { id: chart.id, x: undefined, y: undefined }
     }
     const x = xScale(data[idx][xKey])
