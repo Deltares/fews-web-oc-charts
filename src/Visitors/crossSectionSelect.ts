@@ -122,7 +122,11 @@ export class CrossSectionSelect implements Visitor {
 
   end(): void {
     this.group.select('.date-label').remove()
+    console.log(this.callback)
     if (typeof this.callback === 'function') {
+      console.log('callback', {
+        x: this.value, p: this.currentData
+      })
       this.callback({
         x: this.value, p: this.currentData
       })
