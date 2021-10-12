@@ -2,6 +2,8 @@ import * as d3 from 'd3'
 import { Axis, CartesianAxis } from '../Axis'
 import { Visitor } from './visitor'
 import defaultsDeep from 'lodash/defaultsDeep'
+import { rectCollide } from '../Utils/rectCollide'
+// import { bboxCollide } from '../Utils/bboxCollide'
 
 type CrossSectionSelectOptions = {
   x: { axisIndex: number };
@@ -239,11 +241,19 @@ export class CrossSectionSelect implements Visitor {
     }
 
     if ( this.simulation !== undefined) this.simulation.stop()
+
+    const collisionForce: any = rectCollide()
+    // const collide = bboxCollide(function (d,i) {
+    //   return [[-d.value * 10, -d.value * 5],[d.value * 10, d.value * 5]]
+    // })
+
+      .size(function (d, i) { return [widths[i], heights[i]] })
     this.simulation = d3
       .forceSimulation()
       .alphaDecay(0.2)
       .nodes(nodes)
-      .force("center", d3.forceCollide(maxHeight / 2))
+      .force("center", collisionForce)
+      // .force("center", d3.forceCollide(maxHeight / 2))
       .force("link", d3.forceLink(links).distance(20))
       .on("tick", tick)
     this.simulation.tick(20)
