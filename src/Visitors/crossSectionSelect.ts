@@ -214,14 +214,15 @@ export class CrossSectionSelect implements Visitor {
     const widths = [], heights = []
     const margin = 2
     let maxHeight = 0
-    labelsUpdate.each((element) => {
-      const height = element.getBoundingClientRect().height + 2 * margin
+    const radius = 2 * this.pointRadius
+    labelsUpdate.each(function(this) {
+      const height = this.getBoundingClientRect().height + 2 * margin
       maxHeight = Math.max(maxHeight, height)
       heights.push(height)
-      heights.push(2 * this.pointRadius)
-      const width = element.getBoundingClientRect().width + height
+      heights.push(radius)
+      const width = this.getBoundingClientRect().width + height
       widths.push(width)
-      widths.push(2 * this.pointRadius)
+      widths.push(radius)
     })
 
     rectsUpdate
