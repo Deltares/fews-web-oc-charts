@@ -183,7 +183,7 @@ export class CrossSectionSelect implements Visitor {
       .classed("link", true)
 
     const rectSelection = this.group.selectAll(".back")
-      .data(nodes.filter((d) => d.label) )
+      .data(nodes.filter((d) => d.label !== undefined) )
 
     const rectsUpdate = rectSelection
       .join("rect")
@@ -192,7 +192,7 @@ export class CrossSectionSelect implements Visitor {
       .attr("stroke", "none")
 
     const labelsSelection = this.group.selectAll(".label")
-      .data(nodes.filter((d) => d.label) )
+      .data(nodes.filter((d) =>  d.label !== undefined) )
 
     const labelsUpdate = labelsSelection
       .join("text")
