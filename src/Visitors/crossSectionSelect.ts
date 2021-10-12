@@ -247,7 +247,7 @@ export class CrossSectionSelect implements Visitor {
 
     // const collisionForce: any = rectCollide()
     const collisionForce = bboxCollide(function (d,i) {
-      return [[- heights[i] / 2, - heights[i] / 2],[ heights[i] / 2 + widths[i], heights[i] / 2]]
+      return [[- heights[i] / 2, - heights[i] / 2],[ widths[i], heights[i] / 2]]
     })
 
     this.simulation = d3
