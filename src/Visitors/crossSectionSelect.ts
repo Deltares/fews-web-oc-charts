@@ -13,6 +13,7 @@ export class CrossSectionSelect implements Visitor {
   trace: string[]
   group: any
   mouseGroup: any
+  pointRadius = 3
   line: any
   simulation: d3.Simulation<any,any>
   axis: CartesianAxis
@@ -147,7 +148,7 @@ export class CrossSectionSelect implements Visitor {
       .join('circle')
       .filter((d) => d.y !== undefined)
       .attr('data-point-id', d => d.id)
-      .attr('r', 3)
+      .attr('r', this.pointRadius)
       .style('fill', (d) => {
         const selector = `[data-chart-id="${d.id}"]`
         const element = this.axis.chartGroup.select(selector).select('path')
@@ -217,10 +218,10 @@ export class CrossSectionSelect implements Visitor {
       const height = this.getBoundingClientRect().height + 2 * margin
       maxHeight = Math.max(maxHeight, height)
       heights.push(height)
-      heights.push(4)
+      heights.push(2 * this.pointRadius)
       const width = this.getBoundingClientRect().width + height
       widths.push(width)
-      widths.push(4)
+      widths.push(2 * this.pointRadius)
     })
 
     rectsUpdate
