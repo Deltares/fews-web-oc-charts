@@ -217,10 +217,10 @@ export class CrossSectionSelect implements Visitor {
       const height = this.getBoundingClientRect().height + 2 * margin
       maxHeight = Math.max(maxHeight, height)
       heights.push(height)
-      heights.push(0)
+      heights.push(2)
       const width = this.getBoundingClientRect().width + height
       widths.push(width)
-      widths.push(0)
+      widths.push(2)
     })
 
     rectsUpdate
