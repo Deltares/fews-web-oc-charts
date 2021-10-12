@@ -217,10 +217,10 @@ export class CrossSectionSelect implements Visitor {
       const height = this.getBoundingClientRect().height + 2 * margin
       maxHeight = Math.max(maxHeight, height)
       heights.push(height)
-      heights.push(2)
+      heights.push(4)
       const width = this.getBoundingClientRect().width + height
       widths.push(width)
-      widths.push(2)
+      widths.push(4)
     })
 
     rectsUpdate
@@ -276,9 +276,9 @@ export class CrossSectionSelect implements Visitor {
     return false
   }
 
-  findNearestPoint(chart, xPos): {id: string; x: number; y: number; value?: number} {
+  findNearestPoint(chart, xPos): {id: string; x: number; y: number; value?: number, d: any} {
     const axis = this.axis
-    if (chart.data.length < 2) return { id: chart.id, x: undefined, y: undefined }
+    if (chart.data.length < 2) return { id: chart.id, x: undefined, y: undefined, d: undefined}
     const xIndex = chart.axisIndex.x.axisIndex
     const xScale = axis.xScale[xIndex]
     const yIndex = chart.axisIndex.y.axisIndex
@@ -292,7 +292,7 @@ export class CrossSectionSelect implements Visitor {
 
     const xValue = xScale.invert(xPos)
     let idx = bisect(data, xValue)
-    if (idx < 0 || idx > data.length-1) return { id: chart.id, x: undefined, y: undefined }
+    if (idx < 0 || idx > data.length-1) return { id: chart.id, x: undefined, y: undefined, d: undefined }
     let yValue = data[idx][yKey]
     // look back
     if (yValue === null) {
@@ -305,12 +305,12 @@ export class CrossSectionSelect implements Visitor {
       }
     }
     if (yValue === null || yValue < yScale.domain()[0] || yValue > yScale.domain()[1]) {
-      return { id: chart.id, x: undefined, y: undefined }
+      return { id: chart.id, x: undefined, y: undefined, d: undefined}
     }
     const x = xScale(data[idx][xKey])
     const y = yScale(data[idx][yKey])
     const d = data[idx]
-    return { id: chart.id, x, y, value: d[yKey]}
+    return { id: chart.id, x, y, value: d[yKey], d}
   }
 
 }
