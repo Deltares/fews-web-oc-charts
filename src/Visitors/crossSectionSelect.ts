@@ -94,11 +94,6 @@ export class CrossSectionSelect implements Visitor {
     points = points.filter( (p) => p.y !== undefined )
     this.updateLabels(points)
     this.updateDataPoints(points)
-    if (typeof this.callback === 'function') {
-      this.callback({
-        x: this.value, p: this.currentData
-      })
-    }
     return
   }
 
@@ -127,6 +122,9 @@ export class CrossSectionSelect implements Visitor {
 
   end(): void {
     this.group.select('.date-label').remove()
+    if (typeof this.callback === 'function') {
+      this.callback(this.value)
+    }
   }
 
   updateLine(xPos: number): void {
@@ -305,7 +303,7 @@ export class CrossSectionSelect implements Visitor {
     }).left
 
     const xValue = xScale.invert(xPos)
-    let idx = bisect(data, xValue) - 1
+    let idx = bisect(data, xValue) -1
     if (idx < 0 || idx > data.length-1) return { id: chart.id, x: undefined, y: undefined, d: undefined }
     let yValue = data[idx][yKey]
     // look back
