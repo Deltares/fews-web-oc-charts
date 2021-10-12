@@ -224,10 +224,10 @@ export class CrossSectionSelect implements Visitor {
     })
 
     rectsUpdate
-      .attr("rx", (d, i) => heights[i] / 2)
-      .attr("ry", (d, i) => heights[i] / 2)
-      .attr("width", (d, i) => widths[i])
-      .attr("height",(d, i) => heights[i])
+      .attr("rx", (d, i) => heights[2*i] / 2)
+      .attr("ry", (d, i) => heights[2*i] / 2)
+      .attr("width", (d, i) => widths[2*i])
+      .attr("height",(d, i) => heights[2*i])
 
     const tick = (): void => {
       link
@@ -236,8 +236,8 @@ export class CrossSectionSelect implements Visitor {
         .attr("x2", d => d.target.x)
         .attr("y2", d => d.target.y);
       rectsUpdate
-        .attr("x", (d, i) => d.x - heights[i] / 2)
-        .attr("y", (d, i) => d.y - heights[i] / 2)
+        .attr("x", (d, i) => d.x - heights[2*i] / 2)
+        .attr("y", (d, i) => d.y - heights[2*i] / 2)
       labelsUpdate
         .attr("x", d => d.x)
         .attr("y", d => d.y)
