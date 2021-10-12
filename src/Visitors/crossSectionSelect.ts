@@ -316,12 +316,12 @@ export class CrossSectionSelect implements Visitor {
         }
       }
     }
-    if (yValue === null || yValue < yScale.domain()[0] || yValue > yScale.domain()[1]) {
-      return { id: chart.id, x: undefined, y: undefined, d: undefined}
-    }
     const x = xScale(data[idx][xKey])
     const y = yScale(data[idx][yKey])
     const d = data[idx]
+    if (yValue === null || yValue < yScale.domain()[0] || yValue > yScale.domain()[1]) {
+      return { id: chart.id, x: undefined, y: undefined, d}
+    }
     return { id: chart.id, x, y, value: d[yKey], d}
   }
 
