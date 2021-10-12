@@ -7,6 +7,7 @@ import { bboxCollide } from '../Utils/bboxCollide'
 
 type CrossSectionSelectOptions = {
   x: { axisIndex: number };
+  draggable: boolean;
 }
 
 export class CrossSectionSelect implements Visitor {
@@ -22,7 +23,8 @@ export class CrossSectionSelect implements Visitor {
   callback: Function
   format: Function
   options: CrossSectionSelectOptions = {
-    x: { axisIndex : 0 }
+    x: { axisIndex : 0 },
+    draggable: false
   }
 
   // use shared Visitor constuctor (Visitor should be a abstract class)
@@ -54,23 +56,27 @@ export class CrossSectionSelect implements Visitor {
     }
     this.group = axis.canvas.insert('g', '.mouse-events').attr('class', 'cross-section-select')
     this.group.append('line')
-    this.group
+    const handle = this.group
       .append('polygon')
       .attr('points', '0,0 -5,5 -5,8 5,8 5,5')
       .attr('class', 'cross-section-select-handle')
-      .call(
-        d3
-          .drag()
-          .on('start', (event) => {
-            this.start(event)
-          })
-          .on('drag', (event) => {
-            this.drag(event)
-          })
-          .on('end', () => {
-            this.end()
-          })
-      )
+
+    if (this.options.draggable) {
+      handle
+        .call(
+          d3
+            .drag()
+            .on('start', (event) => {
+              this.start(event)
+            })
+            .on('drag', (event) => {
+              this.drag(event)
+            })
+            .on('end', () => {
+              this.end()
+            })
+        )
+    }
     this.group.append('g').attr('class', 'data-point-per-line')
     this.redraw()
   }
