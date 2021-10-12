@@ -254,6 +254,7 @@ export class CrossSectionSelect implements Visitor {
       } else {
         bbox = [[- widths[i] / 2, -heights[i]/2 ], [widths[i] / 2,heights[i]/2 ]]
       }
+      console.log('bbox', bbox)
       return bbox
     })
 
