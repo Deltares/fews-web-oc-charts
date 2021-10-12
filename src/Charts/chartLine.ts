@@ -5,18 +5,12 @@ import { Chart } from './chart'
 export class ChartLine extends Chart {
   plotterCartesian(axis: CartesianAxis, axisIndex: any) {
 
-    console.log('id:', this.id)
-    console.log('datakeys:', this.dataKeys)
     let xKey = this.dataKeys.x
     let yKey = this.dataKeys.y
     const xScale = axis.xScale[axisIndex.x.axisIndex]
     const yScale = axis.yScale[axisIndex.y.axisIndex]
-    console.log(xScale.range())
-    console.log(xScale.domain())
-    console.log(yScale.range())
 
     let mappedData = this.mapDataCartesian(xScale.domain())
-    console.log(mappedData)
     let lineGenerator = d3
       .line()
       .x(function(d: any) {

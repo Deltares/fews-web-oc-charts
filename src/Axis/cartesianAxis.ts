@@ -184,7 +184,6 @@ export class CartesianAxis extends Axis {
   redraw(options?) {
     this.updateXAxisScales(options.x)
     this.updateYAxisScales(options.y)
-    console.log('redraw', this.charts)
     for (let chart of this.charts) {
       chart.plotter(this, chart.axisIndex)
     }

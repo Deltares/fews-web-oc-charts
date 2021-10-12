@@ -242,8 +242,6 @@ export class MouseOver implements Visitor {
     ? this.trace
     : this.axis.charts.map( (chart) => {return chart.id})
 
-    console.log('updateLineIndicators charts', this.axis.charts)
-
     const mousePerLine = this.group
       .selectAll('.mouse-per-line')
       .data(traces)
