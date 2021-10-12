@@ -2,8 +2,8 @@ import * as d3 from 'd3'
 import { Axis, CartesianAxis } from '../Axis'
 import { Visitor } from './visitor'
 import defaultsDeep from 'lodash/defaultsDeep'
-import { rectCollide } from '../Utils/rectCollide'
-// import { bboxCollide } from '../Utils/bboxCollide'
+// import { rectCollide } from '../Utils/rectCollide'
+import { bboxCollide } from '../Utils/bboxCollide'
 
 type CrossSectionSelectOptions = {
   x: { axisIndex: number };
@@ -217,14 +217,17 @@ export class CrossSectionSelect implements Visitor {
       const height = this.getBoundingClientRect().height + 2 * margin
       maxHeight = Math.max(maxHeight, height)
       heights.push(height)
-      widths.push(this.getBoundingClientRect().width + height)
+      heights.push(0)
+      const width = this.getBoundingClientRect().width + height
+      widths.push(width)
+      widths.push(0)
     })
 
     rectsUpdate
-      .attr("rx", (d, i) => heights[i] / 2)
-      .attr("ry", (d, i) => heights[i] / 2)
-      .attr("width", (d, i) => widths[i])
-      .attr("height",(d, i) => heights[i])
+      .attr("rx", (d, i) => heights[Math.floor(i/2)] / 2)
+      .attr("ry", (d, i) => heights[Math.floor(i/2)] / 2)
+      .attr("width", (d, i) => widths[Math.floor(i/2)])
+      .attr("height",(d, i) => heights[Math.floor(i/2)])
 
     const tick = (): void => {
       link
@@ -233,8 +236,8 @@ export class CrossSectionSelect implements Visitor {
         .attr("x2", d => d.target.x)
         .attr("y2", d => d.target.y);
       rectsUpdate
-        .attr("x", (d, i) => d.x - heights[i] / 2)
-        .attr("y", (d, i) => d.y - heights[i] / 2)
+        .attr("x", (d, i) => d.x - heights[Math.floor(i/2)] / 2)
+        .attr("y", (d, i) => d.y - heights[Math.floor(i/2)] / 2)
       labelsUpdate
         .attr("x", d => d.x)
         .attr("y", d => d.y)
@@ -242,12 +245,11 @@ export class CrossSectionSelect implements Visitor {
 
     if ( this.simulation !== undefined) this.simulation.stop()
 
-    const collisionForce: any = rectCollide()
-    // const collide = bboxCollide(function (d,i) {
-    //   return [[-d.value * 10, -d.value * 5],[d.value * 10, d.value * 5]]
-    // })
+    // const collisionForce: any = rectCollide()
+    const collisionForce = bboxCollide(function (d,i) {
+      return [[- heights[i] / 2, - heights[i] / 2],[ heights[i] / 2 + widths[i], heights[i] / 2]]
+    })
 
-      .size(function (d, i) { return [widths[i], heights[i]] })
     this.simulation = d3
       .forceSimulation()
       .alphaDecay(0.2)
@@ -281,7 +283,6 @@ export class CrossSectionSelect implements Visitor {
     const xScale = axis.xScale[xIndex]
     const yIndex = chart.axisIndex.y.axisIndex
     const yScale = axis.yScale[yIndex]
-    console.log(chart)
     const xKey = chart.dataKeys.x
     const yKey = chart.dataKeys.y
     const data = chart.data
