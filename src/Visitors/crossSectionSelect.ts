@@ -18,6 +18,7 @@ export class CrossSectionSelect implements Visitor {
   simulation: d3.Simulation<any,any>
   axis: CartesianAxis
   value: number | Date
+  currentData: any
   callback: Function
   format: Function
   options: CrossSectionSelectOptions = {
@@ -87,6 +88,9 @@ export class CrossSectionSelect implements Visitor {
       const chart = axis.charts.find(chart => chart.id === chartId)
       points.push(this.findNearestPoint(chart, xPos))
     }
+    this.currentData = points.map( (p) => { return {
+      id: p.id, data: p.d
+    }})
     points = points.filter( (p) => p.y !== undefined )
     this.updateLabels(points)
     this.updateDataPoints(points)
@@ -119,7 +123,9 @@ export class CrossSectionSelect implements Visitor {
   end(): void {
     this.group.select('.date-label').remove()
     if (typeof this.callback === 'function') {
-      this.callback(this.value)
+      this.callback({
+        x: this.value, p: this.currentData
+      })
     }
   }
 
