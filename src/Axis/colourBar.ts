@@ -163,20 +163,23 @@ export class ColourBar {
     const maximum = this.colourMap[this.colourMap.length - 1].lowerValue
     const range = maximum - minimum
     const relativeLocation = (value: number) => (value - minimum) / range
-    const relativeToCoordinates = (relative: number) => relative * this.sizeAlongAxis
+    // The y-axis is inverted in SVG, so horizontal colour bars need separate treatment from vertical ones.
+    const startCoordinate =
+      this.isHorizontal ? (lowerValue: number, _upperValue: number) => relativeLocation(lowerValue) * this.sizeAlongAxis
+                        : (_lowerValue: number, upperValue: number) => (1 - relativeLocation(upperValue)) * this.sizeAlongAxis
+    const barSize = (lowerValue: number, upperValue: number) => (relativeLocation(upperValue) - relativeLocation(lowerValue)) * this.sizeAlongAxis
 
     // Add rectangles for each segment of the colour bar.
     const barGroup = this.group.append('g')
     for (let i = 0; i < this.colourMap.length - 1; i++) {
-      const posCur = relativeLocation(this.colourMap[i].lowerValue)
-      const posNext = relativeLocation(this.colourMap[i+1].lowerValue)
-      const relativeSize = posNext - posCur
+      const lowerValue = this.colourMap[i].lowerValue
+      const upperValue = this.colourMap[i+1].lowerValue
 
-      const locCur = relativeToCoordinates(posCur)
-      const sizeCur = relativeToCoordinates(relativeSize)
+      const posCur = startCoordinate(lowerValue, upperValue)
+      const sizeCur = barSize(lowerValue, upperValue)
       barGroup.append('rect')
-        .attr('x', this.isHorizontal ? locCur : 0)
-        .attr('y', this.isHorizontal ? 0 : locCur)
+        .attr('x', this.isHorizontal ? posCur : 0)
+        .attr('y', this.isHorizontal ? 0 : posCur)
         .attr('width', this.isHorizontal ? sizeCur : this.sizeAcrossAxis)
         .attr('height', this.isHorizontal ? this.sizeAcrossAxis : sizeCur)
         .attr('stroke', 'none')
@@ -193,9 +196,10 @@ export class ColourBar {
     const axisTranslation = `translate(${this.options.position === AxisPosition.Right ? this.width : 0}, ${this.options.position === AxisPosition.Bottom ? this.height : 0})`
     const tickValues = this.colourMap.map((val: ColourMapValue) => val.lowerValue)
 
+    // The y-axis is inverted in the SVG, so for vertical scale bars the range is inverted.
     const scale = d3.scaleLinear()
       .domain([this.minimum, this.maximum])
-      .range([0, this.sizeAlongAxis])
+      .range(this.isHorizontal ? [0, this.sizeAlongAxis] : [this.sizeAlongAxis, 0])
     const axis =
       this.options.position === AxisPosition.Bottom ? d3.axisBottom(scale) :
       this.options.position === AxisPosition.Top ? d3.axisTop(scale) :
@@ -240,11 +244,12 @@ export class ColourBar {
       .attr('y1', this.isHorizontal ? '100%' : '0%')
       .attr('x2', '100%')
       .attr('y2', '100%')
+    // Since the SVG y-axis inverted, for vertical colour bars the gradient should also be inverted.
     gradient.append('stop')
       .attr('offset', '0%')
-      .attr('style', `stop-color:${colorStart};stop-opacity:1`)
+      .attr('style', `stop-color:${this.isHorizontal ? colorStart : colorEnd};stop-opacity:1`)
     gradient.append('stop')
       .attr('offset', '100%')
-      .attr('style', `stop-color:${colorEnd};stop-opacity:1`)
+      .attr('style', `stop-color:${this.isHorizontal ? colorEnd : colorStart};stop-opacity:1`)
   }
 }
