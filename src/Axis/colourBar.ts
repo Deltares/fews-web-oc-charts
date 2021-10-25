@@ -219,6 +219,8 @@ export class ColourBar {
     const grid = this.isHorizontal ? d3.axisTop(scale) : d3.axisLeft(scale)
     grid.tickValues(tickValues).tickSize(this.sizeAcrossAxis)
     gridGroup.call(grid)
+    gridGroup.select('path').remove()
+    gridGroup.selectAll('.tick').selectAll('text').remove()
   }
 
   /**
