@@ -1,17 +1,11 @@
 import * as d3 from 'd3'
 import { Axis, AxesOptions, AxisType, AxisOptions } from './axis'
+import { AxisPosition } from '../Types/axisPosition'
+
 import { generateMultiFormat } from '../Utils/date'
 import { DateTime } from 'luxon'
 import merge from 'lodash/merge'
 import { niceDomain } from './niceDomain'
-
-export enum AxisPosition {
-  AtZero = 'atzero',
-  Top = 'top',
-  Bottom = 'bottom',
-  Left = 'left',
-  Right = 'right',
-}
 
 export interface CartesianAxisOptions extends AxisOptions {
   position?: AxisPosition;

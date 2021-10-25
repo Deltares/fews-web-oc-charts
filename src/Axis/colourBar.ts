@@ -1,5 +1,7 @@
 import { Color } from 'csstype'
 import * as d3 from 'd3'
+import defaultsDeep from 'lodash/defaultsDeep'
+import { AxisPosition } from '../Types/axisPosition'
 
 /**
  * A single value in a colour map
@@ -11,6 +13,16 @@ export interface ColourMapValue {
   color: Color
 }
 export type ColourMap = ColourMapValue[]
+
+/**
+ * A single value in a colour map
+ */
+ export interface ColourBarOptions {
+  /** The lower value of this segment */
+  useGradients: boolean
+  /** Colour associated with this segment */
+  position: AxisPosition
+}
 
 type GroupSelection = d3.Selection<SVGElement, any, SVGElement, any>
 
@@ -40,8 +52,7 @@ export class ColourBar {
   colourMap: ColourMap
   width: number
   height: number
-  useGradients: boolean
-  isHorizontal: boolean
+  options: ColourBarOptions
 
   /**
    * Creates a colour bar
@@ -49,24 +60,27 @@ export class ColourBar {
    * @param colourMap colour map to display
    * @param width width of the colour bar
    * @param height height of the colour bar
-   * @param useGradients whether to show gradients (true) or solid coloured bar segments (false)
-   * @param isHorizontal whether the colour bar segments are stacked horizontally (true) or vertically (false)
+   * @param options colour bar options
    */
   constructor(
     group: GroupSelection,
     colourMap: ColourMap,
     width: number,
     height: number,
-    useGradients: boolean,
-    isHorizontal: boolean
+    options: ColourBarOptions
   ) {
     this.group = group
     this.colourMap = colourMap
     this.width = width
     this.height = height
-    this.useGradients = useGradients
-    this.isHorizontal = isHorizontal
-
+    this.options = defaultsDeep({},
+      options,
+      {
+        position: AxisPosition.Bottom,
+        useGradients: true
+      }
+    )
+    console.log(this.options)
     const fills = this.createFills()
     this.createBarSegments(fills)
     this.createAxis()
@@ -96,6 +110,10 @@ export class ColourBar {
     return this.isHorizontal ? this.height : this.width
   }
 
+  get isHorizontal () {
+    return this.options.position === AxisPosition.Bottom || this.options.position === AxisPosition.Top
+  }
+
   /**
    * Generate fill colours for the colour bar elements.
    *
@@ -103,7 +121,7 @@ export class ColourBar {
    */
   private createFills() {
     let fills = []
-    if (this.useGradients) {
+    if (this.options.useGradients) {
       // Add colour map gradients with unique IDs to <defs> element in this group.
       const ids = this.addColourMapGradients()
       // Refer to their IDs for each rectangle's fill colour
@@ -146,7 +164,7 @@ export class ColourBar {
     const maximum = this.colourMap[this.colourMap.length - 1].lowerValue
     const range = maximum - minimum
     const relativeLocation = (value: number) => (value - minimum) / range
-    const relativeToCoordinates = (rel: number) => rel * this.sizeAlongAxis
+    const relativeToCoordinates = (relative: number) => relative * this.sizeAlongAxis
 
     // Add rectangles for each segment of the colour bar.
     const barGroup = this.group.append('g')
@@ -173,13 +191,18 @@ export class ColourBar {
    */
   private createAxis() {
     // Add ticks along the colour bar.
-    const axisTranslation = `translate(${this.isHorizontal ? 0 : this.width}, ${this.isHorizontal ? this.height: 0})`
+    const axisTranslation = `translate(${this.options.position === AxisPosition.Right ? this.width : 0}, ${this.options.position === AxisPosition.Bottom ? this.height : 0})`
     const tickValues = this.colourMap.map((val: ColourMapValue) => val.lowerValue)
 
     const scale = d3.scaleLinear()
       .domain([this.minimum, this.maximum])
       .range([0, this.sizeAlongAxis])
-    const axis = this.isHorizontal ? d3.axisBottom(scale) : d3.axisRight(scale)
+    const axis =
+      this.options.position === AxisPosition.Bottom ? d3.axisBottom(scale) :
+      this.options.position === AxisPosition.Top ? d3.axisTop(scale) :
+      this.options.position === AxisPosition.Right ? d3.axisRight(scale) :
+      d3.axisLeft(scale)
+
     axis.tickValues(tickValues)
     const axisGroup = this.group.append('g')
       .attr('transform', axisTranslation)
@@ -189,10 +212,11 @@ export class ColourBar {
     axisGroup.select('path').remove()
 
     // Add grid lines across the colour bar.
+    const gridTranslation = `translate(${this.isHorizontal ? 0 : this.width}, ${this.isHorizontal ? this.height : 0 })`
     const gridGroup = this.group.append('g')
       .attr('class', 'grid colourbar')
-      .attr('transform', axisTranslation)
-    const grid = this. isHorizontal ? d3.axisTop(scale) : d3.axisLeft(scale)
+      .attr('transform', gridTranslation)
+    const grid = this.isHorizontal ? d3.axisTop(scale) : d3.axisLeft(scale)
     grid.tickValues(tickValues).tickSize(this.sizeAcrossAxis)
     gridGroup.call(grid)
   }

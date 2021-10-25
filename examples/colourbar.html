@@ -11,7 +11,16 @@
 
 <body>
   <div id="chart-container-1"></div>
+  <br />
   <div id="chart-container-2"></div>
+  <br />
+  <div id="chart-container-3"></div>
+  <br />
+  <div style="display: inline-block;">
+  <div id="chart-container-left" style="display: inline-block;"></div>
+  <div id="chart-container-right" style="display: inline-block;"></div>
+  </div>
+
   <script src="../dist/wb-charts.umd.js"></script>
   <script type="text/javascript">
     const colorMap = [{
@@ -49,21 +58,61 @@
         "color": "#800000"
       }]
 
-    const d3Container = d3.select('#chart-container-1')
-    const svg = d3Container.append('svg')
+    const svg1 = d3.select('#chart-container-1').append('svg')
       .attr('width', 500)
       .attr('height', 60)
-    const group = svg.append('g')
-      .attr('transform', 'translate(50, 20)')
-    new wbCharts.ColourBar(group, colorMap, 400, 20, true, true)
+      .append('g')
+        .attr('transform', 'translate(50, 20)')
+    new wbCharts.ColourBar(svg1, colorMap, 400, 20,
+      {
+        position: 'bottom', useGradients: true
+      }
+    )
 
-    const d3Container2 = d3.select('#chart-container-2')
-    const svg2 = d3Container.append('svg')
+    const svg2 = d3.select('#chart-container-2').append('svg')
       .attr('width', 500)
       .attr('height', 60)
-    const group2 = svg2.append('g')
-      .attr('transform', 'translate(50, 20)')
-    new wbCharts.ColourBar(group2, colorMap, 400, 20, false, true)
+      .append('g')
+        .attr('transform', 'translate(50, 20)')
+    new wbCharts.ColourBar(svg2, colorMap, 400, 20,
+      {
+        position: 'bottom', useGradients: false
+      }
+    )
+
+    const svg3 =  d3.select('#chart-container-3').append('svg')
+      .attr('width', 500)
+      .attr('height', 60)
+      .append('g')
+        .attr('transform', 'translate(50, 20)')
+    new wbCharts.ColourBar(svg3, colorMap, 400, 20,
+      {
+        position: 'top', useGradients: true
+      }
+    )
+
+    const svgLeft = d3.select('#chart-container-left').append('svg')
+      .attr('width', 120)
+      .attr('height', 500)
+      .append('g')
+        .attr('transform', 'translate(50, 50)')
+    new wbCharts.ColourBar(svgLeft, colorMap, 20, 400,
+      {
+        position: 'left', useGradients: true
+      }
+    )
+
+    const svgRight = d3.select('#chart-container-right').append('svg')
+      .attr('width', 120)
+      .attr('height', 500)
+      .append('g')
+        .attr('transform', 'translate(50, 50)')
+    new wbCharts.ColourBar(svgRight, colorMap, 20, 400,
+      {
+        position: 'right', useGradients: true
+      }
+    )
+
   </script>
 </body>
 
