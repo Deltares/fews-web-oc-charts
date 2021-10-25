@@ -80,7 +80,6 @@ export class ColourBar {
         useGradients: true
       }
     )
-    console.log(this.options)
     const fills = this.createFills()
     this.createBarSegments(fills)
     this.createAxis()
