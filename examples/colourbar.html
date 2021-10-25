@@ -11,6 +11,7 @@
 
 <body>
   <div id="chart-container-1"></div>
+  <div id="chart-container-2"></div>
   <script src="../dist/wb-charts.umd.js"></script>
   <script type="text/javascript">
     const colorMap = [{
@@ -51,10 +52,18 @@
     const d3Container = d3.select('#chart-container-1')
     const svg = d3Container.append('svg')
       .attr('width', 500)
-      .attr('height', 500)
+      .attr('height', 60)
     const group = svg.append('g')
-      .attr('transform', 'translate(50, 50)')
-    new wbCharts.ColourBar(group, colorMap, 400, 50, true, true)
+      .attr('transform', 'translate(50, 20)')
+    new wbCharts.ColourBar(group, colorMap, 400, 20, true, true)
+
+    const d3Container2 = d3.select('#chart-container-2')
+    const svg2 = d3Container.append('svg')
+      .attr('width', 500)
+      .attr('height', 60)
+    const group2 = svg2.append('g')
+      .attr('transform', 'translate(50, 20)')
+    new wbCharts.ColourBar(group2, colorMap, 400, 20, false, true)
   </script>
 </body>
 
