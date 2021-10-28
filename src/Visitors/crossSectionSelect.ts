@@ -323,7 +323,7 @@ export class CrossSectionSelect implements Visitor {
     }
     const x = xScale(data[idx][xKey])
     const y = yScale(data[idx][yKey])
-    const yExtent = yIndex  === 0 ? this.axis.extent.y : this.axis.extent.y1
+    const yExtent = this.axis.extent.y
     const s = d3.formatSpecifier("f")
     s.precision = d3.precisionFixed((yExtent[1] - yExtent[0]) / 100 )
     const d = data[idx]
