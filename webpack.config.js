@@ -3,7 +3,7 @@ const CopyPlugin = require('copy-webpack-plugin');
 const TerserPlugin = require('terser-webpack-plugin');
 
 module.exports = {
-  mode: 'production',
+  mode: 'development',
   entry: './src/wb-charts.ts',
   output: {
     path: path.resolve(__dirname, 'dist'),
