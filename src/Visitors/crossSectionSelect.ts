@@ -94,7 +94,7 @@ export class CrossSectionSelect implements Visitor {
       points.push(this.findNearestPoint(chart, xPos))
     }
     this.currentData = points.map( (p) => { return {
-      id: p.id, data: p.d
+      id: p.id, data: p.d, value: p.value
     }})
     points = points.filter( (p) => p.y !== undefined )
     this.updateLabels(points)
