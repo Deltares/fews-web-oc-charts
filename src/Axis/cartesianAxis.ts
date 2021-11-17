@@ -69,14 +69,14 @@ export class CartesianAxis extends Axis {
     }
   }
 
-  setOptions(options?: CartesianAxesOptions) {
+  setOptions(options?: CartesianAxesOptions): void {
     merge(this.options,
       options
     )
   }
 
-  setCanvas() {
-    let rect = this.canvas.select('.axis-canvas')
+  setCanvas(): void {
+    const rect = this.canvas.select('.axis-canvas')
     if (rect.size() === 0) {
       this.clipPathId =
         'id-' +
@@ -117,7 +117,7 @@ export class CartesianAxis extends Axis {
   }
 
   setClipPath() {
-    let clipPath = this.defs.select('#' + this.clipPathId)
+    const clipPath = this.defs.select('#' + this.clipPathId)
     if (clipPath.size() === 0) {
       this.defs
         .append('clipPath')
@@ -133,15 +133,15 @@ export class CartesianAxis extends Axis {
     }
   }
 
-  updateXAxisScales(options: any) {
+  updateXAxisScales(options: any): void {
     options = { ... { autoScale: false }, ...options }
-    for ( let key in this.xScale) {
+    for ( const key in this.xScale) {
       const scale = this.xScale[key]
       if (this.options.x[key]?.domain) {
         scale.domain(this.options.x[key].domain)
       } else if (this.options.x[key]?.type === AxisType.band) {
         let extent = new Array(0)
-        for (let chart of this.charts) {
+        for (const chart of this.charts) {
           if ( chart.axisIndex.x?.axisIndex === +key ) {
             extent = chart.data.map(d => d[chart.dataKeys.x])
             break
@@ -153,9 +153,9 @@ export class CartesianAxis extends Axis {
         if (this.options.x[key]?.includeZero === true) {
           extent[0] = 0
         }
-        for (let chart of this.charts) {
+        for (const chart of this.charts) {
           if ( chart.axisIndex.x?.axisIndex === +key ) {
-            let chartExtent = chart.extent[chart.dataKeys.x]
+            const chartExtent = chart.extent[chart.dataKeys.x]
             extent = d3.extent(d3.merge([extent, [].concat(...chartExtent)]))
           }
         }
@@ -170,15 +170,15 @@ export class CartesianAxis extends Axis {
     }
   }
 
-  updateYAxisScales(options: any) {
+  updateYAxisScales(options: any): void {
     options = { ... { autoScale: false }, ...options }
-    for ( let key in this.yScale) {
+    for ( const key in this.yScale) {
       const scale = this.yScale[key]
       if (this.options.y[key]?.domain) {
         scale.domain(this.options.y[key].domain)
       } else if (this.options.y[key]?.type === AxisType.band) {
         let extent = new Array(0)
-        for (let chart of this.charts) {
+        for (const chart of this.charts) {
           if ( chart.axisIndex.y?.axisIndex === +key ) {
             extent = chart.data.map(d => d[chart.dataKeys.y])
             break
@@ -190,9 +190,9 @@ export class CartesianAxis extends Axis {
         if (this.options.y[key]?.includeZero === true) {
           extent[0] = 0
         }
-        for (let chart of this.charts) {
+        for (const chart of this.charts) {
           if ( chart.axisIndex.y?.axisIndex === +key ) {
-            let chartExtent = chart.extent[chart.dataKeys.y]
+            const chartExtent = chart.extent[chart.dataKeys.y]
             extent = d3.extent(d3.merge([extent, [].concat(...chartExtent)]))
           }
         }
@@ -207,40 +207,40 @@ export class CartesianAxis extends Axis {
     }
   }
 
-  redraw(options?) {
+  redraw(options?): void {
     this.updateXAxisScales(options.x)
     this.updateYAxisScales(options.y)
-    for (let chart of this.charts) {
+    for (const chart of this.charts) {
       chart.plotter(this, chart.axisIndex)
     }
     this.updateGrid()
     this.updateMouseEventLayer()
-    for (let visitor of this.visitors) {
+    for (const visitor of this.visitors) {
       visitor.redraw()
     }
   }
 
-  resize() {
+  resize(): void {
     this.setSize()
     this.setRange()
     this.updateMouseEventLayer()
     this.zoom()
   }
 
-  zoom() {
-    for (let chart of this.charts) {
+  zoom(): void {
+    for (const chart of this.charts) {
       chart.plotter(this, chart.axisIndex)
     }
     this.updateGrid()
     // FIXME: move to Axis.ts?
-    for (let visitor of this.visitors) {
+    for (const visitor of this.visitors) {
       visitor.redraw()
     }
   }
 
   updateXAxis (options: CartesianAxisOptions[]) {
     for (const key in this.xScale) {
-      let scale = this.xScale[key]
+      const scale = this.xScale[key]
       let axis = undefined
       switch (options[key].position) {
         case AxisPosition.Top:
@@ -249,17 +249,17 @@ export class CartesianAxis extends Axis {
         default:
           axis = d3.axisBottom(scale).ticks(5)
       }
-      let grid = d3.axisBottom(scale)
+      const grid = d3.axisBottom(scale)
       grid.ticks(5).tickSize(this.height)
       if (options[key].type === AxisType.time ) {
 
-        let offsetDomain = scale.domain().map((d) => {
+        const offsetDomain = scale.domain().map((d) => {
           const m = DateTime.fromJSDate(d as Date).setZone(options[key].timeZone)
           return new Date(d.getTime() + m.offset * 60000);
         })
-        let offsetScale = d3.scaleUtc().domain(offsetDomain)
-        let tickValues = offsetScale.ticks(5)
-        let offsetValues = tickValues.map((d) => {
+        const offsetScale = d3.scaleUtc().domain(offsetDomain)
+        const tickValues = offsetScale.ticks(5)
+        const offsetValues = tickValues.map((d) => {
           const m = DateTime.fromJSDate(d as Date).setZone(options[key].timeZone)
           return new Date(d.getTime() - m.offset * 60000);
         })
@@ -267,21 +267,21 @@ export class CartesianAxis extends Axis {
         axis.tickFormat(generateMultiFormat(options[key].timeZone, options[key].locale))
         grid.tickValues(offsetValues)
       } else if (options[key].type === AxisType.degrees) {
-        let domain = scale.domain()
+        const domain = scale.domain()
         let step = d3.tickIncrement(domain[0], domain[1], 5)
         step = step >= 100 ? 90 : step >= 50 ? 45 : step >= 20 ? 15 : step
-        let start = Math.ceil(domain[0] / step) * step
-        let stop = Math.floor(domain[1] / step + 1) * step
+        const start = Math.ceil(domain[0] / step) * step
+        const stop = Math.floor(domain[1] / step + 1) * step
         axis.tickValues(d3.range(start, stop, step))
         grid.tickValues(d3.range(start, stop, step))
       }
-      let x = 0
-      let y = ( options[key].position === AxisPosition.AtZero )
+      const x = 0
+      const y = ( options[key].position === AxisPosition.AtZero )
         ? this.yScale[0](0)
         : ( options[key].position === AxisPosition.Bottom )
           ? this.height
           : 0
-      let translateString = `translate(${x},${y})`
+      const translateString = `translate(${x},${y})`
 
       const angle = options[key].labelAngle || 0
       let normalizedAngle = options[key].position === AxisPosition.Top ? 180 : 0
@@ -323,9 +323,9 @@ export class CartesianAxis extends Axis {
     }
   }
 
-updateYAxis (options: CartesianAxisOptions[]) {
+updateYAxis (options: CartesianAxisOptions[]): void {
   for (const key in this.yScale) {
-    let scale = this.yScale[key]
+    const scale = this.yScale[key]
     let axis = undefined
     switch (options[key].position) {
       case AxisPosition.Right:
@@ -334,16 +334,16 @@ updateYAxis (options: CartesianAxisOptions[]) {
       default:
       axis = d3.axisLeft(scale).ticks(5)
     }
-    let grid = d3.axisRight(scale)
+    const grid = d3.axisRight(scale)
     grid.ticks(5).tickSize(this.width)
     if (options[key].type === AxisType.time ) {
-      let offsetDomain = scale.domain().map((d) => {
+      const offsetDomain = scale.domain().map((d) => {
         const m = DateTime.fromJSDate(d as Date).setZone(options[key].timeZone)
         return new Date(d.getTime() + m.offset * 60000);
       })
-      let offsetScale = d3.scaleUtc().domain(offsetDomain)
-      let tickValues = offsetScale.ticks(5)
-      let offsetValues = tickValues.map((d) => {
+      const offsetScale = d3.scaleUtc().domain(offsetDomain)
+      const tickValues = offsetScale.ticks(5)
+      const offsetValues = tickValues.map((d) => {
         const m = DateTime.fromJSDate(d as Date).setZone(options[key].timeZone)
         return new Date(d.getTime() - m.offset * 60000);
       })
@@ -351,21 +351,21 @@ updateYAxis (options: CartesianAxisOptions[]) {
       axis.tickFormat(generateMultiFormat(options[key].timeZone, options[key].locale))
       grid.tickValues(offsetValues)
     } else if (options[key].type === AxisType.degrees) {
-      let domain = scale.domain()
+      const domain = scale.domain()
       let step = d3.tickIncrement(domain[0], domain[1], 5)
       step = step >= 100 ? 90 : step >= 50 ? 45 : step >= 20 ? 15 : step
-      let start = Math.ceil(domain[0] / step) * step
-      let stop = Math.floor(domain[1] / step + 1) * step
+      const start = Math.ceil(domain[0] / step) * step
+      const stop = Math.floor(domain[1] / step + 1) * step
       axis.tickValues(d3.range(start, stop, step))
       grid.tickValues(d3.range(start, stop, step))
     }
-    let x = ( options[key].position === AxisPosition.AtZero )
+    const x = ( options[key].position === AxisPosition.AtZero )
     ? this.xScale[0](0)
     : ( options[key].position === AxisPosition.Right )
       ? this.width
       : 0
-    let y = 0
-    let translateString = `translate(${x},${y})`
+    const y = 0
+    const translateString = `translate(${x},${y})`
 
     const angle = options[key].labelAngle || 0
     let normalizedAngle = options[key].position === AxisPosition.Right ? -90 : + 90
@@ -406,7 +406,7 @@ updateYAxis (options: CartesianAxisOptions[]) {
   }
 }
 
-  updateGrid() {
+  updateGrid(): void {
     this.setClipPath()
     this.setCanvas()
     this.updateXAxis(this.options.x)
@@ -446,7 +446,7 @@ updateYAxis (options: CartesianAxisOptions[]) {
     // this.initialDraw = false
   }
 
-  updateLabels () {
+  updateLabels (): void {
     const g = this.canvas.select('.axis.labels')
     if (this.options.y) {
       if (this.options.y[0]?.label) {
@@ -488,8 +488,8 @@ updateYAxis (options: CartesianAxisOptions[]) {
     }
   }
 
-  protected initXScales (options: CartesianAxisOptions[]) {
-    for ( let key in options) {
+  protected initXScales (options: CartesianAxisOptions[]): void {
+    for ( const key in options) {
       let scale
       switch (options[key].type) {
         case AxisType.time:
@@ -506,8 +506,8 @@ updateYAxis (options: CartesianAxisOptions[]) {
     }
   }
 
-  protected initYScales (options: CartesianAxisOptions[]) {
-    for ( let key in options) {
+  protected initYScales (options: CartesianAxisOptions[]): void {
+    for ( const key in options) {
       let scale
       switch (options[key].type) {
         case AxisType.time:
@@ -524,23 +524,23 @@ updateYAxis (options: CartesianAxisOptions[]) {
     }
   }
 
-  protected setRange() {
-    for ( let key in this.xScale ) {
+  protected setRange(): void{
+    for ( const key in this.xScale ) {
       this.xScale[key].range([0, this.width])
     }
-    for ( let key in this.yScale ) {
+    for ( const key in this.yScale ) {
       this.yScale[key].range([this.height, 0])
     }
   }
 
-  protected initGrid() {
-    let g = this.canvas
-    let yGrid = g.append('g').attr('class', 'grid y-grid')
-    let xGrid = g.append('g').attr('class', 'grid x-grid')
+  protected initGrid(): void {
+    const g = this.canvas
+    g.append('g').attr('class', 'grid y-grid')
+    g.append('g').attr('class', 'grid x-grid')
   }
 
-  protected initAxis() {
-    let g = this.canvas
+  protected initAxis(): void {
+    const g = this.canvas
     g.append('g')
       .attr('class', 'axis x-axis-0')
     g.append('g')
@@ -550,7 +550,7 @@ updateYAxis (options: CartesianAxisOptions[]) {
     g.append('g')
       .attr('class', 'axis y-axis-1')
 
-    let labelGroup = this.canvas.append('g')
+    const labelGroup = this.canvas.append('g')
       .attr('class', 'axis labels')
       .attr('font-family', 'sans-serif')
       .attr('font-size', 10)
