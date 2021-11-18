@@ -30,6 +30,7 @@ export interface AxisOptions {
   nice?: boolean;
   includeZero?: boolean;
   symmetric?: boolean;
+  locale?: string;
   timeZone?: string;
 }
 
@@ -106,6 +107,7 @@ export abstract class Axis {
     const optionsArray = Array.isArray(axisOptions) ? axisOptions : [axisOptions]
     for (const options of optionsArray) {
       options.timeZone = options.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone
+      options.locale = options.locale ?? navigator.language
     }
   }
 

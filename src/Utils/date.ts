@@ -3,13 +3,14 @@ import { DateTime, Zone } from 'luxon'
 
 export function dateFormatter(date: number | Date, format: string, options?: any ) : string {
   const timeZone = options?.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone
-  const dateTime = DateTime.fromJSDate(date as Date).setZone(timeZone).setLocale('nl-NL');
+  const locale = options?.locale ?? navigator.language
+  const dateTime = DateTime.fromJSDate(date as Date).setZone(timeZone).setLocale(locale);
   return dateTime.toFormat(format)
 }
 
-export function generateMultiFormat(timeZone: string | Zone) {
+export function generateMultiFormat(timeZone: string | Zone, locale?: string) {
   return function (date: Date) {
-    const m = DateTime.fromJSDate(date).setZone(timeZone).setLocale('nl-NL')
+    const m = DateTime.fromJSDate(date).setZone(timeZone).setLocale(locale ?? navigator.language)
     const offsetDate = new Date(date.getTime() + m.offset * 60000)
     return (d3.utcSecond(offsetDate) < offsetDate
       ? m.toFormat('.SSS')

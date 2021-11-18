@@ -79,7 +79,7 @@ export class CurrentTime implements Visitor {
         .select('text')
         .attr('x', 5)
         .attr('y', -5)
-        .text(dateFormatter(currentDate, 'yyyy-MM-dd HH:mm ZZZZ', {timeZone: this.axis[axisIndex].timeZone} ))
+        .text(dateFormatter(currentDate, 'yyyy-MM-dd HH:mm ZZZZ', {timeZone: this.axis[axisIndex].timeZone, locale: this.axis[axisIndex].locale} ))
     } else {
       this.group.attr('display', 'none')
     }

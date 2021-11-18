@@ -190,12 +190,12 @@ export class MouseOver implements Visitor {
         this.group.select('.mouse-line').attr('transform', 'translate(' + xPos + ',' + 0 + ')')
 
         // update x-value
-        // TODO: always use the first x-axis time zone, is this correct?
+        // TODO: always use the first x-axis time zone and locale, is this correct?
         this.group
           .select('.mouse-x')
           .attr('transform', 'translate(' + ( xPos + 2) + ',' + (axis.height - 5) + ')')
           .select('text')
-          .text(dateFormatter(axis.xScale[0].invert(xPos), 'yyyy-MM-dd HH:mm ZZZZ', { timeZone: this.axis[0].timeZone } ) )
+          .text(dateFormatter(axis.xScale[0].invert(xPos), 'yyyy-MM-dd HH:mm ZZZZ', { timeZone: this.axis[0].timeZone, locale: this.axis[0].locale } ) )
         if (allHidden) {
           axis.tooltip.hide()
           return

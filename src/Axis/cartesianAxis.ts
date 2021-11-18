@@ -5,6 +5,7 @@ import { AxisPosition } from '../Types/axisPosition'
 import { generateMultiFormat } from '../Utils/date'
 import { DateTime } from 'luxon'
 import merge from 'lodash/merge'
+import defaults from 'lodash/defaults'
 import { niceDomain } from './niceDomain'
 
 export interface CartesianAxisOptions extends AxisOptions {
@@ -242,7 +243,7 @@ export class CartesianAxis extends Axis {
           return new Date(d.getTime() - m.offset * 60000);
         })
         axis.tickValues(offsetValues)
-        axis.tickFormat(generateMultiFormat(options[key].timeZone))
+        axis.tickFormat(generateMultiFormat(options[key].timeZone, options[key].locale))
         grid.tickValues(offsetValues)
       } else if (options[key].type === AxisType.degrees) {
         let domain = scale.domain()
@@ -326,7 +327,7 @@ updateYAxis (options: CartesianAxisOptions[]) {
         return new Date(d.getTime() - m.offset * 60000);
       })
       axis.tickValues(offsetValues)
-      axis.tickFormat(generateMultiFormat(options[key].timeZone))
+      axis.tickFormat(generateMultiFormat(options[key].timeZone, options[key].locale))
       grid.tickValues(offsetValues)
     } else if (options[key].type === AxisType.degrees) {
       let domain = scale.domain()
