@@ -11,18 +11,17 @@ type CrossSectionSelectOptions = {
 }
 
 export class CrossSectionSelect implements Visitor {
-  trace: string[]
-  group: any
-  mouseGroup: any
-  pointRadius = 3
-  line: any
-  simulation: d3.Simulation<any,any>
-  axis: CartesianAxis
+  private trace: string[]
+  private group: any
+  private mouseGroup: any
+  private pointRadius = 3
+  private simulation: d3.Simulation<any,any>
+  private axis: CartesianAxis
   value: number | Date
   currentData: any
   callback: Function
   format: Function
-  options: CrossSectionSelectOptions = {
+  private options: CrossSectionSelectOptions = {
     x: { axisIndex : 0 },
     draggable: false
   }
@@ -61,22 +60,21 @@ export class CrossSectionSelect implements Visitor {
       .attr('points', '0,0 -5,5 -5,8 5,8 5,5')
       .attr('class', 'cross-section-select-handle')
 
-    if (this.options.draggable) {
-      handle
-        .call(
-          d3
-            .drag()
-            .on('start', (event) => {
-              this.start(event)
-            })
-            .on('drag', (event) => {
-              this.drag(event)
-            })
-            .on('end', () => {
-              this.end()
-            })
-        )
-    }
+    handle
+      .call(
+        d3
+          .drag()
+          .on('start', (event) => {
+            this.start(event)
+          })
+          .on('drag', (event) => {
+            this.drag(event)
+          })
+          .on('end', () => {
+            this.end()
+          })
+      )
+
     this.group.append('g').attr('class', 'data-point-per-line')
     this.redraw()
   }
@@ -95,7 +93,7 @@ export class CrossSectionSelect implements Visitor {
       points.push(this.findNearestPoint(chart, xPos))
     }
     this.currentData = points.map( (p) => { return {
-      id: p.id, data: p.d
+      id: p.id, data: p.d, value: p.value
     }})
     points = points.filter( (p) => p.y !== undefined )
     this.updateLabels(points)
@@ -294,7 +292,7 @@ export class CrossSectionSelect implements Visitor {
     return false
   }
 
-  findNearestPoint(chart, xPos): {id: string; x: number; y: number; value?: number, d: any} {
+  findNearestPoint(chart, xPos): {id: string; x: number; y: number; value?: string, d: any} {
     const axis = this.axis
     if (chart.data.length < 2) return { id: chart.id, x: undefined, y: undefined, d: undefined}
     const xIndex = chart.axisIndex.x.axisIndex
@@ -324,11 +322,14 @@ export class CrossSectionSelect implements Visitor {
     }
     const x = xScale(data[idx][xKey])
     const y = yScale(data[idx][yKey])
+    const yExtent = this.axis.extent.y
+    const s = d3.formatSpecifier("f")
+    s.precision = d3.precisionFixed((yExtent[1] - yExtent[0]) / 100 )
     const d = data[idx]
     if (yValue === null || yValue < yScale.domain()[0] || yValue > yScale.domain()[1]) {
       return { id: chart.id, x: undefined, y: undefined, d}
     }
-    return { id: chart.id, x, y, value: d[yKey], d}
+    return { id: chart.id, x, y, value: d3.format(s.toString())(d[yKey]), d}
   }
 
 }

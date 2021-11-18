@@ -106,7 +106,7 @@ export class MouseOver implements Visitor {
 
         const yExtent = this.axis.extent.y
         const s = d3.formatSpecifier("f")
-        s.precision = d3.precisionFixed((yExtent[1] - yExtent[0]) / 1000 )
+        s.precision = d3.precisionFixed((yExtent[1] - yExtent[0]) / 100 )
 
         axis.canvas.selectAll('.mouse-per-line').attr('transform', (d) => {
           // let element = d3.select(d).select('path')
