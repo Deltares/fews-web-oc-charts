@@ -60,22 +60,21 @@ export class CrossSectionSelect implements Visitor {
       .attr('points', '0,0 -5,5 -5,8 5,8 5,5')
       .attr('class', 'cross-section-select-handle')
 
-    if (this.options.draggable) {
-      handle
-        .call(
-          d3
-            .drag()
-            .on('start', (event) => {
-              this.start(event)
-            })
-            .on('drag', (event) => {
-              this.drag(event)
-            })
-            .on('end', () => {
-              this.end()
-            })
-        )
-    }
+    handle
+      .call(
+        d3
+          .drag()
+          .on('start', (event) => {
+            this.start(event)
+          })
+          .on('drag', (event) => {
+            this.drag(event)
+          })
+          .on('end', () => {
+            this.end()
+          })
+      )
+
     this.group.append('g').attr('class', 'data-point-per-line')
     this.redraw()
   }
