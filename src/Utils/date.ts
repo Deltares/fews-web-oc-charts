@@ -2,7 +2,8 @@ import * as d3 from 'd3'
 import { DateTime, Zone } from 'luxon'
 
 export function dateFormatter(date: number | Date, format: string, options?: any ) : string {
-  const dateTime = DateTime.fromJSDate(date as Date).setZone(options.timeZone).setLocale('nl-NL');
+  const timeZone = options?.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone
+  const dateTime = DateTime.fromJSDate(date as Date).setZone(timeZone).setLocale('nl-NL');
   return dateTime.toFormat(format)
 }
 

@@ -36,6 +36,9 @@ export class CartesianAxis extends Axis {
     options?: CartesianAxesOptions
   ) {
     super(container, width, height, options, CartesianAxis.defaultOptions)
+    this.setDefaultTimeOptions(this.options.x)
+    this.setDefaultTimeOptions(this.options.y)
+
     this.view = this.canvas
     this.setCanvas()
     this.initXScales(this.options.x)
@@ -220,17 +223,17 @@ export class CartesianAxis extends Axis {
       if (options[key].type === AxisType.time ) {
 
         let offsetDomain = scale.domain().map((d) => {
-          const m = DateTime.fromJSDate(d as Date).setZone(this.timeZone)
+          const m = DateTime.fromJSDate(d as Date).setZone(options[key].timeZone)
           return new Date(d.getTime() + m.offset * 60000);
         })
         let offsetScale = d3.scaleUtc().domain(offsetDomain)
         let tickValues = offsetScale.ticks(5)
         let offsetValues = tickValues.map((d) => {
-          const m = DateTime.fromJSDate(d as Date).setZone(this.timeZone)
+          const m = DateTime.fromJSDate(d as Date).setZone(options[key].timeZone)
           return new Date(d.getTime() - m.offset * 60000);
         })
         axis.tickValues(offsetValues)
-        axis.tickFormat(generateMultiFormat(this.timeZone))
+        axis.tickFormat(generateMultiFormat(options[key].timeZone))
         grid.tickValues(offsetValues)
       } else if (options[key].type === AxisType.degrees) {
         let domain = scale.domain()
@@ -304,17 +307,17 @@ updateYAxis (options: CartesianAxisOptions[]) {
     grid.ticks(5).tickSize(this.width)
     if (options[key].type === AxisType.time ) {
       let offsetDomain = scale.domain().map((d) => {
-        const m = DateTime.fromJSDate(d as Date).setZone(this.timeZone)
+        const m = DateTime.fromJSDate(d as Date).setZone(options[key].timeZone)
         return new Date(d.getTime() + m.offset * 60000);
       })
       let offsetScale = d3.scaleUtc().domain(offsetDomain)
       let tickValues = offsetScale.ticks(5)
       let offsetValues = tickValues.map((d) => {
-        const m = DateTime.fromJSDate(d as Date).setZone(this.timeZone)
+        const m = DateTime.fromJSDate(d as Date).setZone(options[key].timeZone)
         return new Date(d.getTime() - m.offset * 60000);
       })
       axis.tickValues(offsetValues)
-      axis.tickFormat(generateMultiFormat(this.timeZone))
+      axis.tickFormat(generateMultiFormat(options[key].timeZone))
       grid.tickValues(offsetValues)
     } else if (options[key].type === AxisType.degrees) {
       let domain = scale.domain()
