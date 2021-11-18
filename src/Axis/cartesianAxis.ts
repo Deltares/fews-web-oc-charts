@@ -36,6 +36,9 @@ export class CartesianAxis extends Axis {
     options?: CartesianAxesOptions
   ) {
     super(container, width, height, options, CartesianAxis.defaultOptions)
+    // Set defaults for each x- and y-axis.
+    this.setDefaultAxisOptions(this.options.x, CartesianAxis.defaultOptions.x[0])
+    this.setDefaultAxisOptions(this.options.y, CartesianAxis.defaultOptions.y[0])
     this.setDefaultTimeOptions(this.options.x)
     this.setDefaultTimeOptions(this.options.y)
 
@@ -56,6 +59,12 @@ export class CartesianAxis extends Axis {
       .attr('class', 'front')
       .attr('clip-path', 'url(#' + this.clipPathId + ')')
     this.initAxis()
+  }
+
+  setDefaultAxisOptions(axisOptions: CartesianAxisOptions[], defaultOptions: CartesianAxisOptions) {
+    for (const options of axisOptions) {
+      defaults(options, defaultOptions)
+    }
   }
 
   setOptions(options?: CartesianAxesOptions) {
