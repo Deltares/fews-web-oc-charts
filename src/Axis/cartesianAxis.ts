@@ -269,7 +269,7 @@ export class CartesianAxis extends Axis {
           : 0
       let translateString = `translate(${x},${y})`
 
-      const angle = options[key].labelAngle
+      const angle = options[key].labelAngle || 0
       let normalizedAngle = options[key].position === AxisPosition.Top ? 180 : 0
       normalizedAngle = options[key].labelAngle + normalizedAngle
        - 360 * Math.floor( (options[key].labelAngle + normalizedAngle) / 360)
@@ -353,7 +353,7 @@ updateYAxis (options: CartesianAxisOptions[]) {
     let y = 0
     let translateString = `translate(${x},${y})`
 
-    const angle = options[key].labelAngle
+    const angle = options[key].labelAngle || 0
     let normalizedAngle = options[key].position === AxisPosition.Right ? -90 : + 90
     normalizedAngle = options[key].labelAngle + normalizedAngle
      - 360 * Math.floor( (options[key].labelAngle + normalizedAngle) / 360)
