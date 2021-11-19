@@ -63,6 +63,7 @@
     }
 
     #chart-wind-rose {
+      position: relative;
       display: inline-block;
       width: 400px;
       height: 400px;
@@ -78,34 +79,40 @@
     }
 
     #wind-gauges {
+      position: relative;
       display: inline-block;
     }
 
     #chart-wind-time {
+      position: relative;
       display: block;
     }
 
     #chart-wind-stoot {
+      position: relative;
       display: block;
       width: 400px;
       height: 140px;
     }
     #chart-wind-speed {
+      position: relative;
       display: block;
       width: 400px;
       height: 140px;
     }
 
     #chart-wind-speed-time {
+      position: relative;
       display: block;
       width: 400px;
       height: 300px;
     }
 
     #chart-wind-direction-time {
-    display: block;
-    width: 400px;
-    height: 300px;
+      position: relative;
+      display: block;
+      width: 400px;
+      height: 300px;
     }
 
     #polar-dot {
@@ -168,30 +175,6 @@
     .legend {
       font: 10px sans-serif;
     }
-
-    /* div.tooltip { position: absolute; text-align: center; min-width: 10px; height: 28px; padding: 2px;
-      font: 12px sans-serif; background:
-      lightgray; border: 0px; border-radius: 8px; pointer-events: none; } */
-
-/* Tooltip text */
-.tooltip {
-/* visibility: hidden; */
-position: absolute;
-margin-left: 5px;
-min-width: 40px;
-background-color: black;
-color: #fff;
-font: 11px sans-serif;
-text-align: center;
-padding: 5px;
-border-radius: 6px;
-z-index: 1;
-opacity: 0;
-transition: opacity 0.3s;
-/* top: -50%;
-left: 125%; */
-pointer-events: none;
-}
     </style>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.js"> </script>
@@ -203,10 +186,10 @@ pointer-events: none;
   src="https://code.jquery.com/jquery-3.3.1.js"
   integrity="sha256-2Kok7MbOyxpgUVvAk/HJ2jigOSYS2auK4Pfzbm7uH60="
   crossorigin="anonymous"></script>
-    <script src="https://d3js.org/d3.v5.js"></script>
+    <script src="https://d3js.org/d3.v7.js"></script>
     <script src="https://d3js.org/d3-selection-multi.v1.min.js"></script>
     <!-- <script src="https://unpkg.com/date-time-format-timezone@latest/build/browserified/date-time-format-timezone-complete-min.js"></script> -->
-    <link rel="stylesheet" href="../dist/wb-charts.css">
+    <link rel="stylesheet" href="../dist/wb-charts-dark.css">
   </head>
   <body>
     <div id="chart-wind-rose"></div>
@@ -484,7 +467,7 @@ pointer-events: none;
           { x: { key: "t", axisIndex: 0 } , y: {key: "y", axisIndex: 0}}, 'wind', '#wind-line-time');
 
         windStootTimeM.addTo(windTimeAxis,{ x: { key: "t",axisIndex: 0  } , y: {key: "y", axisIndex: 0} }, 'windstoot', '#windstoot-line-time');
-// 
+//
         windSpeedTimeF.addTo(windTimeAxis,{ x: { key: "t", axisIndex: 0 } , y: {key: "y", axisIndex: 0} }, 'wind-forecast', '#forecast-time');
 
         var legendWindTime = new wbCharts.Legend( [
