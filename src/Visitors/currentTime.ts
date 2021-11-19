@@ -36,10 +36,9 @@ export class CurrentTime implements Visitor {
   }
 
   create(axis: CartesianAxis) {
-    if (!this.group) {
-      this.group = axis.canvas.append('g').attr('class', 'current-time')
-      this.line = this.group.append('line').attr('class', 'current-time')
-    }
+    const front = axis.canvas.select('.front')
+    this.group = front.append('g').attr('class', 'current-time')
+    this.line = this.group.append('line').attr('class', 'current-time')
     this.redraw()
   }
 
