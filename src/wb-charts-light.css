@@ -3,6 +3,26 @@
   fill: black;
 }
 
+.tooltip {
+  font-size: 1em;
+}
+
+.axis {
+  font-size: 1em;
+}
+
+.front {
+  font-size: 1em;
+}
+
+.cross-section-select {
+  font-size: 1em;
+}
+
+.mouse-over {
+  font-size: 1em;
+}
+
 .axis-canvas {
   /* 0.87 * 255 = 223 */
   fill: rgba(223, 223, 223);
@@ -176,8 +196,7 @@
 
 .tooltip {
   position: absolute;
-  display: flex;
-  flex-direction: row;
+  display: inline-block;
   top: 0px;
   left: 0px;
   pointer-events: none;

@@ -536,7 +536,11 @@ updateYAxis (options: CartesianAxisOptions[]) {
     g.append('g')
       .attr('class', 'axis y-axis-1')
 
-    let labelGroup = this.canvas.append('g').attr('class', 'axis labels')
+    let labelGroup = this.canvas.append('g')
+      .attr('class', 'axis labels')
+      .attr('font-family', 'sans-serif')
+      .attr('font-size', 10)
+
     if (this.options.y) {
       if (this.options.y[0]?.label) {
         labelGroup.append('text')
