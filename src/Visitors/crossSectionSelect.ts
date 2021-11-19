@@ -43,16 +43,6 @@ export class CrossSectionSelect implements Visitor {
 
   create(axis: CartesianAxis): void {
     this.mouseGroup = axis.canvas.select('.mouse-events')
-    if (this.mouseGroup.size() === 0) {
-      this.mouseGroup = axis.canvas
-        .append('g')
-        .attr('class', 'mouse-events')
-        .append('rect')
-        .attr('width', axis.width)
-        .attr('height', axis.height)
-        .attr('fill', 'none')
-        .attr('pointer-events', 'all')
-    }
     this.group = axis.canvas.insert('g', '.mouse-events').attr('class', 'cross-section-select')
     this.group.append('line')
     const handle = this.group

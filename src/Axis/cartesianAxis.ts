@@ -48,11 +48,11 @@ export class CartesianAxis extends Axis {
       .attr('class', 'group')
       .attr('clip-path', 'url(#' + this.clipPathId + ')')
       .append('g')
+    this.initAxis()
     this.canvas
       .append('g')
       .attr('class', 'front')
-      .attr('clip-path', 'url(#' + this.clipPathId + ')')
-    this.initAxis()
+    this.updateMouseEventLayer()
   }
 
   setOptions(options?: CartesianAxesOptions) {
@@ -78,6 +78,24 @@ export class CartesianAxis extends Axis {
         .attr('height', this.height)
     } else {
       rect
+        .select('rect')
+        .attr('height', this.height)
+        .attr('width', this.width)
+    }
+  }
+
+  updateMouseEventLayer(): void {
+    const mouseGroup = this.canvas.select('.mouse-events')
+    if (mouseGroup.size() === 0) {
+      this.canvas
+        .append('g')
+        .attr('class', 'mouse-events')
+        .append('rect')
+        .attr('width', this.width)
+        .attr('height', this.height)
+        .attr('fill', 'none')
+    } else {
+      mouseGroup
         .select('rect')
         .attr('height', this.height)
         .attr('width', this.width)
@@ -182,6 +200,7 @@ export class CartesianAxis extends Axis {
       chart.plotter(this, chart.axisIndex)
     }
     this.updateGrid()
+    this.updateMouseEventLayer()
     for (let visitor of this.visitors) {
       visitor.redraw()
     }
@@ -190,6 +209,7 @@ export class CartesianAxis extends Axis {
   resize() {
     this.setSize()
     this.setRange()
+    this.updateMouseEventLayer()
     this.zoom()
   }
 
