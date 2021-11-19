@@ -22,7 +22,10 @@ export class MouseOver implements Visitor {
 
   create(axis: CartesianAxis): void {
     this.mouseGroup = axis.canvas.select('.mouse-events')
-    this.group = axis.canvas.insert('g', '.mouse-events').attr('class', 'mouse-over')
+    this.group = axis.canvas.insert('g', '.mouse-events')
+      .attr('class', 'mouse-over')
+      .attr('font-family', 'sans-serif')
+      .attr('font-size', 10)
 
     this.group
       .append('path')
