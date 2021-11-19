@@ -11,7 +11,6 @@ enum SelectionMode {
 
 export class ZoomHandler implements Visitor {
   private brushStartPoint: [number, number]
-  private svg: any
   private brushGroup: any
   private mouseGroup: any
   private axis: CartesianAxis
@@ -27,41 +26,37 @@ export class ZoomHandler implements Visitor {
   }
 
   createHandler(axis: CartesianAxis): void {
-    this.svg = axis.canvas
-    if (!this.brushGroup) {
-      this.brushGroup = this.svg.append('g').attr('class', 'brush')
-      this.brushGroup
-        .append('rect')
-        .attr('class', 'select-rect')
-        .attr('visibility', 'hidden')
-      this.brushGroup
-        .append('rect')
-        .attr('class', 'handle east')
-        .attr('visibility', 'hidden')
-        .attr('height', 2 * this.MINMOVE)
-        .attr('width', 4)
-      this.brushGroup
-        .append('rect')
-        .attr('class', 'handle west')
-        .attr('visibility', 'hidden')
-        .attr('height', 2 * this.MINMOVE)
-        .attr('width', 4)
-      this.brushGroup
-        .append('rect')
-        .attr('class', 'handle south')
-        .attr('visibility', 'hidden')
-        .attr('width', 2 * this.MINMOVE)
-        .attr('height', 4)
-      this.brushGroup
-        .append('rect')
-        .attr('class', 'handle north')
-        .attr('visibility', 'hidden')
-        .attr('width', 2 * this.MINMOVE)
-        .attr('height', 4)
-    }
-
-    this.mouseGroup = this.svg.select('.mouse-events')
+    this.mouseGroup = axis.canvas.select('.mouse-events')
     const mouseRect = this.mouseGroup.select('rect').attr('pointer-events', 'all')
+    this.brushGroup = axis.canvas.insert('g','.mouse-events').attr('class', 'brush')
+    this.brushGroup
+      .append('rect')
+      .attr('class', 'select-rect')
+      .attr('visibility', 'hidden')
+    this.brushGroup
+      .append('rect')
+      .attr('class', 'handle east')
+      .attr('visibility', 'hidden')
+      .attr('height', 2 * this.MINMOVE)
+      .attr('width', 4)
+    this.brushGroup
+      .append('rect')
+      .attr('class', 'handle west')
+      .attr('visibility', 'hidden')
+      .attr('height', 2 * this.MINMOVE)
+      .attr('width', 4)
+    this.brushGroup
+      .append('rect')
+      .attr('class', 'handle south')
+      .attr('visibility', 'hidden')
+      .attr('width', 2 * this.MINMOVE)
+      .attr('height', 4)
+    this.brushGroup
+      .append('rect')
+      .attr('class', 'handle north')
+      .attr('visibility', 'hidden')
+      .attr('width', 2 * this.MINMOVE)
+      .attr('height', 4)
 
     const documentMouseUp = (): void => {
       this.endSelection(null)
