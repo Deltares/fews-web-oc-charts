@@ -136,7 +136,7 @@
 
     var crossSectionSelect1 = new wbCharts.CrossSectionSelect(getRoundedDate(10, new Date()), function (x) {
       console.log('1:', x)
-    });
+    }, { draggable: true });
     var crossSectionSelect2= new wbCharts.CrossSectionSelect(getRoundedDate(10, new Date(new Date().getTime() + 24 * 60 * 60 * 1000)), function (x) {
       console.log('2:', x)
     });
