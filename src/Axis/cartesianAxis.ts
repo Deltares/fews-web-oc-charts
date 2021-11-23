@@ -12,8 +12,8 @@ export interface CartesianAxisOptions extends AxisOptions {
 }
 
 export interface CartesianAxesOptions extends AxesOptions {
-  x?: CartesianAxisOptions[]
-  y?: CartesianAxisOptions[]
+  x?: CartesianAxisOptions[];
+  y?: CartesianAxisOptions[];
 }
 
 export class CartesianAxis extends Axis {
@@ -52,6 +52,7 @@ export class CartesianAxis extends Axis {
     this.canvas
       .append('g')
       .attr('class', 'front')
+      .attr('clip-path', 'url(#' + this.clipPathId + ')')
     this.updateMouseEventLayer()
   }
 
