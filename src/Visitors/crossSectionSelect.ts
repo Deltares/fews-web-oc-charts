@@ -31,8 +31,8 @@ export class CrossSectionSelect implements Visitor {
     this.value = value
     this.callback = callback
     this.format = d3.format('.2f')
-    this.options = defaultsDeep(this.options,
-      options
+    this.options = defaultsDeep(options,
+      this.options
     ) as CrossSectionSelectOptions
   }
 
@@ -54,7 +54,8 @@ export class CrossSectionSelect implements Visitor {
       .attr('points', '0,0 -5,5 -5,8 5,8 5,5')
       .attr('class', 'cross-section-select-handle')
 
-    handle
+    if (this.options.draggable) {
+      handle
       .call(
         d3
           .drag()
@@ -68,6 +69,7 @@ export class CrossSectionSelect implements Visitor {
             this.end()
           })
       )
+    }
 
     this.group.append('g').attr('class', 'data-point-per-line')
     this.redraw()
