@@ -10,19 +10,19 @@ export class AlertLines implements Visitor {
     this.options = options
   }
 
-  visit(axis: Axis) {
+  visit(axis: Axis): void {
     this.axis = axis as CartesianAxis
     this.create(axis as CartesianAxis)
   }
 
-  create(axis: CartesianAxis) {
+  create(axis: CartesianAxis): void {
     this.group =this.axis.canvas.select('.front')
       .append('g')
       .attr('class', 'warning-sections')
     this.redraw()
   }
 
-  redraw() {
+  redraw(): void {
     this.group.selectAll('g').remove()
     if ( this.options === undefined || this.options.length === 0) {
       return
@@ -39,13 +39,13 @@ export class AlertLines implements Visitor {
       .style("stroke-dasharray", "40 2")
       .style("stroke-width", "40 2")
       .attr("x1", (d: any) => {
-        return xScale(d.x1)
+        return Math.max(xScale(d.x1), 0)
       })
       .attr("y1", (d: any) => {
         const yScale = this.axis.yScale[d.yAxisIndex];
         return yScale(d.value)})
       .attr("x2", (d: any) => {
-        return xScale(d.x2)
+        return Math.min(this.axis.width, xScale(d.x2))
       })
       .attr("y2", (d: any) => {
         const yScale = this.axis.yScale[d.yAxisIndex]
@@ -56,7 +56,7 @@ export class AlertLines implements Visitor {
       .attr('text-anchor', 'end')
       .attr("x", (d: any) => {
         const x = xScale(d.x2);
-        let xPos = Math.min(x, this.axis.width);
+        const xPos = Math.min(x, this.axis.width);
         return xPos})
         .attr("y", (d: any) => {
           const yScale = this.axis.yScale[d.yAxisIndex];
