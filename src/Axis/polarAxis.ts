@@ -60,6 +60,8 @@ export class PolarAxis extends Axis {
     this.angularDomain = options.angular.domain ? options.angular.domain : [0, 360]
     this.angularAxisOptions = defaultsDeep(this.angularAxisOptions, options.angular, { type: 'value'})
     this.radialAxisOptions = defaultsDeep(this.radialAxisOptions, options.radial, { type: 'value'})
+    this.setDefaultTimeOptions(this.angularAxisOptions)
+    this.setDefaultTimeOptions(this.radialAxisOptions)
 
     let startAngle = Math.PI/2  - this.intercept + this.angularRange[0]
     let endAngle =  Math.PI/2 - this.intercept + this.angularRange[1]
@@ -144,13 +146,13 @@ export class PolarAxis extends Axis {
     if (this.angularAxisOptions.type === AxisType.time) {
       const scale = this.angularScale.copy()
       let offsetDomain = scale.domain().map((d) => {
-        const m = DateTime.fromJSDate(d as Date).setZone(this.timeZone)
+        const m = DateTime.fromJSDate(d as Date).setZone(this.angularAxisOptions.timeZone)
         return new Date(d.getTime() + m.offset * 60000);
       })
       let offsetScale = d3.scaleUtc().domain(offsetDomain)
       let tickValues = offsetScale.ticks(10)
       let offsetValues = tickValues.map((d) => {
-        const m = DateTime.fromJSDate(d as Date).setZone(this.timeZone)
+        const m = DateTime.fromJSDate(d as Date).setZone(this.angularAxisOptions.timeZone)
         return new Date(d.getTime() - m.offset * 60000);
       })
       angularTicks = offsetValues

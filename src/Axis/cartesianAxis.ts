@@ -5,6 +5,7 @@ import { AxisPosition } from '../Types/axisPosition'
 import { generateMultiFormat } from '../Utils/date'
 import { DateTime } from 'luxon'
 import merge from 'lodash/merge'
+import defaults from 'lodash/defaults'
 import { niceDomain } from './niceDomain'
 
 export interface CartesianAxisOptions extends AxisOptions {
@@ -36,6 +37,12 @@ export class CartesianAxis extends Axis {
     options?: CartesianAxesOptions
   ) {
     super(container, width, height, options, CartesianAxis.defaultOptions)
+    // Set defaults for each x- and y-axis.
+    this.setDefaultAxisOptions(this.options.x, CartesianAxis.defaultOptions.x[0])
+    this.setDefaultAxisOptions(this.options.y, CartesianAxis.defaultOptions.y[0])
+    this.setDefaultTimeOptions(this.options.x)
+    this.setDefaultTimeOptions(this.options.y)
+
     this.view = this.canvas
     this.setCanvas()
     this.initXScales(this.options.x)
@@ -54,6 +61,12 @@ export class CartesianAxis extends Axis {
       .attr('class', 'front')
       .attr('clip-path', 'url(#' + this.clipPathId + ')')
     this.updateMouseEventLayer()
+  }
+
+  setDefaultAxisOptions(axisOptions: CartesianAxisOptions[], defaultOptions: CartesianAxisOptions) {
+    for (const options of axisOptions) {
+      defaults(options, defaultOptions)
+    }
   }
 
   setOptions(options?: CartesianAxesOptions) {
@@ -241,17 +254,17 @@ export class CartesianAxis extends Axis {
       if (options[key].type === AxisType.time ) {
 
         let offsetDomain = scale.domain().map((d) => {
-          const m = DateTime.fromJSDate(d as Date).setZone(this.timeZone)
+          const m = DateTime.fromJSDate(d as Date).setZone(options[key].timeZone)
           return new Date(d.getTime() + m.offset * 60000);
         })
         let offsetScale = d3.scaleUtc().domain(offsetDomain)
         let tickValues = offsetScale.ticks(5)
         let offsetValues = tickValues.map((d) => {
-          const m = DateTime.fromJSDate(d as Date).setZone(this.timeZone)
+          const m = DateTime.fromJSDate(d as Date).setZone(options[key].timeZone)
           return new Date(d.getTime() - m.offset * 60000);
         })
         axis.tickValues(offsetValues)
-        axis.tickFormat(generateMultiFormat(this.timeZone))
+        axis.tickFormat(generateMultiFormat(options[key].timeZone, options[key].locale))
         grid.tickValues(offsetValues)
       } else if (options[key].type === AxisType.degrees) {
         let domain = scale.domain()
@@ -325,17 +338,17 @@ updateYAxis (options: CartesianAxisOptions[]) {
     grid.ticks(5).tickSize(this.width)
     if (options[key].type === AxisType.time ) {
       let offsetDomain = scale.domain().map((d) => {
-        const m = DateTime.fromJSDate(d as Date).setZone(this.timeZone)
+        const m = DateTime.fromJSDate(d as Date).setZone(options[key].timeZone)
         return new Date(d.getTime() + m.offset * 60000);
       })
       let offsetScale = d3.scaleUtc().domain(offsetDomain)
       let tickValues = offsetScale.ticks(5)
       let offsetValues = tickValues.map((d) => {
-        const m = DateTime.fromJSDate(d as Date).setZone(this.timeZone)
+        const m = DateTime.fromJSDate(d as Date).setZone(options[key].timeZone)
         return new Date(d.getTime() - m.offset * 60000);
       })
       axis.tickValues(offsetValues)
-      axis.tickFormat(generateMultiFormat(this.timeZone))
+      axis.tickFormat(generateMultiFormat(options[key].timeZone, options[key].locale))
       grid.tickValues(offsetValues)
     } else if (options[key].type === AxisType.degrees) {
       let domain = scale.domain()

@@ -30,6 +30,8 @@ export interface AxisOptions {
   nice?: boolean;
   includeZero?: boolean;
   symmetric?: boolean;
+  locale?: string;
+  timeZone?: string;
 }
 
 export interface AxesOptions {
@@ -67,7 +69,6 @@ export abstract class Axis {
   charts: Chart[]
   initialDraw = true
   visitors: Visitor[]
-  timeZone: string
 
   constructor(container: HTMLElement, width: number | null, height: number| null, options: AxesOptions, defaultOptions: any) {
     this.container = container
@@ -76,8 +77,6 @@ export abstract class Axis {
       options,
       defaultOptions
     )
-    this.timeZone = 'Europe/Amsterdam'
-
 
     // Using the d3.formatLocale is not easy for generic plotting
     d3.formatDefaultLocale({
@@ -102,6 +101,14 @@ export abstract class Axis {
     this.tooltip = new Tooltip(container)
     this.charts = []
     this.visitors = []
+  }
+
+  setDefaultTimeOptions(axisOptions: AxisOptions | AxisOptions[]) {
+    const optionsArray = Array.isArray(axisOptions) ? axisOptions : [axisOptions]
+    for (const options of optionsArray) {
+      options.timeZone = options.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone
+      options.locale = options.locale ?? navigator.language
+    }
   }
 
   setOptions(options: AxesOptions): void {

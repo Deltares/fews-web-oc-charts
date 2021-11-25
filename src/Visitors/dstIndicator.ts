@@ -46,8 +46,8 @@ export class DstIndicator implements Visitor {
       const axisIndex = this.options.x.axisIndex
       const scale = this.axis.xScale[axisIndex]
       const domain = scale.domain()
-      let startDate = DateTime.fromJSDate(domain[0]).setZone(this.axis.timeZone)
-      let endDate = DateTime.fromJSDate(domain[1]).setZone(this.axis.timeZone)
+      let startDate = DateTime.fromJSDate(domain[0]).setZone(this.axis.options.x[axisIndex].timeZone)
+      let endDate = DateTime.fromJSDate(domain[1]).setZone(this.axis.options.x[axisIndex].timeZone)
       if (startDate.isInDST !== endDate.isInDST ) {
         this.dstDate = this.findDst(startDate, endDate)
         let x = scale(this.dstDate)
