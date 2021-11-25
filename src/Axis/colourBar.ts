@@ -1,4 +1,4 @@
-import { Color } from 'csstype'
+import { Property } from 'csstype'
 import * as d3 from 'd3'
 import defaultsDeep from 'lodash/defaultsDeep'
 import { AxisPosition } from '../Types/axisPosition'
@@ -10,7 +10,7 @@ export interface ColourMapValue {
   /** The lower value of this segment */
   lowerValue: number
   /** Colour associated with this segment */
-  color: Color
+  color: Property.Color
 }
 export type ColourMap = ColourMapValue[]
 
@@ -237,7 +237,7 @@ export class ColourBar {
    * @param colorStart start colour of the gradient
    * @param colorEnd end colour of the gradient
    */
-  private addGradient(defs: any, id: string, colorStart: Color, colorEnd: Color) {
+  private addGradient(defs: any, id: string, colorStart: Property.Color, colorEnd: Property.Color) {
     const gradient = defs.append('linearGradient')
       .attr('id', id)
       .attr('x1', this.isHorizontal ? '0%' : '100%')
