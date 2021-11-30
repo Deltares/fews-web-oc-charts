@@ -59,7 +59,6 @@ export class CartesianAxis extends Axis {
     this.canvas
       .append('g')
       .attr('class', 'front')
-      .attr('clip-path', 'url(#' + this.clipPathId + ')')
     this.updateMouseEventLayer()
   }
 
