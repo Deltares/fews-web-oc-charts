@@ -134,14 +134,19 @@ export class ChartMarker extends Chart {
       .append('svg')
       .attr('width',20)
       .attr('height',20)
-    const group = svg
+    const outerGroup = svg
+      .append('g')
+      .attr('transform', 'translate(0, 10)')
+    // Make sure the marker is aligned horizontally even when returning the
+    // "bare" SVG element.
+    const innerGroup = outerGroup
       .append('g')
       .attr('transform', 'translate(10, 0)')
-    const element = group.append('path')
+    innerGroup.append('path')
       .attr('d', d3.symbol(d3.symbols[this.options.symbol.id], this.options.symbol.size))
       .style('stroke', style.getPropertyValue('stroke'))
       .style('fill', style.getPropertyValue('fill'))
-    if (asSvgElement) return group.node()
+    if (asSvgElement) return innerGroup.node()
     return svg.node()
   }
 
