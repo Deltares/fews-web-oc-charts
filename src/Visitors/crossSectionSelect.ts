@@ -13,7 +13,6 @@ type CrossSectionSelectOptions = {
 export class CrossSectionSelect implements Visitor {
   private trace: string[]
   private group: any
-  private mouseGroup: any
   private pointRadius = 3
   private simulation: d3.Simulation<any,any>
   private axis: CartesianAxis
@@ -42,7 +41,7 @@ export class CrossSectionSelect implements Visitor {
   }
 
   create(axis: CartesianAxis): void {
-    this.mouseGroup = axis.canvas.select('.mouse-events')
+    axis.canvas.select('.mouse-events')
     this.group = axis.canvas.insert('g', '.mouse-events')
       .attr('class', 'cross-section-select')
       .attr('font-family', 'sans-serif')
@@ -304,7 +303,8 @@ export class CrossSectionSelect implements Visitor {
 
     const xValue = xScale.invert(xPos)
     let idx = bisect(data, xValue)
-    if (idx < 0 || idx > data.length-1) return { id: chart.id, x: undefined, y: undefined, d: undefined }
+    if (idx < 0) return { id: chart.id, x: undefined, y: undefined, d: undefined }
+    idx = Math.max(idx, data.length - 1)
     let yValue = data[idx][yKey]
     // look back
     if (yValue === null) {
