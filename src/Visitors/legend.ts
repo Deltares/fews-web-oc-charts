@@ -75,7 +75,6 @@ export class Legend implements Visitor {
           let charts = that.axis.charts.filter(x => x.id === d.selector)
 
           const symbol = entry.append('g')
-            .attr('transfrom', 'translate(0, -10)')
           let entryNode = symbol.node() as Element
           const types = []
 
