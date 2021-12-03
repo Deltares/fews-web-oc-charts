@@ -19,9 +19,10 @@ export type ColourMap = ColourMapValue[]
  */
  export interface ColourBarOptions {
   /** The lower value of this segment */
-  useGradients: boolean
+  useGradients: boolean;
   /** Colour associated with this segment */
-  position: AxisPosition
+  position: AxisPosition;
+  title?: string;
 }
 
 type GroupSelection = d3.Selection<SVGElement, any, SVGElement, any>
@@ -224,6 +225,19 @@ export class ColourBar {
     gridGroup.call(grid)
     gridGroup.select('path').remove()
     gridGroup.selectAll('.tick').selectAll('text').remove()
+
+    const g = this.group.append('g')
+      .attr('class', 'title')
+      .attr('font-family', 'sans-serif')
+      .attr('font-size', 10)
+
+    if (this.options.title) {
+      g.append('text')
+        .attr('x', this.width / 2)
+        .attr('y', -9)
+        .attr('text-anchor', 'middle')
+        .text(this.options.title)
+    }
   }
 
   /**

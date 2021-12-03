@@ -6,6 +6,11 @@
   <title>Colour bar demo</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/6.3.0/d3.js"></script>
   <link rel="stylesheet" href="../dist/wb-charts-light.css">
+  <style>
+    .title {
+      font-size: 1em;
+    }
+  </style>
 </head>
 
 <body>
@@ -58,13 +63,14 @@
       }]
 
     const svg1 = d3.select('#chart-container-1').append('svg')
+      .attr('class', 'colourbar')
       .attr('width', 500)
-      .attr('height', 60)
+      .attr('height', 70)
       .append('g')
-        .attr('transform', 'translate(50, 20)')
+        .attr('transform', 'translate(50, 30)')
     new wbCharts.ColourBar(svg1, colorMap, 400, 20,
       {
-        position: 'bottom', useGradients: true
+        position: 'bottom', useGradients: true, title: 'Title [unit]'
       }
     )
 
