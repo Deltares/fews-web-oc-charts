@@ -23,6 +23,8 @@ export type ColourMap = ColourMapValue[]
   /** Colour associated with this segment */
   position: AxisPosition;
   title?: string;
+  type: string;
+  ticks?: number
 }
 
 type GroupSelection = d3.Selection<SVGElement, any, SVGElement, any>
@@ -54,6 +56,7 @@ export class ColourBar {
   width: number
   height: number
   options: ColourBarOptions
+  scale: any
 
   /**
    * Creates a colour bar
@@ -78,9 +81,11 @@ export class ColourBar {
       options,
       {
         position: AxisPosition.Bottom,
-        useGradients: true
+        useGradients: true,
+        type: 'normal'
       }
     )
+    this.createScale()
     const fills = this.createFills()
     this.createBarSegments(fills)
     this.createAxis()
@@ -154,21 +159,36 @@ export class ColourBar {
     return ids
   }
 
+  private createScale() {
+    const tickValues = this.colourMap.map((val: ColourMapValue) => val.lowerValue)
+    const scale = d3.scaleLinear()
+    if ( this.options.type === 'nonlinear' ) {
+      let range = tickValues.map( (_d, i) => {
+        return i * this.sizeAlongAxis / ( tickValues.length - 1 )
+      })
+      if (!this.isHorizontal) range = range.reverse()
+      scale
+      .domain(tickValues)
+      .range(range)
+    } else {
+      scale
+      .domain([this.minimum, this.maximum])
+      .range(this.isHorizontal ? [0, this.sizeAlongAxis] : [this.sizeAlongAxis, 0])
+    }
+    this.scale = scale
+  }
+
+
   /**
    * Creates rectangles for each segment of the colour bar.
    * @param fills colour values (or e.g. gradient references) for each segment
    */
   private createBarSegments(fills: string[]) {
     // Bounds of the colour map should be monotonically increasing.
-    const minimum = this.colourMap[0].lowerValue
-    const maximum = this.colourMap[this.colourMap.length - 1].lowerValue
-    const range = maximum - minimum
-    const relativeLocation = (value: number) => (value - minimum) / range
-    // The y-axis is inverted in SVG, so horizontal colour bars need separate treatment from vertical ones.
     const startCoordinate =
-      this.isHorizontal ? (lowerValue: number, _upperValue: number) => relativeLocation(lowerValue) * this.sizeAlongAxis
-                        : (_lowerValue: number, upperValue: number) => (1 - relativeLocation(upperValue)) * this.sizeAlongAxis
-    const barSize = (lowerValue: number, upperValue: number) => (relativeLocation(upperValue) - relativeLocation(lowerValue)) * this.sizeAlongAxis
+      this.isHorizontal ? (lowerValue: number, _upperValue: number) => this.scale(lowerValue)
+                        : (_lowerValue: number, upperValue: number) => this.scale(upperValue)
+    const barSize = (lowerValue: number, upperValue: number) => Math.abs(this.scale(upperValue) - this.scale(lowerValue))
 
     // Add rectangles for each segment of the colour bar.
     const barGroup = this.group.append('g')
@@ -198,16 +218,19 @@ export class ColourBar {
     const tickValues = this.colourMap.map((val: ColourMapValue) => val.lowerValue)
 
     // The y-axis is inverted in the SVG, so for vertical scale bars the range is inverted.
-    const scale = d3.scaleLinear()
-      .domain([this.minimum, this.maximum])
-      .range(this.isHorizontal ? [0, this.sizeAlongAxis] : [this.sizeAlongAxis, 0])
+    const scale = this.scale
     const axis =
       this.options.position === AxisPosition.Bottom ? d3.axisBottom(scale) :
       this.options.position === AxisPosition.Top ? d3.axisTop(scale) :
       this.options.position === AxisPosition.Right ? d3.axisRight(scale) :
       d3.axisLeft(scale)
 
-    axis.tickValues(tickValues)
+    if ( this.options.ticks ) {
+      axis.ticks(this.options.ticks)
+    } else {
+      axis.tickValues(tickValues)
+    }
+
     const axisGroup = this.group.append('g')
       .attr('transform', axisTranslation)
       .attr('class', 'axis colourbar')
@@ -221,7 +244,12 @@ export class ColourBar {
       .attr('class', 'grid colourbar')
       .attr('transform', gridTranslation)
     const grid = this.isHorizontal ? d3.axisTop(scale) : d3.axisLeft(scale)
-    grid.tickValues(tickValues).tickSize(this.sizeAcrossAxis)
+    if ( this.options.ticks ) {
+      grid.ticks(this.options.ticks)
+    } else {
+      grid.tickValues(tickValues)
+    }
+    grid.tickSize(this.sizeAcrossAxis)
     gridGroup.call(grid)
     gridGroup.select('path').remove()
     gridGroup.selectAll('.tick').selectAll('text').remove()
