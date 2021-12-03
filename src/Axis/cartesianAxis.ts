@@ -148,23 +148,35 @@ export class CartesianAxis extends Axis {
         }
         scale.domain(extent)
       } else if (options.autoScale === true) {
-        let extent = new Array(2)
+        let defaultExtent
+        let dataExtent = new Array(2)
         if (this.options.x[key]?.includeZero === true) {
-          extent[0] = 0
+          dataExtent[0] = 0
+        }
+        if (this.options.x[key]?.defaultDomain !== undefined) {
+          defaultExtent = this.options.x[key]?.defaultDomain
         }
         for (const chart of this.charts) {
           if ( chart.axisIndex.x?.axisIndex === +key ) {
             const chartExtent = chart.extent[chart.dataKeys.x]
-            extent = d3.extent(d3.merge([extent, [].concat(...chartExtent)]))
+            dataExtent = d3.extent(d3.merge([dataExtent, [].concat(...chartExtent)]))
           }
         }
         if (this.options.x[key]?.symmetric === true) {
-          const max = Math.max(Math.abs(extent[0]), Math.abs(extent[1]))
-          extent[0] = -max
-          extent[1] = max
+          const max = Math.max(Math.abs(dataExtent[0]), Math.abs(dataExtent[1]))
+          dataExtent[0] = -max
+          dataExtent[1] = max
         }
-        scale.domain(extent)
-        if (this.options.x[key]?.nice === true) niceDomain(scale, 16)
+        scale.domain(dataExtent)
+        if (this.options.x[key]?.nice === true) {
+          niceDomain(scale, 16)
+        }
+        if (defaultExtent !== undefined) {
+          const domain = scale.domain()
+          if (defaultExtent[0] < domain[0] || defaultExtent[1] > domain[1] ) {
+            scale.domain(defaultExtent)
+          }
+        }
       }
     }
   }
@@ -185,23 +197,33 @@ export class CartesianAxis extends Axis {
         }
         scale.domain(extent)
       } else if (options.autoScale === true) {
-        let extent = new Array(2)
+        let defaultExtent
+        let dataExtent = new Array(2)
         if (this.options.y[key]?.includeZero === true) {
-          extent[0] = 0
+          dataExtent[0] = 0
+        }
+        if (this.options.y[key]?.defaultDomain !== undefined) {
+          defaultExtent = this.options.y[key]?.defaultDomain
         }
         for (const chart of this.charts) {
           if ( chart.axisIndex.y?.axisIndex === +key ) {
             const chartExtent = chart.extent[chart.dataKeys.y]
-            extent = d3.extent(d3.merge([extent, [].concat(...chartExtent)]))
+            dataExtent = d3.extent(d3.merge([dataExtent, [].concat(...chartExtent)]))
           }
         }
         if (this.options.y[key]?.symmetric === true) {
-          const max = Math.max(Math.abs(extent[0]), Math.abs(extent[1]))
-          extent[0] = -max
-          extent[1] = max
+          const max = Math.max(Math.abs(dataExtent[0]), Math.abs(dataExtent[1]))
+          dataExtent[0] = -max
+          dataExtent[1] = max
         }
-        scale.domain(extent)
+        scale.domain(dataExtent)
         if (this.options.y[key]?.nice === true) niceDomain(scale, 16)
+        if (defaultExtent !== undefined) {
+          const domain = scale.domain()
+          if (defaultExtent[0] < domain[0] || defaultExtent[1] > domain[1] ) {
+            scale.domain(defaultExtent)
+          }
+        }
       }
     }
   }

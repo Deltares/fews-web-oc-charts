@@ -26,6 +26,7 @@ export interface AxisOptions {
   unit?: string;
   showGrid?: boolean;
   format?: Function;
+  defaultDomain?: [number, number] | [Date, Date];
   domain?: [number, number] | [Date, Date];
   nice?: boolean;
   includeZero?: boolean;
