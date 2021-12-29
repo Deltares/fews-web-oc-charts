@@ -36,7 +36,7 @@ export class ChartRange extends Chart {
     })
     const max = d3.max(this._data, function(d: any) {
       if (d[path] === null) return undefined
-      if (Array.isArray(d[path])) return d3.max(d[path])
+      if (Array.isArray(d[path])) return d3.min(d[path])
       return d[path]
     })
     return [min, max]
@@ -170,7 +170,6 @@ export class ChartRange extends Chart {
   }
 
   plotterPolar(axis: PolarAxis, axisIndex: AxisIndex) {
-
     const rKey = this.dataKeys.radial
     const tKey = this.dataKeys.angular
     const colorKey = this.dataKeys.color
@@ -273,7 +272,7 @@ export class ChartRange extends Chart {
 
     this.previousData = {...this.data}
     function arcTween(transition: any, p: any) {
-      transition.attrTween('d', (d: any, i: number, a: any) => {
+      transition.attrTween('d', function(d: any, i: number, a: any) {
         const old = p[i]
         if (mean(old[tKey]) - mean(d[tKey]) > 180) {
           old[tKey] = old[tKey].map(function(x) {
@@ -287,9 +286,9 @@ export class ChartRange extends Chart {
 
         const tInterpolate = d3.interpolateArray(old[tKey], d[tKey])
         const rInterpolate = d3.interpolateArray(old[rKey], d[rKey])
-        return function(x: any) {
-          d[tKey] = tInterpolate(x)
-          d[rKey] = rInterpolate(x)
+        return function(t: any) {
+          d[tKey] = tInterpolate(t)
+          d[rKey] = rInterpolate(t)
           return arcGenerator(d)
         }
       })
