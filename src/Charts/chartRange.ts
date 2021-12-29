@@ -116,10 +116,10 @@ export class ChartRange extends Chart {
         return yScale(d[yKey][1])
       })
       .attr('width', (d: any) => {
-        return xScale(d[xKey][1] - d[xKey][0])
+        return xScale(d[xKey][1]) - xScale(d[xKey][0])
       })
       .attr('height', (d: any) => {
-        return yScale(d[yKey][0] - d[yKey][1])
+        return yScale(d[yKey][0]) - yScale(d[yKey][1])
       })
 
     if (this.options.tooltip !== undefined) {
@@ -156,10 +156,10 @@ export class ChartRange extends Chart {
         return yScale(d[yKey][1])
       })
       .attr('width', (d: any) => {
-        return xScale(d[xKey][1] - d[xKey][0])
+        return xScale(d[xKey][1]) - xScale(d[xKey][0])
       })
       .attr('height', (d: any) => {
-        return yScale(d[yKey][0] - d[yKey][1])
+        return yScale(d[yKey][0]) - yScale(d[yKey][1])
       })
 
     if (colorKey) {
