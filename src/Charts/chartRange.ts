@@ -132,8 +132,8 @@ export class ChartRange extends Chart {
         axis.tooltip.update(
           this.toolTipFormatterCartesian(d),
           this.options.tooltip.position !== undefined ? this.options.tooltip.position : TooltipPosition.Top,
-          axis.margin.left + xScale((d[xKey][1] + d[xKey][0])/2),
-          axis.margin.top + yScale((d[yKey][1] + d[yKey][0])/2),
+          axis.margin.left + (xScale(d[xKey][1]) + xScale(d[xKey][0]))/2,
+          axis.margin.top + (yScale(d[yKey][1]) + yScale(d[yKey][0]))/2,
         )
       })
       .on('pointerout', () => {
