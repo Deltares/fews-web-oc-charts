@@ -31,11 +31,11 @@ export class ChartMatrix extends Chart {
 
     const colorMap = this.getColorMap(colorScale)
     this.group = this.selectGroup(axis, ChartMatrix.GROUP_CLASS)
-    const t = d3
+    d3
       .transition()
       .duration(this.options.transitionTime)
 
-    const matrix = this.group
+    this.group
       .selectAll("rect")
       .data(data)
       .join("rect")

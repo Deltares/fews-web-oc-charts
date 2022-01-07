@@ -78,9 +78,9 @@ export class ChartMarker extends Chart {
         }
         const tInterpolate = d3.interpolate(old[tKey], d[tKey])
         const rInterpolate = d3.interpolate(old[rKey], d[rKey])
-        return function(t) {
-          const theta = axis.angularScale(tInterpolate(t))
-          const radius = axis.radialScale(rInterpolate(t))
+        return function(x) {
+          const theta = axis.angularScale(tInterpolate(x))
+          const radius = axis.radialScale(rInterpolate(x))
           return 'translate(' + -radius * Math.sin(-theta) + ',' + -radius * Math.cos(-theta) + ')'
         }
       }
@@ -100,7 +100,6 @@ export class ChartMarker extends Chart {
       })
       .attr('d', d3.symbol(d3.symbols[this.options.symbol.id], this.options.symbol.size))
       .on('pointerover', (e: any, d) => {
-        const v = { r: d[rKey], t: d[tKey] }
         const pointer = d3.pointer(e, axis.container)
         const x = pointer[0]
         const y = pointer[1]
