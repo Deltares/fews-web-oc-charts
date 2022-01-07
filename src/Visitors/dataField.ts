@@ -1,7 +1,14 @@
-import { Axis, PolarAxis } from '../Axis'
+import { Axis } from '../Axis'
 import { Visitor } from './visitor'
 import * as d3 from 'd3'
 import defaultsDeep from 'lodash/defaultsDeep'
+
+export interface UnitOptions {
+  unit: string;
+  factor: number;
+  precision: string;
+  scale: (x: number) => string;
+}
 
 export interface DataFieldOptions {
   selector? : string
@@ -13,7 +20,7 @@ export interface DataFieldOptions {
   valueField?: {
     dx?: string | number
     dy?: string | number
-    units?: any
+    units?: UnitOptions[]
     precision?: string
   }
 }
@@ -58,9 +65,8 @@ export class DataField implements Visitor {
 
       this.value.attr('dx', this.options.valueField.dx)
       this.value.attr('dy', this.options.valueField.dy)
-      let that = this
       if ( this.options.valueField.units.length > 1 ) {
-        this.value.on('click', function() { that.onClick() } )
+        this.value.on('click', () => { this.onClick() } )
         this.value.style('cursor','pointer')
       }
     }
@@ -69,9 +75,9 @@ export class DataField implements Visitor {
 
   redraw() {
     //TODO this only works with unique ids
-    let element = d3.select(`[data-chart-id="${this.options.selector}"]`).select('path')
-    let data = element.datum()
-    let style = window.getComputedStyle(element.node() as Element)
+    const element = d3.select(`[data-chart-id="${this.options.selector}"]`).select('path')
+    const data = element.datum()
+    const style = window.getComputedStyle(element.node() as Element)
 
     this.value.text(this.formatter(data))
     this.value.style('fill', style.getPropertyValue('stroke'))
@@ -94,18 +100,14 @@ export class DataField implements Visitor {
       const valueString = value !== null ? format(value * units.factor ) : '-';
       return valueString + units.unit;
     } else {
-      let valueString: string = value !== null ? units.scale( value ) : '-';
+      const valueString: string = value !== null ? units.scale( value ) : '-';
       return valueString + units.unit;
     }
   }
 
   // TODO: we should specify a datakey or always require a formatter
   getValue(d) {
-    if (this.axis instanceof PolarAxis) {
-      return d[0] !== undefined ? d[0].y : null
-    } else {
-      return d[0] !== undefined ? d[0].y : null
-    }
+    return d[0] !== undefined ? d[0].y : null
   }
 
 }
