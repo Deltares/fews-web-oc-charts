@@ -18,8 +18,6 @@ export class ZoomHandler implements Visitor {
   private readonly MINMOVE = 15
   private lastPoint: [number, number]
 
-  constructor() {}
-
   visit(axis: Axis): void {
     this.axis = axis as CartesianAxis
     this.createHandler(axis as CartesianAxis)

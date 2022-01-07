@@ -126,10 +126,9 @@ export class ChartBar extends Chart {
     if ( this.options.color?.map ) {
       return this.options.color?.map
     } else {
-      const colorMap = (value: any) => {
+      return (value: any) => {
         return d3.scaleSequential(d3.interpolateWarm)(scale(value))
       }
-      return colorMap
     }
   }
 

@@ -10,9 +10,9 @@ export function bboxCollide(bbox) {
     return d.y + d.vy;
   }
 
-  function constant (x) {
+  function constant (_) {
     return function () {
-      return x;
+      return _;
     };
   }
 
@@ -38,21 +38,21 @@ export function bboxCollide(bbox) {
             ny2
 
             const cornerNodes = []
-            nodes.forEach(function (d, i) {
-              cornerNodes.push({node: d, vx: d.vx, vy: d.vy, x: d.x + (boundingBoxes[i][1][0] + boundingBoxes[i][0][0]) / 2, y: d.y + (boundingBoxes[i][0][1] + boundingBoxes[i][1][1]) / 2})
-              cornerNodes.push({node: d, vx: d.vx, vy: d.vy, x: d.x + boundingBoxes[i][0][0], y: d.y + boundingBoxes[i][0][1]})
-              cornerNodes.push({node: d, vx: d.vx, vy: d.vy, x: d.x + boundingBoxes[i][0][0], y: d.y + boundingBoxes[i][1][1]})
-              cornerNodes.push({node: d, vx: d.vx, vy: d.vy, x: d.x + boundingBoxes[i][1][0], y: d.y + boundingBoxes[i][0][1]})
-              cornerNodes.push({node: d, vx: d.vx, vy: d.vy, x: d.x + boundingBoxes[i][1][0], y: d.y + boundingBoxes[i][1][1]})
+            nodes.forEach(function (d, j) {
+              cornerNodes.push({node: d, vx: d.vx, vy: d.vy, x: d.x + (boundingBoxes[j][1][0] + boundingBoxes[j][0][0]) / 2, y: d.y + (boundingBoxes[i][0][1] + boundingBoxes[i][1][1]) / 2})
+              cornerNodes.push({node: d, vx: d.vx, vy: d.vy, x: d.x + boundingBoxes[j][0][0], y: d.y + boundingBoxes[j][0][1]})
+              cornerNodes.push({node: d, vx: d.vx, vy: d.vy, x: d.x + boundingBoxes[j][0][0], y: d.y + boundingBoxes[j][1][1]})
+              cornerNodes.push({node: d, vx: d.vx, vy: d.vy, x: d.x + boundingBoxes[j][1][0], y: d.y + boundingBoxes[j][0][1]})
+              cornerNodes.push({node: d, vx: d.vx, vy: d.vy, x: d.x + boundingBoxes[j][1][0], y: d.y + boundingBoxes[j][1][1]})
             })
             const cn = cornerNodes.length
 
+        let nodeI
         for (let k = 0; k < iterations; ++k) {
           tree = quadtree(cornerNodes, x, y).visitAfter(prepareCorners);
 
           for (i = 0; i < cn; ++i) {
-            // eslint-disable-next-line no-var
-            var nodeI = ~~(i / 5);
+            nodeI = ~~(i / 5);
             node = nodes[nodeI]
             bbi = boundingBoxes[nodeI]
             xi = node.x + node.vx

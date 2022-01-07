@@ -2,8 +2,7 @@ import * as d3 from 'd3'
 import { Axis, AxesOptions, AxisType, AxisOptions } from './axis'
 import defaultsDeep from 'lodash/defaultsDeep'
 import { DateTime } from 'luxon'
-
-// import { scaleLinear } from 'd3-scale'
+import { niceDegreeSteps } from '../Utils/niceDegreeSteps'
 
 export enum Direction {
   CLOCKWISE = -1,
@@ -109,10 +108,9 @@ export class PolarAxis extends Axis {
 
   updateGrid() {
     // draw the circular grid lines
-    const g = this.canvas
     // draw the radial axis
     const rAxis = d3.axisBottom(this.radialScale).ticks(5)
-    const radialAxis = this.canvas.select('.r-axis').call(rAxis)
+    this.canvas.select('.r-axis').call(rAxis)
 
     const draw = (context, radius) => {
       context.arc(0, 0, radius, -this.direction * this.angularRange[0] - this.intercept, -this.direction * this.angularRange[1] - this.intercept, this.direction === Direction.ANTICLOCKWISE) // draw an arc, the turtle ends up at ⟨194.4,108.5⟩
@@ -133,24 +131,17 @@ export class PolarAxis extends Axis {
         .attr('d', (d) => { return draw(d3.path(), d) })
     }
 
-    let startAngle = Math.PI / 2 - this.intercept + this.angularRange[0]
-    let endAngle = Math.PI / 2 - this.intercept + this.angularRange[1]
-    if (this.direction === Direction.ANTICLOCKWISE) {
-      startAngle = Math.PI + startAngle
-      endAngle = Math.PI + endAngle
-    }
-
     let angularTicks
     if (this.angularAxisOptions.type === AxisType.time) {
       const scale = this.angularScale.copy()
       const offsetDomain = scale.domain().map((d) => {
-        const m = DateTime.fromJSDate(d as Date).setZone(this.angularAxisOptions.timeZone)
+        const m = DateTime.fromJSDate(d).setZone(this.angularAxisOptions.timeZone)
         return new Date(d.getTime() + m.offset * 60000);
       })
       const offsetScale = d3.scaleUtc().domain(offsetDomain)
       const tickValues = offsetScale.ticks(10)
       const offsetValues = tickValues.map((d) => {
-        const m = DateTime.fromJSDate(d as Date).setZone(this.angularAxisOptions.timeZone)
+        const m = DateTime.fromJSDate(d).setZone(this.angularAxisOptions.timeZone)
         return new Date(d.getTime() - m.offset * 60000);
       })
       angularTicks = offsetValues
@@ -159,18 +150,13 @@ export class PolarAxis extends Axis {
 
       let step = d3.tickIncrement(domain[0], domain[1], 8)
 
-      step = step >= 100 ? 90 : step >= 50 ? 45 : step >= 20 ? 15 : step
+      step = niceDegreeSteps(step)
       const start = Math.ceil(domain[0] / step) * step
       const stop = Math.floor(domain[1] / step + 1) * step
       angularTicks = d3.range(start, stop, step)
     }
 
-    const suffix = ''
-    const offset = 10
-
-    // angularTicks = angularTicks.map(this.radToDegrees)
-
-    const drawAngular = this.canvas
+    this.canvas
       .select('.t-grid')
       .selectAll('line')
       .data(angularTicks)
@@ -195,7 +181,6 @@ export class PolarAxis extends Axis {
       .append('g')
       .attr('class', 'tick')
       .attr('transform', groupRotate)
-    //   .attr('opacity',1)
 
     drawTicks
       .append('line')
@@ -264,10 +249,10 @@ export class PolarAxis extends Axis {
   }
 
   protected initGrid() {
-    const radialGrid = this.canvas.append('g').attr('class', 'grid r-grid')
-    const angularGrid = this.canvas.append('g').attr('class', 'grid t-grid')
-    const radialAxis = this.canvas.append('g').attr('class', 'axis r-axis')
-    const angularAxis = this.canvas
+    this.canvas.append('g').attr('class', 'grid r-grid')
+    this.canvas.append('g').attr('class', 'grid t-grid')
+    this.canvas.append('g').attr('class', 'axis r-axis')
+    this.canvas
       .append('g')
       .attr('class', 'axis t-axis')
       .attr('transform', 'rotate(' + -this.intercept * 180 / Math.PI + ')')

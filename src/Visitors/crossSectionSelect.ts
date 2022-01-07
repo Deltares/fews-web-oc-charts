@@ -92,7 +92,6 @@ export class CrossSectionSelect implements Visitor {
     points = points.filter( (p) => p.y !== undefined )
     this.updateLabels(points)
     this.updateDataPoints(points)
-    return
   }
 
   start(event): void {
@@ -155,10 +154,9 @@ export class CrossSectionSelect implements Visitor {
         const selector = `[data-chart-id="${d.id}"]`
         const element = this.axis.chartGroup.select(selector).select('path')
         if (element.node() === null ) return
-        const stroke = window
+        return window
           .getComputedStyle(element.node() as Element)
           .getPropertyValue('stroke')
-        return stroke
       })
       .style('stroke-width', '1px')
       .style('opacity', '1')
@@ -205,10 +203,9 @@ export class CrossSectionSelect implements Visitor {
         const selector = `[data-chart-id="${d.id}"]`
         const element = this.axis.chartGroup.select(selector).select('path')
         if (element.node() === null ) return
-        const stroke = window
+        return window
           .getComputedStyle(element.node() as Element)
           .getPropertyValue('stroke')
-        return stroke
       })
       .attr('stroke', 'none')
       .text(d => d.label)

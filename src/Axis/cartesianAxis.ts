@@ -7,6 +7,7 @@ import { DateTime } from 'luxon'
 import merge from 'lodash/merge'
 import defaults from 'lodash/defaults'
 import { niceDomain } from './niceDomain'
+import { niceDegreeSteps } from '../Utils/niceDegreeSteps'
 
 export interface CartesianAxisOptions extends AxisOptions {
   position?: AxisPosition;
@@ -275,13 +276,13 @@ export class CartesianAxis extends Axis {
       if (options[key].type === AxisType.time ) {
 
         const offsetDomain = scale.domain().map((d) => {
-          const m = DateTime.fromJSDate(d as Date).setZone(options[key].timeZone)
+          const m = DateTime.fromJSDate(d).setZone(options[key].timeZone)
           return new Date(d.getTime() + m.offset * 60000);
         })
         const offsetScale = d3.scaleUtc().domain(offsetDomain)
         const tickValues = offsetScale.ticks(5)
         const offsetValues = tickValues.map((d) => {
-          const m = DateTime.fromJSDate(d as Date).setZone(options[key].timeZone)
+          const m = DateTime.fromJSDate(d).setZone(options[key].timeZone)
           return new Date(d.getTime() - m.offset * 60000);
         })
         axis.tickValues(offsetValues)
@@ -290,7 +291,7 @@ export class CartesianAxis extends Axis {
       } else if (options[key].type === AxisType.degrees) {
         const domain = scale.domain()
         let step = d3.tickIncrement(domain[0], domain[1], 5)
-        step = step >= 100 ? 90 : step >= 50 ? 45 : step >= 20 ? 15 : step
+        step = niceDegreeSteps(step)
         const start = Math.ceil(domain[0] / step) * step
         const stop = Math.floor(domain[1] / step + 1) * step
         axis.tickValues(d3.range(start, stop, step))
@@ -375,7 +376,7 @@ updateYAxis (options: CartesianAxisOptions[]): void {
     } else if (options[key].type === AxisType.degrees) {
       const domain = scale.domain()
       let step = d3.tickIncrement(domain[0], domain[1], 5)
-      step = step >= 100 ? 90 : step >= 50 ? 45 : step >= 20 ? 15 : step
+      step = niceDegreeSteps(step)
       const start = Math.ceil(domain[0] / step) * step
       const stop = Math.floor(domain[1] / step + 1) * step
       axis.tickValues(d3.range(start, stop, step))

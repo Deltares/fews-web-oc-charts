@@ -1,7 +1,7 @@
 import { AxisType } from './axis'
 
 const valueSteps = [1, 2, 2.5, 5, 10 ] // keep the 10 at the end
-const degreeSteeps = [1, 5, 15, 30, 45, 60, 90] // keep the 10 at the end
+const degreeSteps = [1, 5, 15, 30, 45, 60, 90] // keep the 10 at the end
 
 export function niceDomain(scale: any, count: number, axisType = AxisType.value): void
 {
@@ -27,7 +27,7 @@ export function niceDomain(scale: any, count: number, axisType = AxisType.value)
   let step = 1
   // Normalize rough step to find the normalized one that fits best
   if (axisType === AxisType.degrees) {
-    step = degreeSteeps.find(n => n >= roughStep)
+    step = degreeSteps.find(n => n >= roughStep)
   } else {
     const stepPower = Math.pow(10, -Math.floor(Math.log10(Math.abs(roughStep))))
     const normalizedStep = roughStep * stepPower

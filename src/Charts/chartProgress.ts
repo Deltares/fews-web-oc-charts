@@ -80,7 +80,6 @@ export class ChartProgress extends Chart {
   }
 
   plotterPolar(axis: PolarAxis, dataKeys: any) {
-    const canvas = axis.canvas
 
     const tKey = this.dataKeys.angular
     const rKey = this.dataKeys.radial
@@ -110,7 +109,6 @@ export class ChartProgress extends Chart {
       .endAngle(function(d: any, i) {
         return axis.angularScale(d[tKey][1])
       })
-      // .cornerRadius(scale.bandwidth()/2)
       .cornerRadius(scale.bandwidth()/8)
 
 
@@ -154,10 +152,10 @@ export class ChartProgress extends Chart {
 
     if (colorKey) {
       update
-        .style('fill', function (d: any) {
+        .style('fill', (d: any) => {
           return colorMap[d[colorKey]]
         })
-        .style('stroke', function (d: any) {
+        .style('stroke', (d: any) => {
           return colorMap[d[colorKey]]
         })
     }
@@ -165,23 +163,23 @@ export class ChartProgress extends Chart {
     this.previousData = {...this.data}
 
     function arcTween(transition: any, p: any) {
-      transition.attrTween('d', function(d: any, i: number, a: any) {
+      transition.attrTween('d', (d: any, i: number, a: any) => {
         const old = p[i]
         if (mean(old[tKey]) - mean(d[tKey]) > 180) {
-          old[tKey] = old[tKey].map(function(x) {
+          old[tKey] = old[tKey].map((x) => {
             return x - 360
           })
         } else if (mean(old[tKey]) - mean(d[tKey]) < -180) {
-          old[tKey] = old[tKey].map(function(x) {
+          old[tKey] = old[tKey].map((x) => {
             return x + 360
           })
         }
 
         const tInterpolate = d3.interpolateArray(old[tKey], d[tKey])
         const rInterpolate = d3.interpolateArray(old[rKey], d[rKey])
-        return function(t: any) {
-          d[tKey] = tInterpolate(t)
-          d[rKey] = rInterpolate(t)
+        return function(x: any) {
+          d[tKey] = tInterpolate(x)
+          d[rKey] = rInterpolate(x)
           return arcGenerator(d)
         }
       })

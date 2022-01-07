@@ -221,10 +221,9 @@ export class MouseOver implements Visitor {
         const selector = `[data-chart-id="${d}"]`
         const element = this.axis.chartGroup.select(selector).select('path')
         if (element.node() === null ) return
-        const stroke = window
+        return window
           .getComputedStyle(element.node() as Element)
           .getPropertyValue('stroke')
-        return stroke
       })
     this.group.select('.mouse-x text').style('fill-opacity', '1')
   }
