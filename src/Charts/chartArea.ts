@@ -17,18 +17,18 @@ export class ChartArea extends Chart {
 
   get extent(): any[] {
     if (!this._extent) {
-      this._extent = Array()
-      for (let key in this.dataKeys) {
+      this._extent = []
+      for (const key in this.dataKeys) {
         if (key === 'x') {
-          let path = this.dataKeys[key]
+          const path = this.dataKeys[key]
           this._extent[path] = d3.extent(this._data, (d) => d[path])
         } else if (key === 'y') {
-          let path = this.dataKeys[key]
-          let min = d3.min(this._data, function(d: any) {
+          const path = this.dataKeys[key]
+          const min = d3.min(this._data, function(d: any) {
             if (d[path] === null) return undefined
             return d3.min(d[path])
           })
-          let max = d3.max(this._data, function(d: any) {
+          const max = d3.max(this._data, function(d: any) {
             if (d[path] === null) return undefined
             return d3.max(d[path])
           })
@@ -40,13 +40,13 @@ export class ChartArea extends Chart {
   }
 
   plotterCartesian(axis: CartesianAxis, axisIndex: AxisIndex) {
-    let xKey = this.dataKeys.x
-    let yKey = this.dataKeys.y
-    let colorKey = this.dataKeys.color
+    const xKey = this.dataKeys.x
+    const yKey = this.dataKeys.y
+    const colorKey = this.dataKeys.color
     const xScale = axis.xScale[axisIndex.x.axisIndex]
     const yScale = axis.yScale[axisIndex.y.axisIndex]
 
-    let colorScale = d3.scaleLinear().domain([0, 1])
+    const colorScale = d3.scaleLinear().domain([0, 1])
     if (this.options.colorScale === AUTO_SCALE) {
       colorScale.domain(
         d3.extent(this.data, function(d: any): number {
@@ -55,9 +55,9 @@ export class ChartArea extends Chart {
       )
     }
 
-    let colorMap = this.colorMap
+    const colorMap = this.colorMap
 
-    let bisectX = d3.bisector(function(d) {
+    const bisectX = d3.bisector(function(d) {
       return d[xKey]
     })
     let i0 = bisectX.right(this.data, xScale.domain()[0])
@@ -65,7 +65,7 @@ export class ChartArea extends Chart {
     i0 = i0 > 0 ? i0 - 1 : 0
     i1 = i1 < this.data.length - 1 ? i1 + 1 : this.data.length
 
-    let mappedData: any = this.data.slice(i0, i1).map(function(d: any) {
+    const mappedData: any = this.data.slice(i0, i1).map(function(d: any) {
       return {
         [xKey]: xScale(d[xKey]),
         [yKey]: d[yKey].map(yScale),
@@ -78,7 +78,7 @@ export class ChartArea extends Chart {
       this.group.append('path')
     }
 
-    let areaGenerator = d3
+    const areaGenerator = d3
       .area()
       .x(function(d: any) {
         return d.x
@@ -90,22 +90,23 @@ export class ChartArea extends Chart {
         return d.y[1]
       })
 
-    let elements = this.group.datum(mappedData)
+    this.group.datum(mappedData)
 
-    let area = this.group.select('path')
+    const area = this.group.select('path')
     area.attr('d', areaGenerator(mappedData))
     area.datum(mappedData)
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   plotterPolar(axis: PolarAxis, dataKeys: any) {
     console.error('plotterPolar is not implemented for ChartArea')
   }
 
   drawLegendSymbol(legendId?: string, asSvgElement?: boolean) {
-    let chartElement = this.group
+    const chartElement = this.group
       .select('path')
       .node() as Element
-    let style = window.getComputedStyle(chartElement)
+    const style = window.getComputedStyle(chartElement)
     const svg = d3.create('svg')
       .attr('width',20)
       .attr('height',20)
