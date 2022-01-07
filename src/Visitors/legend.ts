@@ -3,15 +3,13 @@ import { Axis, CartesianAxis } from '../Axis'
 import { Visitor } from './visitor'
 
 export class Legend implements Visitor {
-  private container: HTMLElement
   private labels: any
   private svg: any
   private group: any
   private axis: CartesianAxis
-  private configuredLabels: boolean = false
+  private configuredLabels = false
 
   constructor(labels: any, container?: HTMLElement) {
-    this.container = container
     if (labels) {
       this.labels = labels
       this.configuredLabels = true
@@ -42,20 +40,21 @@ export class Legend implements Visitor {
         }
       }
     }
-    let entries = this.group.selectAll('g').data(this.labels)
-    let that = this
+    const entries = this.group.selectAll('g').data(this.labels)
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    const that = this
     let maxWidth = 1
 
     entries.exit().remove()
 
-    let enter = entries.enter()
+    const enter = entries.enter()
       .append('g')
       .attr('class', 'legend-entry')
 
     const updateSelection = entries
       .merge(enter)
       .each(function(d, i) {
-        let entry = d3.select(this)
+        const entry = d3.select(this)
         const chartGroup = that.axis.chartGroup
           .select(`[data-chart-id="${d.selector}"]`)
 
@@ -71,15 +70,13 @@ export class Legend implements Visitor {
         }
 
         if (chartElement) {
-          let style = window.getComputedStyle(chartElement)
-          let charts = that.axis.charts.filter(x => x.id === d.selector)
+          const style = window.getComputedStyle(chartElement)
+          const charts = that.axis.charts.filter(x => x.id === d.selector)
 
           const symbol = entry.append('g')
-          let entryNode = symbol.node() as Element
-          const types = []
+          const entryNode = symbol.node() as Element
 
           for ( let i = 0 ; i < charts.length ; i++) {
-            if ( types.includes( charts[i].constructor.name)) continue
             const svgElement = charts[i].drawLegendSymbol(d.legendId, true)
             entryNode.appendChild(svgElement)
           }
@@ -87,7 +84,7 @@ export class Legend implements Visitor {
           if (that.configuredLabels){
             entry.style('cursor', 'pointer')
             entry.on('click', function() {
-              let display = style.getPropertyValue('visibility')
+              const display = style.getPropertyValue('visibility')
               if (display === 'visible') {
                 if (that.configuredLabels){
                   that.axis.chartGroup.selectAll(`[data-chart-id="${d.selector}"]`).style('visibility', 'hidden')
@@ -125,13 +122,13 @@ export class Legend implements Visitor {
 
     if ( this.labels.length > 0) {
       const {columns, rows} = this.optimalColumnsRows(this.axis.width, maxWidth, this.labels.length)
-      let dx = this.axis.width / columns
-      let y = 15
-      let dy = 25
+      const dx = this.axis.width / columns
+      const y = 15
+      const dy = 25
       this.svg.attr('height', rows* dy)
       updateSelection.attr('transform', function(d, i) {
-        let column = Math.floor(i / rows)
-        let row = i % rows
+        const column = Math.floor(i / rows)
+        const row = i % rows
         return 'translate(' + column * dx + ',' + (y + row * dy) + ')'
       })
 
