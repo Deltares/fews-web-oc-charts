@@ -182,7 +182,6 @@ export class MouseOver implements Visitor {
         this.group.select('.mouse-line').attr('transform', 'translate(' + xPos + ',' + 0 + ')')
 
         // update x-value
-        // TODO: always use the first x-axis time zone and locale, is this correct?
         this.group
           .select('.mouse-x')
           .attr('transform', 'translate(' + ( xPos + 2) + ',' + (axis.height - 5) + ')')
