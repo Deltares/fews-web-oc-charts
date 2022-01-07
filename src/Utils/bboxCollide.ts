@@ -16,7 +16,7 @@ export function bboxCollide(bbox) {
     };
   }
 
-  var nodes,
+  let nodes,
       boundingBoxes,
       strength = 1,
       iterations = 1;
@@ -26,7 +26,7 @@ export function bboxCollide(bbox) {
       }
 
       function force () {
-        var i,
+        let i,
             tree,
             node,
             xi,
@@ -37,7 +37,7 @@ export function bboxCollide(bbox) {
             nx2,
             ny2
 
-            var cornerNodes = []
+            const cornerNodes = []
             nodes.forEach(function (d, i) {
               cornerNodes.push({node: d, vx: d.vx, vy: d.vy, x: d.x + (boundingBoxes[i][1][0] + boundingBoxes[i][0][0]) / 2, y: d.y + (boundingBoxes[i][0][1] + boundingBoxes[i][1][1]) / 2})
               cornerNodes.push({node: d, vx: d.vx, vy: d.vy, x: d.x + boundingBoxes[i][0][0], y: d.y + boundingBoxes[i][0][1]})
@@ -45,12 +45,13 @@ export function bboxCollide(bbox) {
               cornerNodes.push({node: d, vx: d.vx, vy: d.vy, x: d.x + boundingBoxes[i][1][0], y: d.y + boundingBoxes[i][0][1]})
               cornerNodes.push({node: d, vx: d.vx, vy: d.vy, x: d.x + boundingBoxes[i][1][0], y: d.y + boundingBoxes[i][1][1]})
             })
-            var cn = cornerNodes.length
+            const cn = cornerNodes.length
 
-        for (var k = 0; k < iterations; ++k) {
+        for (let k = 0; k < iterations; ++k) {
           tree = quadtree(cornerNodes, x, y).visitAfter(prepareCorners);
 
           for (i = 0; i < cn; ++i) {
+            // eslint-disable-next-line no-var
             var nodeI = ~~(i / 5);
             node = nodes[nodeI]
             bbi = boundingBoxes[nodeI]
@@ -65,14 +66,14 @@ export function bboxCollide(bbox) {
         }
 
         function apply (quad, x0, y0, x1, y1) {
-            var data = quad.data
+            const data = quad.data
             if (data) {
-              var bWidth = bbLength(bbi, 0),
+              const bWidth = bbLength(bbi, 0),
               bHeight = bbLength(bbi, 1);
 
               if (data.node.index !== nodeI) {
-                var dataNode = data.node
-                var bbj = boundingBoxes[dataNode.index],
+                const dataNode = data.node
+                const bbj = boundingBoxes[dataNode.index],
                   dnx1 = dataNode.x + dataNode.vx + bbj[0][0],
                   dny1 = dataNode.y + dataNode.vy + bbj[0][1],
                   dnx2 = dataNode.x + dataNode.vx + bbj[1][0],
@@ -82,17 +83,17 @@ export function bboxCollide(bbox) {
 
                 if (nx1 <= dnx2 && dnx1 <= nx2 && ny1 <= dny2 && dny1 <= ny2) {
 
-                  var xSize = [Math.min.apply(null, [dnx1, dnx2, nx1, nx2]), Math.max.apply(null, [dnx1, dnx2, nx1, nx2])]
-                  var ySize = [Math.min.apply(null, [dny1, dny2, ny1, ny2]), Math.max.apply(null, [dny1, dny2, ny1, ny2])]
+                  const xSize = [Math.min.apply(null, [dnx1, dnx2, nx1, nx2]), Math.max.apply(null, [dnx1, dnx2, nx1, nx2])]
+                  const ySize = [Math.min.apply(null, [dny1, dny2, ny1, ny2]), Math.max.apply(null, [dny1, dny2, ny1, ny2])]
 
-                  var xOverlap = bWidth + dWidth - (xSize[1] - xSize[0])
-                  var yOverlap = bHeight + dHeight - (ySize[1] - ySize[0])
+                  const xOverlap = bWidth + dWidth - (xSize[1] - xSize[0])
+                  const yOverlap = bHeight + dHeight - (ySize[1] - ySize[0])
 
-                  var xBPush = xOverlap * strength * (yOverlap / bHeight)
-                  var yBPush = yOverlap * strength * (xOverlap / bWidth)
+                  const xBPush = xOverlap * strength * (yOverlap / bHeight)
+                  const yBPush = yOverlap * strength * (xOverlap / bWidth)
 
-                  var xDPush = xOverlap * strength * (yOverlap / dHeight)
-                  var yDPush = yOverlap * strength * (xOverlap / dWidth)
+                  const xDPush = xOverlap * strength * (yOverlap / dHeight)
+                  const yDPush = yOverlap * strength * (xOverlap / dWidth)
 
                   if ((nx1 + nx2) / 2 < (dnx1 + dnx2) / 2) {
                     node.vx -= xBPush
@@ -127,7 +128,7 @@ export function bboxCollide(bbox) {
           return quad.bb = boundingBoxes[quad.data.node.index]
         }
           quad.bb = [[0,0],[0,0]]
-          for (var i = 0; i < 4; ++i) {
+          for (let i = 0; i < 4; ++i) {
             if (quad[i] && quad[i].bb[0][0] < quad.bb[0][0]) {
               quad.bb[0][0] = quad[i].bb[0][0]
             }
@@ -148,7 +149,8 @@ export function bboxCollide(bbox) {
       }
 
       force.initialize = function (_) {
-        var i, n = (nodes = _).length; boundingBoxes = new Array(n);
+        let i
+        const n = (nodes = _).length; boundingBoxes = new Array(n);
         for (i = 0; i < n; ++i) boundingBoxes[i] = bbox(nodes[i], i, nodes);
       };
 
