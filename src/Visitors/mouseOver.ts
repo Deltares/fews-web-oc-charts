@@ -10,7 +10,6 @@ export class MouseOver implements Visitor {
   private axis: CartesianAxis
   private mouseGroup: any
 
-  // TODO: we should assign the level select to an axis and give an option where to put the labels (left, right)
   constructor(trace?: string[]) {
     this.trace = trace
   }

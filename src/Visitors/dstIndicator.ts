@@ -25,7 +25,7 @@ export class DstIndicator implements Visitor {
   visit(axis: Axis) {
     this.axis = axis as CartesianAxis
     if ("x" in this.options) {
-      let axisIndex = this.options.x.axisIndex
+      const axisIndex = this.options.x.axisIndex
       if (this.axis.options.x[axisIndex] && this.axis.options.x[axisIndex].type === AxisType.time) {
         this.create(axis as CartesianAxis)
       } else {
@@ -46,11 +46,11 @@ export class DstIndicator implements Visitor {
       const axisIndex = this.options.x.axisIndex
       const scale = this.axis.xScale[axisIndex]
       const domain = scale.domain()
-      let startDate = DateTime.fromJSDate(domain[0]).setZone(this.axis.options.x[axisIndex].timeZone)
-      let endDate = DateTime.fromJSDate(domain[1]).setZone(this.axis.options.x[axisIndex].timeZone)
+      const startDate = DateTime.fromJSDate(domain[0]).setZone(this.axis.options.x[axisIndex].timeZone)
+      const endDate = DateTime.fromJSDate(domain[1]).setZone(this.axis.options.x[axisIndex].timeZone)
       if (startDate.isInDST !== endDate.isInDST ) {
         this.dstDate = this.findDst(startDate, endDate)
-        let x = scale(this.dstDate)
+        const x = scale(this.dstDate)
           this.group.attr('display', 'initial')
           if (!this.indicator) {
             this.indicator = this.group.append('g').attr('class', 'dst-indicator')
@@ -76,13 +76,13 @@ export class DstIndicator implements Visitor {
     let d2 = endDate
     let duration = d2.diff(d1)
     while (duration.as('minutes') > 1) {
-      let intermediate = d1.plus(Duration.fromMillis(duration.valueOf()/2))
+      const intermediate = d1.plus(Duration.fromMillis(duration.valueOf()/2))
       if (d1.offset === intermediate.offset ) {
         d1 = intermediate
       } else {
         d2 = intermediate
       }
-      duration = duration = d2.diff(d1)
+      duration = d2.diff(d1)
 
     }
     return d2.set({ second: 0 }).toJSDate()

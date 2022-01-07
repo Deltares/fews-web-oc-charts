@@ -76,8 +76,8 @@ export class Legend implements Visitor {
           const symbol = entry.append('g')
           const entryNode = symbol.node() as Element
 
-          for ( let i = 0 ; i < charts.length ; i++) {
-            const svgElement = charts[i].drawLegendSymbol(d.legendId, true)
+          for ( const chart of charts) {
+            const svgElement = chart.drawLegendSymbol(d.legendId, true)
             entryNode.appendChild(svgElement)
           }
 

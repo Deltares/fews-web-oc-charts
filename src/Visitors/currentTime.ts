@@ -29,7 +29,7 @@ export class CurrentTime implements Visitor {
     this.axis = axis as CartesianAxis
     this.create(axis as CartesianAxis)
     this.redraw()
-    const timer = d3.interval(() => {
+    d3.interval(() => {
       this.redraw()
     }, CurrentTime.REFRESH_INTERVAL)
   }

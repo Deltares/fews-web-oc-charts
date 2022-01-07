@@ -35,7 +35,6 @@ export class DataField implements Visitor {
   private formatter: any
   private clickCount = 0
 
-  // TODO: we can provide an optional source element or axis where we look for the value
   constructor(container, options: DataFieldOptions, formatter?: any) {
     this.container = container
     this.options = defaultsDeep({},
@@ -74,7 +73,6 @@ export class DataField implements Visitor {
   }
 
   redraw() {
-    //TODO this only works with unique ids
     const element = d3.select(`[data-chart-id="${this.options.selector}"]`).select('path')
     const data = element.datum()
     const style = window.getComputedStyle(element.node() as Element)
@@ -105,7 +103,6 @@ export class DataField implements Visitor {
     }
   }
 
-  // TODO: we should specify a datakey or always require a formatter
   getValue(d) {
     return d[0] !== undefined ? d[0].y : null
   }

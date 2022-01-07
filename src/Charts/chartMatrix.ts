@@ -129,8 +129,7 @@ export class ChartMatrix extends Chart {
       return this.options.color?.map
     } else {
       const colorMap = (value: any) => {
-        const colorMap = d3.scaleSequential(d3.interpolateWarm)
-        return colorMap(scale(value))
+        return d3.scaleSequential(d3.interpolateWarm)(scale(value))
       }
       return colorMap
     }
