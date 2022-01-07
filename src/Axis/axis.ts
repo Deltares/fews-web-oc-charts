@@ -158,8 +158,8 @@ export abstract class Axis {
   }
 
   removeAllCharts(): void {
-    for (let i=0; i< this.charts.length;i++) {
-      this.charts[i].group = null
+    for (const chart of this.charts) {
+      chart.group = null
     }
     this.charts = []
     this.chartGroup.selectAll('g').remove()

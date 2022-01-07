@@ -266,6 +266,7 @@ export class CartesianAxis extends Axis {
         case AxisPosition.Top:
           axis = d3.axisTop(scale).ticks(5)
           break
+        case AxisPosition.Bottom:
         default:
           axis = d3.axisBottom(scale).ticks(5)
       }
@@ -351,6 +352,7 @@ updateYAxis (options: CartesianAxisOptions[]): void {
       case AxisPosition.Right:
       axis = d3.axisRight(scale).ticks(5)
       break
+      case AxisPosition.Left:
       default:
       axis = d3.axisLeft(scale).ticks(5)
     }
@@ -358,13 +360,13 @@ updateYAxis (options: CartesianAxisOptions[]): void {
     grid.ticks(5).tickSize(this.width)
     if (options[key].type === AxisType.time ) {
       const offsetDomain = scale.domain().map((d) => {
-        const m = DateTime.fromJSDate(d as Date).setZone(options[key].timeZone)
+        const m = DateTime.fromJSDate(d).setZone(options[key].timeZone)
         return new Date(d.getTime() + m.offset * 60000);
       })
       const offsetScale = d3.scaleUtc().domain(offsetDomain)
       const tickValues = offsetScale.ticks(5)
       const offsetValues = tickValues.map((d) => {
-        const m = DateTime.fromJSDate(d as Date).setZone(options[key].timeZone)
+        const m = DateTime.fromJSDate(d).setZone(options[key].timeZone)
         return new Date(d.getTime() - m.offset * 60000);
       })
       axis.tickValues(offsetValues)
@@ -432,38 +434,6 @@ updateYAxis (options: CartesianAxisOptions[]): void {
     this.updateXAxis(this.options.x)
     this.updateYAxis(this.options.y)
     this.updateLabels()
-    // if (this.options.transitionTime > 0 && !this.initialDraw) {
-    //   let t = d3
-    //     .transition()
-    //     .duration(this.options.transitionTime)
-    //     .ease(d3.easeLinear)
-    //   this.canvas
-    //     .select('.x-axis')
-    //     .attr('transform', 'translate(' + 0 + ',' + this.height + ')')
-    //     .transition(t)
-    //     .call(xAxis)
-    //   this.canvas
-    //     .select('.x-grid')
-    //     .transition(t)
-    //     .call(xGrid)
-    //   this.canvas
-    //     .select('.y-axis')
-    //     .transition(t)
-    //     .call(yAxis)
-    //   this.canvas
-    //     .select('.y-grid')
-    //     .transition(t)
-    //     .call(yGrid)
-    // } else {
-    //   this.canvas
-    //     .select('.x-axis')
-    //     .attr('transform', 'translate(' + 0 + ',' + this.height + ')')
-    //     .call(xAxis)
-    //   this.canvas.select('.x-grid').call(xGrid)
-    //   this.canvas.select('.y-axis').call(yAxis)
-    //   this.canvas.select('.y-grid').call(yGrid)
-    // }
-    // this.initialDraw = false
   }
 
   updateLabels (): void {
