@@ -19,24 +19,27 @@ export class ChartArea extends Chart {
     if (!this._extent) {
       this._extent = []
       for (const key in this.dataKeys) {
-        if (key === 'x') {
-          const path = this.dataKeys[key]
-          this._extent[path] = d3.extent(this._data, (d) => d[path])
-        } else if (key === 'y') {
-          const path = this.dataKeys[key]
-          const min = d3.min(this._data, function(d: any) {
-            if (d[path] === null) return undefined
-            return d3.min(d[path])
-          })
-          const max = d3.max(this._data, function(d: any) {
-            if (d[path] === null) return undefined
-            return d3.max(d[path])
-          })
-          this._extent[path] = [min, max]
-        }
+        const path = this.dataKeys[key]
+        this._extent[path] = this.dataExtentFor(key, path)
       }
     }
     return this._extent
+  }
+
+  dataExtentFor(key, path) {
+    if (key === 'x') {
+      return d3.extent(this._data, (d) => d[path])
+    } else if (key === 'y') {
+      const min = d3.min(this._data, function(d: any) {
+        if (d[path] === null) return undefined
+        return d3.min(d[path])
+      })
+      const max = d3.max(this._data, function(d: any) {
+        if (d[path] === null) return undefined
+        return d3.max(d[path])
+      })
+      return [min, max]
+    }
   }
 
   plotterCartesian(axis: CartesianAxis, axisIndex: AxisIndex) {

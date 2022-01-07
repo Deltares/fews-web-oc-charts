@@ -22,23 +22,26 @@ export class ChartProgress extends Chart {
       this._extent = []
       for (const key in this.dataKeys) {
         const path = this.dataKeys[key]
-        if (key  === 'radial') {
-          this._extent[path] = this._data.map((d) => {return d[path]})
-        } else {
-          const min = d3.min(this._data, function (d: any) {
-            if (d[path] === null) return undefined
-            return d3.min(d[path])
-          })
-          const max = d3.max(this._data, function (d: any) {
-            if (d[path] === null) return undefined
-            return d3.max(d[path])
-          })
-          this._extent[path] = [min, max]
-        }
-
+        this._extent[path] = this.dataExtentFor(key, path)
       }
     }
     return this._extent
+  }
+
+  dataExtentFor(key, path) {
+    if (key  === 'radial') {
+      return this._data.map((d) => {return d[path]})
+    } else {
+      const min = d3.min(this._data, function (d: any) {
+        if (d[path] === null) return undefined
+        return d3.min(d[path])
+      })
+      const max = d3.max(this._data, function (d: any) {
+        if (d[path] === null) return undefined
+        return d3.max(d[path])
+      })
+      return [min, max]
+    }
   }
 
   defaultToolTipFormatterCartesian(d) {
