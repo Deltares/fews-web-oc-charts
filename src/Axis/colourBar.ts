@@ -32,8 +32,6 @@ type GroupSelection = d3.Selection<SVGElement, any, SVGElement, any>
 /**
  * Generates a random (hopefully unique) ID
  *
- * TODO: some UUID rather than this...
- *
  * @param length number of characters in the ID
  * @returns a random ID
  */
@@ -219,11 +217,7 @@ export class ColourBar {
 
     // The y-axis is inverted in the SVG, so for vertical scale bars the range is inverted.
     const scale = this.scale
-    const axis =
-      this.options.position === AxisPosition.Bottom ? d3.axisBottom(scale) :
-      this.options.position === AxisPosition.Top ? d3.axisTop(scale) :
-      this.options.position === AxisPosition.Right ? d3.axisRight(scale) :
-      d3.axisLeft(scale)
+    const axis = this.initAxis(scale, this.options)
 
     if ( this.options.ticks ) {
       axis.ticks(this.options.ticks)
@@ -265,6 +259,20 @@ export class ColourBar {
         .attr('y', -9)
         .attr('text-anchor', 'middle')
         .text(this.options.title)
+    }
+  }
+
+  private initAxis(scale: any, options: ColourBarOptions) {
+    switch (options.position) {
+      case AxisPosition.Bottom:
+        return d3.axisBottom(scale)
+      case AxisPosition.Top:
+        return d3.axisTop(scale)
+      case AxisPosition.Right:
+        return d3.axisRight(scale)
+      case AxisPosition.Left:
+      default:
+        return d3.axisLeft(scale)
     }
   }
 
