@@ -258,12 +258,6 @@ export class MouseOver implements Visitor {
 
   redraw(): void {
     this.updateLineIndicators()
-    // FIXME: should resize mouse-events group (is now done by zoomHandler)
-    // this.mouseGroup
-    //   .select('rect')
-    //   .attr('height', this.axis.height)
-    //   .attr('width', this.axis.width)
-
     this.group.select('.mouse-line').attr('d', () => {
       let d = 'M' + 0 + ',' + this.axis.height
       d += ' ' + 0 + ',' + 0

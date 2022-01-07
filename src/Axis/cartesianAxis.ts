@@ -253,7 +253,6 @@ export class CartesianAxis extends Axis {
       chart.plotter(this, chart.axisIndex)
     }
     this.updateGrid()
-    // FIXME: move to Axis.ts?
     for (const visitor of this.visitors) {
       visitor.redraw()
     }

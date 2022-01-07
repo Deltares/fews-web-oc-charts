@@ -220,7 +220,6 @@ export class ZoomHandler implements Visitor {
     this.axis.redraw({ x: { autoScale: true }, y: { autoScale: true } })
   }
 
-  // FIXME: remove when IDrawble is introduced
   redraw(): void {
     this.mouseGroup
       .select('rect')
