@@ -2,7 +2,6 @@ import * as d3 from 'd3'
 import { Axis, AxesOptions, AxisType, AxisOptions } from './axis'
 import defaultsDeep from 'lodash/defaultsDeep'
 import { DateTime } from 'luxon'
-import { TooltipPosition } from '../Tooltip'
 
 // import { scaleLinear } from 'd3-scale'
 
@@ -11,8 +10,7 @@ export enum Direction {
   ANTICLOCKWISE = 1
 }
 
-interface RadialAxisOptions extends AxisOptions {
-}
+type RadialAxisOptions = AxisOptions
 
 interface AngularAxisOptions extends AxisOptions {
   direction?: number
@@ -90,8 +88,8 @@ export class PolarAxis extends Axis {
 
   redraw() {
     let radialExtent = new Array(0)
-    for (let chart of this.charts) {
-      let chartRadialExtent = chart.extent[chart.dataKeys.radial]
+    for (const chart of this.charts) {
+      const chartRadialExtent = chart.extent[chart.dataKeys.radial]
       if (this.radialAxisOptions.type === AxisType.band) {
         radialExtent = d3.merge([radialExtent, [].concat(...chartRadialExtent)])
       } else {
@@ -99,7 +97,7 @@ export class PolarAxis extends Axis {
       }
     }
     this.radialScale.domain(radialExtent)
-    for (let chart of this.charts) {
+    for (const chart of this.charts) {
       chart.plotter(this, chart.axisIndex)
     }
     this.updateGrid()
@@ -111,19 +109,19 @@ export class PolarAxis extends Axis {
 
   updateGrid() {
     // draw the circular grid lines
-    let g = this.canvas
+    const g = this.canvas
     // draw the radial axis
-    let rAxis = d3.axisBottom(this.radialScale).ticks(5)
-    let radialAxis = this.canvas.select('.r-axis').call(rAxis)
+    const rAxis = d3.axisBottom(this.radialScale).ticks(5)
+    const radialAxis = this.canvas.select('.r-axis').call(rAxis)
 
-    let draw = (context, radius) => {
+    const draw = (context, radius) => {
       context.arc(0, 0, radius, -this.direction * this.angularRange[0] - this.intercept, -this.direction * this.angularRange[1] - this.intercept, this.direction === Direction.ANTICLOCKWISE) // draw an arc, the turtle ends up at ⟨194.4,108.5⟩
       return context;
     }
 
     if (this.radialAxisOptions.type !== AxisType.band) {
-      let radialTicks = this.radialScale.ticks(5).map(this.radialScale)
-      let drawRadial = this.canvas
+      const radialTicks = this.radialScale.ticks(5).map(this.radialScale)
+      const drawRadial = this.canvas
         .select('.r-grid')
         .selectAll('path')
         .data(radialTicks)
@@ -145,13 +143,13 @@ export class PolarAxis extends Axis {
     let angularTicks
     if (this.angularAxisOptions.type === AxisType.time) {
       const scale = this.angularScale.copy()
-      let offsetDomain = scale.domain().map((d) => {
+      const offsetDomain = scale.domain().map((d) => {
         const m = DateTime.fromJSDate(d as Date).setZone(this.angularAxisOptions.timeZone)
         return new Date(d.getTime() + m.offset * 60000);
       })
-      let offsetScale = d3.scaleUtc().domain(offsetDomain)
-      let tickValues = offsetScale.ticks(10)
-      let offsetValues = tickValues.map((d) => {
+      const offsetScale = d3.scaleUtc().domain(offsetDomain)
+      const tickValues = offsetScale.ticks(10)
+      const offsetValues = tickValues.map((d) => {
         const m = DateTime.fromJSDate(d as Date).setZone(this.angularAxisOptions.timeZone)
         return new Date(d.getTime() - m.offset * 60000);
       })
@@ -162,17 +160,17 @@ export class PolarAxis extends Axis {
       let step = d3.tickIncrement(domain[0], domain[1], 8)
 
       step = step >= 100 ? 90 : step >= 50 ? 45 : step >= 20 ? 15 : step
-      let start = Math.ceil(domain[0] / step) * step
-      let stop = Math.floor(domain[1] / step + 1) * step
+      const start = Math.ceil(domain[0] / step) * step
+      const stop = Math.floor(domain[1] / step + 1) * step
       angularTicks = d3.range(start, stop, step)
     }
 
-    let suffix: string = ''
-    let offset = 10
+    const suffix = ''
+    const offset = 10
 
     // angularTicks = angularTicks.map(this.radToDegrees)
 
-    let drawAngular = this.canvas
+    const drawAngular = this.canvas
       .select('.t-grid')
       .selectAll('line')
       .data(angularTicks)
@@ -186,10 +184,10 @@ export class PolarAxis extends Axis {
         return 'rotate(' + (this.radToDegrees( -this.intercept - this.direction * this.angularScale(d))) + ')'
       })
 
-    let groupRotate = function(d: number) {
+    const groupRotate = function(d: number) {
       return 'rotate(' + this.radToDegrees( -this.direction * this.angularScale(d)) + ')'
     }.bind(this)
-    let drawTicks = this.canvas
+    const drawTicks = this.canvas
       .select('.t-axis')
       .selectAll('g')
       .data(angularTicks)
@@ -206,7 +204,7 @@ export class PolarAxis extends Axis {
       .attr('x2', this.outerRadius + 6)
       .attr('y2', 0)
 
-    let textRotate = function(d) {
+    const textRotate = function(d) {
       return (
         'rotate(' +
         this.radToDegrees(this.direction * this.angularScale(d) + this.intercept) +
@@ -217,8 +215,8 @@ export class PolarAxis extends Axis {
       )
     }.bind(this)
 
-    let anchor = function(d) {
-      let dNorthCW = (( this.radToDegrees(Math.PI / 2 - this.intercept - this.direction * this.angularScale(d)) % 360) + 360) % 360
+    const anchor = function(d) {
+      const dNorthCW = (( this.radToDegrees(Math.PI / 2 - this.intercept - this.direction * this.angularScale(d)) % 360) + 360) % 360
       if (dNorthCW > 0 && dNorthCW < 180) {
         return 'start'
       } else if (dNorthCW > 180 && dNorthCW < 360) {
@@ -245,6 +243,7 @@ export class PolarAxis extends Axis {
       case AxisType.time:
         this.angularScale = d3.scaleUtc()
         break
+      case AxisType.value:
       default:
         this.angularScale = d3.scaleLinear()
     }
@@ -257,6 +256,7 @@ export class PolarAxis extends Axis {
       case AxisType.band:
         this.radialScale = d3.scaleBand()
         break
+      case AxisType.value:
       default:
         this.radialScale = d3.scaleLinear()
     }
@@ -264,10 +264,10 @@ export class PolarAxis extends Axis {
   }
 
   protected initGrid() {
-    let radialGrid = this.canvas.append('g').attr('class', 'grid r-grid')
-    let angularGrid = this.canvas.append('g').attr('class', 'grid t-grid')
-    let radialAxis = this.canvas.append('g').attr('class', 'axis r-axis')
-    let angularAxis = this.canvas
+    const radialGrid = this.canvas.append('g').attr('class', 'grid r-grid')
+    const angularGrid = this.canvas.append('g').attr('class', 'grid t-grid')
+    const radialAxis = this.canvas.append('g').attr('class', 'axis r-axis')
+    const angularAxis = this.canvas
       .append('g')
       .attr('class', 'axis t-axis')
       .attr('transform', 'rotate(' + -this.intercept * 180 / Math.PI + ')')
