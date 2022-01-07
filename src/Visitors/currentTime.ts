@@ -8,7 +8,6 @@ type CurrentTimeOptions = {
 }
 
 export class CurrentTime implements Visitor {
-  private timer: d3.Timer
   private group: any
   private line: any
   private indicator: any
@@ -30,7 +29,7 @@ export class CurrentTime implements Visitor {
     this.axis = axis as CartesianAxis
     this.create(axis as CartesianAxis)
     this.redraw()
-    this.timer = d3.interval(() => {
+    const timer = d3.interval(() => {
       this.redraw()
     }, CurrentTime.REFRESH_INTERVAL)
   }
@@ -48,7 +47,7 @@ export class CurrentTime implements Visitor {
     if (this.options.x) {
       const index = this.options.x.axisIndex
       scale = this.axis.xScale[index]
-    } else if (this.options.x) {
+    } else if (this.options.y) {
       const index = this.options.y.axisIndex
       scale = this.axis.yScale[index]
     } else {
