@@ -144,13 +144,15 @@ export function bboxCollide(bbox) {
         }
       }
 
-      function bbLength (bbox, heightWidth) {
-        return bbox[1][heightWidth] - bbox[0][heightWidth]
+      function bbLength (rect, heightWidth) {
+        return rect[1][heightWidth] - rect[0][heightWidth]
       }
 
       force.initialize = function (_) {
         let i
-        const n = (nodes = _).length; boundingBoxes = new Array(n);
+        const nodes = _
+        const n = nodes.length;
+        const boundingBoxes = new Array(n);
         for (i = 0; i < n; ++i) boundingBoxes[i] = bbox(nodes[i], i, nodes);
       };
 
@@ -163,7 +165,10 @@ export function bboxCollide(bbox) {
       };
 
       force.bbox = function (_) {
-        return arguments.length ? (bbox = typeof _ === "function" ? _ : constant(+_), force) : bbox;
+        if (arguments.length) {
+          return (bbox = typeof _ === "function" ? _ : constant(+_), force)
+        }
+        return bbox
       };
 
       return force;

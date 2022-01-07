@@ -22,20 +22,24 @@ export class ChartRange extends Chart {
       this._extent = []
       for (const key in this.dataKeys) {
         const path = this.dataKeys[key]
-        const min = d3.min(this._data, function(d: any) {
-          if (d[path] === null) return undefined
-          if (Array.isArray(d[path])) return d3.min(d[path])
-          return d[path]
-        })
-        const max = d3.max(this._data, function(d: any) {
-          if (d[path] === null) return undefined
-          if (Array.isArray(d[path])) return d3.min(d[path])
-          return d[path]
-        })
-        this._extent[path] = [min, max]
+        this._extent[path] = this.dataExtentFor(path)
       }
     }
     return this._extent
+  }
+
+  dataExtentFor(path) {
+    const min = d3.min(this._data, function(d: any) {
+      if (d[path] === null) return undefined
+      if (Array.isArray(d[path])) return d3.min(d[path])
+      return d[path]
+    })
+    const max = d3.max(this._data, function(d: any) {
+      if (d[path] === null) return undefined
+      if (Array.isArray(d[path])) return d3.min(d[path])
+      return d[path]
+    })
+    return [min, max]
   }
 
   defaultToolTipFormatterCartesian(d) {

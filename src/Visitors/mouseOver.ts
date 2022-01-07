@@ -56,8 +56,7 @@ export class MouseOver implements Visitor {
         let rMin = Infinity
         let xPos = -window.innerWidth
         // determine closest point over all lines
-        axis.canvas.selectAll('.mouse-per-line').each(function(d, i) {
-          // let element = d3.select(d).select('path')
+        axis.canvas.selectAll('.mouse-per-line').each((d, i) => {
           const selector = `[data-chart-id="${d}"]`
           const element = axis.canvas.select(selector).select('path')
           if (element.node() !== null) {
@@ -71,7 +70,7 @@ export class MouseOver implements Visitor {
               const mouseValue = xScale.invert(mouse[0])
               const xKey = chart.dataKeys.x
               const yKey = chart.dataKeys.y
-              const bisect = d3.bisector(function(d) {
+              const bisect = d3.bisector((d) => {
                 return d[xKey]
               }).right
               const datum = element.datum()
@@ -101,7 +100,6 @@ export class MouseOver implements Visitor {
         s.precision = d3.precisionFixed((yExtent[1] - yExtent[0]) / 100 )
 
         axis.canvas.selectAll('.mouse-per-line').attr('transform', (d) => {
-          // let element = d3.select(d).select('path')
           const selector = `[data-chart-id="${d}"]`
           const chart = axis.charts.find(chart => chart.id === d)
           const xIndex = chart.axisIndex.x.axisIndex
@@ -110,7 +108,7 @@ export class MouseOver implements Visitor {
           const yScale = axis.yScale[yIndex]
           const xKey = chart.dataKeys.x
           const yKey = chart.dataKeys.y
-          const bisect = d3.bisector(function(d) {
+          const bisect = d3.bisector((d) => {
             return d[xKey]
           }).left
 
@@ -141,7 +139,7 @@ export class MouseOver implements Visitor {
           }
 
           // find closest point
-          let x0 = xPos
+          let x0
           const x1 = xScale(datum[idx-1][xKey])
           const x2 = xScale(datum[idx][xKey])
           if ((xPos - x1) > (x2 - xPos)) {

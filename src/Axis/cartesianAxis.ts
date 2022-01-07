@@ -18,6 +18,15 @@ export interface CartesianAxesOptions extends AxesOptions {
   y?: CartesianAxisOptions[];
 }
 
+function anchorForAngle(angle) {
+  if (angle < 180) {
+    return 'start'
+  } else if (angle > 180) {
+    return 'end'
+  }
+  return 'middle'
+}
+
 export class CartesianAxis extends Axis {
   canvas: any
   container: HTMLElement
@@ -30,6 +39,9 @@ export class CartesianAxis extends Axis {
     x: [ { type: AxisType.value, labelAngle: 0 } ],
     y: [ { type: AxisType.value, labelAngle: 0 } ]
   }
+
+
+
 
   constructor(
     container: HTMLElement,
@@ -298,11 +310,7 @@ export class CartesianAxis extends Axis {
         grid.tickValues(d3.range(start, stop, step))
       }
       const x = 0
-      const y = ( options[key].position === AxisPosition.AtZero )
-        ? this.yScale[0](0)
-        : ( options[key].position === AxisPosition.Bottom )
-          ? this.height
-          : 0
+      const y = this.yPositionAxis(options[key].position)
       const translateString = `translate(${x},${y})`
 
       const angle = options[key].labelAngle || 0
@@ -324,8 +332,7 @@ export class CartesianAxis extends Axis {
             .attr("transform", `rotate(${angle})`);
           break
         default:
-          const anchor = normalizedAngle < 180 ? 'start' :
-          normalizedAngle > 180 ? 'end' : 'middle'
+          const anchor = anchorForAngle(normalizedAngle)
           const offset = options[key].position === AxisPosition.Top ? -15 : 15
           axisHandle
             .selectAll("text")
@@ -382,11 +389,8 @@ updateYAxis (options: CartesianAxisOptions[]): void {
       axis.tickValues(d3.range(start, stop, step))
       grid.tickValues(d3.range(start, stop, step))
     }
-    const x = ( options[key].position === AxisPosition.AtZero )
-    ? this.xScale[0](0)
-    : ( options[key].position === AxisPosition.Right )
-      ? this.width
-      : 0
+
+    const x = this.xPositionAxis(options[key].position)
     const y = 0
     const translateString = `translate(${x},${y})`
 
@@ -409,8 +413,7 @@ updateYAxis (options: CartesianAxisOptions[]): void {
           .attr("transform", `rotate(${angle})`);
         break
       default:
-        const anchor = normalizedAngle < 180 ? 'end' :
-          normalizedAngle > 180 ? 'start' : 'middle'
+        const anchor = anchorForAngle(normalizedAngle)
         const offset = options[key].position === AxisPosition.Right ? 15 : -15
         axisHandle
           .selectAll("text")
@@ -606,5 +609,23 @@ updateYAxis (options: CartesianAxisOptions[]): void {
         .attr('text-anchor', 'start')
         .text(this.options.x[1].unit)
     }
+  }
+
+  xPositionAxis(position) {
+    if (position === AxisPosition.AtZero) {
+      return this.xScale[0](0)
+    } else if (position === AxisPosition.Right) {
+      return this.width
+    }
+    return 0
+  }
+
+  yPositionAxis(position) {
+    if (position === AxisPosition.AtZero) {
+      return this.xScale[0](0)
+    } else if (position === AxisPosition.Bottom) {
+      return this.height
+    }
+    return 0
   }
 }

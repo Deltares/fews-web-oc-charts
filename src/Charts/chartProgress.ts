@@ -142,10 +142,6 @@ export class ChartProgress extends Chart {
         .style('stroke', (d: any) => {
           return colorMap[d[colorKey]]
         })
-      // if (this.options.style) {
-      //   Object.entries(this.options.style).forEach(
-      //     ([prop, val]) => enter.style(prop, val))
-      // }
     }
 
     const update = elements.transition(t).call(arcTween, this.previousData)
