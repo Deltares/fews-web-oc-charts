@@ -51,150 +51,9 @@ export class MouseOver implements Visitor {
       .on('pointermove', (event) => {
         // mouse moving over canvas
         const mouse = d3.pointer(event)
-        const popupData = {}
-        let allHidden = true
-        let rMin = Infinity
-        let xPos = -window.innerWidth
         // determine closest point over all lines
-        axis.canvas.selectAll('.mouse-per-line').each((d, i) => {
-          const selector = `[data-chart-id="${d}"]`
-          const element = axis.canvas.select(selector).select('path')
-          if (element.node() !== null) {
-            const style = window.getComputedStyle(element.node() as Element)
-            if (style === null || style.getPropertyValue('visibility') === 'hidden') {
-              //skip
-            } else {
-              const chart = axis.charts.find(chart => chart.id === d)
-              const xIndex = chart.axisIndex.x.axisIndex
-              const xScale = axis.xScale[xIndex]
-              const mouseValue = xScale.invert(mouse[0])
-              const xKey = chart.dataKeys.x
-              const yKey = chart.dataKeys.y
-              const bisect = d3.bisector((d) => {
-                return d[xKey]
-              }).right
-              const datum = element.datum()
-              const idx = bisect(datum, mouseValue)
-              if ( idx -1 >= 0 && datum[idx-1][yKey] !== null) {
-                const x0 = xScale(datum[idx-1][xKey])
-                const r0 = (x0 - mouse[0] ) ** 2
-                if ( r0 < rMin) {
-                  rMin = r0
-                  xPos = xScale(datum[idx-1][xKey])
-                }
-              }
-              if ( idx < datum.length && datum[idx][yKey] !== null) {
-                const x1 = xScale(datum[idx][xKey])
-                const r1 = ( x1 - mouse[0]) ** 2
-                if ( r1 < rMin) {
-                  rMin = r1
-                  xPos = xScale(datum[idx][xKey])
-                }
-              }
-            }
-          }
-        })
-
-        const yExtent = this.axis.extent.y
-        const s = d3.formatSpecifier("f")
-        s.precision = d3.precisionFixed((yExtent[1] - yExtent[0]) / 100 )
-
-        axis.canvas.selectAll('.mouse-per-line').attr('transform', (d) => {
-          const selector = `[data-chart-id="${d}"]`
-          const chart = axis.charts.find(chart => chart.id === d)
-          const xIndex = chart.axisIndex.x.axisIndex
-          const xScale = axis.xScale[xIndex]
-          const yIndex = chart.axisIndex.y.axisIndex
-          const yScale = axis.yScale[yIndex]
-          const xKey = chart.dataKeys.x
-          const yKey = chart.dataKeys.y
-          const bisect = d3.bisector((d) => {
-            return d[xKey]
-          }).left
-
-          const element = axis.canvas.select(selector).select('path')
-          if (element.node() === null) return 'translate(0,' + -window.innerHeight + ')'
-          const style = window.getComputedStyle(element.node() as Element)
-          if (style === null || style.getPropertyValue('visibility') === 'hidden') {
-            return 'translate(0,' + -window.innerHeight + ')'
-          }
-          allHidden = false
-          const stroke = style.getPropertyValue('stroke')
-          const datum = element.datum()
-          if (datum === null || datum.length === 0) {
-            return 'translate(0,' + -window.innerHeight + ')'
-          }
-          const xValue = xScale.invert(xPos)
-          let idx = bisect(datum, xValue)
-          // before first point
-          if (idx === 0 && datum[idx][xKey] >= xValue) {
-            return 'translate(0,' + -window.innerHeight + ')'
-          }
-          // after last first point
-          if (idx === datum.length-1 && xValue >= datum[idx][xKey]) {
-            return 'translate(0,' + -window.innerHeight + ')'
-          }
-          if (!datum[idx] || datum[idx][yKey] === null || datum[idx-1][yKey] === null) {
-            return 'translate(0,' + -window.innerHeight + ')'
-          }
-
-          // find closest point
-          let x0
-          const x1 = xScale(datum[idx-1][xKey])
-          const x2 = xScale(datum[idx][xKey])
-          if ((xPos - x1) > (x2 - xPos)) {
-            x0 = x2
-          } else {
-            x0 = x1
-            idx = idx -1
-          }
-
-          const valy = datum[idx][yKey]
-          let posy = yScale(valy)
-
-          // labels
-          let yLabel
-          if (Array.isArray(posy)) {
-            const labels = posy
-            for (let i = 0; i < posy.length; i++) {
-              labels[i] = d3.format(s.toString())(yScale.invert(posy[i]))
-            }
-            yLabel = labels.join(':')
-            posy = posy[0]
-          } else {
-            yLabel = d3.format(s.toString())(valy)
-          }
-          // outside range
-          posy =
-            posy < yScale.range()[1] || posy > yScale.range()[0]
-              ? -window.innerHeight
-              : posy
-          popupData[d] = { x: xScale.invert(x0), y: yLabel, color: stroke }
-          return 'translate(' + x0 + ',' + posy + ')'
-        })
-
-        // if no data present for any chart show mouse postion
-        if (Object.keys(popupData).length === 0) xPos = mouse[0]
-
-        // update line
-        this.group.select('.mouse-line').attr('transform', 'translate(' + xPos + ',' + 0 + ')')
-
-        // update x-value
-        this.group
-          .select('.mouse-x')
-          .attr('transform', 'translate(' + ( xPos + 2) + ',' + (axis.height - 5) + ')')
-          .select('text')
-          .text(dateFormatter(axis.xScale[0].invert(xPos), 'yyyy-MM-dd HH:mm ZZZZ', { timeZone: this.axis.options.x[0].timeZone, locale:  this.axis.options.x[0].locale } ) )
-        if (allHidden) {
-          axis.tooltip.hide()
-          return
-        }
-        let htmlContent = ''
-        for (const label in popupData) {
-          const v = popupData[label]
-          htmlContent += `<span style="color: ${v.color}"> ${v.y} </span><br/>`
-        }
-        axis.tooltip.update(htmlContent, TooltipPosition.Right, mouse[0] + axis.margin.left, mouse[1] + axis.margin.top)
+        const xPos = this.xPosForCharts(mouse)
+        this.updateMousePerLine(mouse, xPos)
       })
   }
 
@@ -224,6 +83,168 @@ export class MouseOver implements Visitor {
           .getPropertyValue('stroke')
       })
     this.group.select('.mouse-x text').style('fill-opacity', '1')
+  }
+
+  xPosForCharts(mouse) {
+    const axis = this.axis
+    let rMin = Infinity
+    let xPos = mouse[0]
+    axis.canvas.selectAll('.mouse-per-line').each((d, i) => {
+      const selector = `[data-chart-id="${d}"]`
+      const element = axis.canvas.select(selector).select('path')
+      if (element.node() !== null) {
+        if (this.isHidden(element)) {
+          //skip
+        } else {
+          const datum = element.datum();
+          [ xPos, rMin ] = this.closestPointForChart(d, datum, mouse[0], xPos, rMin)
+        }
+      }
+    })
+    return xPos
+  }
+
+  isHidden(element) {
+    const style = window.getComputedStyle(element.node() as Element)
+    return style === null || style.getPropertyValue('visibility') === 'hidden'
+  }
+
+  distanceSquared(x0, x1) {
+    return (x0 - x1) ** 2
+  }
+
+  closestPointForChart(id: string, datum: any[], x: number, xPos: number, rMin: number) {
+    const axis = this.axis
+    const chart = axis.charts.find(c => c.id === id)
+    const xIndex = chart.axisIndex.x.axisIndex
+    const xScale = axis.xScale[xIndex]
+    const mouseValue = xScale.invert(x)
+    const xKey = chart.dataKeys.x
+    const yKey = chart.dataKeys.y
+    const bisect = d3.bisector((data) => {
+      return data[xKey]
+    }).right
+    const idx = bisect(datum, mouseValue)
+    if ( idx -1 >= 0 && datum[idx-1][yKey] !== null) {
+      const x0 = xScale(datum[idx-1][xKey])
+      const r0 = this.distanceSquared(x0, x)
+      if (r0 < rMin) {
+        rMin = r0
+        xPos = x0
+      }
+    }
+    if ( idx < datum.length && datum[idx][yKey] !== null) {
+      const x1 = xScale(datum[idx][xKey])
+      const r1 = this.distanceSquared(x1, x)
+      if (r1 < rMin) {
+        rMin = r1
+        xPos = x1
+      }
+    }
+    return [xPos, rMin]
+  }
+
+  updateMousePerLine(mouse, xPos) {
+    const axis = this.axis
+    let allHidden = true
+    const popupData = {}
+
+    const yExtent = axis.extent.y
+    const s = d3.formatSpecifier("f")
+    s.precision = d3.precisionFixed((yExtent[1] - yExtent[0]) / 100 )
+
+    axis.canvas.selectAll('.mouse-per-line').attr('transform', (d) => {
+      const selector = `[data-chart-id="${d}"]`
+      const chart = axis.charts.find(c => c.id === d)
+      const xIndex = chart.axisIndex.x.axisIndex
+      const xScale = axis.xScale[xIndex]
+      const yIndex = chart.axisIndex.y.axisIndex
+      const yScale = axis.yScale[yIndex]
+      const xKey = chart.dataKeys.x
+      const yKey = chart.dataKeys.y
+      const bisect = d3.bisector((data) => {
+        return data[xKey]
+      }).left
+
+      const element = axis.canvas.select(selector).select('path')
+      if (element.node() === null || this.isHidden(element)) {
+        return 'translate(0,' + -window.innerHeight + ')'
+      }
+      allHidden = false
+      const style = window.getComputedStyle(element.node() as Element)
+      const stroke = style.getPropertyValue('stroke')
+      const datum = element.datum()
+      if (datum === null || datum.length === 0) {
+        return 'translate(0,' + -window.innerHeight + ')'
+      }
+      const xValue = xScale.invert(xPos)
+      let idx = bisect(datum, xValue)
+      // before first point
+      if (idx === 0 && datum[idx][xKey] >= xValue) {
+        return 'translate(0,' + -window.innerHeight + ')'
+      }
+      // after last first point
+      if (idx === datum.length-1 && xValue >= datum[idx][xKey]) {
+        return 'translate(0,' + -window.innerHeight + ')'
+      }
+      if (!datum[idx] || datum[idx][yKey] === null || datum[idx-1][yKey] === null) {
+        return 'translate(0,' + -window.innerHeight + ')'
+      }
+
+      // find closest point
+      let x0
+      const x1 = xScale(datum[idx-1][xKey])
+      const x2 = xScale(datum[idx][xKey])
+      if ((xPos - x1) > (x2 - xPos)) {
+        x0 = x2
+      } else {
+        x0 = x1
+        idx = idx -1
+      }
+
+      const valy = datum[idx][yKey]
+      let posy = yScale(valy)
+
+      // labels
+      let yLabel
+      if (Array.isArray(posy)) {
+        const labels = posy
+        for (let i = 0; i < posy.length; i++) {
+          labels[i] = d3.format(s.toString())(yScale.invert(posy[i]))
+        }
+        yLabel = labels.join(':')
+        posy = posy[0]
+      } else {
+        yLabel = d3.format(s.toString())(valy)
+      }
+      // outside range
+      posy =
+        posy < yScale.range()[1] || posy > yScale.range()[0]
+          ? -window.innerHeight
+          : posy
+      popupData[d] = { x: xScale.invert(x0), y: yLabel, color: stroke }
+      return 'translate(' + x0 + ',' + posy + ')'
+    })
+
+    // update line
+    this.group.select('.mouse-line').attr('transform', 'translate(' + xPos + ',' + 0 + ')')
+
+    // update x-value
+    this.group
+      .select('.mouse-x')
+      .attr('transform', 'translate(' + ( xPos + 2) + ',' + (axis.height - 5) + ')')
+      .select('text')
+      .text(dateFormatter(axis.xScale[0].invert(xPos), 'yyyy-MM-dd HH:mm ZZZZ', { timeZone: axis.options.x[0].timeZone, locale: axis.options.x[0].locale } ) )
+    if (allHidden) {
+      axis.tooltip.hide()
+      return
+    }
+    let htmlContent = ''
+    for (const label in popupData) {
+      const v = popupData[label]
+      htmlContent += `<span style="color: ${v.color}"> ${v.y} </span><br/>`
+    }
+    axis.tooltip.update(htmlContent, TooltipPosition.Right, mouse[0] + axis.margin.left, mouse[1] + axis.margin.top)
   }
 
   updateLineIndicators (): void {
