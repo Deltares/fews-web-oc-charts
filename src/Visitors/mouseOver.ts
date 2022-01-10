@@ -146,14 +146,13 @@ export class MouseOver implements Visitor {
 
   updateMousePerLine(mouse, xPos) {
     const axis = this.axis
-    let allHidden = true
-    const popupData = {}
+    const pointData = {}
 
     const yExtent = axis.extent.y
     const s = d3.formatSpecifier("f")
     s.precision = d3.precisionFixed((yExtent[1] - yExtent[0]) / 100 )
 
-    axis.canvas.selectAll('.mouse-per-line').attr('transform', (d) => {
+    axis.canvas.selectAll('.mouse-per-line').each((d, i) => {
       const selector = `[data-chart-id="${d}"]`
       const chart = axis.charts.find(c => c.id === d)
       const xIndex = chart.axisIndex.x.axisIndex
@@ -168,27 +167,26 @@ export class MouseOver implements Visitor {
 
       const element = axis.canvas.select(selector).select('path')
       if (element.node() === null || this.isHidden(element)) {
-        return 'translate(0,' + -window.innerHeight + ')'
+        return
       }
-      allHidden = false
       const style = window.getComputedStyle(element.node() as Element)
       const stroke = style.getPropertyValue('stroke')
       const datum = element.datum()
       if (datum === null || datum.length === 0) {
-        return 'translate(0,' + -window.innerHeight + ')'
+        return
       }
       const xValue = xScale.invert(xPos)
       let idx = bisect(datum, xValue)
       // before first point
       if (idx === 0 && datum[idx][xKey] >= xValue) {
-        return 'translate(0,' + -window.innerHeight + ')'
+        return
       }
       // after last point
-      if (idx === datum.length-1 && xValue > datum[idx][xKey]) {
-        return 'translate(0,' + -window.innerHeight + ')'
+      if (idx === datum.length-1 && mouse[0] > xPos) {
+        return
       }
       if (!datum[idx] || datum[idx][yKey] === null || datum[idx-1][yKey] === null) {
-        return 'translate(0,' + -window.innerHeight + ')'
+        return
       }
 
       // find closest point
@@ -222,29 +220,52 @@ export class MouseOver implements Visitor {
         posy < yScale.range()[1] || posy > yScale.range()[0]
           ? -window.innerHeight
           : posy
-      popupData[d] = { x: xScale.invert(x0), y: yLabel, color: stroke }
-      return 'translate(' + x0 + ',' + posy + ')'
+        pointData[d] = { x0, y0: posy, x: xScale.invert(x0), y: yLabel, color: stroke }
     })
 
-    // update line
-    this.group.select('.mouse-line').attr('transform', 'translate(' + xPos + ',' + 0 + ')')
+    axis.canvas.selectAll('.mouse-per-line').attr('transform', (id, i) => {
+      const keys = Object.keys(pointData)
+      if (keys.includes(id)) {
+        return `translate(${pointData[id].x0} , ${pointData[id].y0})`
+      } else {
+        return `translate(0, ${-window.innerWidth})`
+      }
+    })
 
-    // update x-value
+    if (Object.keys(pointData).length === 0) {
+      xPos = mouse[0]
+    }
+    // update line
+    this.updateXLine(xPos)
+    this.updateXValue(xPos)
+    this.updateTooltip(pointData, mouse)
+  }
+
+  updateXLine(xPos: number) {
+    this.group.select('.mouse-line').attr('transform', 'translate(' + xPos + ',' + 0 + ')')
+  }
+
+  updateXValue(xPos) {
+    const axis = this.axis
     this.group
       .select('.mouse-x')
       .attr('transform', 'translate(' + ( xPos + 2) + ',' + (axis.height - 5) + ')')
       .select('text')
       .text(dateFormatter(axis.xScale[0].invert(xPos), 'yyyy-MM-dd HH:mm ZZZZ', { timeZone: axis.options.x[0].timeZone, locale: axis.options.x[0].locale } ) )
-    if (allHidden) {
+  }
+
+  updateTooltip(pointData, mouse) {
+    const axis = this.axis
+    if (Object.keys(pointData).length === 0) {
       axis.tooltip.hide()
-      return
+    } else {
+      let htmlContent = ''
+      for (const label in pointData) {
+        const v = pointData[label]
+        htmlContent += `<span style="color: ${v.color}"> ${v.y} </span><br/>`
+      }
+      axis.tooltip.update(htmlContent, TooltipPosition.Right, mouse[0] + axis.margin.left, mouse[1] + axis.margin.top)
     }
-    let htmlContent = ''
-    for (const label in popupData) {
-      const v = popupData[label]
-      htmlContent += `<span style="color: ${v.color}"> ${v.y} </span><br/>`
-    }
-    axis.tooltip.update(htmlContent, TooltipPosition.Right, mouse[0] + axis.margin.left, mouse[1] + axis.margin.top)
   }
 
   updateLineIndicators (): void {

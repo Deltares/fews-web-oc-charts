@@ -11,6 +11,7 @@ export class Tooltip {
   tooltip: any = null
   tooltipText: any = null
   container: HTMLElement
+  isHidden = true
 
   constructor(container) {
     this.container = container
@@ -29,6 +30,7 @@ export class Tooltip {
   }
 
   show() {
+    this.isHidden = false
     this.tooltip
       .transition()
       .duration(50)
@@ -36,6 +38,7 @@ export class Tooltip {
   }
 
   update(html: string, position: TooltipPosition, x: number, y: number) {
+    if (this.isHidden) this.show()
     this.tooltip
       .style('left', x + 'px')
       .style('top', y + 'px')
@@ -45,6 +48,7 @@ export class Tooltip {
   }
 
   hide() {
+    this.isHidden = true
     this.tooltip
       .transition()
       .duration(50)
