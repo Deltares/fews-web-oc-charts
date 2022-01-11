@@ -23,12 +23,12 @@ export function generateMultiFormat(timeZone: string | Zone, locale?: string) {
       formatString = 'HH:mm'
     } else if (d3.utcMonth(offsetDate) < offsetDate) {
       formatString = d3.utcWeek(offsetDate) < offsetDate
-        ? m.toFormat('EEE dd')
-        : m.toFormat('MMM dd')
+        ? 'EEE dd'
+        : 'MMM dd'
     } else {
       formatString = d3.utcYear(offsetDate) < offsetDate
-        ? m.toFormat('MMMM')
-        : m.toFormat('yyyy')
+        ? 'MMMM'
+        : 'yyyy'
       }
     return m.toFormat(formatString)
   }
