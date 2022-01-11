@@ -111,12 +111,12 @@ export class ChartMarker extends Chart {
       })
       .merge(elements)
 
-    const t = d3
+    const transition = d3
       .transition()
       .duration(this.options.transitionTime)
       .ease(d3.easeLinear)
 
-    elements.transition(t).attrTween('transform', arcTranslation(this.previousData))
+    elements.transition(transition).attrTween('transform', arcTranslation(this.previousData))
 
     this.previousData = this.data
   }
