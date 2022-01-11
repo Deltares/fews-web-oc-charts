@@ -6,16 +6,10 @@ import merge from 'lodash/merge'
 
 export const AUTO_SCALE = 1
 
-function mean(x: number[] | number) {
-  if (x instanceof Array) {
-    return d3.mean(x)
-  }
-  return x
-}
 
 interface ChartOptionItem {
   includeInTooltip?: boolean;
-  format?: Function;
+  format?: (value: number | Date) => string;
   paddingInner?: number;
   paddingOuter?: number;
 }
@@ -212,9 +206,9 @@ export abstract class Chart {
       }
       this.group.attr('data-chart-id', this.id)
       if ( this.cssSelector ) {
-        if (this.cssSelector.lastIndexOf('#', 0) === 0) this.group.attr('id', this.cssSelector.substr(1))
+        if (this.cssSelector.lastIndexOf('#', 0) === 0) this.group.attr('id', this.cssSelector.substring(1))
         if (this.cssSelector.lastIndexOf('.', 0) === 0) {
-          this.group.attr('class', cssClass + ' ' + this.cssSelector.substr(1))
+          this.group.attr('class', cssClass + ' ' + this.cssSelector.substring(1))
         } else {
           this.group.attr('class', cssClass)
         }
