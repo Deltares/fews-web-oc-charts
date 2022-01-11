@@ -173,16 +173,10 @@ export class MouseOver implements Visitor {
         return
       }
       // find closest point
-      let x0
       const x1 = xScale(datum[idx-1][xKey])
       const x2 = xScale(datum[idx][xKey])
-      if ((xPos - x1) > (x2 - xPos)) {
-        x0 = x2
-      } else {
-        x0 = x1
-        idx = idx -1
-      }
-
+      const [x0, offset] = this.findClosestPoint(xPos, x1, x2)
+      idx = idx - 1 + offset
       const valy = datum[idx][yKey]
       const posy = yScale(valy)
 
@@ -205,6 +199,14 @@ export class MouseOver implements Visitor {
     this.updateXLine(xPos)
     this.updateXValue(xPos)
     this.updateTooltip(pointData, mouse)
+  }
+
+  findClosestPoint(x, x1, x2) {
+    if ((x - x1) > (x2 - x)) {
+      return [x2, 1]
+    } else {
+      return [x1, 0]
+    }
   }
 
   findIndex(datum, xKey, yKey, xValue, mouse, xPos) {
