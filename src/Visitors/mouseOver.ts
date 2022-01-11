@@ -6,9 +6,9 @@ import { dateFormatter } from '../Utils'
 
 export class MouseOver implements Visitor {
   private trace: string[]
-  private group: any
+  private group: d3.Selection<SVGElement, unknown, SVGElement, unknown>
   private axis: CartesianAxis
-  private mouseGroup: any
+  private mouseGroup: d3.Selection<SVGElement, unknown, SVGElement, unknown>
 
   constructor(trace?: string[]) {
     this.trace = trace
@@ -53,7 +53,7 @@ export class MouseOver implements Visitor {
         const mouse = d3.pointer(event)
         // determine closest point over all lines
         const xPos = this.xPosForCharts(mouse)
-        this.updateMousePerLine(mouse, xPos)
+        this.update(mouse, xPos)
       })
   }
 
@@ -144,13 +144,9 @@ export class MouseOver implements Visitor {
     return [xPos, rMin]
   }
 
-  updateMousePerLine(mouse, xPos) {
+  update(mouse, xPos) {
     const axis = this.axis
     const pointData = {}
-
-    const yExtent = axis.extent.y
-    const s = d3.formatSpecifier("f")
-    s.precision = d3.precisionFixed((yExtent[1] - yExtent[0]) / 100 )
 
     axis.canvas.selectAll('.mouse-per-line').each((d, i) => {
       const selector = `[data-chart-id="${d}"]`
@@ -161,10 +157,6 @@ export class MouseOver implements Visitor {
       const yScale = axis.yScale[yIndex]
       const xKey = chart.dataKeys.x
       const yKey = chart.dataKeys.y
-      const bisect = d3.bisector((data) => {
-        return data[xKey]
-      }).left
-
       const element = axis.canvas.select(selector).select('path')
       if (element.node() === null || this.isHidden(element)) {
         return
@@ -176,19 +168,10 @@ export class MouseOver implements Visitor {
         return
       }
       const xValue = xScale.invert(xPos)
-      let idx = bisect(datum, xValue)
-      // before first point
-      if (idx === 0 && datum[idx][xKey] >= xValue) {
+      let idx = this.findIndex(datum, xKey, yKey, xValue, mouse, xPos)
+      if ( idx === undefined) {
         return
       }
-      // after last point
-      if (idx === datum.length-1 && mouse[0] > xPos) {
-        return
-      }
-      if (!datum[idx] || datum[idx][yKey] === null || datum[idx-1][yKey] === null) {
-        return
-      }
-
       // find closest point
       let x0
       const x1 = xScale(datum[idx-1][xKey])
@@ -201,36 +184,19 @@ export class MouseOver implements Visitor {
       }
 
       const valy = datum[idx][yKey]
-      let posy = yScale(valy)
+      const posy = yScale(valy)
 
       // labels
-      let yLabel
-      if (Array.isArray(posy)) {
-        const labels = posy
-        for (let i = 0; i < posy.length; i++) {
-          labels[i] = d3.format(s.toString())(yScale.invert(posy[i]))
-        }
-        yLabel = labels.join(':')
-        posy = posy[0]
-      } else {
-        yLabel = d3.format(s.toString())(valy)
-      }
+      const yLabel = this.determineLabel(posy, valy, yScale)
       // outside range
-      posy =
-        posy < yScale.range()[1] || posy > yScale.range()[0]
-          ? -window.innerHeight
-          : posy
+      if ( posy < yScale.range()[1] || posy > yScale.range()[0] ) {
+        pointData[d] = { x0, y0: -window.innerHeight, x: xScale.invert(x0), color: stroke }
+      } else {
         pointData[d] = { x0, y0: posy, x: xScale.invert(x0), y: yLabel, color: stroke }
+      }
     })
 
-    axis.canvas.selectAll('.mouse-per-line').attr('transform', (id, i) => {
-      const keys = Object.keys(pointData)
-      if (keys.includes(id)) {
-        return `translate(${pointData[id].x0} , ${pointData[id].y0})`
-      } else {
-        return `translate(0, ${-window.innerWidth})`
-      }
-    })
+    this.updatePoints(pointData)
 
     if (Object.keys(pointData).length === 0) {
       xPos = mouse[0]
@@ -239,6 +205,54 @@ export class MouseOver implements Visitor {
     this.updateXLine(xPos)
     this.updateXValue(xPos)
     this.updateTooltip(pointData, mouse)
+  }
+
+  findIndex(datum, xKey, yKey, xValue, mouse, xPos) {
+    const bisect = d3.bisector((data) => {
+      return data[xKey]
+    }).left
+    const idx = bisect(datum, xValue)
+    // before first point
+    if (idx === 0 && datum[idx][xKey] >= xValue) {
+      return
+    }
+    // after last point
+    if (idx === datum.length-1 && mouse[0] > xPos) {
+      return
+    }
+    if (!datum[idx] || datum[idx][yKey] === null || datum[idx-1][yKey] === null) {
+      return
+    }
+    return idx
+  }
+
+  determineLabel(posy: number[] | number , valy, yScale) {
+    const yExtent = this.axis.extent.y
+    const s = d3.formatSpecifier("f")
+    s.precision = d3.precisionFixed((yExtent[1] - yExtent[0]) / 100 )
+    let yLabel
+    if (Array.isArray(posy)) {
+      const labels: string[] = []
+      for (let j = 0; j < posy.length; j++) {
+        labels[j] = d3.format(s.toString())(yScale.invert(posy[j]))
+      }
+      yLabel = labels.join(':')
+    } else {
+      yLabel = d3.format(s.toString())(valy)
+    }
+    return yLabel
+  }
+
+  updatePoints(pointData) {
+    const axis = this.axis
+    axis.canvas.selectAll('.mouse-per-line').attr('transform', (id, i) => {
+      const keys = Object.keys(pointData)
+      if (keys.includes(id)) {
+        return `translate(${pointData[id].x0} , ${pointData[id].y0})`
+      } else {
+        return `translate(0, ${-window.innerWidth})`
+      }
+    })
   }
 
   updateXLine(xPos: number) {
@@ -262,7 +276,9 @@ export class MouseOver implements Visitor {
       let htmlContent = ''
       for (const label in pointData) {
         const v = pointData[label]
-        htmlContent += `<span style="color: ${v.color}"> ${v.y} </span><br/>`
+        if (v.y !== undefined) {
+          htmlContent += `<span style="color: ${v.color}"> ${v.y} </span><br/>`
+        }
       }
       axis.tooltip.update(htmlContent, TooltipPosition.Right, mouse[0] + axis.margin.left, mouse[1] + axis.margin.top)
     }
