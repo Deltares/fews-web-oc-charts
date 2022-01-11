@@ -6,16 +6,10 @@ import merge from 'lodash/merge'
 
 export const AUTO_SCALE = 1
 
-function mean(x: number[] | number) {
-  if (x instanceof Array) {
-    return d3.mean(x)
-  }
-  return x
-}
 
 interface ChartOptionItem {
   includeInTooltip?: boolean;
-  format?: Function;
+  format?: (value: number | Date) => string;
   paddingInner?: number;
   paddingOuter?: number;
 }
@@ -96,9 +90,9 @@ export abstract class Chart {
 
   get extent(): any {
     if (!this._extent) {
-      this._extent = Array()
-      for (let axisKey in this.axisIndex) {
-        let path = this.axisIndex[axisKey].key
+      this._extent = []
+      for (const axisKey in this.axisIndex) {
+        const path = this.axisIndex[axisKey].key
         this._extent[path] = d3.extent(this._data, function(d) {
           return d[path]
         })
@@ -155,7 +149,6 @@ export abstract class Chart {
     const xKey = this.dataKeys.x
     const yKey = this.dataKeys.y
     let html = ''
-    // TODO: supply formatter
     if (this.options.x.includeInTooltip) {
       html += xKey + ': ' + d[xKey] + '<br/>'
     }
@@ -185,7 +178,6 @@ export abstract class Chart {
     const rKey = this.dataKeys.x
     const tKey = this.dataKeys.y
     let html = ''
-    // TODO: supply formatter
     if (this.options.angular.includeInTooltip) {
       html += tKey + ': ' + d[tKey] + '<br/>'
     }
@@ -208,15 +200,15 @@ export abstract class Chart {
     if (this.group == null) {
       this.group = axis.chartGroup.append('g')
       if (axis instanceof PolarAxis) {
-        let direction = -axis.direction
-        let intercept = 90 - 180 * axis.intercept / Math.PI
+        const direction = -axis.direction
+        const intercept = 90 - 180 * axis.intercept / Math.PI
         this.group.attr('transform', 'rotate(' + intercept + ')scale(' + direction + ' ,1)')
       }
       this.group.attr('data-chart-id', this.id)
       if ( this.cssSelector ) {
-        if (this.cssSelector.lastIndexOf('#', 0) === 0) this.group.attr('id', this.cssSelector.substr(1))
+        if (this.cssSelector.lastIndexOf('#', 0) === 0) this.group.attr('id', this.cssSelector.substring(1))
         if (this.cssSelector.lastIndexOf('.', 0) === 0) {
-          this.group.attr('class', cssClass + ' ' + this.cssSelector.substr(1))
+          this.group.attr('class', cssClass + ' ' + this.cssSelector.substring(1))
         } else {
           this.group.attr('class', cssClass)
         }
@@ -230,7 +222,7 @@ export abstract class Chart {
 
   get dataKeys () {
     const dataKeys: {x?: string, x1?: string, y?: string, radial?: string, angular?: string, color?: string, value?: string} = {}
-    for (let key in this.axisIndex) {
+    for (const key in this.axisIndex) {
       dataKeys[key] = this.axisIndex[key].key ? this.axisIndex[key].key : key
     }
     return dataKeys
@@ -238,9 +230,9 @@ export abstract class Chart {
 
   protected mapDataCartesian(domain: any) {
 
-    let xKey = this.dataKeys.x
+    const xKey = this.dataKeys.x
 
-    let bisectData = d3.bisector(function(d) {
+    const bisectData = d3.bisector(function(d) {
       return d[xKey]
     })
     let i0 = bisectData.right(this.data, domain[0])
@@ -248,17 +240,15 @@ export abstract class Chart {
     i0 = i0 > 0 ? i0 - 1 : 0
     i1 = i1 < this.data.length - 1 ? i1 + 1 : this.data.length
 
-    let mappedData: any = this.data.slice(i0, i1)
+    const mappedData: any = this.data.slice(i0, i1)
     return mappedData
   }
 
-
-  // TODO: do not scale data only filter
   protected mapDataPolar(axis: PolarAxis) {
-    let rKey = this.dataKeys.radial
-    let tKey = this.dataKeys.angular
+    const rKey = this.dataKeys.radial
+    const tKey = this.dataKeys.angular
 
-    let mappedData: any = this.data.map(function(d: any) {
+    const mappedData: any = this.data.map(function(d: any) {
       return {
         [rKey]: axis.radialScale(d[rKey]),
         [tKey]: axis.angularScale(d[tKey])

@@ -52,10 +52,7 @@ export class WarningLevels implements Visitor {
       .axisRight(this.scale)
       .tickValues(tickValues)
       .tickFormat(function(d, i) {
-        let level
-        for (level of escalationLevels) {
-          if (level.val === d) break
-        }
+        const level = escalationLevels.find( (l) => l.val === d)
         return level.id
       })
 
@@ -98,10 +95,7 @@ export class WarningLevels implements Visitor {
       .scale(scale)
       .tickValues(tickValues)
       .tickFormat(function (d, i) {
-        let level
-        for (level of escalationLevels) {
-          if (level.val === d) break
-        }
+        const level = escalationLevels.find( (l) => l.val === d)
         return level.id
       })
 

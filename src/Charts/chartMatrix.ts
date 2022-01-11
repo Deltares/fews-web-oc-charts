@@ -2,26 +2,25 @@ import * as d3 from 'd3'
 import { CartesianAxis, PolarAxis } from '../Axis'
 import { Chart, AUTO_SCALE } from './chart'
 import { TooltipPosition } from '../Tooltip'
-import { keyBy } from 'lodash'
 
 export class ChartMatrix extends Chart {
   static readonly GROUP_CLASS: 'chart-matrix'
 
   plotterCartesian(axis: CartesianAxis, axisIndex: any) {
-    let xKey = this.dataKeys.x
-    let yKey = this.dataKeys.y
-    let colorKey = this.dataKeys.color
-    let valueKey = this.dataKeys.value ?  this.dataKeys.value : this.dataKeys.color
-    let data = this.data
+    const xKey = this.dataKeys.x
+    const yKey = this.dataKeys.y
+    const colorKey = this.dataKeys.color
+    const valueKey = this.dataKeys.value ?  this.dataKeys.value : this.dataKeys.color
+    const data = this.data
     const xScale = axis.xScale[axisIndex.x.axisIndex]
     const yScale = axis.yScale[axisIndex.y.axisIndex]
 
-    let x0 = xScale.copy()
-    let y0 = yScale.copy()
+    const x0 = xScale.copy()
+    const y0 = yScale.copy()
     this.setPadding(x0, this.options.x)
     this.setPadding(y0, this.options.y)
 
-    let colorScale = d3.scaleLinear().domain([0, 1])
+    const colorScale = d3.scaleLinear().domain([0, 1])
     if (this.options.colorScale === AUTO_SCALE) {
       colorScale.domain(
         d3.extent(this.data, function(d: any): number {
@@ -30,14 +29,13 @@ export class ChartMatrix extends Chart {
       )
     }
 
-    let colorMap = this.getColorMap(colorScale)
+    const colorMap = this.getColorMap(colorScale)
     this.group = this.selectGroup(axis, ChartMatrix.GROUP_CLASS)
-    let t = d3
+    d3
       .transition()
       .duration(this.options.transitionTime)
 
-    const that = this
-    const matrix = this.group
+    this.group
       .selectAll("rect")
       .data(data)
       .join("rect")
@@ -49,10 +47,10 @@ export class ChartMatrix extends Chart {
         .attr("stroke-width", 0)
         .attr("shape-rendering", "auto")
         .attr("fill", d => d[colorKey] !== null ? colorMap(d[colorKey]) : 'none' )
-        .on('pointerover', function(_e: any, d) {
+        .on('pointerover', (_e: any, d) => {
           axis.tooltip.show()
           axis.tooltip.update(
-            that.toolTipFormatterCartesian(d),
+            this.toolTipFormatterCartesian(d),
             TooltipPosition.Top,
             axis.margin.left + x0(d[xKey]) + x0.bandwidth() / 2 ,
             axis.margin.top + y0(d[yKey])
@@ -81,18 +79,19 @@ export class ChartMatrix extends Chart {
         textSelection
         .attr(key, value)
       }
-    } 
+    }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   plotterPolar(axis: PolarAxis, dataKeys: any) {
     throw new Error('plotterPolar is not implemented for ChartMatrix')
   }
 
   drawLegendSymbol(legendId?: string, asSvgElement?: boolean) {
-    let chartElement = this.group
+    const chartElement = this.group
       .select('rect')
       .node() as Element
-    let style = window.getComputedStyle(chartElement)
+    const style = window.getComputedStyle(chartElement)
     const svg = d3.create('svg')
       .attr('width',20)
       .attr('height',20)
@@ -129,11 +128,9 @@ export class ChartMatrix extends Chart {
     if ( this.options.color?.map ) {
       return this.options.color?.map
     } else {
-      let colorMap = (value: any) => {
-        const colorMap = d3.scaleSequential(d3.interpolateWarm)
-        return colorMap(scale(value))
+      return (value: any) => {
+        return d3.scaleSequential(d3.interpolateWarm)(scale(value))
       }
-      return colorMap
     }
   }
 

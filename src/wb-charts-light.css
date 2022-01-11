@@ -3,19 +3,11 @@
   fill: black;
 }
 
-.tooltip {
-  font-size: 1em;
-}
-
 .axis {
   font-size: 1em;
 }
 
 .front {
-  font-size: 1em;
-}
-
-.cross-section-select {
   font-size: 1em;
 }
 
@@ -104,6 +96,7 @@
 
 .cross-section-select {
   stroke: black;
+  font-size: 1em;
 }
 
 .cross-section-select > line {
@@ -201,6 +194,7 @@
   left: 0px;
   pointer-events: none;
   white-space: nowrap;
+  font-size: 1em;
 }
 
 .tooltip .tooltiptext {

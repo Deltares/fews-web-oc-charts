@@ -5,13 +5,13 @@ import { Chart } from './chart'
 export class ChartLine extends Chart {
   plotterCartesian(axis: CartesianAxis, axisIndex: any) {
 
-    let xKey = this.dataKeys.x
-    let yKey = this.dataKeys.y
+    const xKey = this.dataKeys.x
+    const yKey = this.dataKeys.y
     const xScale = axis.xScale[axisIndex.x.axisIndex]
     const yScale = axis.yScale[axisIndex.y.axisIndex]
 
-    let mappedData = this.mapDataCartesian(xScale.domain())
-    let lineGenerator = d3
+    const mappedData = this.mapDataCartesian(xScale.domain())
+    const lineGenerator = d3
       .line()
       .x(function(d: any) {
         return xScale(d[xKey])
@@ -27,19 +27,18 @@ export class ChartLine extends Chart {
     if (this.group.select('path').size() === 0) {
       this.group.append('path')
     }
-    let path = this.group
+    this.group
       .select('path')
       .datum(mappedData)
       .attr('d', lineGenerator)
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   plotterPolar(axis: PolarAxis, axisIndex: any) {
-    let mappedData = this.mapDataPolar(axis)
-    let rKey = this.dataKeys.radial
-    let tKey = this.dataKeys.angular
-    // const rScale = axis.rScale[axisIndex.x.axisIndex]
-    // const tScale = axis.tScale[axisIndex.y.axisIndex]
-    let lineGenerator = d3
+    const mappedData = this.mapDataPolar(axis)
+    const rKey = this.dataKeys.radial
+    const tKey = this.dataKeys.angular
+    const lineGenerator = d3
       .lineRadial()
       .angle(function(d: any) {
         return d[tKey]
@@ -51,9 +50,9 @@ export class ChartLine extends Chart {
     if (this.group.select('path').size() === 0) {
       this.group.append('path')
     }
-    let line = this.group.select('path')
+    const line = this.group.select('path')
 
-    let t = d3
+    const t = d3
       .transition()
       .duration(this.options.transitionTime)
       .ease(d3.easeLinear)
@@ -63,10 +62,10 @@ export class ChartLine extends Chart {
   }
 
   drawLegendSymbol(legendId?: string, asSvgElement?: boolean) {
-    let chartElement = this.group
+    const chartElement = this.group
       .select('path')
       .node() as Element
-    let style = window.getComputedStyle(chartElement)
+    const style = window.getComputedStyle(chartElement)
     const svg = d3.create('svg')
       .attr('width',20)
       .attr('height',20)

@@ -25,7 +25,7 @@ export interface AxisOptions {
   type?: AxisType;
   unit?: string;
   showGrid?: boolean;
-  format?: Function;
+  format?: (x: number | Date) => string;
   defaultDomain?: [number, number] | [Date, Date];
   domain?: [number, number] | [Date, Date];
   nice?: boolean;
@@ -119,7 +119,6 @@ export abstract class Axis {
   }
 
   setSize(height?: number, width?: number): void {
-    // FIXME: does not work for arguments
     const containerWidth = width == null ? this.container.offsetWidth : width
     const containerHeight = height == null ? this.container.offsetHeight : height
     this.height = containerHeight - this.margin.top - this.margin.bottom
@@ -159,8 +158,8 @@ export abstract class Axis {
   }
 
   removeAllCharts(): void {
-    for (let i=0; i< this.charts.length;i++) {
-      this.charts[i].group = null
+    for (const chart of this.charts) {
+      chart.group = null
     }
     this.charts = []
     this.chartGroup.selectAll('g').remove()

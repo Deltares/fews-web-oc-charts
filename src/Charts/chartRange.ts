@@ -19,23 +19,27 @@ export class ChartRange extends Chart {
 
   get extent(): any[] {
     if (!this._extent) {
-      this._extent = Array()
-      for (let key in this.dataKeys) {
-        let path = this.dataKeys[key]
-        let min = d3.min(this._data, function(d: any) {
-          if (d[path] === null) return undefined
-          if (Array.isArray(d[path])) return d3.min(d[path])
-          return d[path]
-        })
-        let max = d3.max(this._data, function(d: any) {
-          if (d[path] === null) return undefined
-          if (Array.isArray(d[path])) return d3.min(d[path])
-          return d[path]
-        })
-        this._extent[path] = [min, max]
+      this._extent = []
+      for (const key in this.dataKeys) {
+        const path = this.dataKeys[key]
+        this._extent[path] = this.dataExtentFor(path)
       }
     }
     return this._extent
+  }
+
+  dataExtentFor(path) {
+    const min = d3.min(this._data, function(d: any) {
+      if (d[path] === null) return undefined
+      if (Array.isArray(d[path])) return d3.min(d[path])
+      return d[path]
+    })
+    const max = d3.max(this._data, function(d: any) {
+      if (d[path] === null) return undefined
+      if (Array.isArray(d[path])) return d3.max(d[path])
+      return d[path]
+    })
+    return [min, max]
   }
 
   defaultToolTipFormatterCartesian(d) {
@@ -73,13 +77,13 @@ export class ChartRange extends Chart {
   }
 
   plotterCartesian(axis: CartesianAxis, axisIndex: AxisIndex) {
-    let xKey = this.dataKeys.x
-    let yKey = this.dataKeys.y
+    const xKey = this.dataKeys.x
+    const yKey = this.dataKeys.y
     const xScale = axis.xScale[axisIndex.x.axisIndex]
     const yScale = axis.yScale[axisIndex.y.axisIndex]
-    let colorKey = this.dataKeys.color
+    const colorKey = this.dataKeys.color
 
-    let colorScale = d3.scaleLinear().domain([0, 1])
+    const colorScale = d3.scaleLinear().domain([0, 1])
     if (this.options.colorScale === AUTO_SCALE) {
       colorScale.domain(
         d3.extent(this.data, function(d: any): number {
@@ -88,40 +92,39 @@ export class ChartRange extends Chart {
       )
     }
 
-    let colorMap = this.colorMap
+    const colorMap = this.colorMap
 
     this.group = this.selectGroup(axis, 'chart-range')
     this.group.style('stroke', 'none')
 
-    let elements: any = this.group.selectAll('rect').data(this.data)
+    const elements: any = this.group.selectAll('rect').data(this.data)
 
-    let t = d3
+    const t = d3
       .transition()
       .duration(this.options.transitionTime)
       .ease(d3.easeLinear)
-    let that = this
     // exit
     elements.exit().remove()
     // update + enter
-    let update = elements
+    const update = elements
       .enter()
       .append('rect')
-      .attr('x', function(d: any) {
+      .attr('x', (d: any) => {
         return xScale(d[xKey][0])
       })
-      .attr('y', function(d: any) {
+      .attr('y', (d: any) => {
         return yScale(d[yKey][1])
       })
-      .attr('width', function(d: any) {
+      .attr('width', (d: any) => {
         return xScale(d[xKey][1] - d[xKey][0])
       })
-      .attr('height', function(d: any) {
+      .attr('height', (d: any) => {
         return yScale(d[yKey][0] - d[yKey][1])
       })
-      .on('pointerover', function(_e: any, d) {
+      .on('pointerover', (_e: any, d) => {
         axis.tooltip.show()
         axis.tooltip.update(
-          that.toolTipFormatterCartesian(d),
+          this.toolTipFormatterCartesian(d),
           TooltipPosition.Top,
           axis.margin.left + xScale((d[xKey][1] + d[xKey][0])/2),
           axis.margin.top + yScale((d[yKey][1] + d[yKey][0])/2),
@@ -132,41 +135,40 @@ export class ChartRange extends Chart {
       })
 
     if (colorKey) {
-      update.style('fill', function(d: any) {
+      update.style('fill', (d: any) => {
         return colorMap(colorScale(mean(d[colorKey])))
       })
     }
 
-    let enter = elements
+    const enter = elements
       .transition(t)
-      .attr('x', function(d: any) {
+      .attr('x', (d: any) => {
         return xScale(d[xKey][0])
       })
-      .attr('y', function(d: any) {
+      .attr('y', (d: any) => {
         return yScale(d[yKey][1])
       })
-      .attr('width', function(d: any) {
+      .attr('width', (d: any) => {
         return xScale(d[xKey][1] - d[xKey][0])
       })
-      .attr('height', function(d: any) {
+      .attr('height', (d: any) => {
         return yScale(d[yKey][0] - d[yKey][1])
       })
 
     if (colorKey) {
-      enter.style('fill', function(d: any) {
+      enter.style('fill', (d: any) => {
         return d.color
       })
     }
   }
 
   plotterPolar(axis: PolarAxis, axisIndex: AxisIndex) {
-    let canvas = axis.canvas
 
-    let rKey = this.dataKeys.radial
-    let tKey = this.dataKeys.angular
-    let colorKey = this.dataKeys.color
+    const rKey = this.dataKeys.radial
+    const tKey = this.dataKeys.angular
+    const colorKey = this.dataKeys.color
 
-    let colorScale = d3.scaleLinear().domain([0, 1])
+    const colorScale = d3.scaleLinear().domain([0, 1])
     if (this.options.colorScale === AUTO_SCALE) {
       colorScale.domain(
         d3.extent(this.data, function(d: any): number {
@@ -174,45 +176,44 @@ export class ChartRange extends Chart {
         })
       )
     }
-    let colorMap = this.colorMap
+    const colorMap = this.colorMap
 
-    let t = d3
+    const t = d3
       .transition()
       .duration(this.options.transitionTime)
       .ease(d3.easeLinear)
 
-    let arcGenerator = d3
+    const arcGenerator = d3
       .arc()
-      .innerRadius(function(d: any, i) {
+      .innerRadius((d: any, i) => {
         return axis.radialScale(d[rKey][0])
       })
-      .outerRadius(function(d: any, i) {
+      .outerRadius((d: any, i) => {
         return axis.radialScale(d[rKey][1])
       })
-      .startAngle(function(d: any, i) {
+      .startAngle((d: any, i) => {
         return axis.angularScale(d[tKey][0])
       })
-      .endAngle(function(d: any, i) {
+      .endAngle((d: any, i) => {
         return axis.angularScale(d[tKey][1])
       })
 
     this.group = this.selectGroup(axis, 'chart-range')
     this.group.style('stroke', 'none')
 
-    let elements = this.group.selectAll('path').data(this.data)
+    const elements = this.group.selectAll('path').data(this.data)
 
     elements.exit().remove()
 
-    let that = this
-    let enter = elements
+    const enter = elements
       .enter()
       .append('path')
       .attr('d', arcGenerator)
-      .on('pointerover', function(e: any, d) {
+      .on('pointerover', (e: any, d) => {
         const pointer = d3.pointer(e, axis.container)
         axis.tooltip.show()
         axis.tooltip.update(
-          that.toolTipFormatterPolar(d),
+          this.toolTipFormatterPolar(d),
           TooltipPosition.Top,
           pointer[0],
           pointer[1]
@@ -223,12 +224,12 @@ export class ChartRange extends Chart {
       })
 
     if (colorKey) {
-      enter.style('fill', function(d: any) {
+      enter.style('fill', (d: any) => {
         return colorMap(colorScale(mean(d[colorKey])))
       })
     }
 
-    let update = elements.transition(t).call(arcTween, this.previousData)
+    const update = elements.transition(t).call(arcTween, this.previousData)
 
     if (colorKey) {
       update.style('fill', function(d: any) {
@@ -238,8 +239,8 @@ export class ChartRange extends Chart {
 
     this.previousData = {...this.data}
     function arcTween(transition: any, p: any) {
-      transition.attrTween('d', function(d: any, i: number, a: any) {
-        let old = p[i]
+      transition.attrTween('d', (d: any, i: number, a: any) => {
+        const old = p[i]
         if (mean(old[tKey]) - mean(d[tKey]) > 180) {
           old[tKey] = old[tKey].map(function(x) {
             return x - 360
@@ -250,11 +251,11 @@ export class ChartRange extends Chart {
           })
         }
 
-        let tInterpolate = d3.interpolateArray(old[tKey], d[tKey])
-        let rInterpolate = d3.interpolateArray(old[rKey], d[rKey])
-        return function(t: any) {
-          d[tKey] = tInterpolate(t)
-          d[rKey] = rInterpolate(t)
+        const tInterpolate = d3.interpolateArray(old[tKey], d[tKey])
+        const rInterpolate = d3.interpolateArray(old[rKey], d[rKey])
+        return function(x: any) {
+          d[tKey] = tInterpolate(x)
+          d[rKey] = rInterpolate(x)
           return arcGenerator(d)
         }
       })
@@ -262,10 +263,10 @@ export class ChartRange extends Chart {
   }
 
   drawLegendSymbol(legendId?: string, asSvgElement?: boolean) {
-    let chartElement = this.group
+    const chartElement = this.group
       .select('path')
       .node() as Element
-    let style = window.getComputedStyle(chartElement)
+    const style = window.getComputedStyle(chartElement)
     const svg = d3.create('svg')
       .attr('width',20)
       .attr('height',20)

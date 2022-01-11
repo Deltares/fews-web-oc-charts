@@ -55,9 +55,9 @@ export class AlertLines implements Visitor {
         return xScale(d.x1) < ( this.axis.width - 10) })
       .attr('text-anchor', 'end')
       .attr("x", (d: any) => {
-        const x = xScale(d.x2);
-        const xPos = Math.min(x, this.axis.width);
-        return xPos})
+          const x = xScale(d.x2);
+          return Math.min(x, this.axis.width);
+        })
         .attr("y", (d: any) => {
           const yScale = this.axis.yScale[d.yAxisIndex];
           return yScale(d.value)})
