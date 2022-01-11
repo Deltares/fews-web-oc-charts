@@ -36,7 +36,7 @@ export class ChartRange extends Chart {
     })
     const max = d3.max(this._data, function(d: any) {
       if (d[path] === null) return undefined
-      if (Array.isArray(d[path])) return d3.min(d[path])
+      if (Array.isArray(d[path])) return d3.max(d[path])
       return d[path]
     })
     return [min, max]

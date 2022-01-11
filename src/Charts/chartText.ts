@@ -39,7 +39,9 @@ export class ChartText extends Chart {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-empty-function
-  plotterPolar(axis: PolarAxis, dataKeys: any) {}
+  plotterPolar(axis: PolarAxis, dataKeys: any) {
+    throw new Error('Polar axis are not supported by ChartText')
+  }
 
   drawLegendSymbol(legendId?: string, asSvgElement?: boolean) {
     const chartElement = this.group
