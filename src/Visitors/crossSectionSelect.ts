@@ -17,15 +17,15 @@ export class CrossSectionSelect implements Visitor {
   private axis: CartesianAxis
   value: number | Date
   currentData: any
-  callback: Function
-  format: Function
+  callback: (value: number | Date ) => void
+  format: (n: number | {valueOf(): number;}) => string
   private options: CrossSectionSelectOptions = {
     x: { axisIndex : 0 },
     draggable: false
   }
 
   // use shared Visitor constuctor (Visitor should be a abstract class)
-  constructor(value: number | Date, callback: Function, options: CrossSectionSelectOptions) {
+  constructor(value: number | Date, callback: (value: number | Date ) => void, options: CrossSectionSelectOptions) {
     this.value = value
     this.callback = callback
     this.format = d3.format('.2f')
@@ -82,16 +82,18 @@ export class CrossSectionSelect implements Visitor {
     // find values
     const traces = this.trace || this.axis.charts.map((chart) => { return chart.id })
     let points = []
+    const styles: Record<string, CSSStyleDeclaration> = {}
     for (const chartId of traces ) {
-      const chart = axis.charts.find(chart => chart.id === chartId)
+      const chart = axis.charts.find(c => c.id === chartId)
       points.push(this.findNearestPoint(chart, xPos))
+      styles[chartId] = this.styleForChart(chartId)
     }
     this.currentData = points.map( (p) => { return {
       id: p.id, data: p.d, value: p.value
     }})
     points = points.filter( (p) => p.y !== undefined )
-    this.updateLabels(points)
-    this.updateDataPoints(points)
+    this.updateLabels(points, styles)
+    this.updateDataPoints(points, styles)
   }
 
   start(event): void {
@@ -124,6 +126,14 @@ export class CrossSectionSelect implements Visitor {
     }
   }
 
+  styleForChart(id) {
+    const selector = `[data-chart-id="${id}"]`
+    const element = this.axis.chartGroup.select(selector).select('path')
+    if (element.node() === null ) return
+    return window
+      .getComputedStyle(element.node() as Element)
+  }
+
   updateLine(xPos: number): void {
     // line
     const timeString = this.format(this.value)
@@ -142,7 +152,7 @@ export class CrossSectionSelect implements Visitor {
   }
 
 
-  updateDataPoints (points): void {
+  updateDataPoints (points, styles): void {
     this.group.selectAll('.data-point-per-line')
       .selectAll('circle')
       .data(points)
@@ -151,20 +161,15 @@ export class CrossSectionSelect implements Visitor {
       .attr('data-point-id', d => d.id)
       .attr('r', this.pointRadius)
       .style('fill', (d) => {
-        const selector = `[data-chart-id="${d.id}"]`
-        const element = this.axis.chartGroup.select(selector).select('path')
-        if (element.node() === null ) return
-        return window
-          .getComputedStyle(element.node() as Element)
-          .getPropertyValue('stroke')
+        const style = styles[d.id]
+        return style.getPropertyValue('stroke')
       })
       .style('stroke-width', '1px')
       .style('opacity', '1')
       .attr('transform', (d) => `translate( ${d.x}, ${d.y})`)
   }
 
-  updateLabels(points): void {
-    // const traces = this.trace || this.axis.charts.map( (chart) => {return chart.id})
+  updateLabels(points, styles): void {
     const nodes = []
     const links = []
 
@@ -200,11 +205,8 @@ export class CrossSectionSelect implements Visitor {
       .classed("label", true)
       .attr("dominant-baseline", "middle")
       .attr('fill', (d) => {
-        const selector = `[data-chart-id="${d.id}"]`
-        const element = this.axis.chartGroup.select(selector).select('path')
-        if (element.node() === null ) return
-        return window
-          .getComputedStyle(element.node() as Element)
+        const style = styles[d.id]
+        return style
           .getPropertyValue('stroke')
       })
       .attr('stroke', 'none')
@@ -225,10 +227,10 @@ export class CrossSectionSelect implements Visitor {
     })
 
     rectsUpdate
-      .attr("rx", (d, i) => heights[2*i] / 2)
-      .attr("ry", (d, i) => heights[2*i] / 2)
-      .attr("width", (d, i) => widths[2*i])
-      .attr("height",(d, i) => heights[2*i])
+      .attr("rx", (d, j) => heights[2*j] / 2)
+      .attr("ry", (d, j) => heights[2*j] / 2)
+      .attr("width", (d, j) => widths[2*j])
+      .attr("height",(d, j) => heights[2*j])
 
     const tick = (): void => {
       link
@@ -237,8 +239,8 @@ export class CrossSectionSelect implements Visitor {
         .attr("x2", d => d.target.x)
         .attr("y2", d => d.target.y);
       rectsUpdate
-        .attr("x", (d, i) => d.x - heights[2*i] / 2)
-        .attr("y", (d, i) => d.y - heights[2*i] / 2)
+        .attr("x", (d, j) => d.x - heights[2*j] / 2)
+        .attr("y", (d, j) => d.y - heights[2*j] / 2)
       labelsUpdate
         .attr("x", d => d.x)
         .attr("y", d => d.y)
@@ -246,13 +248,12 @@ export class CrossSectionSelect implements Visitor {
 
     if ( this.simulation !== undefined) this.simulation.stop()
 
-    // const collisionForce: any = rectCollide()
-    const collisionForce = bboxCollide(function (d,i) {
+    const collisionForce = bboxCollide(function (d,j) {
       let bbox
       if ( d.label !== undefined) {
-        bbox = [[- heights[i] / 2, - heights[i] / 2],[ widths[i]- heights[i] / 2, heights[i] / 2]]
+        bbox = [[- heights[j] / 2, - heights[j] / 2],[ widths[j]- heights[j] / 2, heights[j] / 2]]
       } else {
-        bbox = [[- widths[i] / 2, -heights[i]/2 ], [widths[i] / 2,heights[i]/2 ]]
+        bbox = [[- widths[j] / 2, -heights[j]/2 ], [widths[j] / 2, heights[j]/2 ]]
       }
       return bbox
     })
@@ -293,8 +294,8 @@ export class CrossSectionSelect implements Visitor {
     const xKey = chart.dataKeys.x
     const yKey = chart.dataKeys.y
     const data = chart.data
-    const bisect = d3.bisector(function (d) {
-      return d[xKey]
+    const bisect = d3.bisector(function (datum) {
+      return datum[xKey]
     }).left
 
     const xValue = xScale.invert(xPos)
@@ -319,9 +320,9 @@ export class CrossSectionSelect implements Visitor {
     s.precision = d3.precisionFixed((yExtent[1] - yExtent[0]) / 100 )
     const d = data[idx]
     if (yValue === null || yValue < yScale.domain()[0] || yValue > yScale.domain()[1]) {
-      return { id: chart.id, x: undefined, y: undefined, d}
+      return { id: chart.id, x: undefined, y: undefined, d }
     }
-    return { id: chart.id, x, y, value: d3.format(s.toString())(d[yKey]), d}
+    return { id: chart.id, x, y, value: d3.format(s.toString())(d[yKey]), d }
   }
 
 }
