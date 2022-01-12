@@ -9,3 +9,5 @@ export * from './levelSelect'
 export * from './crossSectionSelect'
 export * from './dataField'
 export * from './alertLines'
+export * from './beaufortAxis'
+
