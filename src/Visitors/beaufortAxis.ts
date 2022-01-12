@@ -36,11 +36,12 @@ export class BeaufortAxis implements Visitor {
   }
 
   redraw(): void {
+    const axis = this.axis
     const windSpeedDomain = this.axis.xScale[0].domain()
     const limits = scaleBeaufort.domain().filter( (x: number) => {
       return windSpeedDomain[0] < x && windSpeedDomain[1] > x
     })
-    const limitsInPixels = limits.map( (x) => { return this.axis.xScale[0](x) })
+    const limitsInPixels = limits.map( (x) => { return axis.xScale[0](x) })
     const beaufortLimits = limits.map( (x) => { return scaleBeaufort(x) })
     const scale = d3.scaleLinear();
 
@@ -59,9 +60,23 @@ export class BeaufortAxis implements Visitor {
         .attr('transform', (d, i) => { return `translate( ${offset(i)} ,0)`});
     }
 
-    this.group
+    const ticks = this.group
       .select('.x2-axis')
       .call(beaufortAxis)
       .call(adjustTextLabels)
+
+    ticks.selectAll('.tick').each(function(d, i) {
+      if (this.nextSibling) {
+        if ( d3.select(this).select('rect').size() === 0) {
+          d3.select(this).append('rect')
+        }
+        const sections = d3.select(this).select('rect')
+        sections
+          .attr("width", scale(d+1) - scale(d))
+          .attr("y", 1)
+          .attr("height", axis.height-1)
+          .style("fill", d % 2 ? 'rgba(255,255,255,.1)' : 'none')
+        }
+    })
   }
 }
