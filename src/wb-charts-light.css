@@ -15,6 +15,10 @@
   font-size: 1em;
 }
 
+.legend {
+  font-size: 1em;
+}
+
 .axis-canvas {
   /* 0.87 * 255 = 223 */
   fill: rgba(223, 223, 223);
@@ -253,4 +257,9 @@
   left: -10px;
   margin-top: -5px;
   border-color: transparent black transparent transparent;
+}
+
+.data-field{
+  font-family: sans-serif;
+  font-size: 1em;
 }
