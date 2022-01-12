@@ -274,7 +274,6 @@ export class CartesianAxis extends Axis {
   resize(): void {
     this.setSize()
     this.setRange()
-    this.updateMouseEventLayer()
     this.zoom()
   }
 

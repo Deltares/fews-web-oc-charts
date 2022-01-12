@@ -35,16 +35,15 @@ export class ChartLine extends Chart {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   plotterPolar(axis: PolarAxis, axisIndex: any) {
-    const mappedData = this.mapDataPolar(axis)
     const rKey = this.dataKeys.radial
     const tKey = this.dataKeys.angular
     const lineGenerator = d3
       .lineRadial()
       .angle(function(d: any) {
-        return d[tKey]
+        return axis.angularScale(d[tKey])
       })
       .radius(function(d: any) {
-        return d[rKey]
+        return axis.radialScale(d[rKey])
       })
     this.group = this.selectGroup(axis, 'chart-line')
     if (this.group.select('path').size() === 0) {
@@ -57,7 +56,7 @@ export class ChartLine extends Chart {
       .duration(this.options.transitionTime)
       .ease(d3.easeLinear)
 
-    line.transition(t).attr('d', lineGenerator(mappedData))
+    line.transition(t).attr('d', lineGenerator(this.data))
     line.datum(this.data)
   }
 

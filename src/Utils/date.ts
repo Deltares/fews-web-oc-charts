@@ -1,10 +1,10 @@
 import * as d3 from 'd3'
 import { DateTime, Zone } from 'luxon'
 
-export function dateFormatter(date: number | Date, format: string, options?: any ) : string {
+export function dateFormatter(date: Date, format: string, options?: any ) : string {
   const timeZone = options?.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone
   const locale = options?.locale ?? navigator.language
-  const dateTime = DateTime.fromJSDate(date as Date).setZone(timeZone).setLocale(locale);
+  const dateTime = DateTime.fromJSDate(date).setZone(timeZone).setLocale(locale);
   return dateTime.toFormat(format)
 }
 
