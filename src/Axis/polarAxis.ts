@@ -23,18 +23,11 @@ export interface PolarAxisOptions extends AxesOptions {
   angular?: AngularAxisOptions
 }
 
-function mean(x: number[] | number) {
-  if (x instanceof Array) {
-    return d3.mean(x)
-  }
-  return x
-}
 
 export class PolarAxis extends Axis {
   radialScale: any
   angularScale: any
-  outerRadius: number
-  innerRadius: number
+  innerRadiusFactor: number
   intercept: number
   direction: number
   private angularRange: number[]
@@ -48,11 +41,9 @@ export class PolarAxis extends Axis {
     super(container, width, height, options, PolarAxis.defaultOptions)
     this.canvas = this.canvas
       .append('g')
-      .attr('transform', 'translate(' + this.width / 2 + ',' + this.height / 2 + ' )')
     this.direction = options.angular.direction ? options.angular.direction : Direction.ANTICLOCKWISE
     this.intercept = options.angular.intercept ? options.angular.intercept : 0
-    this.innerRadius = options.innerRadius ? options.innerRadius : 0
-    this.outerRadius = Math.min(this.width, this.height) / 2
+    this.innerRadiusFactor = options.innerRadius ? options.innerRadius : 0
     this.angularRange = options.angular.range ? options.angular.range : [0, 2 * Math.PI]
     this.angularDomain = options.angular.domain ? options.angular.domain : [0, 360]
     this.angularAxisOptions = defaultsDeep(this.angularAxisOptions, options.angular, { type: 'value'})
@@ -60,17 +51,27 @@ export class PolarAxis extends Axis {
     this.setDefaultTimeOptions(this.angularAxisOptions)
     this.setDefaultTimeOptions(this.radialAxisOptions)
 
+    this.canvas
+      .append('g')
+      .attr('class', 'axis-canvas')
+      .append('path')
+    this.updateCanvas()
+    this.setRange()
+    this.initGrid()
+    this.createChartGroup()
+  }
+
+  updateCanvas() {
+    this.canvas.attr('transform', 'translate(' + this.width / 2 + ',' + this.height / 2 + ' )')
     let startAngle = Math.PI/2  - this.intercept + this.angularRange[0]
     let endAngle =  Math.PI/2 - this.intercept + this.angularRange[1]
     if (this.direction === Direction.ANTICLOCKWISE) {
       startAngle = Math.PI + startAngle
       endAngle = Math.PI + endAngle
     }
-
     this.canvas
-      .append('g')
-      .attr('class', 'axis-canvas')
-      .append('path')
+      .select('.axis-canvas')
+      .select('path')
       .attr(
         'd',
         d3
@@ -80,9 +81,14 @@ export class PolarAxis extends Axis {
           .startAngle(startAngle)
           .endAngle(endAngle)
       )
-    this.setRange()
-    this.initGrid()
-    this.createChartGroup()
+  }
+
+  get innerRadius(): number {
+    return this.innerRadiusFactor * this.outerRadius
+  }
+
+  get outerRadius(): number {
+    return Math.min(this.width, this.height) / 2
   }
 
   redraw() {
@@ -100,6 +106,9 @@ export class PolarAxis extends Axis {
       chart.plotter(this, chart.axisIndex)
     }
     this.updateGrid()
+    for (const visitor of this.visitors) {
+      visitor.redraw()
+    }
   }
 
   radToDegrees(value: number): number {
@@ -111,7 +120,6 @@ export class PolarAxis extends Axis {
     // draw the radial axis
     const rAxis = d3.axisBottom(this.radialScale).ticks(5)
     this.canvas.select('.r-axis').call(rAxis)
-
     const draw = (context, radius) => {
       context.arc(0, 0, radius, -this.direction * this.angularRange[0] - this.intercept, -this.direction * this.angularRange[1] - this.intercept, this.direction === Direction.ANTICLOCKWISE) // draw an arc, the turtle ends up at ⟨194.4,108.5⟩
       return context;
@@ -156,12 +164,22 @@ export class PolarAxis extends Axis {
       angularTicks = d3.range(start, stop, step)
     }
 
-    this.canvas
+    if (
+      (Math.cos(this.angularRange[0]) - Math.cos(this.angularRange[1]) < 1e-6) &&
+      (Math.sin(this.angularRange[0]) - Math.sin(this.angularRange[1]) < 1e-6 )
+    ) angularTicks.shift()
+
+    const ticksSelection = this.canvas
       .select('.t-grid')
       .selectAll('line')
       .data(angularTicks)
+
+    ticksSelection.exit().remove()
+
+    ticksSelection
       .enter()
       .append('line')
+      .merge(ticksSelection)
       .attr('x1', this.innerRadius)
       .attr('y1', 0)
       .attr('x2', this.outerRadius)
@@ -177,17 +195,24 @@ export class PolarAxis extends Axis {
       .select('.t-axis')
       .selectAll('g')
       .data(angularTicks)
+
+    const tickElements= drawTicks
       .enter()
       .append('g')
       .attr('class', 'tick')
       .attr('transform', groupRotate)
 
-    drawTicks
-      .append('line')
-      .attr('x1', this.outerRadius)
-      .attr('y1', 0)
-      .attr('x2', this.outerRadius + 6)
-      .attr('y2', 0)
+    tickElements.append('line')
+    tickElements.append('text')
+
+    this.canvas
+      .select('.t-axis')
+        .selectAll('.tick')
+          .select('line')
+          .attr('x1', this.outerRadius)
+          .attr('y1', 0)
+          .attr('x2', this.outerRadius + 6)
+          .attr('y2', 0)
 
     const textRotate = function(d) {
       return (
@@ -213,14 +238,18 @@ export class PolarAxis extends Axis {
 
     const labelFormat = this.angularAxisOptions.format ? this.angularAxisOptions.format : d => d
 
-    drawTicks
-      .append('text')
-      .attr('text-anchor', anchor)
-      .attr('alignment-baseline', 'middle')
-      .attr('x', this.outerRadius + 15)
-      .attr('y', 0)
-      .text(labelFormat)
-      .attr('transform', textRotate)
+    this.canvas
+      .select('.t-axis')
+        .selectAll('.tick')
+          .select('text')
+          .attr('text-anchor', anchor)
+          .attr('alignment-baseline', 'middle')
+          .attr('x', this.outerRadius + 15)
+          .attr('y', 0)
+          .text(labelFormat)
+          .attr('transform', textRotate)
+
+    this.updateCanvas()
   }
 
   protected setRange() {
@@ -252,10 +281,14 @@ export class PolarAxis extends Axis {
     this.canvas.append('g').attr('class', 'grid r-grid')
     this.canvas.append('g').attr('class', 'grid t-grid')
     this.canvas.append('g').attr('class', 'axis r-axis')
+      .attr('font-family', 'sans-serif')
+      .attr('font-size', '10')
     this.canvas
       .append('g')
       .attr('class', 'axis t-axis')
       .attr('transform', 'rotate(' + -this.intercept * 180 / Math.PI + ')')
+      .attr('font-family', 'sans-serif')
+      .attr('font-size', '10')
     this.updateGrid()
   }
 }
