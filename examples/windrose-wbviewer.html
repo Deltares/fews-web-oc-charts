@@ -1,10 +1,17 @@
 <!DOCTYPE html>
-<html>
+<html lang="nl">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Wind Rose Tech Demo</title>
   <style>
 
+    html, body {
+      height: 100%;
+      margin: 0px;
+      font-size: 16px;
+      font-family: sans-serif;
+    }
 
     .wbcharts svg {
       overflow: visible;
@@ -34,8 +41,6 @@
       display: none;
     }
     #wind-gauges {
-      font-family: sans-serif;
-      font-size: 12px;
       color: white;
     }
 
@@ -57,33 +62,31 @@
       background:gray;
     }
 
-    .data-field{
-      font-family: sans-serif;
-      font-size: 12px;
-    }
-
     #chart-wind-rose {
       position: relative;
       display: inline-block;
-      width: 400px;
-      height: 400px;
+      width: 49%;
+      height: 100%;
     }
 
     #chart-wind-rose .data-field{
       text-anchor: middle
     }
-
+/*
     #chart-wind-rose .data-field-value{
       font-family: sans-serif;
       font-size: 16px;
-    }
+    } */
 
     #wind-gauges {
+      width: 49%;
+      height: 49%;
       position: relative;
       display: inline-block;
     }
 
-    #chart-wind-time {
+    .chart-wind-time {
+      height: 49%;
       position: relative;
       display: block;
     }
@@ -91,28 +94,28 @@
     #chart-wind-stoot {
       position: relative;
       display: block;
-      width: 400px;
+      width: 100%;
       height: 140px;
     }
     #chart-wind-speed {
       position: relative;
       display: block;
-      width: 400px;
+      width: 100%;
       height: 140px;
     }
 
     #chart-wind-speed-time {
       position: relative;
       display: block;
-      width: 400px;
-      height: 300px;
+      width: 100%;
+      height: calc(100% - 60px);
     }
 
     #chart-wind-direction-time {
       position: relative;
       display: block;
-      width: 400px;
-      height: 300px;
+      width: 100%;
+      height: calc(100% - 60px);
     }
 
     #polar-dot {
@@ -131,7 +134,7 @@
     }
 
     #polar-line { fill: none; stroke: rgb(0, 128, 255); stroke-width: 3px; }
-    #forecast { fill: none; stroke: rgb(255, 128, 255); stroke-width: 3px; }
+    #polar-line-forecast { fill: none; stroke: rgb(255, 128, 255); stroke-width: 3px; }
 
     #cartesian-dot { fill: #999999; stroke: white; }
 
@@ -148,7 +151,7 @@
 
     #slider-datetime {
       display: block;
-      margin-left:40px;
+      margin-left:60px;
     }
 
     #slider-reset-button {
@@ -156,9 +159,9 @@
     }
 
     #slider {
-      width: 320px;
-      margin-left: 40px;
-      margin-right: 40px;
+      width: calc(100% - 120px);
+      margin-left: 60px;
+      margin-right: 60px;
     }
 
     #slider-reset-checkbox {
@@ -168,12 +171,8 @@
 
     #slider-reset {
       display: block;
-      margin-left: 40px;
-      margin-right: 40px;
-    }
-
-    .legend {
-      font: 10px sans-serif;
+      margin-left: 60px;
+      margin-right: 60px;
     }
     </style>
 
@@ -188,30 +187,31 @@
   crossorigin="anonymous"></script>
     <script src="https://d3js.org/d3.v7.js"></script>
     <script src="https://d3js.org/d3-selection-multi.v1.min.js"></script>
-    <!-- <script src="https://unpkg.com/date-time-format-timezone@latest/build/browserified/date-time-format-timezone-complete-min.js"></script> -->
     <link rel="stylesheet" href="../dist/wb-charts-dark.css">
   </head>
   <body>
-    <div id="chart-wind-rose"></div>
-    <div id="wind-gauges">
-      <span id="slider-datetime"> -</span>
-      <input id="slider" type="range" name="points" min="0" max="10">
-      <div id="slider-reset">
-        <input id="slider-reset-button" type="button" value="actueel" onclick="resetTimeSlider(timesdata, true);">
-        <input id="slider-reset-checkbox" type="checkbox">
-        Volg actuele tijd
+    <div class="chart-wind-time">
+      <div id="chart-wind-rose"></div>
+      <div id="wind-gauges">
+        <span id="slider-datetime"> -</span>
+        <input id="slider" type="range" name="points" min="0" max="10" title="time selection">
+        <div id="slider-reset">
+          <input id="slider-reset-button" type="button" value="actueel" onclick="resetTimeSlider(timesdata, true);">
+          <input id="slider-reset-checkbox" type="checkbox">
+          Volg actuele tijd
+        </div>
+        <div id="chart-wind-stoot"></div>
+        <div id="chart-wind-speed"></div>
       </div>
-      <div id="chart-wind-stoot"></div>
-      <div id="chart-wind-speed"></div>
     </div>
-    <div id="chart-wind-time">
-      <div style="display: inline-block;">
+    <div class="chart-wind-time">
+      <div style="display: inline-block; height: 100%; width: 49%;">
+        <div id="legend-wind-direction-time"></div><br>
         <div id="chart-wind-direction-time"></div>
-        <div id="legend-wind-direction-time"></div>
       </div>
-      <div style="display: inline-block;">
+      <div style="display: inline-block; height: 100%; width: 49%;">
+        <div id="legend-wind-speed-time"></div><br>
         <div id="chart-wind-speed-time"></div>
-        <div id="legend-wind-speed-time"></div>
       </div>
     </div>
     <script src="../dist/wb-charts.umd.js"></script>
@@ -349,7 +349,7 @@
             intercept: Math.PI/ 2,
             format: (value) => `${value}°`
           },
-          innerRadius: 80
+          innerRadius: 0.5
         });
         windDirectionMeasurement = new wbCharts.ChartLine(windRichtingMetingen[0], {transitionTime: transitionTime});
         windDirectionForecast = new wbCharts.ChartLine(windRichtingVerwachtingen[0], {transitionTime: transitionTime});
@@ -361,8 +361,8 @@
         polarText = new wbCharts.DataField(
         polarAxis.canvas, {
           selector: 'direction-measured',
-          labelField: {text: 'richting', dy: '-45px' },
-          valueField: {dy: '-25px', units: degree }
+          labelField: {text: 'richting', dy: '-50px' },
+          valueField: {dy: '-30px', units: degree }
         }
         );
 
@@ -376,8 +376,8 @@
         polarText2 = new wbCharts.DataField(
         polarAxis.canvas, {
           selector: 'stoot',
-          labelField: {text: 'windstoot', dy: '25px' },
-          valueField: {dy: '45px', units: unitsStoot }
+          labelField: {text: 'windstoot', dy: '30px' },
+          valueField: {dy: '50px', units: unitsStoot }
         });
 
         // Wind speed chart
@@ -400,6 +400,8 @@
             { position: 'left' }
           ],
           margin: {
+            right: 60,
+            left: 60,
             bottom: 60
           }
         });
@@ -433,6 +435,8 @@
             showGrid: true
           }],
           margin: {
+            right: 60,
+            left: 60,
             bottom: 60
           }
         });
@@ -458,7 +462,11 @@
             domain: [0,40],
             position: 'left',
             showGrid: true
-          }]
+          }],
+          margin: {
+            right: 60,
+            left: 60,
+          }
         });
         windSpeedTimeM = new wbCharts.ChartLine( [ {t: 0, y: 0}, {t: 1, y: 0} ], {transitionTime: transitionTime});
         windSpeedTimeF = new wbCharts.ChartLine( [ {t: 0, y: 0}, {t: 1, y: 0} ], {transitionTime: transitionTime});
@@ -489,7 +497,11 @@
           domain: [0,360],
           position: 'left',
           showGrid: true
-        }]
+        }],
+        margin: {
+            right: 60,
+            left: 60,
+        }
         });
         windDirectionTimeM = new wbCharts.ChartLine( [ {t: 0, y: 0}, {t: 1, y: 0} ], {transitionTime: transitionTime});
         windDirectionTimeF = new wbCharts.ChartLine( [ {t: 0, y: 0}, {t: 1, y: 0} ], {transitionTime: transitionTime});
@@ -776,6 +788,14 @@
 
       get_wind_data();
 
+      window.onresize = function() {
+        windSpeedAxis.resize();
+        windStootAxis.resize();
+        windSpeedAxis.resize();
+        windTimeAxis.resize();
+        windDirectionTimeAxis.resize();
+        polarAxis.resize();
+      };
     </script>
 
   </body>
