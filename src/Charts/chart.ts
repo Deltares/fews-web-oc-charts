@@ -239,21 +239,6 @@ export abstract class Chart {
     let i1 = bisectData.left(this.data, domain[1])
     i0 = i0 > 0 ? i0 - 1 : 0
     i1 = i1 < this.data.length - 1 ? i1 + 1 : this.data.length
-
-    const mappedData: any = this.data.slice(i0, i1)
-    return mappedData
-  }
-
-  protected mapDataPolar(axis: PolarAxis) {
-    const rKey = this.dataKeys.radial
-    const tKey = this.dataKeys.angular
-
-    const mappedData: any = this.data.map(function(d: any) {
-      return {
-        [rKey]: axis.radialScale(d[rKey]),
-        [tKey]: axis.angularScale(d[tKey])
-      }
-    })
-    return mappedData
+    return this.data.slice(i0, i1)
   }
 }

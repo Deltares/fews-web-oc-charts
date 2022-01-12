@@ -18,10 +18,30 @@ export interface CartesianAxesOptions extends AxesOptions {
   y?: CartesianAxisOptions[];
 }
 
-function anchorForAngle(angle) {
-  if (angle < 180) {
+function normalizeAngle(angle) {
+  return angle - 360 * Math.floor( (angle) / 360)
+}
+
+function anchorForAngle(angle, position) {
+  let rotate
+  switch(position) {
+    case AxisPosition.Top:
+      rotate = 180
+      break
+    case AxisPosition.Right:
+      rotate = -90
+      break
+    case AxisPosition.Bottom:
+      rotate = 0
+      break
+    case AxisPosition.Left:
+    default:
+      rotate = 90
+  }
+  const normalizedAngle = normalizeAngle(angle - rotate)
+  if (normalizedAngle < 180) {
     return 'start'
-  } else if (angle > 180) {
+  } else if (normalizedAngle > 180) {
     return 'end'
   }
   return 'middle'
@@ -39,9 +59,6 @@ export class CartesianAxis extends Axis {
     x: [ { type: AxisType.value, labelAngle: 0 } ],
     y: [ { type: AxisType.value, labelAngle: 0 } ]
   }
-
-
-
 
   constructor(
     container: HTMLElement,
@@ -257,7 +274,6 @@ export class CartesianAxis extends Axis {
   resize(): void {
     this.setSize()
     this.setRange()
-    this.updateMouseEventLayer()
     this.zoom()
   }
 
@@ -314,10 +330,6 @@ export class CartesianAxis extends Axis {
       const translateString = `translate(${x},${y})`
 
       const angle = options[key].labelAngle || 0
-      let normalizedAngle = options[key].position === AxisPosition.Top ? 180 : 0
-      normalizedAngle = options[key].labelAngle + normalizedAngle
-       - 360 * Math.floor( (options[key].labelAngle + normalizedAngle) / 360)
-
       const axisHandle = this.canvas
         .select(`.x-axis-${key}`)
         .attr('transform', translateString)
@@ -332,7 +344,7 @@ export class CartesianAxis extends Axis {
             .attr("transform", `rotate(${angle})`);
           break
         default:
-          const anchor = anchorForAngle(normalizedAngle)
+          const anchor = anchorForAngle(angle, options[key].position)
           const offset = options[key].position === AxisPosition.Top ? -15 : 15
           axisHandle
             .selectAll("text")
@@ -395,11 +407,7 @@ updateYAxis (options: CartesianAxisOptions[]): void {
     const translateString = `translate(${x},${y})`
 
     const angle = options[key].labelAngle || 0
-    let normalizedAngle = options[key].position === AxisPosition.Right ? -90 : + 90
-    normalizedAngle = options[key].labelAngle + normalizedAngle
-     - 360 * Math.floor( (options[key].labelAngle + normalizedAngle) / 360)
-
-     const axisHandle = this.canvas
+    const axisHandle = this.canvas
       .select(`.y-axis-${key}`)
       .attr('transform', translateString)
       .call(axis)
@@ -413,7 +421,7 @@ updateYAxis (options: CartesianAxisOptions[]): void {
           .attr("transform", `rotate(${angle})`);
         break
       default:
-        const anchor = anchorForAngle(normalizedAngle)
+        const anchor = anchorForAngle(angle, options[key].position)
         const offset = options[key].position === AxisPosition.Right ? 15 : -15
         axisHandle
           .selectAll("text")

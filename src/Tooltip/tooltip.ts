@@ -38,7 +38,6 @@ export class Tooltip {
   }
 
   update(html: string, position: TooltipPosition, x: number, y: number) {
-    if (this.isHidden) this.show()
     this.tooltip
       .style('left', x + 'px')
       .style('top', y + 'px')
