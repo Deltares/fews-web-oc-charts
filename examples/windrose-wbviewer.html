@@ -346,7 +346,8 @@
         polarAxis = new wbCharts.PolarAxis(containerWindrose, null, null, {
           angular: {
             direction: wbCharts.Direction.CLOCKWISE,
-            intercept: Math.PI/ 2
+            intercept: Math.PI/ 2,
+            format: (value) => `${value}°`
           },
           innerRadius: 80
         });
