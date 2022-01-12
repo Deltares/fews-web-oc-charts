@@ -322,13 +322,13 @@
 
       function speedDataFormatter(d) {
         if (!d[0] || d[0].x === null) {
-          return '-' + "[m/s]\t" + '-' + "[kt]\t" + '-' + "[km/h]";
+          return '-' + "m/s\t" + '-' + "kt\t" + '-' + "km/h";
         }
         var format = d3.format(".1f");
         var value = d[0].y !== null ? format(d[0].y) : '-';
         var knots = !d[0].y !== null ? format(d[0].y * 1.943844): '-';
         var kmph = !d[0].y !== null ?  format(d[0].y * 3.6): '-';
-        return value + "[m/s]\t" + knots + "[kt]\t" + kmph + "[km/h]";
+        return value + "m/s\t" + knots + "kt\t" + kmph + "km/h";
       }
 
       var unitsSpeed = [{unit: ' m/s', factor : 1.0 }, {unit: ' kt', factor: 1.943844 }, {unit: ' km/h', factor: 3.6 }, {unit: ' Bft', scale: wbCharts.scaleBeaufort }]
@@ -345,8 +345,8 @@
         var containerWindrose = document.getElementById("chart-wind-rose");
         polarAxis = new wbCharts.PolarAxis(containerWindrose, null, null, {
           angular: {
-            direction: wbCharts.CLOCKWISE,
-            intercept: 90
+            direction: wbCharts.Direction.CLOCKWISE,
+            intercept: Math.PI/ 2
           },
           innerRadius: 80
         });
@@ -385,14 +385,14 @@
           transitionTime: transitionTime,
           x: [
             {
-              unit: "[m/s]",
+              unit: "m/s",
               domain: [0,40],
               position: 'bottom',
               showGrid: true
             },
             {
               position: 'top',
-              unit: "[Bft]"
+              unit: "Bft"
             },
           ],
           y: [
@@ -426,7 +426,7 @@
         windStootAxis = new wbCharts.CartesianAxis(containerWindstoot, null, null, {
           transitionTime: transitionTime,
           x: [{
-            unit: "[m/s]",
+            unit: "m/s",
             domain: [0,40],
             position: 'bottom',
             showGrid: true
@@ -453,7 +453,7 @@
           x: [{ type: 'time', position: 'bottom', showGrid: true }],
           y: [{
             label: "windsnelheid",
-            unit: "[m/s]",
+            unit: "m/s",
             domain: [0,40],
             position: 'left',
             showGrid: true
@@ -483,7 +483,7 @@
         x: [{ type: 'time', position: 'bottom', showGrid: true}],
         y: [{
           label: "windrichting",
-          unit: "[°]",
+          unit: "°",
           type: 'degrees',
           domain: [0,360],
           position: 'left',
@@ -503,16 +503,37 @@
         );
 
         var beaufort = windSpeedAxis.canvas
-        .append('g')
+        .insert('g', '.group')
         .attr('class', 'axis x2-axis');
 
         var limits;
         beaufortScale = d3.scaleLinear();
         beaufortScale = updateBeaufortScale(zoomLimit);
+
+        adjustTextLabels = function(selection) {
+          const text = selection.selectAll('.tick text')
+          const tickValues = text.data().map((x) => beaufortScale(x))
+          tickValues.push(windSpeedAxis.width)
+          const offset = ( i ) => { return (tickValues[i+1] - tickValues[i])/2}
+          text
+            .attr('transform', (d, i) => { return `translate( ${offset(i)} ,0)`});
+        }
+
         beaufortAxis = d3
-        .axisTop(beaufortScale)
-        .tickValues([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
-        windSpeedAxis.canvas.select(".x2-axis").call(beaufortAxis);
+          .axisTop(beaufortScale)
+          .tickValues([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+        const gX = windSpeedAxis.canvas.select(".x2-axis")
+          .call(beaufortAxis)
+          .call(adjustTextLabels)
+        gX.selectAll(".tick").each(function(d, i) {
+          if (this.nextSibling) {
+          d3.select(this).append("rect")
+            .attr("width", this.nextSibling.firstChild.getBoundingClientRect().x - this.firstChild.getBoundingClientRect().x)
+            .attr("y", 1)
+            .attr("height", windSpeedAxis.height-1)
+            .style("fill", i % 2 ? "none" : "dimgray");
+          }
+        });
 
         // Draw
         windSpeedAxis.redraw({x: {autoScale: true}, y : {autoScale: true}});
@@ -536,7 +557,7 @@
         var sliderdt = document.getElementById("slider-datetime");
         // var timezone = 'Etc/GMT' + windTimeAxis.timeZoneOffset/60;
         var dateFormatter = wbCharts.dateFormatter;
-        sliderdt.innerHTML = dateFormatter(new Date(times[0] * 1000), 'YYYY-MM-DD HH:mm zz', {timeZone: 'Europe/Amsterdam'});
+        sliderdt.innerHTML = dateFormatter(new Date(times[0] * 1000), 'yyyy-MM-DD HH:mm ZZZZ', {timeZone: 'Europe/Amsterdam'});
       }
 
 
@@ -609,12 +630,14 @@
           polarText2.redraw();
           windStootText.redraw();
 
-          windSpeedAxis.canvas.select(".x2-axis").transition(transitionTime).call(beaufortAxis);
+          windSpeedAxis.canvas.select(".x2-axis")
+            .call(beaufortAxis)
+            .call(adjustTextLabels)
 
           var sliderdt = document.getElementById("slider-datetime");
           var date = new Date(times[position]*1000);
           var dateFormatter = wbCharts.dateFormatter;
-          sliderdt.innerHTML = dateFormatter(new Date(times[position] * 1000),  'YYYY-MM-DD HH:mm zz', {timeZone: 'Europe/Amsterdam'});
+          sliderdt.innerHTML = dateFormatter(new Date(times[position] * 1000),  'yyyy-MM-DD HH:mm ZZZZ', {timeZone: 'Europe/Amsterdam'});
         };
         var input = document.getElementById("slider");
         input.onchange = function (event) { updateCharts(event); };
