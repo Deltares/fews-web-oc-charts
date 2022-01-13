@@ -124,31 +124,31 @@
     }
 
     #polar-range {
-      fill:rgba(0,128,255,0.5);
+      fill:rgba(79, 193, 255, 0.5);
       stroke: none;
     }
 
     #cartesian-range {
-      fill:rgba(53, 180, 41,0.5);
+      fill:rgba(79, 193, 255, 0.5);
       stroke: none;
     }
 
-    #polar-line { fill: none; stroke: rgb(0, 128, 255); stroke-width: 3px; }
-    #polar-line-forecast { fill: none; stroke: rgb(255, 128, 255); stroke-width: 3px; }
+    #polar-line { fill: none; stroke: rgb(79, 193, 255); stroke-width: 3px; }
+    #polar-line-forecast { fill: none; stroke: rgb(214, 39, 40); stroke-width: 3px; }
 
     #cartesian-dot { fill: #999999; stroke: white; }
 
-    #wind-line { fill: none; stroke: rgb(53, 180, 41); stroke-width: 3px;}
-    #wind-line-time { fill: none; stroke: rgb(53, 180, 41); stroke-width: 1px;}
-    #windstoot-line-time { fill: none; stroke: rgb(170, 30, 30); stroke-width: 1px;}
-    #forecast-time { fill: none; stroke: rgb(255, 128, 255); stroke-width: 1px; }
+    #wind-line { fill: none; stroke: rgb(79, 193, 255); stroke-width: 3px;}
+    #wind-line-time { fill: none; stroke: rgb(79, 193, 255); stroke-width: 1.5px;}
+    #windstoot-line-time { fill: none; stroke: rgb(156, 220, 254); stroke-width: 1.5px;}
 
+    #wind-forecast-line{ fill: none; stroke: rgb(214, 39, 40); stroke-width: 3px;}
+    #wind-forecast-line-time{ fill: none; stroke: rgb(214, 39, 40); stroke-width: 1.5px;}
 
+    #winddirection-line-time{ fill: none; stroke:rgb(79, 193, 255); stroke-width: 1.5px;}
+    #winddirection-forecast-line-time{ fill: none; stroke: rgb(214, 39, 40); stroke-width: 1.5px;}
 
-    #winddirection-line-time{ fill: none; stroke: rgb(0, 128, 255); stroke-width: 1px;}
-
-    #stoot-line { fill: none; stroke: rgb(170, 30, 30); stroke-width: 3px;}
-
+    #stoot-line { fill: none; stroke: rgb(156, 220, 254); stroke-width: 3px;}
     #slider-datetime {
       display: block;
       margin-left:60px;
@@ -355,7 +355,35 @@
           valueField: {dy: '50px', units: unitsStoot }
         });
 
-        beaufortVisitor = new wbCharts.BeaufortAxis({});
+        beaufortVisitor = new wbCharts.BeaufortAxis({
+          x: { axisIndex: 0 },
+          colors: {
+            1: "rgba(255, 255, 255, 0.2)",
+            3: "rgba(255, 255, 255, 0.2)",
+            5: "rgba(255, 255, 255, 0.2)",
+            7: "rgba(255, 255, 255, 0.2)",
+            9: "rgba(255, 255, 255, 0.2)",
+            11: "rgba(255, 255, 255, 0.2)",
+          }
+        });
+        beaufortVisitor1 = new wbCharts.BeaufortAxis({
+          y: { axisIndex: 0 },
+          colors: {
+            0: "rgba(255, 255, 255, 0.2)",
+            1: "rgba(174, 241, 249, 0.2)",
+            2: "rgba(150, 247, 220, 0.2)",
+            3: "rgba(150, 247, 180, 0.2)",
+            4: "rgba(111, 244, 111, 0.2)",
+            5: "rgba(115, 237, 19, 0.2)",
+            6: "rgba(164, 237, 18, 0.2)",
+            7: "rgba(218, 237, 19, 0.2)",
+            8: "rgba(237, 194, 18, 0.2)",
+            9: "rgba(237, 143, 18, 0.2)",
+            10: "rgba(237, 99, 18, 0.2)",
+            11: "rgba(237, 41, 17, 0.2)",
+            12: "rgba(213, 16, 44, 0.2)",
+          }
+        });
         // Wind speed chart
         var containerWindSpeed = document.getElementById("chart-wind-speed");
         windSpeedAxis = new wbCharts.CartesianAxis(containerWindSpeed, null, null, {
@@ -431,13 +459,19 @@
         windTimeAxis = new wbCharts.CartesianAxis(containerWindSpeedTime, null, null, {
           transitionTime: transitionTime,
           x: [{ type: 'time', position: 'bottom', showGrid: true }],
-          y: [{
-            label: "windsnelheid",
-            unit: "m/s",
-            domain: [0,40],
-            position: 'left',
-            showGrid: true
-          }],
+          y: [
+            {
+              label: "windsnelheid",
+              unit: "m/s",
+              domain: [0,40],
+              position: 'left',
+              showGrid: true
+            },
+            {
+              position: 'right',
+              unit: "Bft"
+            },
+          ],
           margin: {
             right: 60,
             left: 60,
@@ -452,7 +486,7 @@
 
         windStootTimeM.addTo(windTimeAxis,{ x: { key: "t",axisIndex: 0  } , y: {key: "y", axisIndex: 0} }, 'windstoot', '#windstoot-line-time');
 //
-        windSpeedTimeF.addTo(windTimeAxis,{ x: { key: "t", axisIndex: 0 } , y: {key: "y", axisIndex: 0} }, 'wind-forecast', '#forecast-time');
+        windSpeedTimeF.addTo(windTimeAxis,{ x: { key: "t", axisIndex: 0 } , y: {key: "y", axisIndex: 0} }, 'wind-forecast', '#wind-forecast-line-time');
 
         var legendWindTime = new wbCharts.Legend( [
         {selector: 'windstoot', label :'Windstoot meting'},
@@ -481,7 +515,7 @@
         windDirectionTimeM = new wbCharts.ChartLine( [ {t: 0, y: 0}, {t: 1, y: 0} ], {transitionTime: transitionTime});
         windDirectionTimeF = new wbCharts.ChartLine( [ {t: 0, y: 0}, {t: 1, y: 0} ], {transitionTime: transitionTime});
         windDirectionTimeM.addTo(windDirectionTimeAxis, { x: { key: "t", axisIndex: 0 } , y: {key: "y", axisIndex: 0} }, 'winddirection', '#winddirection-line-time');
-        windDirectionTimeF.addTo(windDirectionTimeAxis, { x: { key: "t",axisIndex: 0 } , y: {key: "y", axisIndex: 0} }, 'winddirection-forecast', '#forecast-time');
+        windDirectionTimeF.addTo(windDirectionTimeAxis, { x: { key: "t", axisIndex: 0 } , y: {key: "y", axisIndex: 0} }, 'winddirection-forecast', '#winddirection-forecast-line-time');
 
         var legendWindDirectionTime = new wbCharts.Legend( [
         {selector: 'winddirection', label : 'Windrichting meting'},
@@ -496,8 +530,8 @@
         windSpeedAxis.redraw({x: {autoScale: true}, y : {autoScale: true}});
         windStootAxis.redraw({x: {autoScale: true}, y : {autoScale: true}});
         polarAxis.redraw();
-        windTimeAxis.redraw({x: {autoScale: true} });
-        windDirectionTimeAxis.redraw({ x: {autoScale: true} });
+        windTimeAxis.redraw({x: {autoScale: true}, y: {autoScale: true} });
+        windDirectionTimeAxis.redraw({ x: {autoScale: true}, y: {autoScale: true} });
 
         // Add visitors
         polarAxis.accept(polarText);
@@ -507,6 +541,7 @@
         windStootAxis.accept(windStootText);
         windStootAxis.accept(polarText2);
         windTimeAxis.accept(legendWindTime);
+        windTimeAxis.accept(beaufortVisitor1);
 
         windDirectionTimeAxis.accept(legendWindDirectionTime);
         windDirectionTimeAxis.accept(new wbCharts.ZoomHandler());
