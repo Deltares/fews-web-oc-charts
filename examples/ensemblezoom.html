@@ -51,7 +51,7 @@ var height = null;
 var width = null;
 var container1 = document.getElementById("chart-container-1");
 
-var axis1 = new wbCharts.CartesianAxis(container1, width, height, 
+var axis1 = new wbCharts.CartesianAxis(container1, width, height,
     {   x: [{
             type: wbCharts.AxisType.time,
             label: 'datum',
@@ -135,7 +135,6 @@ d3.json("ensemble.json").then(function (data) {
     plotMedian1.addTo(axis,  { x: { key: "x", axisIndex: 0 }, y: {key: "y", axisIndex: 0} }, 'median', '#median-line');
     axis.redraw({x:{ autoScale: true}, y: {autoScale: true} });
 
-    window.onresize = function(){axis.resize(); axis1.resize()};
 })
         </script>
 

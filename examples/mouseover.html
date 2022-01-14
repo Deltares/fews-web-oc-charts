@@ -329,10 +329,6 @@
     }
     window.setTimeout(dataload, 1000);
 
-    window.onresize = function () {
-      axis.resize();
-    };
-
     function toggleChart(element) {
       console.log('toggle', element)
       let ids = element.getAttribute('data-id').split(',');
