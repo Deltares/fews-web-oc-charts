@@ -62,6 +62,7 @@ export abstract class Axis {
   canvas: any
   svg: d3.Selection<SVGElement, any, SVGElement, any>
   container: HTMLElement
+  observer: ResizeObserver
   width: number
   height: number
   margin: { top: number; right: number; bottom: number; left: number }
@@ -78,6 +79,11 @@ export abstract class Axis {
       options,
       defaultOptions
     )
+
+    this.observer = new ResizeObserver(entries => {
+      if(entries[0].contentBoxSize) this.resize()
+    })
+    this.observer.observe(container)
 
     // Using the d3.formatLocale is not easy for generic plotting
     d3.formatDefaultLocale({
