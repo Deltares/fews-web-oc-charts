@@ -283,6 +283,7 @@ export class MouseOver implements Visitor {
         }
       }
       axis.tooltip.update(htmlContent, TooltipPosition.Right, mouse[0] + axis.margin.left, mouse[1] + axis.margin.top)
+      if ( axis.tooltip.isHidden ) { axis.tooltip.show() }
     }
   }
 
