@@ -123,7 +123,7 @@ export class ChartMarker extends Chart {
   }
 
   drawLegendSymbol(legendId?: string, asSvgElement?: boolean) {
-    const props = ['file', 'stroke']
+    const props = ['fill', 'stroke']
     const source = this.group
       .select('path')
       .node() as Element
