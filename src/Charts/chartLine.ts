@@ -61,10 +61,7 @@ export class ChartLine extends Chart {
   }
 
   drawLegendSymbol(legendId?: string, asSvgElement?: boolean) {
-    const chartElement = this.group
-      .select('path')
-      .node() as Element
-    const style = window.getComputedStyle(chartElement)
+    const props = ['stroke', 'stroke-width', 'stroke-dasharray']
     const svg = d3.create('svg')
       .attr('width',20)
       .attr('height',20)
@@ -76,9 +73,19 @@ export class ChartLine extends Chart {
       .attr('x2', 20)
       .attr('y1', 0)
       .attr('y2', 0)
-      .style('stroke', style.getPropertyValue('stroke'))
-      .style('stroke-width', style.getPropertyValue('stroke-width'))
-      .style('stroke-dasharray', style.getPropertyValue('stroke-dasharray'))
+    if (this.style === undefined) {
+      const chartElement = this.group
+      .select('path')
+      .node() as Element
+      const style = window.getComputedStyle(chartElement)
+      for ( const key of props) {
+        element.style(key, style.getPropertyValue('stroke'))
+      }
+    } else {
+      for ( const key of props) {
+        if ( this.style[key] ) element.style(key, this.style[key])
+      }
+    }
     if (asSvgElement) return element.node()
     return svg.node()
   }
