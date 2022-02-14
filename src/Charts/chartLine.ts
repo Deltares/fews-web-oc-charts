@@ -79,7 +79,7 @@ export class ChartLine extends Chart {
       .node() as Element
       const style = window.getComputedStyle(chartElement)
       for ( const key of props) {
-        element.style(key, style.getPropertyValue('stroke'))
+        element.style(key, style.getPropertyValue(key))
       }
     } else {
       for ( const key of props) {
