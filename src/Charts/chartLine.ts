@@ -1,3 +1,4 @@
+import { SvgPropertiesHyphen } from 'csstype'
 import * as d3 from 'd3'
 import { CartesianAxis, PolarAxis } from '../Axis'
 import { Chart } from './chart'
@@ -62,6 +63,9 @@ export class ChartLine extends Chart {
 
   drawLegendSymbol(legendId?: string, asSvgElement?: boolean) {
     const props = ['stroke', 'stroke-width', 'stroke-dasharray']
+    const source = this.group
+      .select('path')
+      .node() as Element
     const svg = d3.create('svg')
       .attr('width',20)
       .attr('height',20)
@@ -73,19 +77,7 @@ export class ChartLine extends Chart {
       .attr('x2', 20)
       .attr('y1', 0)
       .attr('y2', 0)
-    if (this.style === undefined) {
-      const chartElement = this.group
-      .select('path')
-      .node() as Element
-      const style = window.getComputedStyle(chartElement)
-      for ( const key of props) {
-        element.style(key, style.getPropertyValue(key))
-      }
-    } else {
-      for ( const key of props) {
-        if ( this.style[key] ) element.style(key, this.style[key])
-      }
-    }
+    this.applyStyle(source, element, props)
     if (asSvgElement) return element.node()
     return svg.node()
   }

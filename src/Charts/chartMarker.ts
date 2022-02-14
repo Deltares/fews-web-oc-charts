@@ -122,10 +122,10 @@ export class ChartMarker extends Chart {
   }
 
   drawLegendSymbol(legendId?: string, asSvgElement?: boolean) {
-    const chartElement = this.group
+    const props = ['file', 'stroke']
+    const source = this.group
       .select('path')
       .node() as Element
-    const style = window.getComputedStyle(chartElement)
     const svg = d3.create('svg')
       .append('svg')
       .attr('width',20)
@@ -140,8 +140,7 @@ export class ChartMarker extends Chart {
       .attr('transform', 'translate(10, 0)')
     innerGroup.append('path')
       .attr('d', d3.symbol(d3.symbols[this.options.symbol.id], this.options.symbol.size))
-      .style('stroke', style.getPropertyValue('stroke'))
-      .style('fill', style.getPropertyValue('fill'))
+    this.applyStyle(source, innerGroup, props)
     if (asSvgElement) return innerGroup.node()
     return svg.node()
   }

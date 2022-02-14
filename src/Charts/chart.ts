@@ -241,4 +241,17 @@ export abstract class Chart {
     i1 = i1 < this.data.length - 1 ? i1 + 1 : this.data.length
     return this.data.slice(i0, i1)
   }
+
+  protected applyStyle(source: Element, element: d3.Selection<SVGElement, unknown, SVGElement, unknown>, props: string[]) {
+    if (this.style === undefined) {
+      const s = window.getComputedStyle(source)
+      for ( const key of props) {
+        element.style(key, s.getPropertyValue(key))
+      }
+    } else {
+      for ( const key of props) {
+        if ( this.style[key] ) element.style(key, this.style[key])
+      }
+    }
+  }
 }
