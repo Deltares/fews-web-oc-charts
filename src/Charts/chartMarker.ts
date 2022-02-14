@@ -31,7 +31,8 @@ export class ChartMarker extends Chart {
     const yScale = axis.yScale[axisIndex.y.axisIndex]
 
     const skip = this.options.symbol.skip
-    const mappedData = this.mapDataCartesian(xScale.domain()).filter((d, i) => { return i % skip === 0 })
+    const mappedData = this.mapDataCartesian(xScale.domain())
+      .filter((d, i) => { return i % skip === 0 && d[yKey] !== null })
 
     this.group = this.selectGroup(axis, 'chart-marker')
       .datum(mappedData)
