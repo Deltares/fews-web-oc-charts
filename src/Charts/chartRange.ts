@@ -205,16 +205,22 @@ export class ChartRange extends Chart {
 
     elements.exit().remove()
 
+    function angularPosition(angle: number): number {
+      const direction = -axis.direction
+      const intercept = 90 - 180 * axis.intercept / Math.PI
+      const range = [180 * axis.angularScale.range()[0] / Math.PI, 180 * axis.angularScale.range()[1] / Math.PI]
+      const scale = (axis.angularScale.domain()[1] - axis.angularScale.domain()[0])/(range[1]-range[0])
+      return (angle + direction*intercept*scale + (range[0] - direction*range[0])*scale)*direction
+    }
+
     const enter = elements
       .enter()
       .append('path')
       .attr('d', arcGenerator)
       .on('pointerover', (e: any, d: any) => {
         axis.tooltip.show()
-        const direction = -axis.direction
-        const intercept = 90 - 180 * axis.intercept / Math.PI
-        const start = (d[tKey][0] + direction*intercept)*direction
-        const end = (d[tKey][1] + direction*intercept)*direction
+        const start = angularPosition(d[tKey][0])
+        const end = angularPosition(d[tKey][1])
         const centroid = d3.arc().centroid({innerRadius: axis.radialScale(d[rKey][0]), outerRadius: axis.radialScale(d[rKey][1]), startAngle: axis.angularScale(start), endAngle: axis.angularScale(end)})
         axis.tooltip.update(
           this.toolTipFormatterPolar(d),
