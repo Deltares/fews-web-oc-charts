@@ -1,7 +1,7 @@
 import * as d3 from 'd3'
 import { CartesianAxis, PolarAxis } from '../Axis'
 import { Chart, AUTO_SCALE } from './chart'
-import { TooltipPosition } from '../Tooltip'
+import { TooltipAnchor, TooltipPosition } from '../Tooltip'
 
 export class ChartHistogram extends Chart {
   plotterCartesian(axis: CartesianAxis, axisIndex: any) {
@@ -58,11 +58,16 @@ export class ChartHistogram extends Chart {
       .attr('x', function(d: any) {
         return x1(d[xKey])
       })
+    if (this.options.tooltip !== undefined) {
+      elements
       .on('pointerover', (_e: any, d) => {
         axis.tooltip.show()
+        if (this.options.tooltip.anchor !== undefined && this.options.tooltip.anchor !== TooltipAnchor.Bottom) {
+          console.error('Tooltip not implemented for anchor ', this.options.tooltip.anchor, ', using ', TooltipAnchor.Bottom, ' instead.')
+        }
         axis.tooltip.update(
           this.toolTipFormatterCartesian(d),
-          TooltipPosition.Top,
+          this.options.tooltip.position !== undefined ? this.options.tooltip.position : TooltipPosition.Top,
           axis.margin.left + x1(d[xKey]) + x1.bandwidth() / 2 ,
           axis.margin.top + Math.min(yScale(d[yKey]), yScale(0))
         )
@@ -70,7 +75,8 @@ export class ChartHistogram extends Chart {
       .on('pointerout', () => {
         axis.tooltip.hide()
       })
-      .attr('width', x1.bandwidth())
+    }
+    elements.attr('width', x1.bandwidth())
 
     elements
       .transition(t)

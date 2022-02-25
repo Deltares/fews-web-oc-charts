@@ -1,7 +1,7 @@
 import * as d3 from 'd3'
 import { CartesianAxis, PolarAxis, AxisIndex } from '../Axis'
 import { Chart, AUTO_SCALE } from './chart'
-import { TooltipPosition } from '../Tooltip'
+import { TooltipAnchor, TooltipPosition } from '../Tooltip'
 
 function mean(x: number[] | number) {
   if (x instanceof Array) {
@@ -121,11 +121,17 @@ export class ChartRange extends Chart {
       .attr('height', (d: any) => {
         return yScale(d[yKey][0] - d[yKey][1])
       })
+
+    if (this.options.tooltip !== undefined) {
+      update
       .on('pointerover', (_e: any, d) => {
+        if (this.options.tooltip.anchor !== undefined && this.options.tooltip.anchor !== TooltipAnchor.Center) {
+          console.error('Tooltip not implemented for anchor ', this.options.tooltip.anchor, ', using ', TooltipAnchor.Center, ' instead.')
+        }
         axis.tooltip.show()
         axis.tooltip.update(
           this.toolTipFormatterCartesian(d),
-          TooltipPosition.Top,
+          this.options.tooltip.position !== undefined ? this.options.tooltip.position : TooltipPosition.Top,
           axis.margin.left + xScale((d[xKey][1] + d[xKey][0])/2),
           axis.margin.top + yScale((d[yKey][1] + d[yKey][0])/2),
         )
@@ -133,6 +139,7 @@ export class ChartRange extends Chart {
       .on('pointerout', () => {
         axis.tooltip.hide()
       })
+    }
 
     if (colorKey) {
       update.style('fill', (d: any) => {
@@ -217,21 +224,38 @@ export class ChartRange extends Chart {
       .enter()
       .append('path')
       .attr('d', arcGenerator)
-      .on('pointerover', (e: any, d: any) => {
-        axis.tooltip.show()
-        const start = angularPosition(d[tKey][0])
-        const end = angularPosition(d[tKey][1])
-        const centroid = d3.arc().centroid({innerRadius: axis.radialScale(d[rKey][0]), outerRadius: axis.radialScale(d[rKey][1]), startAngle: axis.angularScale(start), endAngle: axis.angularScale(end)})
-        axis.tooltip.update(
-          this.toolTipFormatterPolar(d),
-          TooltipPosition.Top,
-          axis.margin.left + axis.width/2 + centroid[0],
-          axis.margin.top + axis.height/2 + centroid[1]
-        )
-      })
+
+    if (this.options.tooltip !== undefined) {
+      enter
+        .on('pointerover', (e: any, d: any) => {
+          axis.tooltip.show()
+          let x = 0
+          let y = 0
+          if (this.options.tooltip.anchor === TooltipAnchor.Center) {
+            const start = angularPosition(d[tKey][0])
+            const end = angularPosition(d[tKey][1])
+            const centroid = d3.arc().centroid({innerRadius: axis.radialScale(d[rKey][0]), outerRadius: axis.radialScale(d[rKey][1]), startAngle: axis.angularScale(start), endAngle: axis.angularScale(end)})
+            x = axis.margin.left + axis.width/2 + centroid[0]
+            y = axis.margin.top + axis.height/2 + centroid[1]
+          } else {
+            if (this.options.tooltip.anchor !== undefined && this.options.tooltip.anchor !== TooltipAnchor.Pointer) {
+              console.error('Tooltip not implemented for anchor ', this.options.tooltip.anchor, ', using ', TooltipAnchor.Pointer, ' instead.')
+            }
+            const pointer = d3.pointer(e, axis.container)
+            x = pointer[0]
+            y = pointer[1]
+          }
+          axis.tooltip.update(
+            this.toolTipFormatterPolar(d),
+            this.options.tooltip.position !== undefined ? this.options.tooltip.position : TooltipPosition.Top,
+            x,
+            y
+          )
+        })
       .on('pointerout', () => {
         axis.tooltip.hide()
       })
+    }
 
     if (colorKey) {
       enter.style('fill', (d: any) => {

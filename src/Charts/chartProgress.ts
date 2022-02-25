@@ -1,6 +1,6 @@
 import * as d3 from 'd3'
 import { CartesianAxis, PolarAxis } from '../Axis'
-import { TooltipPosition } from '../Tooltip'
+import { TooltipAnchor, TooltipPosition } from '../Tooltip'
 import { Chart } from './chart'
 
 function mean(x: number[] | number) {
@@ -126,16 +126,27 @@ export class ChartProgress extends Chart {
       .append('path')
       .attr('d', arcGenerator)
       .attr('data-chart-element-id', (d) => { return d[rKey] })
-      .on('pointerover', (e: any, d) => {
-        const pointer = d3.pointer(e, axis.container)
-        const x = pointer[0]
-        const y = pointer[1]
-        axis.tooltip.show()
-        axis.tooltip.update(this.toolTipFormatterPolar(d), TooltipPosition.Top, x, y)
-      })
-      .on('pointerout', () => {
-        axis.tooltip.hide()
-      })
+    if (this.options.tooltip !== undefined) {
+      enter
+        .on('pointerover', (e: any, d) => {
+          if (this.options.tooltip.anchor !== undefined && this.options.tooltip.anchor !== TooltipAnchor.Pointer) {
+            console.error('Tooltip not implemented for anchor ', this.options.tooltip.anchor, ', using ', TooltipAnchor.Pointer, ' instead.')
+          }
+          const pointer = d3.pointer(e, axis.container)
+          const x = pointer[0]
+          const y = pointer[1]
+          axis.tooltip.show()
+          axis.tooltip.update(
+            this.toolTipFormatterPolar(d),
+            this.options.tooltip.position !== undefined ? this.options.tooltip.position : TooltipPosition.Top,
+            x,
+            y
+          )
+        })
+        .on('pointerout', () => {
+          axis.tooltip.hide()
+        })
+    }
 
     if (colorKey) {
       enter

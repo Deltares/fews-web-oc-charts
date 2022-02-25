@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8" />
-  <title>Wind Rose Tech Demo</title>
+  <title>Wind Direction Tech Demo</title>
   <style>
 
 
@@ -379,7 +379,7 @@
         });
         windDirectionMeasurement = new wbCharts.ChartLine(windRichtingMetingen[0], {transitionTime: transitionTime});
         windDirectionForecast = new wbCharts.ChartLine(windRichtingVerwachtingen[0], {transitionTime: transitionTime});
-        windDirectionRange = new wbCharts.ChartRange(allWindSpreidingR[0], {transitionTime: transitionTime, r:{includeInTooltip:false} });
+        windDirectionRange = new wbCharts.ChartRange(allWindSpreidingR[0], {transitionTime: transitionTime, r:{includeInTooltip:false}, tooltip: {anchor: 'center'} });
         windDirectionRange.addTo(polarAxis, { radial: { key: "x" }, angular: { key: "y" } }, 'direction-range', '#polar-range');
         windDirectionMeasurement.addTo(polarAxis, { radial: { key: "x" }, angular: { key: "y" } }, 'direction-measured', '#polar-line');
         windDirectionForecast.addTo(polarAxis, { radial: { key: "x" }, angular: { key: "y" } }, 'direction-forecast','#polar-line-forecast');
@@ -431,7 +431,7 @@
         });
         var zoomLimit = getZoomLimit(target);
 
-        windSpeedRange = new wbCharts.ChartRange(allWindSpreidingV[0], {transitionTime: transitionTime, x :{includeInTooltip: false} });
+        windSpeedRange = new wbCharts.ChartRange(allWindSpreidingV[0], {transitionTime: transitionTime, x :{includeInTooltip: false}, tooltip: {anchor: 'center'} });
         windSpeedMeasurement = new wbCharts.ChartLine( windSnelheiMetingen[0], {transitionTime: transitionTime});
         windSpeedForecast = new wbCharts.ChartLine( windSnelheiVerwachtingen[0], {transitionTime: transitionTime});
 

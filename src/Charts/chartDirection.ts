@@ -1,6 +1,6 @@
 import * as d3 from 'd3'
 import { CartesianAxis, PolarAxis } from '../Axis'
-import { TooltipPosition } from '../Tooltip'
+import { TooltipAnchor, TooltipPosition } from '../Tooltip'
 import { Chart, SymbolOptions } from './chart'
 
 import { symbolArrow } from '../Symbols'
@@ -61,18 +61,30 @@ export class ChartDirection extends Chart {
           return 'translate(' + xScale(d[xKey]) + ',' + yScale(d[yKey]) + ')'
         })
         .append('path')
-        .on('pointerover', (e: any, d) => {
-          axis.tooltip.show()
-          const pointer = d3.pointer(e, axis.container)
-          axis.tooltip.update(this.toolTipFormatterPolar(d), TooltipPosition.Top, pointer[0], pointer[1])
-        })
-        .on('pointerout', () => {
-          axis.tooltip.hide()
-        })
         .attr('d', d3.symbol().type(symbolArrow).size(this.options.symbol.size))
         .attr('transform', function (d: any, i: number) {
           return `rotate(${d[dKey] - 180})`
         })
+    if (this.options.tooltip !== undefined) {
+      elements
+        .on('pointerover', (e: any, d) => {
+          if (this.options.tooltip.anchor !== undefined && this.options.tooltip.anchor !== TooltipAnchor.Pointer) {
+            console.error('Tooltip not implemented for anchor ', this.options.tooltip.anchor, ', using ', TooltipAnchor.Pointer, ' instead.')
+          }
+          axis.tooltip.show()
+          const pointer = d3.pointer(e, axis.container)
+          axis.tooltip.update(
+            this.toolTipFormatterPolar(d),
+            this.options.tooltip.position !== undefined ? this.options.tooltip.position : TooltipPosition.Top,
+            pointer[0],
+            pointer[1]
+          )
+        })
+        .on('pointerout', () => {
+          axis.tooltip.hide()
+        })
+    }
+
 
     elements
       .attr('transform', (d: any, i: number) => {
@@ -125,17 +137,28 @@ export class ChartDirection extends Chart {
         return 'translate(' + -r * Math.sin(-t) + ',' + -r * Math.cos(-t) + ')'
       })
       .attr('d', d3.symbol().type(symbolArrow).size(this.options.symbol.size))
+      .merge(elements)
+    if (this.options.tooltip !== undefined) {
+      elements
       .on('pointerover', (e: any, d) => {
+        if (this.options.tooltip.anchor !== undefined && this.options.tooltip.anchor !== TooltipAnchor.Pointer) {
+          console.error('Tooltip not implemented for anchor ', this.options.tooltip.anchor, ', using ', TooltipAnchor.Pointer, ' instead.')
+        }
         const pointer = d3.pointer(e, axis.container)
         const x = pointer[0]
         const y = pointer[1]
         axis.tooltip.show()
-        axis.tooltip.update(this.toolTipFormatterPolar(d), TooltipPosition.Top, x, y)
+        axis.tooltip.update(
+          this.toolTipFormatterPolar(d),
+          this.options.tooltip.position !== undefined ? this.options.tooltip.position : TooltipPosition.Top,
+          x,
+          y
+        )
       })
       .on('pointerout', () => {
         axis.tooltip.hide()
       })
-      .merge(elements)
+    }
 
     const transition = d3
       .transition()

@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8" />
-  <title>Ensemble Tech Demo</title>
+  <title>Matrix Tech Demo</title>
   <style>
     body {
       background-color: rgb(44, 44, 44);
@@ -134,6 +134,9 @@
         },
         formatter: (d) => { return d['Value'] === null ? '' :d3.format('0.1f')(d['Value'])}
       },
+      tooltip: {
+        anchor: 'bottom'
+      }
     });
 
     plotBars.addTo(axis1, {
@@ -188,8 +191,8 @@
             'fill': 'black'
           },
           formatter: (d) => { return d['Value'] === null ? '' :d3.format('0.1f')(d['Value'])}
-        }
-
+        },
+        tooltip: {anchor: 'top'},
       });
       plotMatrix.addTo(axis3, {
         x: {
