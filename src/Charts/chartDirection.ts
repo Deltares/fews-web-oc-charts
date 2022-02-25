@@ -148,10 +148,10 @@ export class ChartDirection extends Chart {
   }
 
   drawLegendSymbol(legendId?: string, asSvgElement?: boolean) {
-    const chartElement = this.group
+    const props = ['fill', 'stroke']
+    const source = this.group
       .select('path')
       .node() as Element
-    const style = window.getComputedStyle(chartElement)
     const svg = d3.create('svg')
       .append('svg')
       .attr('width',20)
@@ -159,10 +159,9 @@ export class ChartDirection extends Chart {
     const group = svg
       .append('g')
       .attr('transform', 'translate(10, 0)')
-    group.append('path')
+    const element = group.append('path')
       .attr('d', d3.symbol().type(symbolArrow).size(this.options.symbol.size))
-      .style('stroke', style.getPropertyValue('stroke'))
-      .style('fill', style.getPropertyValue('fill'))
+    this.applyStyle(source, element, props)
     if (asSvgElement) return group.node()
     return svg.node()
   }

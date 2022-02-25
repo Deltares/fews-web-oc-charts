@@ -106,10 +106,10 @@ export class ChartArea extends Chart {
   }
 
   drawLegendSymbol(legendId?: string, asSvgElement?: boolean) {
-    const chartElement = this.group
+    const props = ['fill']
+    const source = this.group
       .select('path')
       .node() as Element
-    const style = window.getComputedStyle(chartElement)
     const svg = d3.create('svg')
       .attr('width',20)
       .attr('height',20)
@@ -121,7 +121,7 @@ export class ChartArea extends Chart {
       .attr('y', -5)
       .attr('width', 20)
       .attr('height', 10)
-      .style('fill', style.getPropertyValue('fill'))
+    this.applyStyle(source, element, props)
     if (asSvgElement) return element.node()
     return svg.node()
   }

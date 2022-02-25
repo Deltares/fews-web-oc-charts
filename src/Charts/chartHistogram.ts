@@ -5,14 +5,14 @@ import { TooltipPosition } from '../Tooltip'
 
 export class ChartHistogram extends Chart {
   plotterCartesian(axis: CartesianAxis, axisIndex: any) {
-    let xKey = this.dataKeys.x
-    let yKey = this.dataKeys.y
-    let colorKey = this.dataKeys.color
-    let data = this.data
+    const xKey = this.dataKeys.x
+    const yKey = this.dataKeys.y
+    const colorKey = this.dataKeys.color
+    const data = this.data
     const xScale = axis.xScale[axisIndex.x.axisIndex]
     const yScale = axis.yScale[axisIndex.y.axisIndex]
 
-    let x1 = d3.scaleBand().domain(
+    const x1 = d3.scaleBand().domain(
       data.map(function(d: any) {
         return d[xKey]
       })
@@ -20,7 +20,7 @@ export class ChartHistogram extends Chart {
     x1.range(xScale.range())
     x1.padding(0.05)
 
-    let colorScale = d3.scaleLinear().domain([0, 1])
+    const colorScale = d3.scaleLinear().domain([0, 1])
     if (this.options.colorScale === AUTO_SCALE) {
       colorScale.domain(
         d3.extent(this.data, function(d: any): number {
@@ -29,16 +29,15 @@ export class ChartHistogram extends Chart {
       )
     }
 
-    let colorMap = this.colorMap
+    const colorMap = this.colorMap
     this.group = this.selectGroup(axis, 'chart-range')
-    let t = d3
+    const t = d3
       .transition()
       .duration(this.options.transitionTime)
       .ease(d3.easeLinear)
 
-    let elements: any = this.group.selectAll('rect').data(this.data)
+    const elements: any = this.group.selectAll('rect').data(this.data)
 
-    let that = this
     // remove
     elements.exit().remove()
     // enter + update
@@ -59,10 +58,10 @@ export class ChartHistogram extends Chart {
       .attr('x', function(d: any) {
         return x1(d[xKey])
       })
-      .on('pointerover', function(_e: any, d) {
+      .on('pointerover', (_e: any, d) => {
         axis.tooltip.show()
         axis.tooltip.update(
-          that.toolTipFormatterCartesian(d),
+          this.toolTipFormatterCartesian(d),
           TooltipPosition.Top,
           axis.margin.left + x1(d[xKey]) + x1.bandwidth() / 2 ,
           axis.margin.top + Math.min(yScale(d[yKey]), yScale(0))
@@ -91,10 +90,10 @@ export class ChartHistogram extends Chart {
   }
 
   drawLegendSymbol(legendId?: string, asSvgElement?: boolean) {
-    let chartElement = this.group
+    const props = ['fill']
+    const source = this.group
       .select('rect')
       .node() as Element
-    let style = window.getComputedStyle(chartElement)
     const svg = d3.create('svg')
       .attr('width',20)
       .attr('height',20)
@@ -108,21 +107,21 @@ export class ChartHistogram extends Chart {
       .attr('y', -8)
       .attr('width', 5)
       .attr('height', 18)
-      .style('fill', style.getPropertyValue('fill'))
+    this.applyStyle(source, element, props)
     element
       .append('rect')
       .attr('x', 5)
       .attr('y', -6)
       .attr('width', 5)
       .attr('height', 16)
-      .style('fill', style.getPropertyValue('fill'))
+    this.applyStyle(source, element, props)
     element
       .append('rect')
       .attr('x', 10)
       .attr('y', -5)
       .attr('width', 5)
       .attr('height', 15)
-      .style('fill', style.getPropertyValue('fill'))
+    this.applyStyle(source, element, props)
     if (asSvgElement) return element.node()
     return svg.node()
   }

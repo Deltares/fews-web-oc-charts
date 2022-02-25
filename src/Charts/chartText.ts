@@ -44,10 +44,10 @@ export class ChartText extends Chart {
   }
 
   drawLegendSymbol(legendId?: string, asSvgElement?: boolean) {
-    const chartElement = this.group
+    const props = ['stroke', 'fill']
+    const source = this.group
       .select('path')
       .node() as Element
-    const style = window.getComputedStyle(chartElement)
     const svg = d3.create('svg')
       .append('svg')
       .attr('width',20)
@@ -58,8 +58,7 @@ export class ChartText extends Chart {
     const element = group.append('text')
       .attr('text-anchor', 'middle')
       .text('+1.0')
-      .style('stroke', style.getPropertyValue('stroke'))
-      .style('fill', style.getPropertyValue('fill'))
+    this.applyStyle(source, element, props)
     if (asSvgElement) return element.node()
     return svg.node()
   }

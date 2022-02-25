@@ -88,10 +88,10 @@ export class ChartMatrix extends Chart {
   }
 
   drawLegendSymbol(legendId?: string, asSvgElement?: boolean) {
-    const chartElement = this.group
+    const props = ['fill']
+    const source = this.group
       .select('rect')
       .node() as Element
-    const style = window.getComputedStyle(chartElement)
     const svg = d3.create('svg')
       .attr('width',20)
       .attr('height',20)
@@ -105,21 +105,21 @@ export class ChartMatrix extends Chart {
       .attr('y', -8)
       .attr('width', 5)
       .attr('height', 18)
-      .style('fill', style.getPropertyValue('fill'))
+    this.applyStyle(source, element, props)
     element
       .append('rect')
       .attr('x', 5)
       .attr('y', -6)
       .attr('width', 5)
       .attr('height', 16)
-      .style('fill', style.getPropertyValue('fill'))
+    this.applyStyle(source, element, props)
     element
       .append('rect')
       .attr('x', 10)
       .attr('y', -5)
       .attr('width', 5)
       .attr('height', 15)
-      .style('fill', style.getPropertyValue('fill'))
+    this.applyStyle(source, element, props)
     if (asSvgElement) return element.node()
     return svg.node()
   }
