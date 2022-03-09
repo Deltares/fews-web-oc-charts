@@ -2,8 +2,30 @@ import { SvgPropertiesHyphen } from 'csstype'
 import * as d3 from 'd3'
 import { CartesianAxis, PolarAxis } from '../Axis'
 import { Chart } from './chart'
+import { TooltipPosition } from '../Tooltip'
 
 export class ChartLine extends Chart {
+  defaultToolTipFormatterCartesian(d) {
+    const xKey = this.dataKeys.x
+    const yKey = this.dataKeys.y
+    let html = ''
+    if (this.options.x.includeInTooltip) {
+      if (d[0][xKey] != d[1][xKey]) {
+        html += xKey + ': ' + d[0][xKey].toFixed(2) + '-' + d[1][xKey].toFixed(2) + '<br/>'
+      } else {
+        html += xKey + ': ' + d[0][xKey].toFixed(2) + '<br/>'
+      }
+    }
+    if (this.options.y.includeInTooltip) {
+      if (d[0][yKey] != d[1][yKey]) {
+        html += yKey + ': ' + d[0][yKey].toFixed(2) + '-' + d[1][yKey].toFixed(2)
+      } else {
+        html += yKey + ': ' + d[0][yKey].toFixed(2)
+      }
+    }
+    return html
+  }
+
   plotterCartesian(axis: CartesianAxis, axisIndex: any) {
 
     const xKey = this.dataKeys.x
@@ -28,10 +50,28 @@ export class ChartLine extends Chart {
     if (this.group.select('path').size() === 0) {
       this.group.append('path')
     }
-    this.group
+    const update = this.group
       .select('path')
       .datum(mappedData)
+      .join('path')
       .attr('d', lineGenerator)
+
+    if (this.options.tooltip !== undefined) {
+      update
+      .on('pointerover', (e: any, d: any) => {
+        axis.tooltip.show()
+        const pointer = d3.pointer(e, axis.container)
+        axis.tooltip.update(
+          this.toolTipFormatterCartesian(d),
+          TooltipPosition.Top,
+          pointer[0],
+          pointer[1]
+        )
+      })
+      .on('pointerout', () => {
+        axis.tooltip.hide()
+      })
+    }
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
