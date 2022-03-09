@@ -326,9 +326,9 @@
           },
           innerRadius: 0.5
         });
-        windDirectionMeasurement = new wbCharts.ChartLine(windRichtingMetingen[0], {transitionTime: transitionTime});
-        windDirectionForecast = new wbCharts.ChartLine(windRichtingVerwachtingen[0], {transitionTime: transitionTime});
-        windDirectionRange = new wbCharts.ChartRange(allWindSpreidingR[0], {transitionTime: transitionTime, r:{includeInTooltip:false}, tooltip: {anchor: 'center'}});
+        windDirectionMeasurement = new wbCharts.ChartLine(windRichtingMetingen[0], {transitionTime: transitionTime, radial:{includeInTooltip:false}, tooltip: {anchor: 'pointer'}});
+        windDirectionForecast = new wbCharts.ChartLine(windRichtingVerwachtingen[0], {transitionTime: transitionTime, radial:{includeInTooltip:false}, tooltip: {anchor: 'pointer'}});
+        windDirectionRange = new wbCharts.ChartRange(allWindSpreidingR[0], {transitionTime: transitionTime, radial:{includeInTooltip:false}, tooltip: {anchor: 'center'}});
         windDirectionRange.addTo(polarAxis, { radial: { key: "x" }, angular: { key: "y" } }, 'direction-range', '#polar-range');
         windDirectionMeasurement.addTo(polarAxis, { radial: { key: "x" }, angular: { key: "y" } }, 'direction-measured', '#polar-line');
         windDirectionForecast.addTo(polarAxis, { radial: { key: "x" }, angular: { key: "y" } }, 'direction-forecast','#polar-line-forecast');

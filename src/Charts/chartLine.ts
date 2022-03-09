@@ -26,6 +26,27 @@ export class ChartLine extends Chart {
     return html
   }
 
+  defaultToolTipFormatterPolar(d) {
+    const tKey = this.dataKeys.angular
+    const rKey = this.dataKeys.radial
+    let html = ''
+    if (this.options.angular.includeInTooltip) {
+      if (d[0][tKey] != d[1][tKey]) {
+        html += tKey+ ': ' + d[0][tKey].toFixed(0) + '-' + d[1][tKey].toFixed(0) + '<br/>'
+      } else {
+        html += tKey+ ': ' + d[0][tKey].toFixed(0) + '<br/>'
+      }
+    }
+    if (this.options.radial.includeInTooltip) {
+      if (d[0][rKey] != d[1][rKey]) {
+        html += rKey + ': ' + d[0][rKey].toFixed(0) + '-' + d[1][rKey].toFixed(0)
+      } else {
+        html += rKey + ': ' + d[0][rKey].toFixed(0)
+      }
+    }
+    return html
+  }
+
   plotterCartesian(axis: CartesianAxis, axisIndex: any) {
 
     const xKey = this.dataKeys.x
@@ -98,7 +119,23 @@ export class ChartLine extends Chart {
       .ease(d3.easeLinear)
 
     line.transition(t).attr('d', lineGenerator(this.data))
-    line.datum(this.data)
+    line.join('path').datum(this.data)
+    if (this.options.tooltip !== undefined) {
+      line
+      .on('pointerover', (e: any, d: any) => {
+        axis.tooltip.show()
+        const pointer = d3.pointer(e, axis.container)
+        axis.tooltip.update(
+          this.toolTipFormatterPolar(d),
+          this.options.tooltip.position !== undefined ? this.options.tooltip.position : TooltipPosition.Top,
+          pointer[0],
+          pointer[1]
+        )
+      })
+      .on('pointerout', () => {
+        axis.tooltip.hide()
+      })
+    }
   }
 
   drawLegendSymbol(legendId?: string, asSvgElement?: boolean) {
