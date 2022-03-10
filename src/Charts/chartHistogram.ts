@@ -41,29 +41,27 @@ export class ChartHistogram extends Chart {
     // remove
     elements.exit().remove()
     // enter + update
-    elements
+    const update = elements
       .enter()
       .append('rect')
-      .style('fill', function(d: any) {
-        return colorMap(colorScale(d[colorKey]))
-      })
       .attr('y', function(d: any) {
         return d[yKey] === null ? yScale(0) : Math.min(yScale(d[yKey]), yScale(0))
       })
       .attr('height', function(d: any) {
         return d[yKey] === null ? 0 : Math.abs(yScale(0) - yScale(d[yKey]))
       })
-
       .merge(elements)
       .attr('x', function(d: any) {
         return x1(d[xKey])
       })
+      .attr('width', x1.bandwidth())
+
     if (this.options.tooltip !== undefined) {
-      elements
-      .on('pointerover', (_e: any, d) => {
+      update
+      .on('pointerover', function(_e: any, d) {
         axis.tooltip.show()
-        if (this.options.tooltip.anchor !== undefined && this.options.tooltip.anchor !== TooltipAnchor.Bottom) {
-          console.error('Tooltip not implemented for anchor ', this.options.tooltip.anchor, ', using ', TooltipAnchor.Bottom, ' instead.')
+        if (this.options.tooltip.anchor !== undefined && this.options.tooltip.anchor !== TooltipAnchor.Top) {
+          console.error('Tooltip not implemented for anchor ', this.options.tooltip.anchor, ', using ', TooltipAnchor.Top, ' instead.')
         }
         axis.tooltip.update(
           this.toolTipFormatterCartesian(d),
@@ -76,19 +74,21 @@ export class ChartHistogram extends Chart {
         axis.tooltip.hide()
       })
     }
-    elements.attr('width', x1.bandwidth())
+    update.style('fill', function(d: any) {
+      return colorMap(colorScale(d[colorKey]))
+    })
 
     elements
-      .transition(t)
-      .style('fill', function(d: any) {
-        return colorMap(colorScale(d[colorKey]))
-      })
-      .attr('y', function(d: any) {
-        return d[yKey] === null ? yScale(0) : Math.min(yScale(d[yKey]), yScale(0))
-      })
-      .attr('height', function(d: any) {
-        return d[yKey] === null ? 0 : Math.abs(yScale(0) - yScale(d[yKey]))
-      })
+    .transition(t)
+    .style('fill', function(d: any) {
+      return colorMap(colorScale(d[colorKey]))
+    })
+    .attr('y', function(d: any) {
+      return d[yKey] === null ? yScale(0) : Math.min(yScale(d[yKey]), yScale(0))
+    })
+    .attr('height', function(d: any) {
+      return d[yKey] === null ? 0 : Math.abs(yScale(0) - yScale(d[yKey]))
+    })
   }
 
   plotterPolar(axis: PolarAxis, dataKeys: any) {
