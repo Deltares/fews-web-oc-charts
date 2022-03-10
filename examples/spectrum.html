@@ -152,7 +152,7 @@
     var spectra = randomSpectrum(1);
     var plot4 = new wbCharts.ChartHistogram(spectra, {
       colorScale: wbCharts.AUTO_SCALE,
-      tooltip: {anchor: 'bottom'}
+      tooltip: {anchor: wbCharts.TooltipAnchor.Top}
     });
     plot.addTo(polarAxis, {
       radial: {
