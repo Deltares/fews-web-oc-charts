@@ -308,9 +308,9 @@
         plotPercentile50.addTo(plot.axis, chartOptions, 'percent50', '#perc50');
         plotControl.addTo(plot.axis, chartOptions, 'control', '#control-line');
         plotMedian.addTo(plot.axis, chartOptions, 'median', '#median-line');
+        plot.axis.accept(plot.escalations);
         plot.axis.redraw({ x: { autoScale: true }, y: { autoScale: true } });
         plot.axis.zoom();
-        plot.axis.accept(plot.escalations);
         plot.axis.accept(mouseOver);
         plot.axis.accept(zoom);
       });

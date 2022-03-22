@@ -99,7 +99,7 @@ export class WarningLevels implements Visitor {
       })
 
     const transition = d3.transition().duration(this.transitionTime)
-    this.group
+    this.axis.canvas
       .select('.y2-axis')
       .attr('transform', 'translate(' + this.axis.width + ' ,0)')
       .transition(transition)
