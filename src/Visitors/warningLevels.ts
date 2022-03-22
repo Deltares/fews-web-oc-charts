@@ -56,8 +56,7 @@ export class WarningLevels implements Visitor {
         return level.id
       })
 
-    this.group = d3
-    axis.canvas
+    this.group = axis.canvas
       .append('g')
       .attr('class', 'axis y2-axis')
       .attr('transform', 'translate(' + axis.width + ' ,0)')
