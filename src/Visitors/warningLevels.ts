@@ -83,22 +83,29 @@ export class WarningLevels implements Visitor {
     const scaleX = this.axis.xScale[0].copy()
     const domainY = scaleY.domain()
 
+    const bisect = d3.bisector((data:any) => {
+      return data.date
+    }).left
     const escalationLevels = this.escalationLevels
-    const tickValues = escalationLevels
-    .map(el => {
-      // final level is never plotted, as the change at this last point is not visible
-      // TODO: bisect to find the value based on the latest value in the shown X
-      return el.events[el.events.length-2].value
-    })
-    .filter(val => {
-      return val >= domainY[0] && val <= domainY[1]
-    })
+    const tickLevels = escalationLevels
+      .map(el => {
+        // set label at height of level at right side of chart
+        const idx = bisect(el.events, scaleX.domain()[1])
+        return {id: el.id, val: el.events[idx].value}
+      })
+      .filter(el => {
+        return el.val >= domainY[0] && el.val <= domainY[1]
+      })
+    const tickValues = tickLevels
+      .map(el => {
+        return el.val
+      })
 
     this.warningAxis
       .scale(scaleY)
       .tickValues(tickValues)
       .tickFormat((d, i) => {
-        return escalationLevels[i].id
+        return tickLevels[i].id
       })
 
     const transition = d3.transition().duration(this.transitionTime)
