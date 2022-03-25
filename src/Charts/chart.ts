@@ -40,6 +40,14 @@ export interface TooltipOptions {
   toolTipFormatter?: (d: any) => string;
 }
 
+enum CurveType {
+  Linear = 'linear',
+  Basis = 'basis',
+  Step = 'step',
+  StepAfter = 'stepAfter',
+  StepBefore  = 'stepBefore'
+}
+
 export interface ChartOptions {
   x? : ChartOptionItem;
   x1? : ChartOptionItem;
@@ -50,6 +58,7 @@ export interface ChartOptions {
   transitionTime?: number;
   colorScale?: any;
   symbol?: SymbolOptions;
+  curve?: string;
   text?: TextOptions;
   tooltip?: TooltipOptions;
 }
@@ -235,6 +244,28 @@ export abstract class Chart {
       dataKeys[key] = this.axisIndex[key].key ? this.axisIndex[key].key : key
     }
     return dataKeys
+  }
+
+  get curveGenerator (): d3.CurveFactory {
+    if (this.options.curve === undefined) return
+    let curve
+    switch (this.options.curve) {
+      case CurveType.Basis:
+        curve = d3.curveBasis
+        break
+      case CurveType.Linear: // default
+        curve = d3.curveLinear
+        break
+      case CurveType.Step:
+        curve = d3.curveStep
+        break
+      case CurveType.StepAfter:
+        curve = d3.curveStepAfter
+        break
+      case CurveType.StepBefore:
+        curve = d3.curveStepBefore
+    }
+    return curve
   }
 
   protected mapDataCartesian(domain: any) {
