@@ -40,18 +40,18 @@ export class WarningLevels implements Visitor {
     const escalationLevels = this.escalationLevels
 
     const tickValues = escalationLevels
-      .filter(function(el) {
+      .filter(el => {
         const domain = scale.domain()
         return el.val >= domain[0] && el.val <= domain[1]
       })
-      .map(function(el) {
+      .map(el => {
         return el.val
       })
 
     this.warningAxis = d3
       .axisRight(this.scale)
       .tickValues(tickValues)
-      .tickFormat(function(d, i) {
+      .tickFormat((d, i) => {
         const level = escalationLevels.find( (l) => l.val === d)
         return level.id
       })
@@ -66,7 +66,7 @@ export class WarningLevels implements Visitor {
       .selectAll('.tick text')
       .append('title')
       .attr('class', 'tooltip')
-      .text(function(d, i) {
+      .text((d, i) => {
         return 'waarschuwing waardes' + escalationLevels[i].c + '' + d
       })
 
@@ -79,22 +79,26 @@ export class WarningLevels implements Visitor {
   }
 
   redraw(): void {
-    const scale = this.axis.yScale[0].copy()
-    const escalationLevels = this.escalationLevels.filter(function(el) {
-      const domain = scale.domain()
-      return el.val >= domain[0] && el.val <= domain[1]
-    })
+    const scaleY = this.axis.yScale[0].copy()
+    const scaleX = this.axis.xScale[0].copy()
+    const domainY = scaleY.domain()
+
+    const escalationLevels = this.escalationLevels
     const tickValues = escalationLevels
-      .map(function(el) {
-        return el.val
-      })
+    .map(el => {
+      // final level is never plotted, as the change at this last point is not visible
+      // TODO: bisect to find the value based on the latest value in the shown X
+      return el.events[el.events.length-2].value
+    })
+    .filter(val => {
+      return val >= domainY[0] && val <= domainY[1]
+    })
 
     this.warningAxis
-      .scale(scale)
+      .scale(scaleY)
       .tickValues(tickValues)
-      .tickFormat(function (d, i) {
-        const level = escalationLevels.find( (l) => l.val === d)
-        return level.id
+      .tickFormat((d, i) => {
+        return escalationLevels[i].id
       })
 
     const transition = d3.transition().duration(this.transitionTime)
@@ -104,38 +108,43 @@ export class WarningLevels implements Visitor {
       .transition(transition)
       .call(this.warningAxis)
 
-    const escY = (d, i) => {
+    function generateAreaGenerator(d, i) {
+      const areaGen =  d3.area()
+        .curve(d3.curveStepAfter)
+        .x((e: any, j) => { return scaleX(e.date); })
       if (d.c === '<') {
-        return scale(d.val)
-      } else {
-        if (i === escalationLevels.length - 1) return 0
-        return scale(escalationLevels[i + 1].val)
+        if (i === 0 ) { //set lower bound to bottom of chart
+          areaGen.y0((e, j) => { return scaleY(domainY[0]); })
+        } else { // set lower bound to value of the threshold below this one
+          areaGen.y0((e, j) => { return scaleY(escalationLevels[i - 1].events[j].value); })
+        }
+        // set upper bound to value of this threshold
+        areaGen.y1((e: any, j) => { return scaleY(e.value); })
+      } else if (d.c === '>'){
+        // set lower bound to value of this threshold
+        areaGen.y0((e: any, j) => { return scaleY(e.value); })
+        if ( i === escalationLevels.length - 1) {
+          // set upper bound to top of chart
+          areaGen.y1((e, j) => { return scaleY(domainY[1]); })
+        } else {
+          // set upper bound to value of threshold above this one
+          areaGen.y1((e, j) => { return scaleY(escalationLevels[i + 1].events[j].value); })
+        }
       }
+      return areaGen
     }
 
-    const escHeight = (d, i) => {
-      if (d.c === '<') {
-        if (i === 0) return Math.max(0, this.axis.height - scale(d.val))
-        return Math.max(0, scale(escalationLevels[i - 1].val) - scale(d.val))
-      } else {
-        if (i === escalationLevels.length - 1) return Math.max(0, scale(d.val))
-        return Math.max(0, scale(d.val) - scale(escalationLevels[i + 1].val))
-      }
-    }
-
-    const rects = this.sections
-      .selectAll('rect')
+    const areas = this.sections
+      .selectAll('path')
       .data(escalationLevels)
 
-    rects
+    areas.exit().remove()
+    areas
       .enter()
-      .append('rect')
-      .merge(rects)
-      .attr('y', escY)
-      .attr('width', this.axis.width)
-      .attr('height', escHeight)
-      .attr('fill', d => d.color)
+      .append('path')
+      .merge(areas)
+      .style('fill', (d) =>  {return d.color; })
+      .attr('d', (d,i) => { return generateAreaGenerator(d, i)(d.events); })
 
-    rects.exit().remove()
   }
 }

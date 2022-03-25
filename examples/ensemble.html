@@ -130,31 +130,40 @@
       }
     });
     var escalationLevels = [{
-        id: 'normaal',
-        val: -100,
+        id: 'laag',
+        events: [],
+        levelStart: -80,
+        levelEnd: -100,
         color: 'rgba(205, 133, 63,.5)',
         c: '<'
       },
       {
         id: 'verhoogd',
-        val: 100,
+        events: [],
+        levelStart: 80,
+        levelEnd: 100,
         color: 'rgba(255, 215, 0,.5)',
         c: '>'
       },
       {
         id: 'hoog',
-        val: 110,
+        events: [],
+        levelStart: 120,
+        levelEnd: 110,
         color: 'rgba(255, 150, 0,.5)',
         c: '>'
       },
       {
         id: 'extreem',
-        val: 140,
+        events: [],
+        levelStart: 130,
+        levelEnd: 150,
         color: 'rgba(255, 0, 0,.5)',
         c: '>'
       }
     ]
     var warnings = new wbCharts.WarningLevels(escalationLevels);
+    var warnings1 = new wbCharts.WarningLevels(escalationLevels);
 
     percentile = function (p, data) {
       var points = data;
@@ -213,6 +222,17 @@
           x: dateTime,
           y: percentile([0.05, 0.95], points)
         });
+
+        escalationLevels.forEach( function (el, i) {
+          let val = el.levelStart
+          if (index > data.times.length / 2 ) {
+            val = el.levelEnd
+          }
+          el.events.push({
+            date: dateTime,
+            value: val,
+          })
+        });
       })
 
       for (i = 1; i < nEnsemble; i++) {
@@ -258,6 +278,8 @@
           autoScale: true
         }
       });
+      axis1.accept(warnings);
+
 
       var plotControl1 = new wbCharts.ChartMarker(members[0], {});
       var plotMedian1 = new wbCharts.ChartLine(percentiles[0], {});
@@ -316,7 +338,7 @@
           autoScale: true
         }
       });
-      axis.accept(warnings);
+      axis.accept(warnings1);
 
     });
 
