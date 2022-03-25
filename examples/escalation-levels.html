@@ -124,6 +124,17 @@
       }
     }
 
+    const chartOptionLevels = {
+      x: {
+        key: "date",
+        axisIndex: 0
+      },
+      y: {
+        key: "value",
+        axisIndex: 0
+      }
+    }
+
     const legendLabels = [{
         selector: 'median',
         label: 'Middelste (P50)'
@@ -331,6 +342,11 @@
         var plotPercentile90 = new wbCharts.ChartArea(percentiles[2], {});
 
         var escalationsVisitor = new wbCharts.WarningLevels(plot.escalations);
+
+        plot.escalations.forEach( function (el, i) {
+          const escLevel = new wbCharts.ChartLine(el.events, {curve: 'stepAfter'});
+          escLevel.addTo(plot.axis, chartOptionLevels, el.id, {fill: 'none', stroke: el.color, 'stroke-width': '2px', 'stroke-dasharray': '4, 2'})
+        })
 
         plotPercentile90.addTo(plot.axis, chartOptions, 'percent90', '#perc90');
         plotPercentile50.addTo(plot.axis, chartOptions, 'percent50', '#perc50');
