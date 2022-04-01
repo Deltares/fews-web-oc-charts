@@ -89,6 +89,11 @@
     <div id="chart-waterlevel-2" class="chart-container"></div>
     <div id="legend-waterlevel-2" class="chart-legend"></div>
   </div>
+  <!-- Waterlevel 3 -->
+  <div>
+    <div id="chart-waterlevel-3" class="chart-container"></div>
+    <div id="legend-waterlevel-3" class="chart-legend"></div>
+  </div>
 
   <script src="../dist/wb-charts.umd.js"></script>
   <script type="text/javascript">
@@ -161,6 +166,9 @@
     var axis2 = new wbCharts.CartesianAxis(container2, null, null, axisOptions)
     var legend2 = new wbCharts.Legend(legendLabels, document.getElementById("legend-waterlevel-2"));
 
+    var container3 = document.getElementById("chart-waterlevel-3");
+    var axis3 = new wbCharts.CartesianAxis(container3, null, null, axisOptions)
+    var legend3 = new wbCharts.Legend(legendLabels, document.getElementById("legend-waterlevel-3"));
 
     function getRoundedDate(minutes, d = new Date()) {
         let ms = 1000 * 60 * minutes; // convert minutes to ms
@@ -268,6 +276,32 @@
       }
     ]
 
+    var escalationLevels3 = [// Only higher levels
+      {
+        id: 'verhoogd',
+        events: [],
+        levelStart: 80,
+        levelEnd: 100,
+        color: 'rgba(255, 215, 0,.5)',
+        c: '>'
+      },
+      {
+        id: 'hoog',
+        events: [],
+        levelStart: 120,
+        levelEnd: 110,
+        color: 'rgba(255, 150, 0,.5)',
+        c: '>'
+      },
+      {
+        id: 'extreem',
+        events: [],
+        levelStart: 130,
+        levelEnd: 150,
+        color: 'rgba(255, 0, 0,.5)',
+        c: '>'
+      }
+    ]
 
     plot1 = {
       axis: axis1,
@@ -277,9 +311,14 @@
       axis: axis2,
       escalations: escalationLevels2
     }
+    plot3 = {
+      axis: axis3,
+      escalations: escalationLevels3
+    }
 
     axis1.accept(legend1);
     axis2.accept(legend2);
+    axis3.accept(legend3);
 
     function dataload(plot) {
       d3.json("ensemble.json").then(function (data) {
@@ -359,7 +398,7 @@
         plot.axis.accept(zoom);
       });
     }
-    for (const plot of [plot1, plot2]) {
+    for (const plot of [plot1, plot2, plot3]) {
       window.setTimeout(dataload(plot), 500);
     }
 
