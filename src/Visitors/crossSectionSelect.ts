@@ -25,13 +25,14 @@ export class CrossSectionSelect implements Visitor {
   }
 
   // use shared Visitor constuctor (Visitor should be a abstract class)
-  constructor(value: number | Date, callback: (value: number | Date ) => void, options: CrossSectionSelectOptions) {
+  constructor(value: number | Date, callback: (value: number | Date ) => void, options: CrossSectionSelectOptions, trace?: string[]) {
     this.value = value
     this.callback = callback
     this.format = d3.format('.2f')
     this.options = defaultsDeep(options,
       this.options
     ) as CrossSectionSelectOptions
+    this.trace = trace
   }
 
   visit(axis: Axis): void {
