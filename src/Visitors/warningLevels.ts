@@ -56,8 +56,7 @@ export class WarningLevels implements Visitor {
         return level.id
       })
 
-    this.group = d3
-    axis.canvas
+    this.group = axis.canvas
       .append('g')
       .attr('class', 'axis y2-axis')
       .attr('transform', 'translate(' + axis.width + ' ,0)')
@@ -80,13 +79,12 @@ export class WarningLevels implements Visitor {
   }
 
   redraw(): void {
-    const escalationLevels = this.escalationLevels
     const scale = this.axis.yScale[0].copy()
+    const escalationLevels = this.escalationLevels.filter(function(el) {
+      const domain = scale.domain()
+      return el.val >= domain[0] && el.val <= domain[1]
+    })
     const tickValues = escalationLevels
-      .filter(function(el) {
-        const domain = scale.domain()
-        return el.val >= domain[0] && el.val <= domain[1]
-      })
       .map(function(el) {
         return el.val
       })
@@ -100,7 +98,7 @@ export class WarningLevels implements Visitor {
       })
 
     const transition = d3.transition().duration(this.transitionTime)
-    this.group
+    this.axis.canvas
       .select('.y2-axis')
       .attr('transform', 'translate(' + this.axis.width + ' ,0)')
       .transition(transition)
@@ -127,7 +125,7 @@ export class WarningLevels implements Visitor {
 
     const rects = this.sections
       .selectAll('rect')
-      .data(this.escalationLevels)
+      .data(escalationLevels)
 
     rects
       .enter()
