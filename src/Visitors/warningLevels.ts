@@ -93,7 +93,7 @@ export class WarningLevels implements Visitor {
       .map(el => {
         // set label at height of level at right side of chart
         const idx = bisect(el.events, scaleX.domain()[1])
-        return {id: el.id, val: el.events[idx].value}
+        return {id: el.id, val: el.events[Math.max(0,idx-1)].value}
       })
       .filter(el => {
         return !isNull(el.val) && el.val >= domainY[0] && el.val <= domainY[1]
