@@ -3,6 +3,7 @@ import { SvgPropertiesHyphen } from 'csstype';
 import { Axis, AxisIndex, CartesianAxis, PolarAxis } from '../Axis'
 import defaultsDeep from 'lodash/defaultsDeep'
 import merge from 'lodash/merge'
+import { TooltipAnchor, TooltipPosition } from '../Tooltip';
 
 export const AUTO_SCALE = 1
 
@@ -33,6 +34,12 @@ export interface TextOptions {
   formatter?: (d: unknown) => string;
 }
 
+export interface TooltipOptions {
+  position?: TooltipPosition
+  anchor?: TooltipAnchor
+  toolTipFormatter?: (d: any) => string;
+}
+
 export interface ChartOptions {
   x? : ChartOptionItem;
   x1? : ChartOptionItem;
@@ -44,7 +51,7 @@ export interface ChartOptions {
   colorScale?: any;
   symbol?: SymbolOptions;
   text?: TextOptions;
-  toolTipFormatter?: (d: any) => string;
+  tooltip?: TooltipOptions;
 }
 
 export abstract class Chart {
@@ -159,18 +166,20 @@ export abstract class Chart {
   }
 
   protected toolTipFormatterCartesian(d) {
-    if (this.options.toolTipFormatter === undefined) {
+    if (this.options.tooltip === undefined) { return }
+    else if (this.options.tooltip.toolTipFormatter === undefined) {
       return this.defaultToolTipFormatterCartesian(d)
     } else {
-      return this.options.toolTipFormatter(d)
+      return this.options.tooltip.toolTipFormatter(d)
     }
   }
 
   protected toolTipFormatterPolar(d) {
-    if (this.options.toolTipFormatter === undefined) {
+    if (this.options.tooltip === undefined) { return }
+    else if (this.options.tooltip.toolTipFormatter === undefined) {
       return this.defaultToolTipFormatterPolar(d)
     } else {
-      return this.options.toolTipFormatter(d)
+      return this.options.tooltip.toolTipFormatter(d)
     }
   }
 

@@ -1,7 +1,7 @@
 import * as d3 from 'd3'
 import { CartesianAxis, PolarAxis } from '../Axis'
 import { Chart, AUTO_SCALE } from './chart'
-import { TooltipPosition } from '../Tooltip'
+import { TooltipAnchor, TooltipPosition } from '../Tooltip'
 
 export class ChartMatrix extends Chart {
   static readonly GROUP_CLASS: 'chart-matrix'
@@ -35,7 +35,7 @@ export class ChartMatrix extends Chart {
       .transition()
       .duration(this.options.transitionTime)
 
-    this.group
+    const elements = this.group
       .selectAll("rect")
       .data(data)
       .join("rect")
@@ -47,11 +47,16 @@ export class ChartMatrix extends Chart {
         .attr("stroke-width", 0)
         .attr("shape-rendering", "auto")
         .attr("fill", d => d[colorKey] !== null ? colorMap(d[colorKey]) : 'none' )
-        .on('pointerover', (_e: any, d) => {
+    if (this.options.tooltip !== undefined) {
+      elements
+        .on('pointerover', (_e: any, d: any) => {
+          if (this.options.tooltip.anchor !== undefined && this.options.tooltip.anchor !== TooltipAnchor.Top) {
+            console.error('Tooltip not implemented for anchor ', this.options.tooltip.anchor, ', using ', TooltipAnchor.Top, ' instead.')
+          }
           axis.tooltip.show()
           axis.tooltip.update(
             this.toolTipFormatterCartesian(d),
-            TooltipPosition.Top,
+            this.options.tooltip.position !== undefined ? this.options.tooltip.position : TooltipPosition.Top,
             axis.margin.left + x0(d[xKey]) + x0.bandwidth() / 2 ,
             axis.margin.top + y0(d[yKey])
           )
@@ -59,6 +64,7 @@ export class ChartMatrix extends Chart {
         .on('pointerout', () => {
           axis.tooltip.hide()
         })
+      }
 
     if (this.options.text !== undefined) {
       const textSelection = this.group

@@ -1,6 +1,6 @@
 import * as d3 from 'd3'
 import { AxisIndex, CartesianAxis, PolarAxis } from '../Axis'
-import { TooltipPosition } from '../Tooltip'
+import { TooltipAnchor, TooltipPosition } from '../Tooltip'
 import { Chart, AUTO_SCALE } from './chart'
 
 export class ChartBar extends Chart {
@@ -54,18 +54,24 @@ export class ChartBar extends Chart {
           return d[yKey] === null ? 0 : Math.abs(yScale(0) - yScale(d[yKey]))
         })
         .attr("fill", d => d[colorKey] !== null ? colorMap(d[colorKey]) : 'none' )
-        .on('pointerover', (_e: any, d) => {
-          axis.tooltip.show()
-          axis.tooltip.update(
-            this.toolTipFormatterCartesian(d),
-            TooltipPosition.Top,
-            axis.margin.left + x0(d[xKey]) + x1(d[x1Key]) + x1.bandwidth() / 2 ,
-            axis.margin.top + Math.min(yScale(d[yKey]), yScale(0))
-          )
-        })
-        .on('pointerout', () => {
-          axis.tooltip.hide()
-        })
+    if (this.options.tooltip !== undefined) {
+      bar
+      .on('pointerover', (_e: any, d) => {
+        axis.tooltip.show()
+        if (this.options.tooltip.anchor !== undefined && this.options.tooltip.anchor !== TooltipAnchor.Bottom) {
+          console.error('Tooltip not implemented for anchor ', this.options.tooltip.anchor, ', using ', TooltipAnchor.Bottom, ' instead.')
+        }
+        axis.tooltip.update(
+          this.toolTipFormatterCartesian(d),
+          this.options.tooltip.position !== undefined ? this.options.tooltip.position : TooltipPosition.Top,
+          axis.margin.left + x0(d[xKey]) + x1(d[x1Key]) + x1.bandwidth() / 2 ,
+          axis.margin.top + Math.min(yScale(d[yKey]), yScale(0))
+        )
+      })
+      .on('pointerout', () => {
+        axis.tooltip.hide()
+      })
+    }
 
         bar.data(data)
         .order()

@@ -7,6 +7,15 @@ export enum TooltipPosition {
   Right = 'right',
 }
 
+export enum TooltipAnchor {
+  Top = 'top',
+  Bottom = 'bottom',
+  Left = 'left',
+  Right = 'right',
+  Center = 'center',
+  Pointer = 'pointer',
+}
+
 export class Tooltip {
   tooltip: any = null
   tooltipText: any = null

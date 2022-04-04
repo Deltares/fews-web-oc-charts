@@ -2,7 +2,7 @@
 <html lang="en">
     <head>
         <meta charset="UTF-8" />
-        <title>Wind Rose Tech Demo</title>
+        <title>Polar Intercept Tech Demo</title>
         <style>
 
 
@@ -19,6 +19,7 @@
             }
 
             .chart-container {
+                position: relative;
                 display: inline-block;
                 width: 400px;
                 height: 400px;
@@ -36,17 +37,6 @@
 
             #cartesian-line { fill: none; stroke: white; }
 
-            div.tooltip { position: absolute;
-                text-align: center;
-                width: 60px;
-                height: 28px;
-                padding: 2px;
-                font: 12px sans-serif;
-                color: #fff;
-                background: black;
-                border: 0px;
-                border-radius: 8px;
-                pointer-events: none; }
 
         </style>
         <script src="https://d3js.org/d3.v7.min.js"></script>
@@ -121,15 +111,15 @@ var polarData = [
         { x: [6, 7], y: [-10, 15], v: 0 }
     ]
 ];
-var plot1 = new wbCharts.ChartRange(polarData[0], {colorScale: wbCharts.AUTO_SCALE});
-var plot2 = new wbCharts.ChartRange(polarData[0], {colorScale: wbCharts.AUTO_SCALE});
-var plot3 = new wbCharts.ChartRange(polarData[0], {colorScale: wbCharts.AUTO_SCALE});
-var plot4 = new wbCharts.ChartRange(polarData[0], {colorScale: wbCharts.AUTO_SCALE});
-var plot5 = new wbCharts.ChartRange(polarData[0], {colorScale: wbCharts.AUTO_SCALE});
-var plot6 = new wbCharts.ChartRange(polarData[0], {colorScale: wbCharts.AUTO_SCALE});
-var plot7 = new wbCharts.ChartRange(polarData[0], {colorScale: wbCharts.AUTO_SCALE});
-var plot8 = new wbCharts.ChartRange(polarData[0], {colorScale: wbCharts.AUTO_SCALE});
-var plot9 = new wbCharts.ChartRange(polarData[0], {colorScale: wbCharts.AUTO_SCALE});
+var plot1 = new wbCharts.ChartRange(polarData[0], {colorScale: wbCharts.AUTO_SCALE, tooltip: {anchor: 'center'}});
+var plot2 = new wbCharts.ChartRange(polarData[0], {colorScale: wbCharts.AUTO_SCALE, tooltip: {anchor: 'center'}});
+var plot3 = new wbCharts.ChartRange(polarData[0], {colorScale: wbCharts.AUTO_SCALE, tooltip: {anchor: 'center'}});
+var plot4 = new wbCharts.ChartRange(polarData[0], {colorScale: wbCharts.AUTO_SCALE, tooltip: {anchor: 'center'}});
+var plot5 = new wbCharts.ChartRange(polarData[0], {colorScale: wbCharts.AUTO_SCALE, tooltip: {anchor: 'center'}});
+var plot6 = new wbCharts.ChartRange(polarData[0], {colorScale: wbCharts.AUTO_SCALE, tooltip: {anchor: 'center'}});
+var plot7 = new wbCharts.ChartRange(polarData[0], {colorScale: wbCharts.AUTO_SCALE, tooltip: {anchor: 'center'}});
+var plot8 = new wbCharts.ChartRange(polarData[0], {colorScale: wbCharts.AUTO_SCALE, tooltip: {anchor: 'center'}});
+var plot9 = new wbCharts.ChartRange(polarData[0], {colorScale: wbCharts.AUTO_SCALE, tooltip: {anchor: 'center'}});
 
 var random = [];
 for (var i = 0; i < 100; i++) {

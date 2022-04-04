@@ -326,9 +326,9 @@
           },
           innerRadius: 0.5
         });
-        windDirectionMeasurement = new wbCharts.ChartLine(windRichtingMetingen[0], {transitionTime: transitionTime});
-        windDirectionForecast = new wbCharts.ChartLine(windRichtingVerwachtingen[0], {transitionTime: transitionTime});
-        windDirectionRange = new wbCharts.ChartRange(allWindSpreidingR[0], {transitionTime: transitionTime, r:{includeInTooltip:false} });
+        windDirectionMeasurement = new wbCharts.ChartLine(windRichtingMetingen[0], {transitionTime: transitionTime, radial:{includeInTooltip:false}, tooltip: {anchor: 'pointer'}});
+        windDirectionForecast = new wbCharts.ChartLine(windRichtingVerwachtingen[0], {transitionTime: transitionTime, radial:{includeInTooltip:false}, tooltip: {anchor: 'pointer'}});
+        windDirectionRange = new wbCharts.ChartRange(allWindSpreidingR[0], {transitionTime: transitionTime, radial:{includeInTooltip:false}, tooltip: {anchor: 'center'}});
         windDirectionRange.addTo(polarAxis, { radial: { key: "x" }, angular: { key: "y" } }, 'direction-range', '#polar-range');
         windDirectionMeasurement.addTo(polarAxis, { radial: { key: "x" }, angular: { key: "y" } }, 'direction-measured', '#polar-line');
         windDirectionForecast.addTo(polarAxis, { radial: { key: "x" }, angular: { key: "y" } }, 'direction-forecast','#polar-line-forecast');
@@ -410,9 +410,9 @@
           }
         });
 
-        windSpeedRange = new wbCharts.ChartRange(allWindSpreidingV[0], {transitionTime: transitionTime, x :{includeInTooltip: false} });
-        windSpeedMeasurement = new wbCharts.ChartLine( windSnelheiMetingen[0], {transitionTime: transitionTime});
-        windSpeedForecast = new wbCharts.ChartLine( windSnelheiVerwachtingen[0], {transitionTime: transitionTime});
+        windSpeedRange = new wbCharts.ChartRange(allWindSpreidingV[0], {transitionTime: transitionTime, y :{includeInTooltip: false}, tooltip: {anchor: 'center'} });
+        windSpeedMeasurement = new wbCharts.ChartLine( windSnelheiMetingen[0], {transitionTime: transitionTime, y :{includeInTooltip: false}, tooltip: {anchor: 'pointer'}});
+        windSpeedForecast = new wbCharts.ChartLine( windSnelheiVerwachtingen[0], {transitionTime: transitionTime, y :{includeInTooltip: false}, tooltip: {anchor: 'pointer'}});
 
         windSpeedRange.addTo(windSpeedAxis, { x: { key: "y", axisIndex: 0 } , y: {key: "x", axisIndex: 0} }, 'cartesian-range', '#cartesian-range');
         windSpeedMeasurement.addTo(windSpeedAxis,{ x: { key: "y", axisIndex: 0 } , y: {key: "x", axisIndex: 0} }, 'wind', '#wind-line');
@@ -443,7 +443,7 @@
             bottom: 60
           }
         });
-        windStootChart = new wbCharts.ChartLine( allWindStoot[0], {transitionTime: transitionTime});
+        windStootChart = new wbCharts.ChartLine( allWindStoot[0], {transitionTime: transitionTime, y :{includeInTooltip: false}, tooltip: {anchor: 'default'}});
         windStootChart.addTo(windStootAxis,{ x: { key: "y", axisIndex: 0} , y: {key: "x", axisIndex: 0} }, 'stoot', '#stoot-line');
 
         windStootText = new wbCharts.DataField(
