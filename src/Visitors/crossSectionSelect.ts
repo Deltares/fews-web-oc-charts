@@ -23,6 +23,7 @@ export class CrossSectionSelect implements Visitor {
     x: { axisIndex : 0 },
     draggable: false
   }
+  private visible: boolean
 
   // use shared Visitor constuctor (Visitor should be a abstract class)
   constructor(value: number | Date, callback: (value: number | Date ) => void, options: CrossSectionSelectOptions, trace?: string[]) {
@@ -33,6 +34,7 @@ export class CrossSectionSelect implements Visitor {
       this.options
     ) as CrossSectionSelectOptions
     this.trace = trace
+    this.visible = true
   }
 
   visit(axis: Axis): void {
@@ -78,7 +80,9 @@ export class CrossSectionSelect implements Visitor {
     const axis = this.axis
     const axisIndex = this.options.x.axisIndex
     const scale = axis.xScale[axisIndex]
+    const domain = scale.domain()
     const xPos = scale(this.value)
+    this.visible = (this.value >= domain[0] && this.value <= domain[1])
     this.updateLine(xPos)
     // find values
     const traces = this.trace || this.axis.charts.map((chart) => { return chart.id })
@@ -139,24 +143,30 @@ export class CrossSectionSelect implements Visitor {
   }
 
   updateLine(xPos: number): void {
+    const visibility = this.visible ? 'visible' : 'hidden'
     // line
-    const timeString = this.format(this.value)
     this.group
       .select('line')
       .attr('y1', 0)
       .attr('y2', this.axis.height)
       .attr('transform', 'translate(' + xPos + ', 0)')
+      .style('visibility', visibility)
     // text
+    const timeString = this.format(this.value)
     this.group
       .select('.date-label')
       .attr('x', xPos)
       .text(timeString)
-    // handle
-    this.group.select('polygon').attr('transform', 'translate(' + xPos + ',' + this.axis.height + ')')
+      .style('visibility', visibility)
+      // handle
+    this.group.select('polygon')
+      .attr('transform', 'translate(' + xPos + ',' + this.axis.height + ')')
+      .style('visibility', visibility)
   }
 
 
   updateDataPoints (points, styles): void {
+    const visibility = this.visible ? 'visible' : 'hidden'
     this.group.selectAll('.data-point-per-line')
       .selectAll('circle')
       .data(points)
@@ -168,6 +178,7 @@ export class CrossSectionSelect implements Visitor {
         const style = styles[d.id]
         return style.getPropertyValue('stroke')
       })
+      .style('visibility', visibility)
       .style('stroke-width', '1px')
       .style('opacity', '1')
       .attr('transform', (d) => `translate( ${d.x}, ${d.y})`)
@@ -186,10 +197,13 @@ export class CrossSectionSelect implements Visitor {
       i = i + 2
     }
 
+    const visibility = this.visible ? 'visible' : 'hidden'
+
     const link = this.group
       .selectAll(".link")
       .data(links)
       .join("line")
+      .style('visibility', visibility)
       .classed("link", true)
 
     const rectSelection = this.group.selectAll(".back")
@@ -200,6 +214,7 @@ export class CrossSectionSelect implements Visitor {
       .classed("back", true)
       .attr("fill", "rgb(0, 0 , 0)")
       .attr("stroke", "none")
+      .style('visibility', visibility)
 
     const labelsSelection = this.group.selectAll(".label")
       .data(nodes.filter((d) =>  d.label !== undefined) )
@@ -213,6 +228,7 @@ export class CrossSectionSelect implements Visitor {
         return style
           .getPropertyValue('stroke')
       })
+      .style('visibility', visibility)
       .attr('stroke', 'none')
       .text(d => d.label)
 
