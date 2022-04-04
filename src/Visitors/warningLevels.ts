@@ -86,7 +86,8 @@ export class WarningLevels implements Visitor {
     const bisect = d3.bisector((data:any) => {
       return data.date
     }).left
-    const escalationLevels = this.escalationLevels
+
+    const escalationLevels = this.escalationLevels ?? []
     const tickLevels = escalationLevels
       .map(el => {
         // set label at height of level at right side of chart
