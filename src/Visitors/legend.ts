@@ -70,7 +70,7 @@ export class Legend implements Visitor {
           that.createLegendSymbol(d.selector, d.legendId, symbol.node())
           if (that.configuredLabels){
             legendElement.style('cursor', 'pointer')
-            legendElement.on('click', function() {
+            legendElement.on('click', () => {
               const display = style.getPropertyValue('visibility')
               if (display === 'visible') {
                 that.axis.chartGroup.selectAll(`[data-chart-id="${d.selector}"]`).style('visibility', 'hidden')
@@ -79,6 +79,7 @@ export class Legend implements Visitor {
                 that.axis.chartGroup.selectAll(`[data-chart-id="${d.selector}"]`).style('visibility', 'visible')
                 legendElement.style('opacity', 1.0)
               }
+              that.axis.redraw({x: {autoScale: true}, y: {autoScale: true}})
             })
           }
         } else {
