@@ -170,28 +170,81 @@
 
     // var refDate = new Date(2019,02,31);
     var refDate = getRoundedDate( 10, new Date());
+    var refYear = refDate.getFullYear()
     var mouseOver = new wbCharts.MouseOver(['control', 'median', 'percent90']);
     var escalationLevels = [{
         id: 'laag',
-        val: -100,
+        events: [
+          { date: new Date(refYear, 0, 1), value: -90 },
+          { date: new Date(refYear, 1, 1), value: -90 },
+          { date: new Date(refYear, 2, 1), value: -90 },
+          { date: new Date(refYear, 3, 1), value: -90 },
+          { date: new Date(refYear, 4, 1), value: -100 },
+          { date: new Date(refYear, 5, 1), value: -100 },
+          { date: new Date(refYear, 6, 1), value: -100 },
+          { date: new Date(refYear, 7, 1), value: -100 },
+          { date: new Date(refYear, 8, 1), value: -100 },
+          { date: new Date(refYear, 9, 1), value: -90 },
+          { date: new Date(refYear, 10, 1), value: -90 },
+          { date: new Date(refYear, 11, 1), value: -90 },
+        ],
         color: 'rgba(205, 133, 63,.5)',
         c: '<'
       },
       {
         id: 'verhoogd',
-        val: 100,
+        events: [
+          { date: new Date(refYear, 0, 1), value: 110 },
+          { date: new Date(refYear, 1, 1), value: 110 },
+          { date: new Date(refYear, 2, 1), value: 110 },
+          { date: new Date(refYear, 3, 1), value: 110 },
+          { date: new Date(refYear, 4, 1), value: 100 },
+          { date: new Date(refYear, 5, 1), value: 100 },
+          { date: new Date(refYear, 6, 1), value: 100 },
+          { date: new Date(refYear, 7, 1), value: 100 },
+          { date: new Date(refYear, 8, 1), value: 100 },
+          { date: new Date(refYear, 9, 1), value: 110 },
+          { date: new Date(refYear, 10, 1), value: 110 },
+          { date: new Date(refYear, 11, 1), value: 110 },
+        ],
         color: 'rgba(255, 215, 0,.5)',
         c: '>'
       },
       {
         id: 'hoog',
-        val: 110,
+        events: [
+          { date: new Date(refYear, 0, 1), value: 120 },
+          { date: new Date(refYear, 1, 1), value: 120 },
+          { date: new Date(refYear, 2, 1), value: 120 },
+          { date: new Date(refYear, 3, 1), value: 120 },
+          { date: new Date(refYear, 4, 1), value: 110 },
+          { date: new Date(refYear, 5, 1), value: 110 },
+          { date: new Date(refYear, 6, 1), value: 110 },
+          { date: new Date(refYear, 7, 1), value: 110 },
+          { date: new Date(refYear, 8, 1), value: 110 },
+          { date: new Date(refYear, 9, 1), value: 120 },
+          { date: new Date(refYear, 10, 1), value: 120 },
+          { date: new Date(refYear, 11, 1), value: 120 },
+        ],
         color: 'rgba(255, 150, 0,.5)',
         c: '>'
       },
       {
         id: 'extreem',
-        val: 140,
+        events: [
+          { date: new Date(refYear, 0, 1), value: 160 },
+          { date: new Date(refYear, 1, 1), value: 160 },
+          { date: new Date(refYear, 2, 1), value: 160 },
+          { date: new Date(refYear, 3, 1), value: 160 },
+          { date: new Date(refYear, 4, 1), value: 140 },
+          { date: new Date(refYear, 5, 1), value: 140 },
+          { date: new Date(refYear, 6, 1), value: 140 },
+          { date: new Date(refYear, 7, 1), value: 140 },
+          { date: new Date(refYear, 8, 1), value: 140 },
+          { date: new Date(refYear, 9, 1), value: 160 },
+          { date: new Date(refYear, 10, 1), value: 160 },
+          { date: new Date(refYear, 11, 1), value: 160 },
+        ],
         color: 'rgba(255, 0, 0,.5)',
         c: '>'
       }

@@ -183,25 +183,33 @@
 
     var escalationLevels1 = [{
         id: 'laag',
-        val: -100,
+        events: [],
+        levelStart: -80,
+        levelEnd: -100,
         color: 'rgba(205, 133, 63,.5)',
         c: '<'
       },
       {
         id: 'verhoogd',
-        val: 100,
+        events: [],
+        levelStart: 80,
+        levelEnd: 100,
         color: 'rgba(255, 215, 0,.5)',
         c: '>'
       },
       {
         id: 'hoog',
-        val: 110,
+        events: [],
+        levelStart: 120,
+        levelEnd: 110,
         color: 'rgba(255, 150, 0,.5)',
         c: '>'
       },
       {
         id: 'extreem',
-        val: 140,
+        events: [],
+        levelStart: 130,
+        levelEnd: 150,
         color: 'rgba(255, 0, 0,.5)',
         c: '>'
       }
@@ -209,49 +217,55 @@
 
     var escalationLevels2 = [{
         id: 'bruin',
-        val: -100,
+        events: [],
+        levelStart: -50,
+        levelEnd: -100,
         color: 'rgba(205, 133, 63,.5)',
         c: '<'
       },
       {
         id: 'groen',
-        val: 10,
+        events: [],
+        levelStart: 10,
+        levelEnd: -10,
         color: 'rgba(164,237,18,.5)',
         c: '<'
       },
       {
         id: 'geel',
-        val: 50,
+        events: [],
+        levelStart: 40,
+        levelEnd: 70,
         color: 'rgba(255, 215, 0,.5)',
         c: '>'
       },
       {
         id: 'oranje',
-        val: 160,
+        events: [],
+        levelStart: 130,
+        levelEnd: 160,
         color: 'rgba(255, 150, 0,.5)',
         c: '>'
       },
       {
         id: 'rood',
-        val: 200,
+        events: [],
+        levelStart: 180,
+        levelEnd: 210,
         color: 'rgba(255, 0, 0,.5)',
         c: '>'
       }
     ]
 
-    var escalationsVisitor1 = new wbCharts.WarningLevels(escalationLevels1);
-    var escalationsVisitor2 = new wbCharts.WarningLevels(escalationLevels2);
 
     plot1 = {
       axis: axis1,
-      escalations: escalationsVisitor1
+      escalations: escalationLevels1
     }
     plot2 = {
       axis: axis2,
-      escalations: escalationsVisitor2
+      escalations: escalationLevels2
     }
-
-    var zoom = new wbCharts.ZoomHandler();
 
     axis1.accept(legend1);
     axis2.accept(legend2);
@@ -293,10 +307,22 @@
             x: dateTime,
             y: percentile([0.05, 0.95], points)
           });
+
+          plot.escalations.forEach( function (el, i) {
+            let val = el.levelStart
+            if (index > data.times.length / 2 ) {
+              val = el.levelEnd
+            }
+            el.events.push({
+              date: dateTime,
+              value: val,
+            })
+          });
         })
 
         // Plot
         var mouseOver = new wbCharts.MouseOver(['control', 'median', 'percent90']);
+        var zoom = new wbCharts.ZoomHandler();
 
         var plotMedian = new wbCharts.ChartLine(percentiles[0], {});
         var plotControl = new wbCharts.ChartLine(members[0], {});
@@ -304,11 +330,13 @@
         var plotPercentile50 = new wbCharts.ChartArea(percentiles[1], {});
         var plotPercentile90 = new wbCharts.ChartArea(percentiles[2], {});
 
+        var escalationsVisitor = new wbCharts.WarningLevels(plot.escalations);
+
         plotPercentile90.addTo(plot.axis, chartOptions, 'percent90', '#perc90');
         plotPercentile50.addTo(plot.axis, chartOptions, 'percent50', '#perc50');
         plotControl.addTo(plot.axis, chartOptions, 'control', '#control-line');
         plotMedian.addTo(plot.axis, chartOptions, 'median', '#median-line');
-        plot.axis.accept(plot.escalations);
+        plot.axis.accept(escalationsVisitor);
         plot.axis.redraw({ x: { autoScale: true }, y: { autoScale: true } });
         plot.axis.zoom();
         plot.axis.accept(mouseOver);
