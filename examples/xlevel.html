@@ -139,7 +139,7 @@
     }, { draggable: true }, ['control', 'median']);
     var crossSectionSelect2= new wbCharts.CrossSectionSelect(getRoundedDate(10, new Date(new Date().getTime() + 24 * 60 * 60 * 1000)), function (x) {
       console.log('2:', x)
-    }, ['control']);
+    }, {}, ['control']);
 
     formatTime = function(timestamp) {
       return wbCharts.dateFormatter(timestamp, 'yyyy-MM-dd HH:mm ZZZZ', { timeZone: axis.timeZone } )
@@ -380,6 +380,7 @@
         axis.accept(currentTime);
         axis.accept(dstIndicator);
         axis.accept(zoom);
+        axis.accept(mouseOver)
         axis.accept(crossSectionSelect1);
         axis.accept(crossSectionSelect2);
       });
