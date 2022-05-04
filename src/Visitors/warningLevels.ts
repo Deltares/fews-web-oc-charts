@@ -1,4 +1,5 @@
 import * as d3 from 'd3'
+import { isNull } from 'lodash';
 import { Axis, CartesianAxis } from '../Axis'
 import { Visitor } from './visitor'
 
@@ -42,7 +43,7 @@ export class WarningLevels implements Visitor {
     const tickValues = escalationLevels
       .filter(el => {
         const domain = scale.domain()
-        return el.val >= domain[0] && el.val <= domain[1]
+        return !isNull(el.val) && el.val >= domain[0] && el.val <= domain[1]
       })
       .map(el => {
         return el.val
@@ -92,10 +93,10 @@ export class WarningLevels implements Visitor {
       .map(el => {
         // set label at height of level at right side of chart
         const idx = bisect(el.events, scaleX.domain()[1])
-        return {id: el.id, val: el.events[idx].value}
+        return {id: el.id, val: el.events[Math.max(0,idx-1)].value}
       })
       .filter(el => {
-        return el.val >= domainY[0] && el.val <= domainY[1]
+        return !isNull(el.val) && el.val >= domainY[0] && el.val <= domainY[1]
       })
     const tickValues = tickLevels
       .map(el => {

@@ -139,7 +139,7 @@
     }, { draggable: true }, ['control', 'median']);
     var crossSectionSelect2= new wbCharts.CrossSectionSelect(getRoundedDate(10, new Date(new Date().getTime() + 24 * 60 * 60 * 1000)), function (x) {
       console.log('2:', x)
-    }, ['control']);
+    }, {}, ['control']);
 
     formatTime = function(timestamp) {
       return wbCharts.dateFormatter(timestamp, 'yyyy-MM-dd HH:mm ZZZZ', { timeZone: axis.timeZone } )
@@ -362,11 +362,25 @@
             autoScale: true
           }
         });
+        escalationLevels.forEach((el, i) => {
+          const escalationLine = new wbCharts.ChartLine(el.events, {curve: 'stepAfter'});
+          escalationLine.addTo(axis, {
+            x: {
+              key: "date",
+              axisIndex: 0
+            },
+            y: {
+              key: "value",
+              axisIndex: 0
+            }
+          }, el.id, {fill: 'none', stroke: el.color, 'stroke-width': '2px', 'stroke-dasharray': '4, 2'})
+        })
         axis.zoom();
         axis.accept(escalationsVisitor);
         axis.accept(currentTime);
         axis.accept(dstIndicator);
         axis.accept(zoom);
+        axis.accept(mouseOver)
         axis.accept(crossSectionSelect1);
         axis.accept(crossSectionSelect2);
       });

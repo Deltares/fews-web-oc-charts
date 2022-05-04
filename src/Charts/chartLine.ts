@@ -66,6 +66,11 @@ export class ChartLine extends Chart {
       .defined(function(d: any) {
         return d[yKey] != null
       })
+    const curve = this.curveGenerator
+    if (curve !== undefined) {
+      lineGenerator
+        .curve(curve)
+    }
 
     this.group = this.selectGroup(axis, 'chart-line')
     if (this.group.select('path').size() === 0) {

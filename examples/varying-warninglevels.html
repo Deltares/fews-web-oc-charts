@@ -40,6 +40,13 @@
       fill: white;
     }
 
+    .level-lines {
+      fill: none;
+      stroke: black;
+      stroke-dasharray: 4, 2;
+      stroke-width: 2px;
+    }
+
   </style>
   <script src="https://d3js.org/d3.v7.js"></script>
   <script src="https://d3js.org/d3-selection-multi.v1.min.js"></script>
@@ -298,6 +305,15 @@
       return areaGen
     }
 
+    function generateLineGenerator(d, i) {
+      console.log('generateLineGenerator: d:', d, 'i: ', i)
+      const lineGen =  d3.line()
+        .curve(d3.curveStepAfter)
+        .x((e, j) => { return x(e.date); })
+        .y((e, j) => { return y(e.value); })
+      return lineGen
+    }
+
     svg2
       .selectAll('p')
       .data(thresholds)
@@ -305,6 +321,14 @@
       .append("path")
         .style("fill", function(d, i) {return d.color; })
         .attr("d", function(d, i) { return generateAreaGenerator(d, i)(d.events); })
+
+    svg2
+      .selectAll('lines')
+      .data(thresholds)
+      .enter()
+      .append('path')
+      .attr('class', 'level-lines')
+      .attr('d', (d,i) => { return generateLineGenerator(d, i)(d.events); })
 
   </script>
 

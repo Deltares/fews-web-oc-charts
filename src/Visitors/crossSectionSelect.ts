@@ -86,7 +86,7 @@ export class CrossSectionSelect implements Visitor {
     const styles: Record<string, CSSStyleDeclaration> = {}
     for (const chartId of traces ) {
       const style = this.styleForChart(chartId)
-      if (style !== null && style.getPropertyValue('visibility') !== 'hidden') {
+      if (style !== null && style !== undefined && style.getPropertyValue('visibility') !== 'hidden') {
         const chart = axis.charts.find(c => c.id === chartId)
         points.push(this.findNearestPoint(chart, xPos))
         styles[chartId] = style
