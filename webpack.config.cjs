@@ -3,8 +3,8 @@ const CopyPlugin = require('copy-webpack-plugin');
 const TerserPlugin = require('terser-webpack-plugin');
 
 module.exports = {
-  mode: 'development',
-  entry: './src/wb-charts.ts',
+  mode: 'production',
+  entry: './lib/esm/wb-charts.js',
   output: {
     path: path.resolve(__dirname, 'dist'),
     library: 'wbCharts',
@@ -30,16 +30,6 @@ module.exports = {
       ],
     }),
   ],
-  module: {
-    rules: [
-      {
-        // Include ts, tsx, and js files.
-        test: /\.(tsx?)|(js)$/,
-        exclude: /node_modules/,
-        loader: 'ts-loader',
-      },
-    ],
-  },
   devtool: 'source-map',
   externals: ['d3']
 }
