@@ -1,8 +1,9 @@
 import * as d3 from 'd3'
-import { Axis, CartesianAxis } from '../Axis'
-import { Visitor } from './visitor'
-import { TooltipPosition } from '../Tooltip'
-import { dateFormatter } from '../Utils'
+import { TooltipPosition } from '../Tooltip/tooltip.js'
+import { dateFormatter } from '../Utils/date.js'
+import { Axis } from '../Axis/axis.js'
+import { CartesianAxis } from '../Axis/cartesianAxis.js'
+import { Visitor } from '../Visitors/visitor.js'
 
 export class MouseOver implements Visitor {
   private trace: string[]

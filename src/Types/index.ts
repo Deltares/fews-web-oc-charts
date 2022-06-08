@@ -1,1 +1,1 @@
-export * from './axisPosition'
+export * from './axisPosition.js'

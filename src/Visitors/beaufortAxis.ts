@@ -1,8 +1,10 @@
 import * as d3 from 'd3'
-import { Axis, CartesianAxis } from '../Axis'
-import { scaleBeaufort } from '../Scale';
-import { Visitor } from './visitor'
 import { Property } from 'csstype'
+
+import { Axis } from '../Axis/axis.js'
+import { CartesianAxis } from '../Axis/cartesianAxis.js'
+import { Visitor } from '../Visitors/visitor.js'
+import { scaleBeaufort } from '../Scale/wind.js'
 
 export interface BeaufortAxisOptions {
   x?: {

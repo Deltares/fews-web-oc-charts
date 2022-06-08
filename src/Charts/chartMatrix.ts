@@ -1,7 +1,8 @@
 import * as d3 from 'd3'
-import { CartesianAxis, PolarAxis } from '../Axis'
-import { Chart, AUTO_SCALE } from './chart'
-import { TooltipAnchor, TooltipPosition } from '../Tooltip'
+import { CartesianAxis } from '../Axis/cartesianAxis.js'
+import { PolarAxis } from '../Axis/polarAxis.js'
+import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js'
+import { Chart, AUTO_SCALE } from './chart.js'
 
 export class ChartMatrix extends Chart {
   static readonly GROUP_CLASS: 'chart-matrix'

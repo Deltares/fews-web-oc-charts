@@ -1,1 +1,1 @@
-export * from './wind'
+export * from './wind.js'

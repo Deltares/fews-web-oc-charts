@@ -1,9 +1,11 @@
 import * as d3 from 'd3'
 import { SvgPropertiesHyphen } from 'csstype';
-import { Axis, AxisIndex, CartesianAxis, PolarAxis } from '../Axis'
-import defaultsDeep from 'lodash/defaultsDeep'
-import merge from 'lodash/merge'
-import { TooltipAnchor, TooltipPosition } from '../Tooltip';
+import { Axis, AxisIndex } from '../Axis/axis.js'
+import { CartesianAxis } from '../Axis/cartesianAxis.js'
+import { PolarAxis } from '../Axis/polarAxis.js'
+
+import { defaultsDeep, merge } from 'lodash-es'
+import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js';
 
 export const AUTO_SCALE = 1
 

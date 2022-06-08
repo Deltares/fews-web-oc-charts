@@ -1,7 +1,7 @@
 import { Property } from 'csstype'
 import * as d3 from 'd3'
-import defaultsDeep from 'lodash/defaultsDeep'
-import { AxisPosition } from '../Types/axisPosition'
+import { defaultsDeep } from 'lodash-es'
+import { AxisPosition } from '../Types/axisPosition.js'
 
 /**
  * A single value in a colour map

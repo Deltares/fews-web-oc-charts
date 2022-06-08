@@ -1,7 +1,9 @@
 import * as d3 from 'd3'
-import { AxisIndex, CartesianAxis, PolarAxis } from '../Axis'
-import { TooltipAnchor, TooltipPosition } from '../Tooltip'
-import { Chart, AUTO_SCALE } from './chart'
+import { AxisIndex } from '../Axis/axis.js'
+import { CartesianAxis } from '../Axis/cartesianAxis.js'
+import { PolarAxis } from '../Axis/polarAxis.js'
+import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js'
+import { Chart, AUTO_SCALE } from './chart.js'
 
 export class ChartBar extends Chart {
   static readonly GROUP_CLASS: 'chart-bar'

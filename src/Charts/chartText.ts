@@ -1,6 +1,7 @@
 import * as d3 from 'd3'
-import { CartesianAxis, PolarAxis } from '../Axis'
-import { Chart, SymbolOptions } from './chart'
+import { CartesianAxis } from '../Axis/cartesianAxis.js'
+import { PolarAxis } from '../Axis/polarAxis.js'
+import { Chart, SymbolOptions } from './chart.js'
 
 export class ChartText extends Chart {
   private previousData: any[] = []

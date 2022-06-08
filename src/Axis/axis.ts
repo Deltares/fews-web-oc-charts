@@ -1,9 +1,8 @@
 import * as d3 from 'd3'
-import { Chart } from '../Charts'
-import { Visitor } from '../Visitors'
-import defaultsDeep from 'lodash/defaultsDeep'
-import merge from 'lodash/merge'
-import { Tooltip } from '../Tooltip'
+import { Chart } from '../Charts/chart.js'
+import { Visitor } from '../Visitors/visitor.js'
+import { defaultsDeep, merge } from 'lodash-es'
+import { Tooltip } from '../Tooltip/tooltip.js'
 
 export interface Margin {
   top?: number;
@@ -62,7 +61,7 @@ export abstract class Axis {
   canvas: any
   svg: d3.Selection<SVGElement, any, SVGElement, any>
   container: HTMLElement
-  observer: ResizeObserver
+  // observer: ResizeObserver
   width: number
   height: number
   margin: { top: number; right: number; bottom: number; left: number }
@@ -80,10 +79,10 @@ export abstract class Axis {
       defaultOptions
     )
 
-    this.observer = new ResizeObserver(entries => {
-      if(entries[0].contentBoxSize) this.resize()
-    })
-    this.observer.observe(container)
+    // this.observer = new ResizeObserver(entries => {
+    //   if(entries[0].contentBoxSize) this.resize()
+    // })
+    // this.observer.observe(container)
 
     // Using the d3.formatLocale is not easy for generic plotting
     d3.formatDefaultLocale({
@@ -97,6 +96,7 @@ export abstract class Axis {
     this.svg = d3
       .select(container)
       .append('svg')
+      .attr('xmlns', 'http://www.w3.org/2000/svg')
       .attr('class', 'wb-charts')
       .attr('overflow', 'visible')
     this.setSize(height, width)

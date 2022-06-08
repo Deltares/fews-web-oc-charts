@@ -1,7 +1,9 @@
-import { Axis, CartesianAxis, AxisType } from '../Axis'
-import { Visitor } from './visitor'
 import { DateTime, Duration } from 'luxon'
-import defaultsDeep from 'lodash/defaultsDeep'
+import { defaultsDeep } from 'lodash-es'
+
+import { Axis, AxisType } from '../Axis/axis.js'
+import { CartesianAxis } from '../Axis/cartesianAxis.js'
+import { Visitor } from '../Visitors/visitor.js'
 
 type DstIndicatorOptions = { x: { axisIndex: number } } | { y: { axisIndex: number } }
 

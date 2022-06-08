@@ -1,8 +1,10 @@
 import { SvgPropertiesHyphen } from 'csstype'
 import * as d3 from 'd3'
-import { CartesianAxis, PolarAxis } from '../Axis'
-import { Chart } from './chart'
-import { TooltipPosition } from '../Tooltip'
+
+import { CartesianAxis } from '../Axis/cartesianAxis.js'
+import { PolarAxis } from '../Axis/polarAxis.js'
+import { TooltipPosition } from '../Tooltip/tooltip.js'
+import { Chart } from './chart.js'
 
 export class ChartLine extends Chart {
   defaultToolTipFormatterCartesian(d) {

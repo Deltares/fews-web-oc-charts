@@ -1,7 +1,8 @@
 import * as d3 from 'd3'
-import { CartesianAxis, PolarAxis } from '../Axis'
-import { TooltipAnchor, TooltipPosition } from '../Tooltip'
-import { Chart } from './chart'
+import { CartesianAxis } from '../Axis/cartesianAxis.js'
+import { PolarAxis } from '../Axis/polarAxis.js'
+import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js'
+import { Chart } from './chart.js'
 
 function mean(x: number[] | number) {
   if (x instanceof Array) {

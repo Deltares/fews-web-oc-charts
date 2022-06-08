@@ -1,4 +1,4 @@
-import { Axis } from '../Axis'
+import { Axis } from '../Axis/axis.js'
 
 export function toggleChartVisisbility(axis: Axis, id: string): boolean {
   const chartElement = axis.chartGroup

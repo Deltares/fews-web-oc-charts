@@ -1,13 +1,12 @@
 import * as d3 from 'd3'
-import { Axis, AxesOptions, AxisType, AxisOptions } from './axis'
-import { AxisPosition } from '../Types/axisPosition'
+import { Axis, AxesOptions, AxisType, AxisOptions } from './axis.js'
+import { AxisPosition } from '../Types/axisPosition.js'
 
-import { generateMultiFormat } from '../Utils/date'
+import { generateMultiFormat } from '../Utils/date.js'
 import { DateTime } from 'luxon'
-import merge from 'lodash/merge'
-import defaults from 'lodash/defaults'
-import { niceDomain } from './niceDomain'
-import { niceDegreeSteps } from '../Utils/niceDegreeSteps'
+import { defaultsDeep, merge } from 'lodash-es'
+import { niceDomain } from './niceDomain.js'
+import { niceDegreeSteps } from '../Utils/niceDegreeSteps.js'
 
 export interface CartesianAxisOptions extends AxisOptions {
   position?: AxisPosition;
@@ -94,7 +93,7 @@ export class CartesianAxis extends Axis {
 
   setDefaultAxisOptions(axisOptions: CartesianAxisOptions[], defaultOptions: CartesianAxisOptions) {
     for (const options of axisOptions) {
-      defaults(options, defaultOptions)
+      defaultsDeep(options, defaultOptions)
     }
   }
 

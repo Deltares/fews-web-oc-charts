@@ -1,10 +1,12 @@
 import * as d3 from 'd3'
-import { CartesianAxis, PolarAxis } from '../Axis'
-import { TooltipAnchor, TooltipPosition } from '../Tooltip'
-import { Chart, SymbolOptions } from './chart'
 
-import { symbolArrow } from '../Symbols'
-import defaultsDeep from 'lodash/defaultsDeep'
+import { CartesianAxis } from '../Axis/cartesianAxis.js'
+import { PolarAxis } from '../Axis/polarAxis.js'
+import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js'
+import { Chart, SymbolOptions } from './chart.js'
+
+import symbolArrow from '../Symbols/arrow.js'
+import { defaultsDeep } from 'lodash-es'
 
 function mean(x: number[] | number) {
   if (x instanceof Array) {

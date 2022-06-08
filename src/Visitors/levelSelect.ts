@@ -1,7 +1,9 @@
 import * as d3 from 'd3'
-import { Axis, CartesianAxis } from '../Axis'
-import { Visitor } from './visitor'
-import defaultsDeep from 'lodash/defaultsDeep'
+import { defaultsDeep } from 'lodash-es'
+
+import { Axis } from '../Axis/axis.js'
+import { CartesianAxis } from '../Axis/cartesianAxis.js'
+import { Visitor } from '../Visitors/visitor.js'
 
 type LevelSelectOptions = {
   y : { axisIndex: number }

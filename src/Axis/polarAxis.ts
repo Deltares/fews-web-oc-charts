@@ -1,8 +1,8 @@
 import * as d3 from 'd3'
-import { Axis, AxesOptions, AxisType, AxisOptions } from './axis'
-import defaultsDeep from 'lodash/defaultsDeep'
+import { Axis, AxesOptions, AxisType, AxisOptions } from './axis.js'
+import { defaultsDeep } from 'lodash-es'
 import { DateTime } from 'luxon'
-import { niceDegreeSteps } from '../Utils/niceDegreeSteps'
+import { niceDegreeSteps } from '../Utils/niceDegreeSteps.js'
 
 export enum Direction {
   CLOCKWISE = -1,

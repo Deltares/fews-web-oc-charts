@@ -1,7 +1,8 @@
 import * as d3 from 'd3'
-import { isNull } from 'lodash';
-import { Axis, CartesianAxis } from '../Axis'
-import { Visitor } from './visitor'
+import { isNull } from 'lodash-es';
+import { Axis } from '../Axis/axis.js'
+import { CartesianAxis } from '../Axis/cartesianAxis.js'
+import { Visitor } from './visitor.js'
 
 export interface WarningLevelOptions {
   y?: {
