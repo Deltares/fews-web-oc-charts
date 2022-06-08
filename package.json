@@ -3,10 +3,13 @@
   "version": "2.0.1",
   "description": "Chart Library",
   "keywords": [],
-  "main": "./dist/wb-charts.umd.js",
-  "typings": "./dist/types/wb-charts.d.ts",
+  "main": "./lib/cjs/wb-charts.js",
+  "module": "./lib/esm/wb-charts.js",
+  "type": "module",
+  "typings": "./lib/types/wb-charts.d.ts",
   "files": [
     "dist/*",
+    "lib/*",
     "src/*"
   ],
   "author": "Werner Kramer <werner.kramer@vortech.nl>",
@@ -19,8 +22,10 @@
     "node": ">=6.0.0"
   },
   "scripts": {
-    "build": "npm run clean && tsc && webpack",
-    "clean": "shx rm -rf dist",
+    "build": "npm run clean && npm run build:esm && npm run build:cjs && webpack",
+    "build:esm": "tsc",
+    "build:cjs": "tsc --module commonjs --outDir lib/cjs",
+    "clean": "shx rm -rf lib dist",
     "lint": "eslint src/**.ts",
     "lint:fix": "eslint src/**.ts --fix",
     "prepare": "npm run build",
@@ -76,8 +81,8 @@
   },
   "dependencies": {
     "csstype": "^3.0.0",
-    "d3": "^7.1.1",
-    "lodash": "^4.17.19",
+    "d3": "^7.4.4",
+    "lodash-es": "^4.17.21",
     "luxon": "^2.1.1"
   }
 }
