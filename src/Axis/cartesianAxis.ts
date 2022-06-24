@@ -8,6 +8,7 @@ import merge from 'lodash/merge'
 import defaults from 'lodash/defaults'
 import { niceDomain } from './niceDomain'
 import { niceDegreeSteps } from '../Utils/niceDegreeSteps'
+import { AxisOrientation } from '../Types/axisOrientation'
 
 export interface CartesianAxisOptions extends AxisOptions {
   position?: AxisPosition;
@@ -22,19 +23,19 @@ function normalizeAngle(angle) {
   return angle - 360 * Math.floor( (angle) / 360)
 }
 
-function anchorForAngle(angle, position) {
+function anchorForAngle(angle, orientation) {
   let rotate
-  switch(position) {
-    case AxisPosition.Top:
+  switch(orientation) {
+    case AxisOrientation.Top:
       rotate = 180
       break
-    case AxisPosition.Right:
+    case AxisOrientation.Right:
       rotate = -90
       break
-    case AxisPosition.Bottom:
+    case AxisOrientation.Bottom:
       rotate = 0
       break
-    case AxisPosition.Left:
+    case AxisOrientation.Left:
     default:
       rotate = 90
   }
@@ -291,11 +292,12 @@ export class CartesianAxis extends Axis {
     for (const key in this.xScale) {
       const scale = this.xScale[key]
       let axis = undefined
-      switch (options[key].position) {
-        case AxisPosition.Top:
+      const orientation = options[key].orientation || options[key].position
+      switch (orientation) {
+        case AxisOrientation.Top:
           axis = d3.axisTop(scale).ticks(5)
           break
-        case AxisPosition.Bottom:
+        case AxisOrientation.Bottom:
         default:
           axis = d3.axisBottom(scale).ticks(5)
       }
@@ -344,8 +346,8 @@ export class CartesianAxis extends Axis {
             .attr("transform", `rotate(${angle})`);
           break
         default:
-          const anchor = anchorForAngle(angle, options[key].position)
-          const offset = options[key].position === AxisPosition.Top ? -15 : 15
+          const anchor = anchorForAngle(angle, orientation)
+          const offset = orientation === AxisOrientation.Top ? -15 : 15
           axisHandle
             .selectAll("text")
             .attr("x", undefined)
@@ -368,11 +370,12 @@ updateYAxis (options: CartesianAxisOptions[]): void {
   for (const key in this.yScale) {
     const scale = this.yScale[key]
     let axis = undefined
-    switch (options[key].position) {
-      case AxisPosition.Right:
+    const orientation = options[key].orientation || options[key].position
+    switch (orientation) {
+      case AxisOrientation.Right:
       axis = d3.axisRight(scale).ticks(5)
       break
-      case AxisPosition.Left:
+      case AxisOrientation.Left:
       default:
       axis = d3.axisLeft(scale).ticks(5)
     }
@@ -421,8 +424,8 @@ updateYAxis (options: CartesianAxisOptions[]): void {
           .attr("transform", `rotate(${angle})`);
         break
       default:
-        const anchor = anchorForAngle(angle, options[key].position)
-        const offset = options[key].position === AxisPosition.Right ? 15 : -15
+        const anchor = anchorForAngle(angle, orientation)
+        const offset = orientation === AxisOrientation.Right ? 15 : -15
         axisHandle
           .selectAll("text")
           .attr("x", undefined)
