@@ -54,41 +54,23 @@ export class Legend implements Visitor {
       .merge(enter)
       .each(function(d, i) {
         const legendElement = d3.select(this)
-        const chartsInGroup = that.axis.chartGroup
-          .select(`[data-chart-id="${d.selector}"]`)
-
-        const selector = d.legendId !== undefined ? `[data-legend-id="${d.legendId}"]` : 'path'
-
-        const chartElement = chartsInGroup
-            .select(selector)
-            .node() as Element
-
-        if (chartElement) {
-          const style = window.getComputedStyle(chartElement)
-
-          const symbol = legendElement.append('g')
-          that.createLegendSymbol(d.selector, d.legendId, symbol.node())
-          if (that.configuredLabels){
-            legendElement.style('cursor', 'pointer')
-            legendElement.on('click', () => {
-              const display = style.getPropertyValue('visibility')
-              if (display === 'visible') {
-                that.axis.chartGroup.selectAll(`[data-chart-id="${d.selector}"]`).style('visibility', 'hidden')
-                legendElement.style('opacity', 0.5)
-              } else {
-                that.axis.chartGroup.selectAll(`[data-chart-id="${d.selector}"]`).style('visibility', 'visible')
-                legendElement.style('opacity', 1.0)
-              }
-              that.axis.redraw({x: {autoScale: true}, y: {autoScale: true}})
-            })
-          }
-        } else {
-          legendElement
-            .append('circle')
-            .attr('class', 'spinner')
-            .attr('cx', 10)
-            .attr('cy', 0)
-            .attr('r', 8)
+        const chartsInGroup = that.axis.charts.filter(c => c.id === d.selector)
+        const symbol = legendElement.append('g')
+        that.createLegendSymbol(d.selector, d.legendId, symbol.node())
+        if (that.configuredLabels){
+          legendElement.style('cursor', 'pointer')
+          legendElement.on('click', () => {
+            const display = 'visible'
+            for(const chart of chartsInGroup) {
+              chart.visible = !chart.visible
+            }
+            if (display === 'visible') {
+              legendElement.style('opacity', 0.5)
+            } else {
+              legendElement.style('opacity', 1.0)
+            }
+            that.axis.redraw({x: {autoScale: true}, y: {autoScale: true}})
+          })
         }
         legendElement
           .append('text')
