@@ -25,6 +25,7 @@ export type ColourMap = ColourMapValue[]
   title?: string;
   type: string;
   ticks?: number
+  tickValues?: [number] | [Date]
 }
 
 type GroupSelection = d3.Selection<SVGElement, any, SVGElement, any>
@@ -219,10 +220,21 @@ export class ColourBar {
     const scale = this.scale
     const axis = this.initAxis(scale, this.options)
 
-    if ( this.options.ticks ) {
+    console.log(this.options.tickValues)
+    if ( this.options.tickValues ) {
+      axis.tickValues(this.options.tickValues)
+    }
+    else if ( this.options.type === 'nonlinear'  ) {
+      const count = this.options.ticks ?? 5
+      const stride = Math.round(tickValues.length / count)
+      console.log('stride', tickValues.length, stride, count)
+      axis.tickValues(tickValues.filter((v, i) => { return i % stride === 0}) )
+      axis.tickFormat((d) => d.toString())
+    } else if ( this.options.ticks ) {
       axis.ticks(this.options.ticks)
     } else {
       axis.tickValues(tickValues)
+      // axis.tickFormat((d) => d.toString())
     }
 
     const axisGroup = this.group.append('g')
@@ -238,11 +250,8 @@ export class ColourBar {
       .attr('class', 'grid colourbar')
       .attr('transform', gridTranslation)
     const grid = this.isHorizontal ? d3.axisTop(scale) : d3.axisLeft(scale)
-    if ( this.options.ticks ) {
-      grid.ticks(this.options.ticks)
-    } else {
-      grid.tickValues(tickValues)
-    }
+
+    grid.tickValues(axis.tickValues())
     grid.tickSize(this.sizeAcrossAxis)
     gridGroup.call(grid)
     gridGroup.select('path').remove()
