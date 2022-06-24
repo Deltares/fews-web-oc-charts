@@ -2,11 +2,11 @@ import { quadtree } from 'd3-quadtree';
 
 export function bboxCollide(bbox) {
 
-  function x (d) {
+  function x (d): number {
     return d.x + d.vx;
   }
 
-  function y (d) {
+  function y (d): number {
     return d.y + d.vy;
   }
 
@@ -16,9 +16,13 @@ export function bboxCollide(bbox) {
     };
   }
 
+  function bbLength (bb: number[][], heightWidth: number): number {
+    return bb[1][heightWidth] - bb[0][heightWidth]
+  }
+
   let nodes,
       boundingBoxes,
-      strength = 1,
+      strength = .05,
       iterations = 1;
 
   if (typeof bbox !== 'function') {
@@ -79,13 +83,13 @@ export function bboxCollide(bbox) {
 
           if (data.node.index !== nodeI) {
             const dataNode = data.node
-            const bbj = boundingBoxes[dataNode.index],
-              dnx1 = dataNode.x + dataNode.vx + bbj[0][0],
-              dny1 = dataNode.y + dataNode.vy + bbj[0][1],
-              dnx2 = dataNode.x + dataNode.vx + bbj[1][0],
-              dny2 = dataNode.y + dataNode.vy + bbj[1][1],
-              dWidth = bbLength(bbj, 0),
-              dHeight = bbLength(bbj, 1)
+            const bbj = boundingBoxes[dataNode.index]
+            const dnx1 = dataNode.x + dataNode.vx + bbj[0][0]
+            const dny1 = dataNode.y + dataNode.vy + bbj[0][1]
+            const dnx2 = dataNode.x + dataNode.vx + bbj[1][0]
+            const dny2 = dataNode.y + dataNode.vy + bbj[1][1]
+            const dWidth = bbLength(bbj, 0)
+            const dHeight = bbLength(bbj, 1)
 
             if (nx1 <= dnx2 && dnx1 <= nx2 && ny1 <= dny2 && dny1 <= ny2) {
 
@@ -95,11 +99,11 @@ export function bboxCollide(bbox) {
               const xOverlap = bWidth + dWidth - (xSize[1] - xSize[0])
               const yOverlap = bHeight + dHeight - (ySize[1] - ySize[0])
 
-              const xBPush = xOverlap * strength * (yOverlap / bHeight)
-              const yBPush = yOverlap * strength * (xOverlap / bWidth)
+              const xBPush = xOverlap * strength * Math.min(.5, yOverlap / bHeight)
+              const yBPush = yOverlap * strength * Math.min(.5, xOverlap / bWidth)
 
-              const xDPush = xOverlap * strength * (yOverlap / dHeight)
-              const yDPush = yOverlap * strength * (xOverlap / dWidth)
+              const xDPush = xOverlap * strength * Math.min(.5, yOverlap / dHeight)
+              const yDPush = yOverlap * strength * Math.min(.5, xOverlap / dWidth)
 
               if ((nx1 + nx2) / 2 < (dnx1 + dnx2) / 2) {
                 node.vx -= xBPush
@@ -134,25 +138,22 @@ export function bboxCollide(bbox) {
       quad.bb = boundingBoxes[quad.data.node.index]
       return quad.bb
     }
-      quad.bb = [[0,0],[0,0]]
-      for (let i = 0; i < 4; ++i) {
-        if (quad[i] && quad[i].bb[0][0] < quad.bb[0][0]) {
-          quad.bb[0][0] = quad[i].bb[0][0]
-        }
-        if (quad[i] && quad[i].bb[0][1] < quad.bb[0][1]) {
-          quad.bb[0][1] = quad[i].bb[0][1]
-        }
-        if (quad[i] && quad[i].bb[1][0] > quad.bb[1][0]) {
-          quad.bb[1][0] = quad[i].bb[1][0]
-        }
-        if (quad[i] && quad[i].bb[1][1] > quad.bb[1][1]) {
-          quad.bb[1][1] = quad[i].bb[1][1]
-        }
-    }
-  }
 
-  function bbLength (bb, heightWidth) {
-    return bb[1][heightWidth] - bb[0][heightWidth]
+    quad.bb = [[0,0],[0,0]]
+    for (let i = 0; i < 4; ++i) {
+      if (quad[i] && quad[i].bb[0][0] < quad.bb[0][0]) {
+        quad.bb[0][0] = quad[i].bb[0][0]
+      }
+      if (quad[i] && quad[i].bb[0][1] < quad.bb[0][1]) {
+        quad.bb[0][1] = quad[i].bb[0][1]
+      }
+      if (quad[i] && quad[i].bb[1][0] > quad.bb[1][0]) {
+        quad.bb[1][0] = quad[i].bb[1][0]
+      }
+      if (quad[i] && quad[i].bb[1][1] > quad.bb[1][1]) {
+        quad.bb[1][1] = quad[i].bb[1][1]
+      }
+    }
   }
 
   force.initialize = function (_) {
