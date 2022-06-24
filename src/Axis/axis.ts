@@ -4,6 +4,7 @@ import { Visitor } from '../Visitors'
 import defaultsDeep from 'lodash/defaultsDeep'
 import merge from 'lodash/merge'
 import { Tooltip } from '../Tooltip'
+import { AxisOrientation } from '../Types/axisOrientation'
 
 export interface Margin {
   top?: number;
@@ -33,6 +34,7 @@ export interface AxisOptions {
   symmetric?: boolean;
   locale?: string;
   timeZone?: string;
+  orientation?: AxisOrientation;
 }
 
 export interface AxesOptions {
