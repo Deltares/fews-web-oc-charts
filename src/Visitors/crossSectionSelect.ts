@@ -3,6 +3,7 @@ import { Axis, CartesianAxis } from '../Axis'
 import { Visitor } from './visitor'
 import defaultsDeep from 'lodash/defaultsDeep'
 import { bboxCollide } from '../Utils/bboxCollide'
+import { rectCollide } from '../Utils/rectCollide'
 
 type CrossSectionSelectOptions = {
   x: { axisIndex: number };
@@ -12,6 +13,8 @@ type CrossSectionSelectOptions = {
 export class CrossSectionSelect implements Visitor {
   private trace: string[]
   private group: any
+  private backGroup: any
+  private frontGroup: any
   private pointRadius = 3
   private simulation: d3.Simulation<any,any>
   private axis: CartesianAxis
@@ -49,8 +52,11 @@ export class CrossSectionSelect implements Visitor {
       .attr('font-family', 'sans-serif')
       .attr('font-size', 10)
 
-    this.group.append('line')
-    const handle = this.group
+    this.backGroup = this.group.append('g')
+    this.frontGroup = this.group.append('g')
+    this.backGroup.append('line')
+
+    const handle = this.backGroup
       .append('polygon')
       .attr('points', '0,0 -5,5 -5,8 5,8 5,5')
       .attr('class', 'cross-section-select-handle')
@@ -72,7 +78,7 @@ export class CrossSectionSelect implements Visitor {
       )
     }
 
-    this.group.append('g').attr('class', 'data-point-per-line')
+    this.frontGroup.append('g').attr('class', 'data-point-per-line')
     this.redraw()
   }
 
@@ -108,7 +114,7 @@ export class CrossSectionSelect implements Visitor {
     const axisIndex = this.options.x.axisIndex
     const scale = this.axis.xScale[axisIndex]
     this.value = scale.invert(event.x)
-    this.group
+    this.backGroup
       .append('text')
       .classed('date-label', true)
       .attr('x', event.x)
@@ -128,7 +134,7 @@ export class CrossSectionSelect implements Visitor {
   }
 
   end(): void {
-    this.group.select('.date-label').remove()
+    this.backGroup.select('.date-label').remove()
     if (typeof this.callback === 'function') {
       this.callback(this.value)
     }
@@ -145,7 +151,7 @@ export class CrossSectionSelect implements Visitor {
   updateLine(xPos: number): void {
     const visibility = this.visible ? 'visible' : 'hidden'
     // line
-    this.group
+    this.backGroup
       .select('line')
       .attr('y1', 0)
       .attr('y2', this.axis.height)
@@ -153,13 +159,13 @@ export class CrossSectionSelect implements Visitor {
       .style('visibility', visibility)
     // text
     const timeString = this.format(this.value)
-    this.group
+    this.backGroup
       .select('.date-label')
       .attr('x', xPos)
       .text(timeString)
       .style('visibility', visibility)
       // handle
-    this.group.select('polygon')
+    this.backGroup.select('polygon')
       .attr('transform', 'translate(' + xPos + ',' + this.axis.height + ')')
       .style('visibility', visibility)
   }
@@ -167,7 +173,7 @@ export class CrossSectionSelect implements Visitor {
 
   updateDataPoints (points, styles): void {
     const visibility = this.visible ? 'visible' : 'hidden'
-    this.group.selectAll('.data-point-per-line')
+    this.frontGroup.selectAll('.data-point-per-line')
       .selectAll('circle')
       .data(points)
       .join('circle')
@@ -187,26 +193,27 @@ export class CrossSectionSelect implements Visitor {
   updateLabels(points, styles): void {
     const nodes = []
     const links = []
-
+    console.log('updateLabels')
     let i = 0
-    for (const p of points) {
+    let j = 0
+    const sortedPoint = [...points].sort((a, b) => a.y - b.y)
+
+    const centerY = sortedPoint.reduce((total, p) => { return total + p.y }, 0) / sortedPoint.length
+    console.log('centerY', centerY)
+    for (const p of sortedPoint) {
       if (p.y === undefined) continue
-      nodes.push({ id: p.id, fx: p.x + 50, y: p.y, height: 50, width: 50, label: p.value })
-      nodes.push({ fx: p.x, fy: p.y })
-      links.push({ source: i + 1, target: i, label: p.value })
+      nodes.push({ id: p.id, fx: p.x + 50, y: p.y + Math.random()/10, py: p.y, label: p.value, width: 100, height: 20 })
+      // nodes.push({ id: p.id, fx: p.x + 50, x: p.x + 1000, y: (j - sortedPoint.length / 2) * 20 + centerY, py: p.y, label: p.value })
+      nodes.push({ fx: p.x, fy: p.y, width: 4, height: 4})
+      links.push({ source: nodes[i + 1], target: nodes[i], label: p.value })
+      j = j + 1
       i = i + 2
     }
+    console.log(nodes)
 
     const visibility = this.visible ? 'visible' : 'hidden'
 
-    const link = this.group
-      .selectAll(".link")
-      .data(links)
-      .join("line")
-      .style('visibility', visibility)
-      .classed("link", true)
-
-    const rectSelection = this.group.selectAll(".back")
+    const rectSelection = this.frontGroup.selectAll(".back")
       .data(nodes.filter((d) => d.label !== undefined) )
 
     const rectsUpdate = rectSelection
@@ -216,7 +223,7 @@ export class CrossSectionSelect implements Visitor {
       .attr("stroke", "none")
       .style('visibility', visibility)
 
-    const labelsSelection = this.group.selectAll(".label")
+    const labelsSelection = this.frontGroup.selectAll(".label")
       .data(nodes.filter((d) =>  d.label !== undefined) )
 
     const labelsUpdate = labelsSelection
@@ -232,13 +239,19 @@ export class CrossSectionSelect implements Visitor {
       .attr('stroke', 'none')
       .text(d => d.label)
 
+    const link = this.backGroup
+      .selectAll(".link")
+      .data(links)
+      .join("line")
+      .style('visibility', visibility)
+      .classed("link", true)
+
+
     const widths = [], heights = []
     const margin = 2
-    let maxHeight = 0
     const radius = 2 * this.pointRadius
     labelsUpdate.each(function(this) {
       const height = this.getBoundingClientRect().height + 2 * margin
-      maxHeight = Math.max(maxHeight, height)
       heights.push(height)
       heights.push(radius)
       const width = this.getBoundingClientRect().width + height
@@ -280,13 +293,14 @@ export class CrossSectionSelect implements Visitor {
 
     this.simulation = d3
       .forceSimulation()
-      .alphaDecay(0.2)
+      .alphaDecay(0.01)
       .nodes(nodes)
       .force("center", collisionForce)
-      // .force("center", d3.forceCollide(maxHeight / 2))
-      .force("link", d3.forceLink(links).distance(20))
       .on("tick", tick)
-    this.simulation.tick(20)
+    this.simulation.stop()
+    this.simulation.tick(50)
+    tick()
+    // this.simulation.restart()
   }
 
   limitValue(): boolean {
