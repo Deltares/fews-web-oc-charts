@@ -66,6 +66,7 @@ export interface ChartOptions {
 export abstract class Chart {
   protected _data: any
   protected _extent: any
+  protected _isVisible: boolean = true
   group: d3.Selection<SVGElement, any, SVGElement, any>
   colorMap: any
   id: string
@@ -115,6 +116,19 @@ export abstract class Chart {
       }
     }
     return this._extent
+  }
+
+  get visible(): boolean {
+    return this._isVisible
+  }
+
+  set visible(value: boolean) {
+    if (value) {
+      this.group.style('visibility', 'visible')
+    } else {
+      this.group.style('visibility', 'hidden')
+    }
+    this._isVisible = value
   }
 
   addTo(axis: Axis, axisIndex: AxisIndex, id: string, style: SvgPropertiesHyphen | string) {
