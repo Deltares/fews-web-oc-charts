@@ -286,9 +286,9 @@ export class ChartRange extends Chart {
 
         const tInterpolate = d3.interpolateArray(old[tKey], d[tKey])
         const rInterpolate = d3.interpolateArray(old[rKey], d[rKey])
-        return (t: any) => {
-          d[tKey] = tInterpolate(t)
-          d[rKey] = rInterpolate(t)
+        return (x: any) => {
+          d[tKey] = tInterpolate(x)
+          d[rKey] = rInterpolate(x)
           return arcGenerator(d)
         }
       })
