@@ -62,7 +62,7 @@ export class ChartDirection extends Chart {
         })
         .append('path')
         .attr('d', d3.symbol().type(symbolArrow).size(this.options.symbol.size))
-        .attr('transform', function (d: any, i: number) {
+        .attr('transform', (d: any, i: number) => {
           return `rotate(${d[dKey] - 180})`
         })
     if (this.options.tooltip !== undefined) {

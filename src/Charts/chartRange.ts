@@ -29,12 +29,12 @@ export class ChartRange extends Chart {
   }
 
   dataExtentFor(path) {
-    const min = d3.min(this._data, function(d: any) {
+    const min = d3.min(this._data, (d: any) => {
       if (d[path] === null) return undefined
       if (Array.isArray(d[path])) return d3.min(d[path])
       return d[path]
     })
-    const max = d3.max(this._data, function(d: any) {
+    const max = d3.max(this._data, (d: any) => {
       if (d[path] === null) return undefined
       if (Array.isArray(d[path])) return d3.max(d[path])
       return d[path]
@@ -86,7 +86,7 @@ export class ChartRange extends Chart {
     const colorScale = d3.scaleLinear().domain([0, 1])
     if (this.options.colorScale === AUTO_SCALE) {
       colorScale.domain(
-        d3.extent(this.data, function(d: any): number {
+        d3.extent(this.data, (d: any): number => {
           return d[colorKey]
         })
       )
@@ -116,10 +116,10 @@ export class ChartRange extends Chart {
         return yScale(d[yKey][1])
       })
       .attr('width', (d: any) => {
-        return xScale(d[xKey][1] - d[xKey][0])
+        return xScale(d[xKey][1]) - xScale(d[xKey][0])
       })
       .attr('height', (d: any) => {
-        return yScale(d[yKey][0] - d[yKey][1])
+        return yScale(d[yKey][0]) - yScale(d[yKey][1])
       })
 
     if (this.options.tooltip !== undefined) {
@@ -132,8 +132,8 @@ export class ChartRange extends Chart {
         axis.tooltip.update(
           this.toolTipFormatterCartesian(d),
           this.options.tooltip.position !== undefined ? this.options.tooltip.position : TooltipPosition.Top,
-          axis.margin.left + xScale((d[xKey][1] + d[xKey][0])/2),
-          axis.margin.top + yScale((d[yKey][1] + d[yKey][0])/2),
+          axis.margin.left + (xScale(d[xKey][1]) + xScale(d[xKey][0]))/2,
+          axis.margin.top + (yScale(d[yKey][1]) + yScale(d[yKey][0]))/2,
         )
       })
       .on('pointerout', () => {
@@ -156,10 +156,10 @@ export class ChartRange extends Chart {
         return yScale(d[yKey][1])
       })
       .attr('width', (d: any) => {
-        return xScale(d[xKey][1] - d[xKey][0])
+        return xScale(d[xKey][1]) - xScale(d[xKey][0])
       })
       .attr('height', (d: any) => {
-        return yScale(d[yKey][0] - d[yKey][1])
+        return yScale(d[yKey][0]) - yScale(d[yKey][1])
       })
 
     if (colorKey) {
@@ -170,7 +170,6 @@ export class ChartRange extends Chart {
   }
 
   plotterPolar(axis: PolarAxis, axisIndex: AxisIndex) {
-
     const rKey = this.dataKeys.radial
     const tKey = this.dataKeys.angular
     const colorKey = this.dataKeys.color
@@ -178,7 +177,7 @@ export class ChartRange extends Chart {
     const colorScale = d3.scaleLinear().domain([0, 1])
     if (this.options.colorScale === AUTO_SCALE) {
       colorScale.domain(
-        d3.extent(this.data, function(d: any): number {
+        d3.extent(this.data, (d: any): number => {
           return d[colorKey]
         })
       )
@@ -266,7 +265,7 @@ export class ChartRange extends Chart {
     const update = elements.transition(t).call(arcTween, this.previousData)
 
     if (colorKey) {
-      update.style('fill', function(d: any) {
+      update.style('fill', (d: any) => {
         return colorMap(colorScale(mean(d[colorKey])))
       })
     }
@@ -276,18 +275,18 @@ export class ChartRange extends Chart {
       transition.attrTween('d', (d: any, i: number, a: any) => {
         const old = p[i]
         if (mean(old[tKey]) - mean(d[tKey]) > 180) {
-          old[tKey] = old[tKey].map(function(x) {
+          old[tKey] = old[tKey].map((x) => {
             return x - 360
           })
         } else if (mean(old[tKey]) - mean(d[tKey]) < -180) {
-          old[tKey] = old[tKey].map(function(x) {
+          old[tKey] = old[tKey].map((x) => {
             return x + 360
           })
         }
 
         const tInterpolate = d3.interpolateArray(old[tKey], d[tKey])
         const rInterpolate = d3.interpolateArray(old[rKey], d[rKey])
-        return function(x: any) {
+        return (x: any) => {
           d[tKey] = tInterpolate(x)
           d[rKey] = rInterpolate(x)
           return arcGenerator(d)
