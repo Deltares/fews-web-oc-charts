@@ -29,12 +29,12 @@ export class ChartRange extends Chart {
   }
 
   dataExtentFor(path) {
-    const min = d3.min(this._data, function(d: any) {
+    const min = d3.min(this._data, (d: any) => {
       if (d[path] === null) return undefined
       if (Array.isArray(d[path])) return d3.min(d[path])
       return d[path]
     })
-    const max = d3.max(this._data, function(d: any) {
+    const max = d3.max(this._data, (d: any) => {
       if (d[path] === null) return undefined
       if (Array.isArray(d[path])) return d3.max(d[path])
       return d[path]
@@ -86,7 +86,7 @@ export class ChartRange extends Chart {
     const colorScale = d3.scaleLinear().domain([0, 1])
     if (this.options.colorScale === AUTO_SCALE) {
       colorScale.domain(
-        d3.extent(this.data, function(d: any): number {
+        d3.extent(this.data, (d: any): number => {
           return d[colorKey]
         })
       )
@@ -177,7 +177,7 @@ export class ChartRange extends Chart {
     const colorScale = d3.scaleLinear().domain([0, 1])
     if (this.options.colorScale === AUTO_SCALE) {
       colorScale.domain(
-        d3.extent(this.data, function(d: any): number {
+        d3.extent(this.data, (d: any): number => {
           return d[colorKey]
         })
       )
@@ -265,28 +265,28 @@ export class ChartRange extends Chart {
     const update = elements.transition(t).call(arcTween, this.previousData)
 
     if (colorKey) {
-      update.style('fill', function(d: any) {
+      update.style('fill', (d: any) => {
         return colorMap(colorScale(mean(d[colorKey])))
       })
     }
 
     this.previousData = {...this.data}
     function arcTween(transition: any, p: any) {
-      transition.attrTween('d', function(d: any, i: number, a: any) {
+      transition.attrTween('d', (d: any, i: number, a: any) => {
         const old = p[i]
         if (mean(old[tKey]) - mean(d[tKey]) > 180) {
-          old[tKey] = old[tKey].map(function(x) {
+          old[tKey] = old[tKey].map((x) => {
             return x - 360
           })
         } else if (mean(old[tKey]) - mean(d[tKey]) < -180) {
-          old[tKey] = old[tKey].map(function(x) {
+          old[tKey] = old[tKey].map((x) => {
             return x + 360
           })
         }
 
         const tInterpolate = d3.interpolateArray(old[tKey], d[tKey])
         const rInterpolate = d3.interpolateArray(old[rKey], d[rKey])
-        return function(t: any) {
+        return (t: any) => {
           d[tKey] = tInterpolate(t)
           d[rKey] = rInterpolate(t)
           return arcGenerator(d)
