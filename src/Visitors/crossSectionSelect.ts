@@ -191,13 +191,11 @@ export class CrossSectionSelect implements Visitor {
   updateLabels(points, styles): void {
     const nodes = []
     const links = []
-    console.log('updateLabels')
     let i = 0
     let j = 0
     const sortedPoint = [...points].sort((a, b) => a.y - b.y)
 
     const centerY = sortedPoint.reduce((total, p) => { return total + p.y }, 0) / sortedPoint.length
-    console.log('centerY', centerY)
     for (const p of sortedPoint) {
       if (p.y === undefined) continue
       nodes.push({ id: p.id, fx: p.x + 50, y: p.y + Math.random()/10, py: p.y, label: p.value, width: 100, height: 20 })
@@ -207,7 +205,6 @@ export class CrossSectionSelect implements Visitor {
       j = j + 1
       i = i + 2
     }
-    console.log(nodes)
 
     const visibility = this.visible ? 'visible' : 'hidden'
 
