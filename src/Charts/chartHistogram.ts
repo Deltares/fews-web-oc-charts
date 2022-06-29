@@ -56,16 +56,17 @@ export class ChartHistogram extends Chart {
       })
       .attr('width', x1.bandwidth())
 
-    if (this.options.tooltip !== undefined) {
+    const that = this
+    if (that.options.tooltip !== undefined) {
       update
       .on('pointerover', function(_e: any, d) {
-        axis.tooltip.show()
-        if (this.options.tooltip.anchor !== undefined && this.options.tooltip.anchor !== TooltipAnchor.Top) {
-          console.error('Tooltip not implemented for anchor ', this.options.tooltip.anchor, ', using ', TooltipAnchor.Top, ' instead.')
+        if (that.options.tooltip.anchor !== undefined && that.options.tooltip.anchor !== TooltipAnchor.Top) {
+          console.error('Tooltip not implemented for anchor ', that.options.tooltip.anchor, ', using ', TooltipAnchor.Top, ' instead.')
         }
+        axis.tooltip.show()
         axis.tooltip.update(
-          this.toolTipFormatterCartesian(d),
-          this.options.tooltip.position !== undefined ? this.options.tooltip.position : TooltipPosition.Top,
+          that.toolTipFormatterCartesian(d),
+          that.options.tooltip.position !== undefined ? that.options.tooltip.position : TooltipPosition.Top,
           axis.margin.left + x1(d[xKey]) + x1.bandwidth() / 2 ,
           axis.margin.top + Math.min(yScale(d[yKey]), yScale(0))
         )
