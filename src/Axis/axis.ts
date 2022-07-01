@@ -20,6 +20,7 @@ export enum AxisType {
   band = 'band'
 }
 
+
 export interface AxisOptions {
   label?: string;
   labelAngle?: number;
@@ -29,6 +30,7 @@ export interface AxisOptions {
   format?: (x: number | Date) => string;
   defaultDomain?: [number, number] | [Date, Date];
   domain?: [number, number] | [Date, Date];
+  reverse?: boolean;
   nice?: boolean;
   includeZero?: boolean;
   symmetric?: boolean;

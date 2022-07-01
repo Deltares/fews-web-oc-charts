@@ -78,7 +78,6 @@ export class CartesianAxis extends Axis {
     this.setCanvas()
     this.initXScales(this.options.x)
     this.initYScales(this.options.y)
-    this.setRange()
     this.initGrid()
     this.setClipPath()
     this.chartGroup = this.canvas
@@ -506,7 +505,7 @@ updateYAxis (options: CartesianAxisOptions[]): void {
         default:
           scale = d3.scaleLinear()
       }
-      scale.range([0, this.width])
+      this.setRangeX(options)
       this.xScale.push(scale)
     }
   }
@@ -524,17 +523,35 @@ updateYAxis (options: CartesianAxisOptions[]): void {
         default:
           scale = d3.scaleLinear()
       }
-      scale.range([this.height, 0])
+      this.setRangeY(options)
       this.yScale.push(scale)
     }
   }
 
   protected setRange(): void{
+    this.setRangeX(this.options.x)
+    this.setRangeY(this.options.y)
+  }
+
+  protected setRangeX(options): void{
     for ( const key in this.xScale ) {
-      this.xScale[key].range([0, this.width])
+      const scale = this.xScale[key]
+      if (options[key].reverse) {
+        scale.range([this.width, 0])
+      } else {
+        scale.range([0, this.width])
+      }
     }
+  }
+
+  protected setRangeY(options): void{
     for ( const key in this.yScale ) {
-      this.yScale[key].range([this.height, 0])
+      const scale = this.yScale[key]
+      if (options[key].reverse) {
+        scale.range([0, this.height])
+      } else {
+        scale.range([this.height, 0])
+      }
     }
   }
 

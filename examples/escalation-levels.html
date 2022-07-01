@@ -162,8 +162,30 @@
     var axis1 = new wbCharts.CartesianAxis(container1, null, null, axisOptions)
     var legend1 = new wbCharts.Legend(legendLabels, document.getElementById("legend-waterlevel-1"));
 
+    const axisOptions2 = {
+      x: [{
+        type: wbCharts.AxisType.time,
+        label: 'datum',
+        position: wbCharts.AxisPosition.Bottom,
+        showGrid: false,
+      }, ],
+      y: [{
+        position: wbCharts.AxisPosition.Left,
+        showGrid: true,
+        nice: true,
+        includeZero: true,
+        reverse: true,
+        label: 'Waterstand',
+        unit: 'cm',
+      }, ],
+      margin: {
+        left: 100,
+        right: 100
+      }
+    }
+
     var container2 = document.getElementById("chart-waterlevel-2");
-    var axis2 = new wbCharts.CartesianAxis(container2, null, null, axisOptions)
+    var axis2 = new wbCharts.CartesianAxis(container2, null, null, axisOptions2)
     var legend2 = new wbCharts.Legend(legendLabels, document.getElementById("legend-waterlevel-2"));
 
     var container3 = document.getElementById("chart-waterlevel-3");
