@@ -10,19 +10,23 @@ export interface UnitOptions {
   scale: (x: number) => string;
 }
 
+export interface valueFieldOptions {
+  dx?: string | number
+  dy?: string | number
+  margin?: string | number
+  units?: UnitOptions[]
+  hyphen?: string
+  precision?: string
+}
+
 export interface DataFieldOptions {
-  selector? : string
+  selector? : string | string[]
   labelField?: {
     dx?: string | number
     dy?: string | number
     text?: string
   },
-  valueField?: {
-    dx?: string | number
-    dy?: string | number
-    units?: UnitOptions[]
-    precision?: string
-  }
+  valueField?: valueFieldOptions | valueFieldOptions[]
 }
 
 export class DataField implements Visitor {
@@ -32,6 +36,8 @@ export class DataField implements Visitor {
   private axis: Axis
   private text: any
   private value: any
+  private values: any[] = []
+  private units: any[] = []
   private formatter: any
   private clickCount = 0
 
@@ -58,13 +64,34 @@ export class DataField implements Visitor {
         .append('text')
         .attr('class', 'data-field-label')
         .text(this.options.labelField.text)
-      this.value = this.group.append('text').attr('class', 'data-field-value')
       this.text.attr('dx', this.options.labelField.dx)
       this.text.attr('dy', this.options.labelField.dy)
 
-      this.value.attr('dx', this.options.valueField.dx)
-      this.value.attr('dy', this.options.valueField.dy)
-      if ( this.options.valueField.units.length > 1 ) {
+      this.value = this.group.append('text').attr('class', 'data-field-value')
+        
+      if (this.options.valueField instanceof Array) {
+        for(const valueField of this.options.valueField){
+          const i = this.values.push(this.value.append('tspan')) - 1
+          if (valueField.hasOwnProperty('dx')){
+            this.value.attr('dx', valueField.dx)
+          }
+          if (valueField.hasOwnProperty('dy')){
+            this.value.attr('dy', valueField.dy)
+          }
+          if ( valueField.units.length > 1 ) {
+            this.units = valueField.units
+          }
+        }
+      } else {
+        this.value.attr('dx', this.options.valueField.dx)
+        this.value.attr('dy', this.options.valueField.dy)
+        this.values.push(this.value.append('tspan'))
+        if ( this.options.valueField.units.length > 1 ) {
+          this.units = this.options.valueField.units
+        }
+      }
+
+      if (this.units.length > 1){
         this.value.on('click', () => { this.onClick() } )
         this.value.style('cursor','pointer')
       }
@@ -73,12 +100,15 @@ export class DataField implements Visitor {
   }
 
   redraw() {
-    const element = d3.select(`[data-chart-id="${this.options.selector}"]`).select('path')
-    const data = element.datum()
-    const style = window.getComputedStyle(element.node() as Element)
-
-    this.value.text(this.formatter(data))
-    this.value.style('fill', style.getPropertyValue('stroke'))
+    for (let i = 0; i < this.values.length; i++) {
+      const selector = this.getSelector(i)
+      const element = d3.select(`[data-chart-id="${selector}"]`).select('path')
+      const data = element.datum()
+      const style = window.getComputedStyle(element.node() as Element)
+      
+      this.values[i].text(this.formatter(data, i))
+      this.values[i].style('fill', style.getPropertyValue('stroke'))
+    }
   }
 
   onClick() {
@@ -86,25 +116,47 @@ export class DataField implements Visitor {
     this.redraw()
   }
 
-  valueFormatter(d) {
-    const idx = this.clickCount % this.options.valueField.units.length
+  valueFormatter(d, i) {
     const value = this.getValue(d)
-    const units  = this.options.valueField.units[idx]
+    const units = this.getUnit()
+    const symbol = this.getSymbol(units, i)
     if (value === null) {
-      return '-' + units.unit;
+      return '-' + symbol;
     }
     if ( units.factor !== undefined ) {
       const format = units.precision !== undefined?  d3.format(units.precision)  : d3.format(".1f");
       const valueString = value !== null ? format(value * units.factor ) : '-';
-      return valueString + units.unit;
+      return valueString + symbol;
     } else {
       const valueString: string = value !== null ? units.scale( value ) : '-';
-      return valueString + units.unit;
+      return valueString + symbol;
     }
+  }
+
+  getSymbol(units, i){
+    if (this.options.valueField instanceof Array){
+      if (this.options.valueField[i].hasOwnProperty('hyphen')){
+        return this.options.valueField[i].hyphen
+      }
+    }
+    return units.unit
+  }
+
+  getUnit(){
+    const idx = this.clickCount % this.units.length
+    return this.units[idx]
   }
 
   getValue(d) {
     return d[0] !== undefined ? d[0].y : null
+  }
+
+  getSelector(i){
+    if (this.options.selector instanceof Array){
+      return this.options.selector[i] 
+    } else {
+      return this.options.selector
+    }
   }
 
 }
