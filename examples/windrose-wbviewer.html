@@ -343,9 +343,9 @@
 
         polarText1 = new wbCharts.DataField(
         polarAxis.canvas, {
-          selector: 'wind',
+          selector: ['wind-forecast', 'wind'],
           labelField: {text: 'windsnelheid', dy: '-10px' },
-          valueField: {dy: '10px', units: unitsSpeed }
+          valueField: [{dy:'10px', hyphen: ' / '}, {units: unitsSpeed }]
         });
 
         polarText2 = new wbCharts.DataField(
@@ -417,7 +417,7 @@
         windSpeedRange.addTo(windSpeedAxis, { x: { key: "y", axisIndex: 0 } , y: {key: "x", axisIndex: 0} }, 'cartesian-range', '#cartesian-range');
         windSpeedMeasurement.addTo(windSpeedAxis,{ x: { key: "y", axisIndex: 0 } , y: {key: "x", axisIndex: 0} }, 'wind', '#wind-line');
         windSpeedForecast.addTo(windSpeedAxis,{ x: { key: "y",axisIndex: 0  } , y: {key: "x", axisIndex: 0} },
-        'wind-forecast', '#forecast');
+        'wind-forecast', '#wind-forecast-line');
 
         windAmplitudeText = new wbCharts.DataField(
         windSpeedAxis.canvas, {
