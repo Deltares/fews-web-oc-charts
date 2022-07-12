@@ -68,17 +68,17 @@ export class DataField implements Visitor {
       this.text.attr('dy', this.options.labelField.dy)
 
       this.value = this.group.append('text').attr('class', 'data-field-value')
-        
+
       if (this.options.valueField instanceof Array) {
         for(const valueField of this.options.valueField){
-          const i = this.values.push(this.value.append('tspan')) - 1
+          this.values.push(this.value.append('tspan'))
           if (valueField.hasOwnProperty('dx')){
             this.value.attr('dx', valueField.dx)
           }
           if (valueField.hasOwnProperty('dy')){
             this.value.attr('dy', valueField.dy)
           }
-          if ( valueField.units.length > 1 ) {
+          if ( valueField.units !== undefined && valueField.units.length > 1 ) {
             this.units = valueField.units
           }
         }
@@ -86,7 +86,7 @@ export class DataField implements Visitor {
         this.value.attr('dx', this.options.valueField.dx)
         this.value.attr('dy', this.options.valueField.dy)
         this.values.push(this.value.append('tspan'))
-        if ( this.options.valueField.units.length > 1 ) {
+        if ( this.options.valueField.units !== undefined && this.options.valueField.units.length > 1 ) {
           this.units = this.options.valueField.units
         }
       }
@@ -103,11 +103,14 @@ export class DataField implements Visitor {
     for (let i = 0; i < this.values.length; i++) {
       const selector = this.getSelector(i)
       const element = d3.select(`[data-chart-id="${selector}"]`).select('path')
-      const data = element.datum()
-      const style = window.getComputedStyle(element.node() as Element)
-      
-      this.values[i].text(this.formatter(data, i))
-      this.values[i].style('fill', style.getPropertyValue('stroke'))
+      if (element.node() !== null) {
+        const data = element.datum()
+        const style = window.getComputedStyle(element.node() as Element)
+        this.values[i].text(this.formatter(data, i))
+        this.values[i].style('fill', style.getPropertyValue('stroke'))
+      } else {
+        this.values[i].text('')
+      }
     }
   }
 
@@ -153,7 +156,7 @@ export class DataField implements Visitor {
 
   getSelector(i){
     if (this.options.selector instanceof Array){
-      return this.options.selector[i] 
+      return this.options.selector[i]
     } else {
       return this.options.selector
     }
