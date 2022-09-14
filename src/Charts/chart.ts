@@ -10,6 +10,7 @@ export const AUTO_SCALE = 1
 
 interface ChartOptionItem {
   includeInTooltip?: boolean;
+  includeInAutoScale?: boolean;
   format?: (value: number | Date) => string;
   paddingInner?: number;
   paddingOuter?: number;
@@ -81,11 +82,11 @@ export abstract class Chart {
     this.options = defaultsDeep({},
       options,
       {
-        radial: { includeInTooltip: true },
-        angular: { includeInTooltip: true },
-        x: { includeInTooltip: true },
-        y: { includeInTooltip: true },
-        transitionTime: 100
+        radial: { includeInTooltip: true, includeInAutoScale: true },
+        angular: { includeInTooltip: true, includeInAutoScale: true },
+        x: { includeInTooltip: true, includeInAutoScale: true },
+        y: { includeInTooltip: true, includeInAutoScale: true },
+        transitionTime: 100,
       }
     )
     // https://github.com/d3/d3-scale-chromatic
