@@ -363,7 +363,7 @@
           }
         });
         escalationLevels.forEach((el, i) => {
-          const escalationLine = new wbCharts.ChartLine(el.events, {curve: 'stepAfter'});
+          const escalationLine = new wbCharts.ChartLine(el.events, {curve: 'stepAfter', x: { includeInAutoScale: false }});
           escalationLine.addTo(axis, {
             x: {
               key: "date",
