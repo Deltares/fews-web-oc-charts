@@ -69,7 +69,7 @@ export class Legend implements Visitor {
             } else {
               legendElement.style('opacity', 1.0)
             }
-            that.axis.redraw({x: {autoScale: true}, y: {autoScale: true}})
+            that.axis.redraw()
           })
         }
         legendElement
