@@ -1,6 +1,6 @@
 {
   "name": "wb-charts",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "description": "Chart Library",
   "keywords": [],
   "main": "./dist/wb-charts.umd.js",
