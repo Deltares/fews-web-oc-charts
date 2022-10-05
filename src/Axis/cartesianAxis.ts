@@ -1,11 +1,11 @@
 import * as d3 from 'd3'
-import { Axis, AxesOptions, AxisType, AxisOptions } from './axis'
+import { Axis, AxesOptions, AxisType, AxisOptions, ZoomOptions, AxisScaleOptions } from './axis'
 import { AxisPosition } from '../Types/axisPosition'
 
 import { generateMultiFormat } from '../Utils/date'
 import { DateTime } from 'luxon'
 import merge from 'lodash/merge'
-import defaults from 'lodash/defaults'
+import defaultsDeep from 'lodash/defaults'
 import { niceDomain } from './niceDomain'
 import { niceDegreeSteps } from '../Utils/niceDegreeSteps'
 import { AxisOrientation } from '../Types/axisOrientation'
@@ -94,7 +94,7 @@ export class CartesianAxis extends Axis {
 
   setDefaultAxisOptions(axisOptions: CartesianAxisOptions[], defaultOptions: CartesianAxisOptions) {
     for (const options of axisOptions) {
-      defaults(options, defaultOptions)
+      defaultsDeep(options, defaultOptions)
     }
   }
 
@@ -162,105 +162,99 @@ export class CartesianAxis extends Axis {
     }
   }
 
-  updateXAxisScales(options: any): void {
-    options = { ... { autoScale: false }, ...options }
-    for ( const key in this.xScale) {
-      const scale = this.xScale[key]
-      if (this.options.x[key]?.domain) {
-        scale.domain(this.options.x[key].domain)
-      } else if (this.options.x[key]?.type === AxisType.band) {
-        let extent = new Array(0)
-        for (const chart of this.charts) {
-          if ( chart.axisIndex.x?.axisIndex === +key ) {
-            extent = chart.data.map(d => d[chart.dataKeys.x])
-            break
-          }
-        }
-        scale.domain(extent)
-      } else if (options.autoScale === true) {
+  updateAxisScales(options: ZoomOptions, axisKey: keyof CartesianAxesOptions): void {
+    let scales: Array<any>
+    if (axisKey === 'x') {
+      scales = this.xScale
+    } else {
+      scales = this.yScale
+    }
+    for ( const key in scales) {
+      const scale = scales[key]
+      const axisOptions = this.options[axisKey][key]
+      const axisScaleOptions: AxisScaleOptions = {
+        domain: axisOptions.domain,
+        nice: axisOptions.nice,
+        includeZero: axisOptions.includeZero,
+        symmetric: axisOptions.symmetric,
+      }
+      const zoomOptions = { ... { autoScale: false }, ...axisScaleOptions, ...options }
+      if (zoomOptions?.domain) {
+        scale.domain(zoomOptions.domain)
+        if (zoomOptions?.nice === true) niceDomain(scale, 16)
+      } else if (zoomOptions.autoScale === true) {
         let defaultExtent
         let dataExtent = new Array(2)
-        if (this.options.x[key]?.includeZero === true) {
+        if (zoomOptions?.includeZero === true) {
           dataExtent[0] = 0
         }
-        if (this.options.x[key]?.defaultDomain !== undefined) {
-          defaultExtent = this.options.x[key]?.defaultDomain
+        if (axisOptions?.defaultDomain !== undefined) {
+          defaultExtent = axisOptions?.defaultDomain
         }
-        for (const chart of this.charts) {
-          if ( chart.axisIndex.x?.axisIndex === +key ) {
-            const chartExtent = chart.extent[chart.dataKeys.x]
-            dataExtent = d3.extent(d3.merge([dataExtent, [].concat(...chartExtent)]))
-          }
-        }
-        if (this.options.x[key]?.symmetric === true) {
+        dataExtent = this.chartsExtent(axisKey, key, zoomOptions)
+        if (zoomOptions?.symmetric === true) {
           const max = Math.max(Math.abs(dataExtent[0]), Math.abs(dataExtent[1]))
           dataExtent[0] = -max
           dataExtent[1] = max
         }
         scale.domain(dataExtent)
-        if (this.options.x[key]?.nice === true) {
-          niceDomain(scale, 16)
-        }
+        if (zoomOptions?.nice === true) niceDomain(scale, 16)
         if (defaultExtent !== undefined) {
           const domain = scale.domain()
           if (defaultExtent[0] < domain[0] || defaultExtent[1] > domain[1] ) {
             scale.domain(defaultExtent)
           }
         }
+      } else if (zoomOptions.fullExtent === true) {
+        let defaultExtent
+        let dataExtent = new Array(2)
+        if (zoomOptions?.includeZero === true) {
+          dataExtent[0] = 0
+        }
+        if (axisOptions?.defaultDomain !== undefined) {
+          defaultExtent = axisOptions?.defaultDomain
+        }
+        dataExtent = this.chartsExtent(axisKey, key, zoomOptions)
+        if (zoomOptions?.symmetric === true) {
+          const max = Math.max(Math.abs(dataExtent[0]), Math.abs(dataExtent[1]))
+          dataExtent[0] = -max
+          dataExtent[1] = max
+        }
+        scale.domain(dataExtent)
+        if (zoomOptions?.nice === true) niceDomain(scale, 16)
+        if (defaultExtent !== undefined) {
+          const domain = scale.domain()
+          if (defaultExtent[0] < domain[0] || defaultExtent[1] > domain[1] ) {
+            scale.domain(defaultExtent)
+          }
+        }
+      } else if (this.options[axisKey][key].type === AxisType.band) {
+        let extent = new Array(0)
+        for (const chart of this.charts) {
+          if ( chart.axisIndex[axisKey]?.axisIndex === +key ) {
+            extent = chart.data.map(d => d[chart.dataKeys[axisKey]])
+            break
+          }
+        }
+        scale.domain(extent)
       }
     }
   }
 
-  updateYAxisScales(options: any): void {
-    options = { ... { autoScale: false }, ...options }
-    for ( const key in this.yScale) {
-      const scale = this.yScale[key]
-      if (this.options.y[key]?.domain) {
-        scale.domain(this.options.y[key].domain)
-      } else if (this.options.y[key]?.type === AxisType.band) {
-        let extent = new Array(0)
-        for (const chart of this.charts) {
-          if ( chart.axisIndex.y?.axisIndex === +key ) {
-            extent = chart.data.map(d => d[chart.dataKeys.y])
-            break
-          }
-        }
-        scale.domain(extent)
-      } else if (options.autoScale === true) {
-        let defaultExtent
-        let dataExtent = new Array(2)
-        if (this.options.y[key]?.includeZero === true) {
-          dataExtent[0] = 0
-        }
-        if (this.options.y[key]?.defaultDomain !== undefined) {
-          defaultExtent = this.options.y[key]?.defaultDomain
-        }
-        for (const chart of this.charts) {
-          if ( chart.axisIndex.y?.axisIndex === +key ) {
-            const chartExtent = chart.extent[chart.dataKeys.y]
-            dataExtent = d3.extent(d3.merge([dataExtent, [].concat(...chartExtent)]))
-          }
-        }
-        if (this.options.y[key]?.symmetric === true) {
-          const max = Math.max(Math.abs(dataExtent[0]), Math.abs(dataExtent[1]))
-          dataExtent[0] = -max
-          dataExtent[1] = max
-        }
-        scale.domain(dataExtent)
-        if (this.options.y[key]?.nice === true) niceDomain(scale, 16)
-        if (defaultExtent !== undefined) {
-          const domain = scale.domain()
-          if (defaultExtent[0] < domain[0] || defaultExtent[1] > domain[1] ) {
-            scale.domain(defaultExtent)
-          }
-        }
+  chartsExtent(axisKey: string, axisIndex: string, options: ZoomOptions): any[] {
+    let extent = new Array(2)
+    for (const chart of this.charts) {
+      if ( (options.fullExtent || chart.options[axisKey].includeInAutoScale) && chart.axisIndex[axisKey]?.axisIndex === +axisIndex ) {
+        const chartExtent = chart.extent[chart.dataKeys[axisKey]]
+        extent = d3.extent(d3.merge([extent, [].concat(...chartExtent)]))
       }
     }
+    return extent
   }
 
   redraw(options?): void {
-    this.updateXAxisScales(options.x)
-    this.updateYAxisScales(options.y)
+    this.updateAxisScales(options?.x ?? {}, 'x')
+    this.updateAxisScales(options?.y ?? {}, 'y')
     for (const chart of this.charts) {
       chart.plotter(this, chart.axisIndex)
     }

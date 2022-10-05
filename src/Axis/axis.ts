@@ -21,22 +21,30 @@ export enum AxisType {
 }
 
 
-export interface AxisOptions {
+export interface AxisOptions extends AxisScaleOptions {
   label?: string;
   labelAngle?: number;
   type?: AxisType;
   unit?: string;
   showGrid?: boolean;
   format?: (x: number | Date) => string;
-  defaultDomain?: [number, number] | [Date, Date];
-  domain?: [number, number] | [Date, Date];
   reverse?: boolean;
-  nice?: boolean;
-  includeZero?: boolean;
-  symmetric?: boolean;
   locale?: string;
   timeZone?: string;
   orientation?: AxisOrientation;
+  defaultDomain?: [number, number] | [Date, Date];
+}
+
+export interface AxisScaleOptions {
+  domain?: [number, number] | [Date, Date];
+  nice?: boolean;
+  includeZero?: boolean;
+  symmetric?: boolean;
+}
+
+export interface ZoomOptions extends AxisScaleOptions {
+  autoScale?: boolean;
+  fullExtent?: boolean;
 }
 
 export interface AxesOptions {
