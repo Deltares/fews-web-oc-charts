@@ -92,7 +92,11 @@ export class ChartArea extends Chart {
       .y1(function(d: any) {
         return d[yKey][1]
       })
-
+    const curve = this.curveGenerator
+    if (curve !== undefined) {
+      areaGenerator
+        .curve(curve)
+    }
     this.group.datum(mappedData)
 
     const area = this.group.select('path')
