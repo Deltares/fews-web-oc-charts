@@ -182,12 +182,9 @@ export class CartesianAxis extends Axis {
       if (zoomOptions?.domain) {
         scale.domain(zoomOptions.domain)
         if (zoomOptions?.nice === true) niceDomain(scale, 16)
-      } else if (zoomOptions.autoScale === true) {
+      } else if (zoomOptions.autoScale === true || zoomOptions.fullExtent === true) {
         let defaultExtent
         let dataExtent = new Array(2)
-        if (zoomOptions?.includeZero === true) {
-          dataExtent[0] = 0
-        }
         if (axisOptions?.defaultDomain !== undefined) {
           defaultExtent = axisOptions?.defaultDomain
         }
@@ -197,37 +194,16 @@ export class CartesianAxis extends Axis {
           dataExtent[0] = -max
           dataExtent[1] = max
         }
-        scale.domain(dataExtent)
-        if (zoomOptions?.nice === true) niceDomain(scale, 16)
         if (defaultExtent !== undefined) {
-          const domain = scale.domain()
-          if (defaultExtent[0] < domain[0] || defaultExtent[1] > domain[1] ) {
-            scale.domain(defaultExtent)
+          if (defaultExtent[0] < dataExtent[0] || defaultExtent[1] > dataExtent[1] ) {
+            dataExtent = d3.extent([...defaultExtent, ...dataExtent])
           }
-        }
-      } else if (zoomOptions.fullExtent === true) {
-        let defaultExtent
-        let dataExtent = new Array(2)
-        if (zoomOptions?.includeZero === true) {
-          dataExtent[0] = 0
-        }
-        if (axisOptions?.defaultDomain !== undefined) {
-          defaultExtent = axisOptions?.defaultDomain
-        }
-        dataExtent = this.chartsExtent(axisKey, key, zoomOptions)
-        if (zoomOptions?.symmetric === true) {
-          const max = Math.max(Math.abs(dataExtent[0]), Math.abs(dataExtent[1]))
-          dataExtent[0] = -max
-          dataExtent[1] = max
+          if (zoomOptions?.includeZero === true) {
+            dataExtent = d3.extent([...dataExtent, 0])
+          }
         }
         scale.domain(dataExtent)
         if (zoomOptions?.nice === true) niceDomain(scale, 16)
-        if (defaultExtent !== undefined) {
-          const domain = scale.domain()
-          if (defaultExtent[0] < domain[0] || defaultExtent[1] > domain[1] ) {
-            scale.domain(defaultExtent)
-          }
-        }
       } else if (this.options[axisKey][key].type === AxisType.band) {
         let extent = new Array(0)
         for (const chart of this.charts) {

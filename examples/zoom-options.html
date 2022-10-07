@@ -80,47 +80,84 @@
 <body>
   <!-- Waterlevel -->
   <div>
-    <div id="chart-waterlevel" class="chart-container"></div>
-    <div id="legend-waterlevel" class="chart-legend"></div>
-    <button onclick="restoreZoom()">Restore zoom (double click)</button>
-    <button onclick="zoomToFullExtent()">Zoom to full extent</button>
-    <button onclick="zoomToYDefault()">Zoom Y-axis to defaultDomain</button>
-    <button onclick="zoomToDomain()">Zoom Y-axis to [-350, 480]</button>
+    <div id="chart-waterlevel1" class="chart-container"></div>
+    <div id="legend-waterlevel1" class="chart-legend"></div>
+    <button onclick="restoreZoom(plot1)">Restore zoom (double click)</button>
+    <button onclick="zoomToFullExtent(plot1)">Zoom to full extent</button>
+    <button onclick="zoomToYDefault(plot1, defaultYDomain1)">Zoom Y-axis to defaultDomain</button>
+    <button onclick="zoomToDomain(plot1)">Zoom Y-axis to [-350, 480]</button>
+    <div id="chart-waterlevel2" class="chart-container"></div>
+    <div id="legend-waterlevel2" class="chart-legend"></div>
+    <button onclick="restoreZoom(plot2)">Restore zoom (double click)</button>
+    <button onclick="zoomToFullExtent(plot2)">Zoom to full extent</button>
+    <button onclick="zoomToYDefault(plot2, defaultYDomain2)">Zoom Y-axis to defaultDomain</button>
+    <button onclick="zoomToDomain(plot2)">Zoom Y-axis to [-350, 480]</button>
+    <div id="chart-waterlevel3" class="chart-container"></div>
+    <div id="legend-waterlevel3" class="chart-legend"></div>
+    <button onclick="restoreZoom(plot3)">Restore zoom (double click)</button>
+    <button onclick="zoomToFullExtent(plot3)">Zoom to full extent</button>
+    <button onclick="zoomToYDefault(plot3, defaultYDomain3)">Zoom Y-axis to defaultDomain</button>
+    <button onclick="zoomToDomain(plot3)">Zoom Y-axis to [-350, 480]</button>
+    <div id="chart-waterlevel4" class="chart-container"></div>
+    <div id="legend-waterlevel4" class="chart-legend"></div>
+    <button onclick="restoreZoom(plot4)">Restore zoom (double click)</button>
+    <button onclick="zoomToFullExtent(plot4)">Zoom to full extent</button>
+    <button onclick="zoomToYDefault(plot4, defaultYDomain4)">Zoom Y-axis to defaultDomain</button>
+    <button onclick="zoomToDomain(plot4)">Zoom Y-axis to [-350, 480]</button>
   </div>
 
   <script src="../dist/wb-charts.umd.js"></script>
   <script type="text/javascript">
 
-    const defaultYDomain = [-100, 100]
-    const axisOptions = {
-      x: [{
-        type: wbCharts.AxisType.time,
-        label: 'datum',
-        position: wbCharts.AxisPosition.Bottom,
-        showGrid: false,
-      }, ],
-      y: [{
-        position: wbCharts.AxisPosition.Left,
-        label: 'Waterstand',
-        unit: 'cm',
-        nice: true,
-        includeZero: true,
-        showGrid: true,
-        defaultDomain: defaultYDomain
-      }, ],
-      margin: {
-        left: 100,
-        right: 100
-      }
+    const defaultYDomain1 = [-100, 100]
+    const defaultYDomain2 = [50, 150]
+    const defaultYDomain3 = [50, 150]
+    const defaultYDomain4 = [50, 150]
+    const xAxisOptions = {
+      type: wbCharts.AxisType.time,
+      label: 'datum',
+      position: wbCharts.AxisPosition.Bottom,
+      showGrid: false,
+    }
+    const yAxisOptions = {
+      position: wbCharts.AxisPosition.Left,
+      label: 'Waterstand',
+      unit: 'cm',
+      nice: true,
+      showGrid: true,
+    }
+    const marginAxisOptions = {
+      left: 100,
+      right: 100
+    }
+    const axisOptions1 = {
+      x: [xAxisOptions],
+      y: [{...yAxisOptions, ...{defaultDomain: defaultYDomain1}}],
+      margin: marginAxisOptions
+    }
+    const axisOptions2 = {
+      x: [xAxisOptions],
+      y: [{...yAxisOptions, ...{defaultDomain: defaultYDomain2}}],
+      margin: marginAxisOptions
+    }
+    const axisOptions3 = {
+      x: [xAxisOptions],
+      y: [{...yAxisOptions, ...{includeZero: true, defaultDomain: defaultYDomain3}}],
+      margin: marginAxisOptions
+    }
+    const axisOptions4 = {
+      x: [xAxisOptions],
+      y: [{...yAxisOptions, ...{includeZero: true, defaultDomain: defaultYDomain4}}],
+      margin: marginAxisOptions
     }
 
     const chartOptions = {
       x: {
-        key: "x",
+        key: "time",
         axisIndex: 0
       },
       y: {
-        key: "y",
+        key: "value",
         axisIndex: 0
       }
     }
@@ -154,9 +191,21 @@
       },
     ]
 
-    var container = document.getElementById("chart-waterlevel");
-    var axis = new wbCharts.CartesianAxis(container, null, null, axisOptions)
-    var legend = new wbCharts.Legend(legendLabels, document.getElementById("legend-waterlevel"));
+    var container1 = document.getElementById("chart-waterlevel1");
+    var axis1 = new wbCharts.CartesianAxis(container1, null, null, axisOptions1)
+    var legend1 = new wbCharts.Legend(legendLabels, document.getElementById("legend-waterlevel1"));
+
+    var container2 = document.getElementById("chart-waterlevel2");
+    var axis2 = new wbCharts.CartesianAxis(container2, null, null, axisOptions2)
+    var legend2 = new wbCharts.Legend(legendLabels, document.getElementById("legend-waterlevel2"));
+
+    var container3 = document.getElementById("chart-waterlevel3");
+    var axis3 = new wbCharts.CartesianAxis(container3, null, null, axisOptions3)
+    var legend3 = new wbCharts.Legend(legendLabels, document.getElementById("legend-waterlevel3"));
+
+    var container4 = document.getElementById("chart-waterlevel4");
+    var axis4 = new wbCharts.CartesianAxis(container4, null, null, axisOptions4)
+    var legend4 = new wbCharts.Legend([legendLabels[2], legendLabels[3]], document.getElementById("legend-waterlevel4"));
 
     function getRoundedDate(minutes, d = new Date()) {
       let ms = 1000 * 60 * minutes; // convert minutes to ms
@@ -222,11 +271,37 @@
       }
     ]
 
-    plot = {
-      axis: axis,
-      escalations: escalationLevels
+    plot1 = {
+      axis: axis1,
+      escalations: escalationLevels,
+      positiveData: false,
+      onlyRanges: false,
     }
-    axis.accept(legend);
+    axis1.accept(legend1);
+
+    plot2 = {
+      axis: axis2,
+      escalations: escalationLevels,
+      positiveData: true,
+      onlyRanges: false,
+    }
+    axis2.accept(legend2);
+
+    plot3 = {
+      axis: axis3,
+      escalations: escalationLevels,
+      positiveData: true,
+      onlyRanges: false,
+    }
+    axis3.accept(legend3);
+
+    plot4 = {
+      axis: axis4,
+      escalations: escalationLevels,
+      positiveData: true,
+      onlyRanges: true,
+    }
+    axis4.accept(legend4);
 
     function dataload(plot) {
       d3.json("ensemble.json").then(function (data) {
@@ -238,32 +313,40 @@
           [],
           []
         ];
+        const offset = plot.positiveData ? 150 : 0;
 
         for (s = 0; s < nEnsemble; s++) {
           members[s] = Array();
         }
         var medianTime = (data.times[0] + data.times[data.times.length - 1]) / 2;
+        plot.escalations.forEach( function (el, i) {
+          el.events = []
+        })
 
         data.times.forEach(function (time, index) {
           var dateTime = new Date((time - medianTime) * 1000 + refDate.getTime());
           for (i = 0; i < nEnsemble; i++) {
             members[i].push({
-              x: dateTime,
-              y: data.values[index][i]
+              [chartOptions.x.key]: dateTime,
+              [chartOptions.y.key]: data.values[index][i] + offset
             })
           }
           var points = data.values[index]
-          percentiles[0].push({
-            x: dateTime,
-            y: percentile(.5, points)
-          });
+          if (!plot.onlyRanges) {
+            percentiles[0].push({
+              [chartOptions.x.key]: dateTime,
+              [chartOptions.y.key]: percentile(.5, points) + offset
+            });
+          }
+          const perc50 = percentile([0.25, 0.75], points)
           percentiles[1].push({
-            x: dateTime,
-            y: percentile([0.25, 0.75], points)
+            [chartOptions.x.key]: dateTime,
+            [chartOptions.y.key]: [perc50[0] + offset, perc50[1] + offset]
           });
+          const perc90 = percentile([0.05, 0.95], points)
           percentiles[2].push({
-            x: dateTime,
-            y: percentile([0.05, 0.95], points)
+            [chartOptions.x.key]: dateTime,
+            [chartOptions.y.key]: [perc90[0] + offset, perc90[1] + offset]
           });
 
           plot.escalations.forEach( function (el, i) {
@@ -282,18 +365,19 @@
         var mouseOver = new wbCharts.MouseOver(['control', 'median', 'percent90']);
         var zoom = new wbCharts.ZoomHandler();
 
-        var plotMedian = new wbCharts.ChartLine(percentiles[0], {});
-        var plotControl = new wbCharts.ChartLine(members[0], {});
-
+        if (!plot.onlyRanges) {
+          var plotMedian = new wbCharts.ChartLine(percentiles[0], {});
+          var plotControl = new wbCharts.ChartLine(members[0], {});
+        }
         var plotPercentile50 = new wbCharts.ChartArea(percentiles[1], {});
         var plotPercentile90 = new wbCharts.ChartArea(percentiles[2], {});
 
         plotPercentile90.addTo(plot.axis, chartOptions, 'percent90', '#perc90');
         plotPercentile50.addTo(plot.axis, chartOptions, 'percent50', '#perc50');
-        plotControl.addTo(plot.axis, chartOptions, 'control', '#control-line');
-        plotMedian.addTo(plot.axis, chartOptions, 'median', '#median-line');
-
-        // plot.axis.setDomain()
+        if (!plot.onlyRanges) {
+          plotControl.addTo(plot.axis, chartOptions, 'control', '#control-line');
+          plotMedian.addTo(plot.axis, chartOptions, 'median', '#median-line');
+        }
 
         var escalationsVisitor = new wbCharts.WarningLevels(plot.escalations);
         plot.axis.accept(escalationsVisitor);
@@ -302,7 +386,9 @@
           escLevel.addTo(plot.axis, chartOptionLevels, el.id, {fill: 'none', stroke: el.color, 'stroke-width': '2px', 'stroke-dasharray': '4, 2'})
         })
 
-        plot.axis.accept(mouseOver);
+        if (!plot.onlyRanges) {
+          plot.axis.accept(mouseOver);
+        }
         plot.axis.accept(zoom);
         plot.axis.redraw({ x: { autoScale: true }, y: { autoScale: true, nice: true} });
 
@@ -310,23 +396,26 @@
       });
     }
 
-    window.setTimeout(dataload(plot), 500);
+    window.setTimeout(dataload(plot1), 500);
+    window.setTimeout(dataload(plot2), 500);
+    window.setTimeout(dataload(plot3), 500);
+    window.setTimeout(dataload(plot4), 500);
 
 
-    function restoreZoom() {
+    function restoreZoom(plot) {
       plot.axis.redraw({ x: { autoScale: true }, y: { autoScale: true, nice: true } });
     }
 
-    function zoomToFullExtent() {
+    function zoomToFullExtent(plot) {
       plot.axis.redraw({ x: { autoScale: true }, y: { fullExtent: true, nice: true } });
     }
 
-    function zoomToYDefault() {
+    function zoomToYDefault(plot, defaultYDomain) {
       plot.axis.redraw({ x: { autoScale: true }, y: { domain: defaultYDomain, nice: true } });
     }
 
-    function zoomToDomain() {
-      plot.axis.redraw({ x: { autoScale: true }, y: { domain: [-350, 480] } });
+    function zoomToDomain(plot) {
+      plot.axis.redraw({ x: { autoScale: true }, y: { domain: [-350, 480], nice: false } });
     }
   </script>
 
