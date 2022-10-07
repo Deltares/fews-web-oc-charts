@@ -84,13 +84,13 @@ export class ChartArea extends Chart {
     const areaGenerator = d3
       .area()
       .x(function(d: any) {
-        return d.x
+        return d[xKey]
       })
       .y0(function(d: any) {
-        return d.y[0]
+        return d[yKey][0]
       })
       .y1(function(d: any) {
-        return d.y[1]
+        return d[yKey][1]
       })
 
     this.group.datum(mappedData)
