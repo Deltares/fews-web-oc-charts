@@ -3,7 +3,6 @@ import { Axis, CartesianAxis } from '../Axis'
 import { Visitor } from './visitor'
 import defaultsDeep from 'lodash/defaultsDeep'
 import { bboxCollide } from '../Utils/bboxCollide'
-import { rectCollide } from '../Utils/rectCollide'
 
 type CrossSectionSelectOptions = {
   x: { axisIndex: number };
