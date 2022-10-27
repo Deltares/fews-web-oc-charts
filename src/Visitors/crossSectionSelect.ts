@@ -20,7 +20,7 @@ export class CrossSectionSelect implements Visitor {
   value: number | Date
   currentData: any
   callback: (value: number | Date ) => void
-  format: (n: number | {valueOf(): number;}) => string
+  format: (n: number | {valueOf(): number;} | Date) => string
   private options: CrossSectionSelectOptions = {
     x: { axisIndex : 0 },
     draggable: false
