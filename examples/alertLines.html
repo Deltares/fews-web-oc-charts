@@ -102,21 +102,29 @@
       const x2 = new Date(x1.getTime() + 3 * 24 * 60 * 60 * 1000);
 
       alertLine.options = [{
-        x1,
-        x2,
-        value: 100,
-        yAxisIndex: 0,
-        description: 'warning',
-        color: '#00ffff',
-      },{
-        x1,
-        x2,
-        value: -100,
-        yAxisIndex: 0,
-        description: 'alert',
-        color: '#FF0000',
-      },
-
+          x1,
+          x2,
+          value: 100,
+          yAxisIndex: 0,
+          description: 'warning',
+          color: '#00ffff',
+        },
+        {
+          x1,
+          x2,
+          value: -100,
+          yAxisIndex: 0,
+          description: 'alert',
+          color: '#FF0000',
+        },
+        {
+          x1,
+          x2,
+          value: 170,
+          yAxisIndex: 0,
+          description: 'out of bounds',
+          color: '#ffff00',
+        }
       ]
       data.times.forEach( function(time, index) {
           var dateTime = new Date( (time - medianTime) * 1000 + refDate.getTime() );
