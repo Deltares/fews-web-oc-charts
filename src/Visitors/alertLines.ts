@@ -19,6 +19,7 @@ export class AlertLines implements Visitor {
     this.group =this.axis.canvas.select('.front')
       .append('g')
       .attr('class', 'alert-lines')
+      .attr('clip-path', 'url(#' + axis.clipPathId + ')')
     this.redraw()
   }
 
