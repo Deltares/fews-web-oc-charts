@@ -228,7 +228,7 @@ export class MouseOver implements Visitor {
     }
     const idx = bisect(datum, xValue)
     // before first point
-    if (idx === 0 && datum[idx][xKey] >= xValue) {
+    if (idx === 0 && datum[idx][xKey] > xValue) {
       return
     }
     // after last point
