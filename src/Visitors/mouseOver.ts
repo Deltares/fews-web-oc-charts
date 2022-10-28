@@ -183,10 +183,10 @@ export class MouseOver implements Visitor {
       const x1 = xScale(datum[idx-1][xKey])
       const x2 = xScale(datum[idx][xKey])
       const [x0, offset] = this.findClosestPoint(xPos, x1, x2)
+      console.log(chart.id, x0, x1, x2)
       idx = idx - 1 + offset
       const valy = datum[idx][yKey]
       const posy = yScale(valy)
-
       // labels
       const yLabel = this.determineLabel(posy, yKey, valy, yScale)
       // outside range
@@ -227,7 +227,6 @@ export class MouseOver implements Visitor {
         return isNull(d[yKey][0])
       }
     }
-
     const idx = bisect(datum, xValue)
     // before first point
     if (idx === 0 && datum[idx][xKey] >= xValue) {
@@ -237,7 +236,7 @@ export class MouseOver implements Visitor {
     if (idx === datum.length-1 && mouse[0] > xPos) {
       return
     }
-    if (!datum[idx] || yIsNull(datum[idx]) || yIsNull(datum[idx-1])) {
+    if (!datum[idx] || yIsNull(datum[idx])) {
       return
     }
     return idx
@@ -254,6 +253,8 @@ export class MouseOver implements Visitor {
         labels[j] = d3.format(s.toString())(yScale.invert(posy[j]))
       }
       yLabel = labels.join(':')
+    } else if (Array.isArray(valy)) {
+      yLabel = `${d3.format(s.toString())(valy[0])} &ndash; ${d3.format(s.toString())(valy[1])}`
     } else {
       yLabel = d3.format(s.toString())(valy)
     }
