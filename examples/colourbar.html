@@ -24,6 +24,10 @@
   <br />
   <div id="chart-container-4"></div>
   <br />
+  <div id="chart-container-5"></div>
+  <br />
+  <div id="chart-container-6"></div>
+  <br />
   <div style="display: inline-block;">
   <div id="chart-container-left" style="display: inline-block;"></div>
   <div id="chart-container-right" style="display: inline-block;"></div>
@@ -100,6 +104,42 @@
     "lowerValue" : 10.0,
     "color" : "#bfbfbf"
   } ]
+
+  const colorMapSpeed = [ {
+    "lowerValue" : -4.0,
+    "color" : "#404d8f"
+  }, {
+    "lowerValue" : -3.2,
+    "color" : "#32568e"
+  }, {
+    "lowerValue" : -2.4,
+    "color" : "#327b8e"
+  }, {
+    "lowerValue" : -1.6,
+    "color" : "#407867"
+  }, {
+    "lowerValue" : -0.8,
+    "color" : "#328532"
+  }, {
+    "lowerValue" : 0.0,
+    "color" : "#328d32"
+  }, {
+    "lowerValue" : 0.8,
+    "color" : "#8e8432"
+  }, {
+    "lowerValue" : 1.6,
+    "color" : "#8e7132"
+  }, {
+    "lowerValue" : 2.4,
+    "color" : "#824d3d"
+  }, {
+    "lowerValue" : 3.2,
+    "color" : "#733244"
+  }, {
+    "lowerValue" : 4.0,
+    "color" : "#8e3268"
+  }
+]
 
 const colorMapWind = [{ "lowerValue": 0,
   "color": "rgb(98,113,183)"},
@@ -212,7 +252,7 @@ const colorMapBft = [{ "lowerValue": 0,
         .attr('transform', 'translate(50, 30)')
     new wbCharts.ColourBar(svg3, colorMapWind, 400, 20,
       {
-        position: 'bottom', useGradients: true, title: 'Windsnelheid [m/s]', type: 'nonlinear', tickValues: [0, 2, 5, 10, 20, 30]
+        position: 'bottom', useGradients: true, title: 'Windsnelheid [m/s]', type: 'nonlinear', tickValues: [0, 3, 5, 10, 15, 20, 30]
       }
     )
 
@@ -222,9 +262,33 @@ const colorMapBft = [{ "lowerValue": 0,
       .attr('height', 70)
       .append('g')
         .attr('transform', 'translate(50, 30)')
-    new wbCharts.ColourBar(svg4, colorMapBft, 400, 20,
+      new wbCharts.ColourBar(svg4, colorMapWind, 400, 20,
       {
         position: 'bottom', useGradients: true, title: 'Windsnelheid [m/s]', type: 'nonlinear', tickValues: [0, 2.4, 6.7, 12.3, 18.9, 26.4]
+      }
+    )
+
+    const svg5 = d3.select('#chart-container-5').append('svg')
+      .attr('class', 'colourbar')
+      .attr('width', 500)
+      .attr('height', 70)
+      .append('g')
+        .attr('transform', 'translate(50, 30)')
+    new wbCharts.ColourBar(svg5, colorMapSpeed, 400, 20,
+      {
+        position: 'bottom', useGradients: true, title: 'Stroomsnelheid [m/s]', type: 'nonlinear', ticks: 10
+      }
+    )
+
+    const svg6 = d3.select('#chart-container-5').append('svg')
+      .attr('class', 'colourbar')
+      .attr('width', 500)
+      .attr('height', 70)
+      .append('g')
+        .attr('transform', 'translate(50, 30)')
+    new wbCharts.ColourBar(svg6, colorMapSpeed, 400, 20,
+      {
+        position: 'bottom', useGradients: true, title: 'Stroomsnelheid [m/s]', type: 'nonlinear', tickValues: [-4, -3, -2, -1, 0, 1, 2, 3, 4]
       }
     )
 
