@@ -183,7 +183,6 @@ export class MouseOver implements Visitor {
       const x1 = xScale(datum[idx-1][xKey])
       const x2 = xScale(datum[idx][xKey])
       const [x0, offset] = this.findClosestPoint(xPos, x1, x2)
-      console.log(chart.id, x0, x1, x2)
       idx = idx - 1 + offset
       const valy = datum[idx][yKey]
       const posy = yScale(valy)
