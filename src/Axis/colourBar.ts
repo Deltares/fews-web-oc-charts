@@ -220,14 +220,12 @@ export class ColourBar {
     const scale = this.scale
     const axis = this.initAxis(scale, this.options)
 
-    console.log(this.options.tickValues)
     if ( this.options.tickValues ) {
       axis.tickValues(this.options.tickValues)
     }
     else if ( this.options.type === 'nonlinear'  ) {
       const count = this.options.ticks ?? 5
       const stride = Math.round(tickValues.length / count)
-      console.log('stride', tickValues.length, stride, count)
       axis.tickValues(tickValues.filter((v, i) => { return i % stride === 0}) )
       axis.tickFormat((d) => d.toString())
     } else if ( this.options.ticks ) {
