@@ -1,4 +1,5 @@
 import * as d3 from 'd3'
+import { isNull } from 'lodash'
 import { CartesianAxis, PolarAxis, AxisIndex } from '../Axis'
 import { Chart, AUTO_SCALE } from './chart'
 
@@ -68,14 +69,6 @@ export class ChartArea extends Chart {
     i0 = i0 > 0 ? i0 - 1 : 0
     i1 = i1 < this.data.length - 1 ? i1 + 1 : this.data.length
 
-    const mappedData: any = this.data.slice(i0, i1).map(function(d: any) {
-      return {
-        [xKey]: xScale(d[xKey]),
-        [yKey]: d[yKey].map(yScale),
-        color: colorMap(colorScale(mean(d[colorKey])))
-      }
-    })
-
     this.group = this.selectGroup(axis, 'chart-area')
     if (this.group.select('path').size() === 0) {
       this.group.append('path')
@@ -83,25 +76,26 @@ export class ChartArea extends Chart {
 
     const areaGenerator = d3
       .area()
+      .defined((d) => !isNull(d[yKey][0]) && !isNull(d[yKey][1]))
       .x(function(d: any) {
-        return d[xKey]
+        return xScale(d[xKey])
       })
       .y0(function(d: any) {
-        return d[yKey][0]
+        return yScale(d[yKey][0])
       })
       .y1(function(d: any) {
-        return d[yKey][1]
+        return yScale(d[yKey][1])
       })
     const curve = this.curveGenerator
     if (curve !== undefined) {
       areaGenerator
         .curve(curve)
     }
-    this.group.datum(mappedData)
 
     const area = this.group.select('path')
-    area.attr('d', areaGenerator(mappedData))
-    area.datum(mappedData)
+      .datum(this.data.slice(i0, i1))
+      .join('path')
+      .attr('d', areaGenerator)
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

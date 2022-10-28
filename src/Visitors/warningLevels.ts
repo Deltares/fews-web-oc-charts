@@ -120,6 +120,7 @@ export class WarningLevels implements Visitor {
     function generateAreaGenerator(d, i) {
       const areaGen =  d3.area()
         .curve(d3.curveStepAfter)
+        .defined((e: any) => !isNull(e.value))
         .x((e: any, j) => { return scaleX(e.date); })
       if (d.c === '<') {
         if (i === 0 ) { //set lower bound to bottom of chart

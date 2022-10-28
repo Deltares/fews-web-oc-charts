@@ -3,6 +3,7 @@ import { Axis, CartesianAxis } from '../Axis'
 import { Visitor } from './visitor'
 import { TooltipPosition } from '../Tooltip'
 import { dateFormatter } from '../Utils'
+import { isNull } from 'lodash'
 
 export class MouseOver implements Visitor {
   private trace: string[]
@@ -121,11 +122,17 @@ export class MouseOver implements Visitor {
     const mouseValue = xScale.invert(x)
     const xKey = chart.dataKeys.x
     const yKey = chart.dataKeys.y
+    let yIsNull = (d) => isNull(d[yKey])
+    if (Array.isArray(datum[0][yKey])) {
+      yIsNull = (d) => {
+        return isNull(d[yKey][0])
+      }
+    }
     const bisect = d3.bisector((data) => {
       return data[xKey]
     }).right
     const idx = bisect(datum, mouseValue)
-    if ( idx -1 >= 0 && datum[idx-1][yKey] !== null) {
+    if ( idx -1 >= 0 && !yIsNull(datum[idx-1])[yKey]) {
       const x0 = xScale(datum[idx-1][xKey])
       const r0 = this.distanceSquared(x0, x)
       if (r0 < rMin) {
@@ -133,7 +140,7 @@ export class MouseOver implements Visitor {
         xPos = x0
       }
     }
-    if ( idx < datum.length && datum[idx][yKey] !== null) {
+    if ( idx < datum.length && !yIsNull(datum[idx])[yKey]) {
       const x1 = xScale(datum[idx][xKey])
       const r1 = this.distanceSquared(x1, x)
       if (r1 < rMin) {
@@ -179,7 +186,6 @@ export class MouseOver implements Visitor {
       idx = idx - 1 + offset
       const valy = datum[idx][yKey]
       const posy = yScale(valy)
-
       // labels
       const yLabel = this.determineLabel(posy, yKey, valy, yScale)
       // outside range
@@ -213,6 +219,13 @@ export class MouseOver implements Visitor {
     const bisect = d3.bisector((data) => {
       return data[xKey]
     }).left
+
+    let yIsNull = (d) => isNull(d[yKey])
+    if (Array.isArray(datum[0][yKey])) {
+      yIsNull = (d) => {
+        return isNull(d[yKey][0])
+      }
+    }
     const idx = bisect(datum, xValue)
     // before first point
     if (idx === 0 && datum[idx][xKey] >= xValue) {
@@ -222,7 +235,7 @@ export class MouseOver implements Visitor {
     if (idx === datum.length-1 && mouse[0] > xPos) {
       return
     }
-    if (!datum[idx] || datum[idx][yKey] === null || datum[idx-1][yKey] === null) {
+    if (!datum[idx] || yIsNull(datum[idx])) {
       return
     }
     return idx
@@ -239,6 +252,8 @@ export class MouseOver implements Visitor {
         labels[j] = d3.format(s.toString())(yScale.invert(posy[j]))
       }
       yLabel = labels.join(':')
+    } else if (Array.isArray(valy)) {
+      yLabel = `${d3.format(s.toString())(valy[0])} &ndash; ${d3.format(s.toString())(valy[1])}`
     } else {
       yLabel = d3.format(s.toString())(valy)
     }
