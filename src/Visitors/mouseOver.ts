@@ -94,9 +94,7 @@ export class MouseOver implements Visitor {
       const selector = `[data-chart-id="${d}"]`
       const element = axis.canvas.select(selector).select('path')
       if (element.node() !== null) {
-        if (this.isHidden(element)) {
-          //skip
-        } else {
+        if (!this.isHidden(element) && element.datum().length > 0) {
           const datum = element.datum();
           [ xPos, rMin ] = this.closestPointForChart(d, datum, mouse[0], xPos, rMin)
         }
