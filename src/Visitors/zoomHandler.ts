@@ -215,7 +215,7 @@ export class ZoomHandler implements Visitor {
   }
 
   resetZoom(): void {
-    this.axis.redraw({ x: { autoScale: true }, y: { autoScale: true } })
+    this.axis.resetZoom()
   }
 
   redraw(): void {

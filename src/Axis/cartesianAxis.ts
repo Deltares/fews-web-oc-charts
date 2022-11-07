@@ -1,5 +1,5 @@
 import * as d3 from 'd3'
-import { Axis, AxesOptions, AxisType, AxisOptions, ZoomOptions, AxisScaleOptions } from './axis'
+import { Axis, AxesOptions, AxisType, AxisOptions, ZoomOptions, AxisScaleOptions, resetZoom } from './axis'
 import { AxisPosition } from '../Types/axisPosition'
 
 import { generateMultiFormat } from '../Utils/date'
@@ -53,6 +53,8 @@ export class CartesianAxis extends Axis {
   container: HTMLElement
   xScale: Array<any> = []
   yScale: Array<any> = []
+  xInitialExtent: Array<any> = []
+  yInitialExtent: Array<any> = []
   clipPathId: string
   timeZoneOffset: number
   options: CartesianAxesOptions
@@ -164,10 +166,13 @@ export class CartesianAxis extends Axis {
 
   updateAxisScales(options: ZoomOptions, axisKey: keyof CartesianAxesOptions): void {
     let scales: Array<any>
+    let initialExtents: Array<any>
     if (axisKey === 'x') {
       scales = this.xScale
+      initialExtents = this.xInitialExtent
     } else {
       scales = this.yScale
+      initialExtents = this.yInitialExtent
     }
     for ( const key in scales) {
       const scale = scales[key]
@@ -181,7 +186,7 @@ export class CartesianAxis extends Axis {
       const zoomOptions = { ... { autoScale: false }, ...axisScaleOptions, ...options }
       if (zoomOptions?.domain) {
         scale.domain(zoomOptions.domain)
-        if (zoomOptions?.nice === true) niceDomain(scale, 16)
+        if (zoomOptions?.nice === true) scale.domain(niceDomain(scale.domain(), 16))
       } else if (zoomOptions.autoScale === true || zoomOptions.fullExtent === true) {
         let defaultExtent
         let dataExtent = new Array(2)
@@ -203,7 +208,7 @@ export class CartesianAxis extends Axis {
           }
         }
         scale.domain(dataExtent)
-        if (zoomOptions?.nice === true) niceDomain(scale, 16)
+        if (zoomOptions?.nice === true) scale.domain(niceDomain(scale.domain(), 16))
       } else if (this.options[axisKey][key].type === AxisType.band) {
         let extent = new Array(0)
         for (const chart of this.charts) {
@@ -214,10 +219,11 @@ export class CartesianAxis extends Axis {
         }
         scale.domain(extent)
       }
+      if (initialExtents[key] === undefined) initialExtents[key] = scale.domain()
     }
   }
 
-  chartsExtent(axisKey: string, axisIndex: string, options: ZoomOptions): any[] {
+  chartsExtent(axisKey: keyof CartesianAxesOptions, axisIndex: string, options: ZoomOptions): any[] {
     let extent = new Array(2)
     for (const chart of this.charts) {
       if ( (options.fullExtent || chart.options[axisKey].includeInAutoScale) && chart.axisIndex[axisKey]?.axisIndex === +axisIndex ) {
@@ -239,6 +245,22 @@ export class CartesianAxis extends Axis {
     for (const visitor of this.visitors) {
       visitor.redraw()
     }
+  }
+
+  resetZoom(): void {
+    const xOptions: ZoomOptions = { autoScale: true }
+    if (this.options['x'][0].resetZoom === resetZoom.full || (this.options['x'][0].resetZoom === resetZoom.toggle && this.atInitialExtent(this.xScale[0].domain(), this.xInitialExtent[0]))) {
+      xOptions.fullExtent = true
+    }
+    const yOptions: ZoomOptions = { autoScale: true }
+    if (this.options['y'][0].resetZoom === resetZoom.full || (this.options['y'][0].resetZoom === resetZoom.toggle && this.atInitialExtent(this.yScale[0].domain(), this.yInitialExtent[0]))) {
+      yOptions.fullExtent = true
+    }
+    this.redraw({ x: xOptions, y: yOptions })
+  }
+
+  atInitialExtent(domain: any, initialExtent: any): boolean {
+    return initialExtent !== undefined && domain[0] === initialExtent[0] && domain[1] === initialExtent[1]
   }
 
   resize(): void {

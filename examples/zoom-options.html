@@ -82,25 +82,25 @@
   <div>
     <div id="chart-waterlevel1" class="chart-container"></div>
     <div id="legend-waterlevel1" class="chart-legend"></div>
-    <button onclick="restoreZoom(plot1)">Restore zoom (double click)</button>
+    <button onclick="restoreZoom(plot1)">Restore zoom</button>
     <button onclick="zoomToFullExtent(plot1)">Zoom to full extent</button>
     <button onclick="zoomToYDefault(plot1, defaultYDomain1)">Zoom Y-axis to defaultDomain</button>
     <button onclick="zoomToDomain(plot1)">Zoom Y-axis to [-350, 480]</button>
     <div id="chart-waterlevel2" class="chart-container"></div>
     <div id="legend-waterlevel2" class="chart-legend"></div>
-    <button onclick="restoreZoom(plot2)">Restore zoom (double click)</button>
+    <button onclick="restoreZoom(plot2)">Restore zoom</button>
     <button onclick="zoomToFullExtent(plot2)">Zoom to full extent</button>
     <button onclick="zoomToYDefault(plot2, defaultYDomain2)">Zoom Y-axis to defaultDomain</button>
     <button onclick="zoomToDomain(plot2)">Zoom Y-axis to [-350, 480]</button>
     <div id="chart-waterlevel3" class="chart-container"></div>
     <div id="legend-waterlevel3" class="chart-legend"></div>
-    <button onclick="restoreZoom(plot3)">Restore zoom (double click)</button>
+    <button onclick="restoreZoom(plot3)">Restore zoom</button>
     <button onclick="zoomToFullExtent(plot3)">Zoom to full extent</button>
     <button onclick="zoomToYDefault(plot3, defaultYDomain3)">Zoom Y-axis to defaultDomain</button>
     <button onclick="zoomToDomain(plot3)">Zoom Y-axis to [-350, 480]</button>
     <div id="chart-waterlevel4" class="chart-container"></div>
     <div id="legend-waterlevel4" class="chart-legend"></div>
-    <button onclick="restoreZoom(plot4)">Restore zoom (double click)</button>
+    <button onclick="restoreZoom(plot4)">Restore zoom</button>
     <button onclick="zoomToFullExtent(plot4)">Zoom to full extent</button>
     <button onclick="zoomToYDefault(plot4, defaultYDomain4)">Zoom Y-axis to defaultDomain</button>
     <button onclick="zoomToDomain(plot4)">Zoom Y-axis to [-350, 480]</button>
@@ -132,7 +132,7 @@
     }
     const axisOptions1 = {
       x: [xAxisOptions],
-      y: [{...yAxisOptions, ...{defaultDomain: defaultYDomain1}}],
+      y: [{...yAxisOptions, ...{defaultDomain: defaultYDomain1, resetZoom: 'toggle'}}],
       margin: marginAxisOptions
     }
     const axisOptions2 = {
@@ -142,7 +142,7 @@
     }
     const axisOptions3 = {
       x: [xAxisOptions],
-      y: [{...yAxisOptions, ...{includeZero: true, defaultDomain: defaultYDomain3}}],
+      y: [{...yAxisOptions, ...{includeZero: true, defaultDomain: defaultYDomain3, resetZoom: 'full'}}],
       margin: marginAxisOptions
     }
     const axisOptions4 = {
