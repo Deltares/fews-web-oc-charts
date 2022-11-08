@@ -219,7 +219,8 @@ export class CartesianAxis extends Axis {
         }
         scale.domain(extent)
       }
-      if (initialExtents[key] === undefined) initialExtents[key] = scale.domain()
+      const domain = scale.domain()
+      if (initialExtents[key] === undefined && !isNaN(domain[0]) && !isNaN(domain[1])) initialExtents[key] = domain
     }
   }
 
@@ -245,6 +246,11 @@ export class CartesianAxis extends Axis {
     for (const visitor of this.visitors) {
       visitor.redraw()
     }
+  }
+
+  removeInitialExtent(): void {
+    this.xInitialExtent = []
+    this.yInitialExtent = []
   }
 
   resetZoom(): void {
