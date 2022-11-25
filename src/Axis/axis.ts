@@ -20,6 +20,12 @@ export enum AxisType {
   band = 'band'
 }
 
+export enum resetZoom {
+  initial = 'initial',
+  full = 'full',
+  toggle = 'toggle'
+}
+
 
 export interface AxisOptions extends AxisScaleOptions {
   label?: string;
@@ -40,6 +46,7 @@ export interface AxisScaleOptions {
   nice?: boolean;
   includeZero?: boolean;
   symmetric?: boolean;
+  resetZoom?: resetZoom;
 }
 
 export interface ZoomOptions extends AxisScaleOptions {
@@ -160,6 +167,10 @@ export abstract class Axis {
   }
 
   abstract redraw(): void
+
+  resetZoom(): void {
+    this.redraw()
+  }
 
   abstract updateGrid(): void
 
