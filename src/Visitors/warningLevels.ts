@@ -16,12 +16,10 @@ export class WarningLevels implements Visitor {
   private scale: any
   private warningAxis: any
   private sections: any
-  private transitionTime: number
   private options: any
 
   constructor(escalationLevels, options: WarningLevelOptions) {
     this.escalationLevels = escalationLevels
-    this.transitionTime = 0
     this.options = {
       ...{
         y: { axisIndex: 0 }
@@ -110,11 +108,9 @@ export class WarningLevels implements Visitor {
         return tickLevels[i].id
       })
 
-    const transition = d3.transition().duration(this.transitionTime)
     this.axis.canvas
       .select('.y2-axis')
       .attr('transform', 'translate(' + this.axis.width + ' ,0)')
-      .transition(transition)
       .call(this.warningAxis)
 
     function generateAreaGenerator(d, i) {
