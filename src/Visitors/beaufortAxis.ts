@@ -15,9 +15,9 @@ export interface BeaufortAxisOptions {
 }
 
 export class BeaufortAxis implements Visitor {
-  private group: any
+  private group: d3.Selection<SVGGElement, unknown, SVGElement, unknown>
   private axis: CartesianAxis
-  private options: any
+  private options: BeaufortAxisOptions
   private isVertical = true
 
   constructor(options: BeaufortAxisOptions) {
@@ -59,7 +59,7 @@ export class BeaufortAxis implements Visitor {
     scale.domain(beaufortLimits)
     scale.range(limitsInPixels)
 
-    const beaufortAxis = this.isVertical ?  d3.axisRight(scale) : d3.axisTop(scale)
+    const beaufortAxis = this.isVertical ? d3.axisRight(scale) : d3.axisTop(scale)
 
     beaufortAxis.tickValues(beaufortLimits)
     beaufortAxis.tickFormat( (v) => { return v === 0 ? "" : d3.format(".0f")(v) })
@@ -85,7 +85,7 @@ export class BeaufortAxis implements Visitor {
 
     const isVertical = this.isVertical
     const colors = this.options.colors === undefined ? {} : this.options.colors
-    ticks.selectAll('.tick').each(function(d, i) {
+    ticks.selectAll<SVGElement,number>('.tick').each(function(d) {
       if ( d3.select(this).select('rect').size() === 0) {
         d3.select(this).append('rect')
       }
