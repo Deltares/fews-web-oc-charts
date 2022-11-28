@@ -94,7 +94,7 @@ export class MouseOver implements Visitor {
       const selector = `[data-chart-id="${d}"]`
       const element = axis.canvas.select(selector).select('path')
       if (element.node() !== null) {
-        if (this.isHidden(element)) {
+        if (this.isHidden(element) || element.datum().length === 0) {
           //skip
         } else {
           const datum = element.datum();
