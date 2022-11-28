@@ -188,7 +188,11 @@ export class MouseOver implements Visitor {
         x0 = x
         idx = idx - 1 + offset
       } else {
-        return
+        const x1 = xScale(datum[idx][xKey])
+        const x2 = xScale(datum[idx+1][xKey])
+        const [x, offset] = this.findClosestPoint(xPos, x1, x2)
+        x0 = x
+        idx = idx + offset
       }
 
       const valy = datum[idx][yKey]
