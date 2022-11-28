@@ -189,6 +189,7 @@ export class MouseOver implements Visitor {
         idx = idx - 1 + offset
       } else {
         const x1 = xScale(datum[idx][xKey])
+        if (x1 > xValue) return
         const x2 = xScale(datum[idx+1][xKey])
         const [x, offset] = this.findClosestPoint(xPos, x1, x2)
         x0 = x
@@ -240,7 +241,6 @@ export class MouseOver implements Visitor {
     const idx = bisect(datum, xValue)
     // before first point
     if (idx === 0 && datum[idx][xKey] > xValue) {
-      console.log('before first point', datum[idx][xKey], xValue, datum[idx][xKey] > xValue)
       return
     }
     // after last point
