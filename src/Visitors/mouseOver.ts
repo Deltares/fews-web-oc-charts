@@ -188,8 +188,7 @@ export class MouseOver implements Visitor {
         x0 = x
         idx = idx - 1 + offset
       } else {
-        idx = 0
-        x0 = xScale(datum[idx][xKey])
+        return
       }
 
       const valy = datum[idx][yKey]
