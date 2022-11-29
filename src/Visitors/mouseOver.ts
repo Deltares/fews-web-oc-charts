@@ -174,16 +174,20 @@ export class MouseOver implements Visitor {
       if (datum === null || datum.length === 0) {
         return
       }
-      const xValue = xScale.invert(xPos)
-      let idx = this.findIndex(datum, xKey, yKey, xValue, mouse, xPos)
+      const xValue = xScale.invert(mouse[0])
+      let idx = this.findIndex(datum, xKey, yKey, xValue)
       if ( idx === undefined) {
         return
       }
       // find closest point
-      const x1 = xScale(datum[idx-1][xKey])
-      const x2 = xScale(datum[idx][xKey])
-      const [x0, offset] = this.findClosestPoint(xPos, x1, x2)
-      idx = idx - 1 + offset
+      let x0: number = xScale(datum[idx][xKey])
+      if ( idx -1 >= 0) {
+        const x1 = xScale(datum[idx-1][xKey])
+        const x2 = xScale(datum[idx][xKey])
+        const [closestX, offset] = this.findClosestPoint(xPos, x1, x2)
+        x0 = closestX
+        idx = idx - 1 + offset
+      }
       const valy = datum[idx][yKey]
       const posy = yScale(valy)
       // labels
@@ -215,7 +219,7 @@ export class MouseOver implements Visitor {
     }
   }
 
-  findIndex(datum, xKey, yKey, xValue, mouse, xPos) {
+  findIndex(datum, xKey, yKey, xValue) {
     const bisect = d3.bisector((data) => {
       return data[xKey]
     }).left
@@ -232,7 +236,7 @@ export class MouseOver implements Visitor {
       return
     }
     // after last point
-    if (idx === datum.length-1 && mouse[0] > xPos) {
+    if (idx === datum.length-1 && datum[idx][xKey] < xValue) {
       return
     }
     if (!datum[idx] || yIsNull(datum[idx])) {
