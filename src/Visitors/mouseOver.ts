@@ -174,8 +174,8 @@ export class MouseOver implements Visitor {
       if (datum === null || datum.length === 0) {
         return
       }
-      const xValue = xScale.invert(xPos)
-      let idx = this.findIndex(datum, xKey, yKey, xValue, mouse, xPos)
+      const xValue = xScale.invert(mouse[0])
+      let idx = this.findIndex(datum, xKey, yKey, xValue)
       if ( idx === undefined) {
         return
       }
@@ -219,7 +219,7 @@ export class MouseOver implements Visitor {
     }
   }
 
-  findIndex(datum, xKey, yKey, xValue, mouse, xPos) {
+  findIndex(datum, xKey, yKey, xValue) {
     const bisect = d3.bisector((data) => {
       return data[xKey]
     }).left
@@ -236,7 +236,7 @@ export class MouseOver implements Visitor {
       return
     }
     // after last point
-    if (idx === datum.length-1 && mouse[0] > xPos) {
+    if (idx === datum.length-1 && datum[idx][xKey] < xValue) {
       return
     }
     if (!datum[idx] || yIsNull(datum[idx])) {
