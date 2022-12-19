@@ -1,5 +1,5 @@
 {
-  "name": "wb-charts",
+  "name": "@deltares/fews-web-oc-charts",
   "version": "2.1.2",
   "description": "Chart Library",
   "keywords": [],
