@@ -5,9 +5,10 @@
   "keywords": [],
   "main": "./dist/wb-charts.umd.js",
   "typings": "./dist/types/wb-charts.d.ts",
+  "type": "module",
   "files": [
     "dist/*",
-    "src/*"
+    "lib/*"
   ],
   "author": "Werner Kramer <werner.kramer@vortech.nl>",
   "repository": {
@@ -20,11 +21,14 @@
   },
   "scripts": {
     "build": "npm run clean && tsc && webpack",
+    "build:esm": "tsc",
+    "build:cjs": "tsc --module commonjs --outDir lib/cjs",
     "clean": "shx rm -rf dist",
     "lint": "eslint src/**.ts",
     "lint:fix": "eslint src/**.ts --fix",
     "prepare": "npm run build",
-    "test": "jest"
+    "test": "jest",
+    "webpack": "webpack"
   },
   "jest": {
     "transform": {
