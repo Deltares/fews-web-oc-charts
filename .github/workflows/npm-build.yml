@@ -1,9 +1,7 @@
 name: Build and test
 
 
-on:
-  pull_request:
-    branches: [ master ]
+on: [ push ]
 
 jobs:
   build:
@@ -13,7 +11,9 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: 16
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
+        env:
+          cache-name: cache-node-modules
         id: cache-nodemodules
         with:
           path: cache-node_modules
@@ -35,7 +35,9 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: 16
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
+        env:
+          cache-name: cache-node-modules
         id: cache-nodemodules
         with:
           path: cache-node_modules
