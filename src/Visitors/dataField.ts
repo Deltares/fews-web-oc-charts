@@ -1,7 +1,7 @@
-import { Axis } from '../Axis'
-import { Visitor } from './visitor'
+import { Axis } from '../Axis/axis.js'
+import { Visitor } from './visitor.js'
 import * as d3 from 'd3'
-import defaultsDeep from 'lodash/defaultsDeep'
+import { defaultsDeep } from 'lodash-es'
 
 export interface UnitOptions {
   unit: string;
@@ -20,7 +20,7 @@ export interface valueFieldOptions {
 }
 
 export interface DataFieldOptions {
-  selector? : string | string[]
+  selector?: string | string[]
   labelField?: {
     dx?: string | number
     dy?: string | number
@@ -46,8 +46,8 @@ export class DataField implements Visitor {
     this.options = defaultsDeep({},
       options,
       {
-        labelField : {dx: 0, dy: 0},
-        valueField : {dx: 0, dy: 0, units: [{unit: '', factor: 1.0} ], precision: "0.1f" }
+        labelField: { dx: 0, dy: 0 },
+        valueField: { dx: 0, dy: 0, units: [{ unit: '', factor: 1.0 }], precision: "0.1f" }
       })
     this.formatter = formatter !== undefined ? formatter : this.valueFormatter
   }
@@ -70,15 +70,15 @@ export class DataField implements Visitor {
       this.value = this.group.append('text').attr('class', 'data-field-value')
 
       if (this.options.valueField instanceof Array) {
-        for(const valueField of this.options.valueField){
+        for (const valueField of this.options.valueField) {
           this.values.push(this.value.append('tspan'))
-          if (valueField.hasOwnProperty('dx')){
+          if (valueField.hasOwnProperty('dx')) {
             this.value.attr('dx', valueField.dx)
           }
-          if (valueField.hasOwnProperty('dy')){
+          if (valueField.hasOwnProperty('dy')) {
             this.value.attr('dy', valueField.dy)
           }
-          if ( valueField.units !== undefined && valueField.units.length > 1 ) {
+          if (valueField.units !== undefined && valueField.units.length > 1) {
             this.units = valueField.units
           }
         }
@@ -86,14 +86,14 @@ export class DataField implements Visitor {
         this.value.attr('dx', this.options.valueField.dx)
         this.value.attr('dy', this.options.valueField.dy)
         this.values.push(this.value.append('tspan'))
-        if ( this.options.valueField.units !== undefined && this.options.valueField.units.length > 1 ) {
+        if (this.options.valueField.units !== undefined && this.options.valueField.units.length > 1) {
           this.units = this.options.valueField.units
         }
       }
 
-      if (this.units.length > 1){
-        this.value.on('click', () => { this.onClick() } )
-        this.value.style('cursor','pointer')
+      if (this.units.length > 1) {
+        this.value.on('click', () => { this.onClick() })
+        this.value.style('cursor', 'pointer')
       }
     }
     this.redraw()
@@ -126,26 +126,26 @@ export class DataField implements Visitor {
     if (value === null) {
       return '-' + symbol;
     }
-    if ( units.factor !== undefined ) {
-      const format = units.precision !== undefined?  d3.format(units.precision)  : d3.format(".1f");
-      const valueString = value !== null ? format(value * units.factor ) : '-';
+    if (units.factor !== undefined) {
+      const format = units.precision !== undefined ? d3.format(units.precision) : d3.format(".1f");
+      const valueString = value !== null ? format(value * units.factor) : '-';
       return valueString + symbol;
     } else {
-      const valueString: string = value !== null ? units.scale( value ) : '-';
+      const valueString: string = value !== null ? units.scale(value) : '-';
       return valueString + symbol;
     }
   }
 
-  getSymbol(units, i){
-    if (this.options.valueField instanceof Array){
-      if (this.options.valueField[i].hasOwnProperty('hyphen')){
+  getSymbol(units, i) {
+    if (this.options.valueField instanceof Array) {
+      if (this.options.valueField[i].hasOwnProperty('hyphen')) {
         return this.options.valueField[i].hyphen
       }
     }
     return units.unit
   }
 
-  getUnit(){
+  getUnit() {
     const idx = this.clickCount % this.units.length
     return this.units[idx]
   }
@@ -154,8 +154,8 @@ export class DataField implements Visitor {
     return d[0] !== undefined ? d[0].y : null
   }
 
-  getSelector(i){
-    if (this.options.selector instanceof Array){
+  getSelector(i) {
+    if (this.options.selector instanceof Array) {
       return this.options.selector[i]
     } else {
       return this.options.selector

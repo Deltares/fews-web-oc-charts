@@ -1,5 +1,6 @@
-import { Axis, CartesianAxis } from '../Axis'
-import { Visitor } from './visitor'
+import { Axis } from '../Axis/axis.js'
+import { CartesianAxis } from '../index.js';
+import { Visitor } from './visitor.js'
 
 export class AlertLines implements Visitor {
   public options: any[]
@@ -16,7 +17,7 @@ export class AlertLines implements Visitor {
   }
 
   create(axis: CartesianAxis): void {
-    this.group =this.axis.canvas.select('.front')
+    this.group = this.axis.canvas.select('.front')
       .append('g')
       .attr('class', 'alert-lines')
       .attr('clip-path', 'url(#' + axis.clipPathId + ')')
@@ -25,7 +26,7 @@ export class AlertLines implements Visitor {
 
   redraw(): void {
     this.group.selectAll('g').remove()
-    if ( this.options === undefined || this.options.length === 0) {
+    if (this.options === undefined || this.options.length === 0) {
       return
     }
     const xScale = this.axis.xScale[0]
@@ -44,24 +45,28 @@ export class AlertLines implements Visitor {
       })
       .attr("y1", (d: any) => {
         const yScale = this.axis.yScale[d.yAxisIndex];
-        return yScale(d.value)})
+        return yScale(d.value)
+      })
       .attr("x2", (d: any) => {
         return Math.min(this.axis.width, xScale(d.x2))
       })
       .attr("y2", (d: any) => {
         const yScale = this.axis.yScale[d.yAxisIndex]
-        return yScale(d.value)})
+        return yScale(d.value)
+      })
     enter.append('text')
       .filter((d) => {
-        return xScale(d.x1) < ( this.axis.width - 10) })
+        return xScale(d.x1) < (this.axis.width - 10)
+      })
       .attr('text-anchor', 'end')
       .attr("x", (d: any) => {
-          const x = xScale(d.x2);
-          return Math.min(x, this.axis.width);
-        })
-        .attr("y", (d: any) => {
-          const yScale = this.axis.yScale[d.yAxisIndex];
-          return yScale(d.value)})
+        const x = xScale(d.x2);
+        return Math.min(x, this.axis.width);
+      })
+      .attr("y", (d: any) => {
+        const yScale = this.axis.yScale[d.yAxisIndex];
+        return yScale(d.value)
+      })
       .attr("dx", "-10px")
       .attr("dy", "-.35em")
       .style("fill", (d: any) => d.color)

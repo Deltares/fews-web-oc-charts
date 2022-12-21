@@ -1,7 +1,8 @@
 import * as d3 from 'd3'
-import { Axis, CartesianAxis } from '../Axis'
-import { scaleBeaufort } from '../Scale';
-import { Visitor } from './visitor'
+import { Axis } from '../Axis/axis.js'
+import { CartesianAxis } from '../index.js';
+import { scaleBeaufort } from '../Scale/index.js';
+import { Visitor } from './visitor.js'
 import { Property } from 'csstype'
 
 export interface BeaufortAxisOptions {
@@ -32,7 +33,7 @@ export class BeaufortAxis implements Visitor {
   create(axis: CartesianAxis): void {
     this.isVertical = this.options.x === undefined
     this.group = axis.canvas
-    .insert('g','.group')
+      .insert('g', '.group')
     if (this.isVertical) {
       this.group.attr('class', 'axis y2-axis')
     } else {
@@ -48,21 +49,21 @@ export class BeaufortAxis implements Visitor {
     const windSpeedDomain = sourceScale.domain()
     const domain = scaleBeaufort.domain()
     domain.unshift(windSpeedDomain[0])
-    const limits = domain.filter( (x: number) => {
+    const limits = domain.filter((x: number) => {
       return windSpeedDomain[0] <= x && windSpeedDomain[1] > x
     })
 
-    const limitsInPixels = limits.map( (x) => { return sourceScale(x) })
-    const beaufortLimits = limits.map( (x) => { return scaleBeaufort(x) })
+    const limitsInPixels = limits.map((x) => { return sourceScale(x) })
+    const beaufortLimits = limits.map((x) => { return scaleBeaufort(x) })
     const scale = d3.scaleLinear();
 
     scale.domain(beaufortLimits)
     scale.range(limitsInPixels)
 
-    const beaufortAxis = this.isVertical ?  d3.axisRight(scale) : d3.axisTop(scale)
+    const beaufortAxis = this.isVertical ? d3.axisRight(scale) : d3.axisTop(scale)
 
     beaufortAxis.tickValues(beaufortLimits)
-    beaufortAxis.tickFormat( (v) => { return v === 0 ? "" : d3.format(".0f")(v) })
+    beaufortAxis.tickFormat((v) => { return v === 0 ? "" : d3.format(".0f")(v) })
 
     const adjustTextLabels = (selection) => {
       const text = selection.selectAll('.tick text')
@@ -72,9 +73,9 @@ export class BeaufortAxis implements Visitor {
       } else {
         values.push(this.axis.width)
       }
-      const offset = ( i ) => { return (values[i+1] - values[i])/2}
+      const offset = (i) => { return (values[i + 1] - values[i]) / 2 }
       text
-        .attr('transform', (d, i) => { return this.isVertical ? `translate(0,${offset(i)})` : `translate( ${offset(i)} ,0)`});
+        .attr('transform', (d, i) => { return this.isVertical ? `translate(0,${offset(i)})` : `translate( ${offset(i)} ,0)` });
     }
 
     const translate = this.isVertical ? `translate(${axis.width},0)` : 'translate(0,0)'
@@ -85,16 +86,16 @@ export class BeaufortAxis implements Visitor {
 
     const isVertical = this.isVertical
     const colors = this.options.colors === undefined ? {} : this.options.colors
-    ticks.selectAll('.tick').each(function(d, i) {
-      if ( d3.select(this).select('rect').size() === 0) {
+    ticks.selectAll('.tick').each(function (d, i) {
+      if (d3.select(this).select('rect').size() === 0) {
         d3.select(this).append('rect')
       }
       const sections = d3.select(this).select('rect')
-      let width = isVertical ? axis.width - 1: scale(d+1) - scale(d)
-      let height = isVertical ? scale(d) - scale(d+1) : axis.height-1
+      let width = isVertical ? axis.width - 1 : scale(d + 1) - scale(d)
+      let height = isVertical ? scale(d) - scale(d + 1) : axis.height - 1
       if (!this.nextSibling) {
-        height = isVertical ? scale(d) : axis.height-1
-        width = isVertical ? axis.width - 1: axis.width - scale(d)
+        height = isVertical ? scale(d) : axis.height - 1
+        width = isVertical ? axis.width - 1 : axis.width - scale(d)
       }
       const x = isVertical ? -width : 0
       const y = isVertical ? -height : 1
@@ -104,7 +105,7 @@ export class BeaufortAxis implements Visitor {
         .attr("x", x)
         .attr("y", y)
         .attr("height", height)
-        .style("fill", colors[d] ? colors[d] : 'none' )
+        .style("fill", colors[d] ? colors[d] : 'none')
     })
   }
 }

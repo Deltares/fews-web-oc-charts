@@ -1,10 +1,10 @@
 import * as d3 from 'd3'
-import { CartesianAxis, PolarAxis } from '../Axis'
-import { TooltipAnchor, TooltipPosition } from '../Tooltip'
-import { Chart, SymbolOptions } from './chart'
+import { CartesianAxis, PolarAxis } from '../index.js';
+import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js'
+import { Chart, SymbolOptions } from './chart.js'
 
-import { symbolArrow } from '../Symbols'
-import defaultsDeep from 'lodash/defaultsDeep'
+import { symbolArrow } from '../Symbols/index.js'
+import { defaultsDeep } from 'lodash-es'
 
 function mean(x: number[] | number) {
   if (x instanceof Array) {
@@ -23,7 +23,7 @@ export class ChartDirection extends Chart {
 
   constructor(data: any, options: any) {
     super(data, options)
-    this.options = defaultsDeep(this.options, this.options, { symbol: DefaultSymbolOptions})
+    this.options = defaultsDeep(this.options, this.options, { symbol: DefaultSymbolOptions })
   }
 
   plotterCartesian(axis: CartesianAxis, axisIndex: any) {
@@ -47,8 +47,8 @@ export class ChartDirection extends Chart {
         (d) => d.filter(
           (e, i) =>
             ((i + 1) % skip === 0) ? e : undefined
-          )
         )
+      )
 
     // exit selection
     elements.exit().remove()
@@ -57,14 +57,14 @@ export class ChartDirection extends Chart {
     elements
       .enter()
       .append('g')
-        .attr('transform', (d: any, i: number) => {
-          return 'translate(' + xScale(d[xKey]) + ',' + yScale(d[yKey]) + ')'
-        })
-        .append('path')
-        .attr('d', d3.symbol().type(symbolArrow).size(this.options.symbol.size))
-        .attr('transform', (d: any, i: number) => {
-          return `rotate(${d[dKey] - 180})`
-        })
+      .attr('transform', (d: any, i: number) => {
+        return 'translate(' + xScale(d[xKey]) + ',' + yScale(d[yKey]) + ')'
+      })
+      .append('path')
+      .attr('d', d3.symbol().type(symbolArrow).size(this.options.symbol.size))
+      .attr('transform', (d: any, i: number) => {
+        return `rotate(${d[dKey] - 180})`
+      })
     if (this.options.tooltip !== undefined) {
       elements
         .on('pointerover', (e: any, d) => {
@@ -91,10 +91,10 @@ export class ChartDirection extends Chart {
         return 'translate(' + xScale(d[xKey]) + ',' + yScale(d[yKey]) + ')'
       })
       .select('path')
-        .attr('d', d3.symbol().type(symbolArrow).size(this.options.symbol.size))
-        .attr('transform', (d: any, i: number) => {
-          return `rotate(${d[dKey] - 180})`
-        })
+      .attr('d', d3.symbol().type(symbolArrow).size(this.options.symbol.size))
+      .attr('transform', (d: any, i: number) => {
+        return `rotate(${d[dKey] - 180})`
+      })
   }
 
   plotterPolar(axis: PolarAxis, dataKeys: any) {
@@ -107,7 +107,7 @@ export class ChartDirection extends Chart {
     function arcTranslation(p) {
       // We only use 'd', but list d,i,a as params just to show can have them as params.
       // Code only really uses d and t.
-      return function(d, i, a) {
+      return function (d, i, a) {
         const old = p[i]
         if (mean(old[tKey]) - mean(d[tKey]) > 180) {
           old[tKey] = old[tKey] - 360
@@ -116,7 +116,7 @@ export class ChartDirection extends Chart {
         }
         const tInterpolate = d3.interpolate(old[tKey], d[tKey])
         const rInterpolate = d3.interpolate(old[rKey], d[rKey])
-        return function(x) {
+        return function (x) {
           const theta = axis.angularScale(tInterpolate(x))
           const radius = axis.radialScale(rInterpolate(x))
           return 'translate(' + -radius * Math.sin(-theta) + ',' + -radius * Math.cos(-theta) + ')'
@@ -140,24 +140,24 @@ export class ChartDirection extends Chart {
       .merge(elements)
     if (this.options.tooltip !== undefined) {
       elements
-      .on('pointerover', (e: any, d) => {
-        if (this.options.tooltip.anchor !== undefined && this.options.tooltip.anchor !== TooltipAnchor.Pointer) {
-          console.error('Tooltip not implemented for anchor ', this.options.tooltip.anchor, ', using ', TooltipAnchor.Pointer, ' instead.')
-        }
-        const pointer = d3.pointer(e, axis.container)
-        const x = pointer[0]
-        const y = pointer[1]
-        axis.tooltip.show()
-        axis.tooltip.update(
-          this.toolTipFormatterPolar(d),
-          this.options.tooltip.position !== undefined ? this.options.tooltip.position : TooltipPosition.Top,
-          x,
-          y
-        )
-      })
-      .on('pointerout', () => {
-        axis.tooltip.hide()
-      })
+        .on('pointerover', (e: any, d) => {
+          if (this.options.tooltip.anchor !== undefined && this.options.tooltip.anchor !== TooltipAnchor.Pointer) {
+            console.error('Tooltip not implemented for anchor ', this.options.tooltip.anchor, ', using ', TooltipAnchor.Pointer, ' instead.')
+          }
+          const pointer = d3.pointer(e, axis.container)
+          const x = pointer[0]
+          const y = pointer[1]
+          axis.tooltip.show()
+          axis.tooltip.update(
+            this.toolTipFormatterPolar(d),
+            this.options.tooltip.position !== undefined ? this.options.tooltip.position : TooltipPosition.Top,
+            x,
+            y
+          )
+        })
+        .on('pointerout', () => {
+          axis.tooltip.hide()
+        })
     }
 
     const transition = d3
@@ -177,8 +177,8 @@ export class ChartDirection extends Chart {
       .node() as Element
     const svg = d3.create('svg')
       .append('svg')
-      .attr('width',20)
-      .attr('height',20)
+      .attr('width', 20)
+      .attr('height', 20)
     const group = svg
       .append('g')
       .attr('transform', 'translate(10, 0)')

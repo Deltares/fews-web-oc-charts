@@ -1,10 +1,11 @@
 import * as d3 from 'd3'
-import { Axis, CartesianAxis } from '../Axis'
-import { dateFormatter }  from '../Utils'
-import { Visitor } from './visitor'
+import { Axis } from '../Axis/axis.js'
+import { CartesianAxis } from '../index.js';
+import { dateFormatter } from '../Utils/date.js'
+import { Visitor } from './visitor.js'
 
 type CurrentTimeOptions = {
-  [key in 'x' | 'y'] : { axisIndex: number }
+  [key in 'x' | 'y']: { axisIndex: number }
 }
 
 export class CurrentTime implements Visitor {
@@ -77,7 +78,7 @@ export class CurrentTime implements Visitor {
         .select('text')
         .attr('x', 5)
         .attr('y', -5)
-        .text(dateFormatter(currentDate, 'yyyy-MM-dd HH:mm ZZZZ', {timeZone: this.axis.options.x[axisIndex].timeZone, locale: this.axis.options.x[axisIndex].locale} ))
+        .text(dateFormatter(currentDate, 'yyyy-MM-dd HH:mm ZZZZ', { timeZone: this.axis.options.x[axisIndex].timeZone, locale: this.axis.options.x[axisIndex].locale }))
     } else {
       this.group.attr('display', 'none')
     }

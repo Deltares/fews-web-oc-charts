@@ -1,7 +1,8 @@
 import * as d3 from 'd3'
 import { isNull } from 'lodash'
-import { CartesianAxis, PolarAxis, AxisIndex } from '../Axis'
-import { Chart, AUTO_SCALE } from './chart'
+import { CartesianAxis, PolarAxis } from '../index.js';
+import { AxisIndex } from '../Axis/axis.js'
+import { Chart, AUTO_SCALE } from './chart.js'
 
 function mean(x: number[] | number) {
   if (x instanceof Array) {
@@ -31,11 +32,11 @@ export class ChartArea extends Chart {
     if (key === 'x') {
       return d3.extent(this._data, (d) => d[path])
     } else if (key === 'y') {
-      const min = d3.min(this._data, function(d: any) {
+      const min = d3.min(this._data, function (d: any) {
         if (d[path] === null) return undefined
         return d3.min(d[path])
       })
-      const max = d3.max(this._data, function(d: any) {
+      const max = d3.max(this._data, function (d: any) {
         if (d[path] === null) return undefined
         return d3.max(d[path])
       })
@@ -53,7 +54,7 @@ export class ChartArea extends Chart {
     const colorScale = d3.scaleLinear().domain([0, 1])
     if (this.options.colorScale === AUTO_SCALE) {
       colorScale.domain(
-        d3.extent(this.data, function(d: any): number {
+        d3.extent(this.data, function (d: any): number {
           return d[colorKey]
         })
       )
@@ -61,7 +62,7 @@ export class ChartArea extends Chart {
 
     const colorMap = this.colorMap
 
-    const bisectX = d3.bisector(function(d) {
+    const bisectX = d3.bisector(function (d) {
       return d[xKey]
     })
     let i0 = bisectX.right(this.data, xScale.domain()[0])
@@ -77,13 +78,13 @@ export class ChartArea extends Chart {
     const areaGenerator = d3
       .area()
       .defined((d) => !isNull(d[yKey][0]) && !isNull(d[yKey][1]))
-      .x(function(d: any) {
+      .x(function (d: any) {
         return xScale(d[xKey])
       })
-      .y0(function(d: any) {
+      .y0(function (d: any) {
         return yScale(d[yKey][0])
       })
-      .y1(function(d: any) {
+      .y1(function (d: any) {
         return yScale(d[yKey][1])
       })
     const curve = this.curveGenerator
@@ -109,11 +110,11 @@ export class ChartArea extends Chart {
       .select('path')
       .node() as Element
     const svg = d3.create('svg')
-      .attr('width',20)
-      .attr('height',20)
+      .attr('width', 20)
+      .attr('height', 20)
     const group = svg
       .append('g')
-      .attr('transform','translate(0, 10)')
+      .attr('transform', 'translate(0, 10)')
     const element = group.append('rect')
       .attr('x', 0)
       .attr('y', -5)

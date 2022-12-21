@@ -1,6 +1,4 @@
-import {
-  quadtree
-} from 'd3-quadtree';
+import { quadtree } from 'd3-quadtree';
 
 function constant(_) {
   return function () {

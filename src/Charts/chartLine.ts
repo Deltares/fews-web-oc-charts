@@ -1,8 +1,8 @@
 import { SvgPropertiesHyphen } from 'csstype'
 import * as d3 from 'd3'
-import { CartesianAxis, PolarAxis } from '../Axis'
-import { Chart } from './chart'
-import { TooltipPosition } from '../Tooltip'
+import { CartesianAxis, PolarAxis } from '../index.js';
+import { Chart } from './chart.js'
+import { TooltipPosition } from '../Tooltip/tooltip.js'
 
 export class ChartLine extends Chart {
   defaultToolTipFormatterCartesian(d) {
@@ -32,9 +32,9 @@ export class ChartLine extends Chart {
     let html = ''
     if (this.options.angular.includeInTooltip) {
       if (d[0][tKey] != d[1][tKey]) {
-        html += tKey+ ': ' + d[0][tKey].toFixed(0) + '-' + d[1][tKey].toFixed(0) + '<br/>'
+        html += tKey + ': ' + d[0][tKey].toFixed(0) + '-' + d[1][tKey].toFixed(0) + '<br/>'
       } else {
-        html += tKey+ ': ' + d[0][tKey].toFixed(0) + '<br/>'
+        html += tKey + ': ' + d[0][tKey].toFixed(0) + '<br/>'
       }
     }
     if (this.options.radial.includeInTooltip) {
@@ -57,13 +57,13 @@ export class ChartLine extends Chart {
     const mappedData = this.mapDataCartesian(xScale.domain())
     const lineGenerator = d3
       .line()
-      .x(function(d: any) {
+      .x(function (d: any) {
         return xScale(d[xKey])
       })
-      .y(function(d: any) {
+      .y(function (d: any) {
         return yScale(d[yKey])
       })
-      .defined(function(d: any) {
+      .defined(function (d: any) {
         return d[yKey] != null
       })
     const curve = this.curveGenerator
@@ -84,19 +84,19 @@ export class ChartLine extends Chart {
 
     if (this.options.tooltip !== undefined) {
       update
-      .on('pointerover', (e: any, d: any) => {
-        axis.tooltip.show()
-        const pointer = d3.pointer(e, axis.container)
-        axis.tooltip.update(
-          this.toolTipFormatterCartesian(d),
-          TooltipPosition.Top,
-          pointer[0],
-          pointer[1]
-        )
-      })
-      .on('pointerout', () => {
-        axis.tooltip.hide()
-      })
+        .on('pointerover', (e: any, d: any) => {
+          axis.tooltip.show()
+          const pointer = d3.pointer(e, axis.container)
+          axis.tooltip.update(
+            this.toolTipFormatterCartesian(d),
+            TooltipPosition.Top,
+            pointer[0],
+            pointer[1]
+          )
+        })
+        .on('pointerout', () => {
+          axis.tooltip.hide()
+        })
     }
   }
 
@@ -106,10 +106,10 @@ export class ChartLine extends Chart {
     const tKey = this.dataKeys.angular
     const lineGenerator = d3
       .lineRadial()
-      .angle(function(d: any) {
+      .angle(function (d: any) {
         return axis.angularScale(d[tKey])
       })
-      .radius(function(d: any) {
+      .radius(function (d: any) {
         return axis.radialScale(d[rKey])
       })
     this.group = this.selectGroup(axis, 'chart-line')
@@ -127,19 +127,19 @@ export class ChartLine extends Chart {
     line.join('path').datum(this.data)
     if (this.options.tooltip !== undefined) {
       line
-      .on('pointerover', (e: any, d: any) => {
-        axis.tooltip.show()
-        const pointer = d3.pointer(e, axis.container)
-        axis.tooltip.update(
-          this.toolTipFormatterPolar(d),
-          this.options.tooltip.position !== undefined ? this.options.tooltip.position : TooltipPosition.Top,
-          pointer[0],
-          pointer[1]
-        )
-      })
-      .on('pointerout', () => {
-        axis.tooltip.hide()
-      })
+        .on('pointerover', (e: any, d: any) => {
+          axis.tooltip.show()
+          const pointer = d3.pointer(e, axis.container)
+          axis.tooltip.update(
+            this.toolTipFormatterPolar(d),
+            this.options.tooltip.position !== undefined ? this.options.tooltip.position : TooltipPosition.Top,
+            pointer[0],
+            pointer[1]
+          )
+        })
+        .on('pointerout', () => {
+          axis.tooltip.hide()
+        })
     }
   }
 
@@ -149,11 +149,11 @@ export class ChartLine extends Chart {
       .select('path')
       .node() as Element
     const svg = d3.create('svg')
-      .attr('width',20)
-      .attr('height',20)
+      .attr('width', 20)
+      .attr('height', 20)
     const group = svg
       .append('g')
-      .attr('transform','translate(0, 10)')
+      .attr('transform', 'translate(0, 10)')
     const element = group.append('line')
       .attr('x1', 0)
       .attr('x2', 20)

@@ -1,2 +1,2 @@
-export * from './axisPosition'
-export * from './axisOrientation'
+export * from './axisPosition.js'
+export * from './axisOrientation.js'

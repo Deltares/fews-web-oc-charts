@@ -1,7 +1,7 @@
 import * as d3 from 'd3'
-import { CartesianAxis, PolarAxis } from '../Axis'
-import { Chart, AUTO_SCALE } from './chart'
-import { TooltipAnchor, TooltipPosition } from '../Tooltip'
+import { CartesianAxis, PolarAxis } from '../index.js';
+import { Chart, AUTO_SCALE } from './chart.js'
+import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js'
 
 export class ChartHistogram extends Chart {
   plotterCartesian(axis: CartesianAxis, axisIndex: any) {
@@ -13,7 +13,7 @@ export class ChartHistogram extends Chart {
     const yScale = axis.yScale[axisIndex.y.axisIndex]
 
     const x1 = d3.scaleBand().domain(
-      data.map(function(d: any) {
+      data.map(function (d: any) {
         return d[xKey]
       })
     )
@@ -23,7 +23,7 @@ export class ChartHistogram extends Chart {
     const colorScale = d3.scaleLinear().domain([0, 1])
     if (this.options.colorScale === AUTO_SCALE) {
       colorScale.domain(
-        d3.extent(this.data, function(d: any): number {
+        d3.extent(this.data, function (d: any): number {
           return d[colorKey]
         })
       )
@@ -44,14 +44,14 @@ export class ChartHistogram extends Chart {
     const update = elements
       .enter()
       .append('rect')
-      .attr('y', function(d: any) {
+      .attr('y', function (d: any) {
         return d[yKey] === null ? yScale(0) : Math.min(yScale(d[yKey]), yScale(0))
       })
-      .attr('height', function(d: any) {
+      .attr('height', function (d: any) {
         return d[yKey] === null ? 0 : Math.abs(yScale(0) - yScale(d[yKey]))
       })
       .merge(elements)
-      .attr('x', function(d: any) {
+      .attr('x', function (d: any) {
         return x1(d[xKey])
       })
       .attr('width', x1.bandwidth())
@@ -59,37 +59,37 @@ export class ChartHistogram extends Chart {
     const that = this
     if (that.options.tooltip !== undefined) {
       update
-      .on('pointerover', function(_e: any, d) {
-        if (that.options.tooltip.anchor !== undefined && that.options.tooltip.anchor !== TooltipAnchor.Top) {
-          console.error('Tooltip not implemented for anchor ', that.options.tooltip.anchor, ', using ', TooltipAnchor.Top, ' instead.')
-        }
-        axis.tooltip.show()
-        axis.tooltip.update(
-          that.toolTipFormatterCartesian(d),
-          that.options.tooltip.position !== undefined ? that.options.tooltip.position : TooltipPosition.Top,
-          axis.margin.left + x1(d[xKey]) + x1.bandwidth() / 2 ,
-          axis.margin.top + Math.min(yScale(d[yKey]), yScale(0))
-        )
-      })
-      .on('pointerout', () => {
-        axis.tooltip.hide()
-      })
+        .on('pointerover', function (_e: any, d) {
+          if (that.options.tooltip.anchor !== undefined && that.options.tooltip.anchor !== TooltipAnchor.Top) {
+            console.error('Tooltip not implemented for anchor ', that.options.tooltip.anchor, ', using ', TooltipAnchor.Top, ' instead.')
+          }
+          axis.tooltip.show()
+          axis.tooltip.update(
+            that.toolTipFormatterCartesian(d),
+            that.options.tooltip.position !== undefined ? that.options.tooltip.position : TooltipPosition.Top,
+            axis.margin.left + x1(d[xKey]) + x1.bandwidth() / 2,
+            axis.margin.top + Math.min(yScale(d[yKey]), yScale(0))
+          )
+        })
+        .on('pointerout', () => {
+          axis.tooltip.hide()
+        })
     }
-    update.style('fill', function(d: any) {
+    update.style('fill', function (d: any) {
       return colorMap(colorScale(d[colorKey]))
     })
 
     elements
-    .transition(t)
-    .style('fill', function(d: any) {
-      return colorMap(colorScale(d[colorKey]))
-    })
-    .attr('y', function(d: any) {
-      return d[yKey] === null ? yScale(0) : Math.min(yScale(d[yKey]), yScale(0))
-    })
-    .attr('height', function(d: any) {
-      return d[yKey] === null ? 0 : Math.abs(yScale(0) - yScale(d[yKey]))
-    })
+      .transition(t)
+      .style('fill', function (d: any) {
+        return colorMap(colorScale(d[colorKey]))
+      })
+      .attr('y', function (d: any) {
+        return d[yKey] === null ? yScale(0) : Math.min(yScale(d[yKey]), yScale(0))
+      })
+      .attr('height', function (d: any) {
+        return d[yKey] === null ? 0 : Math.abs(yScale(0) - yScale(d[yKey]))
+      })
   }
 
   plotterPolar(axis: PolarAxis, dataKeys: any) {
@@ -102,8 +102,8 @@ export class ChartHistogram extends Chart {
       .select('rect')
       .node() as Element
     const svg = d3.create('svg')
-      .attr('width',20)
-      .attr('height',20)
+      .attr('width', 20)
+      .attr('height', 20)
     const group = svg
       .append('g')
       .attr('transform', 'translate(0, 10)')

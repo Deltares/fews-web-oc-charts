@@ -1,6 +1,7 @@
 import * as d3 from 'd3'
-import { Axis, CartesianAxis } from '../Axis'
-import { Visitor } from './visitor'
+import { Axis } from '../Axis/axis.js'
+import { CartesianAxis } from '../index.js';
+import { Visitor } from './visitor.js'
 
 interface LegendEntry {
   selector: string;
@@ -52,16 +53,16 @@ export class Legend implements Visitor {
 
     const updateSelection = entries
       .merge(enter)
-      .each(function(d, i) {
+      .each(function (d, i) {
         const legendElement = d3.select(this)
         const chartsInGroup = that.axis.charts.filter(c => c.id === d.selector)
         const symbol = legendElement.append('g')
         that.createLegendSymbol(d.selector, d.legendId, symbol.node())
-        if (that.configuredLabels){
+        if (that.configuredLabels) {
           legendElement.style('cursor', 'pointer')
           legendElement.on('click', () => {
             const display = 'visible'
-            for(const chart of chartsInGroup) {
+            for (const chart of chartsInGroup) {
               chart.visible = !chart.visible
             }
             if (display === 'visible') {
@@ -76,7 +77,7 @@ export class Legend implements Visitor {
           .append('text')
           .text(d.label)
           .attr('x', 25)
-          .attr('dominant-baseline','middle')
+          .attr('dominant-baseline', 'middle')
         maxWidth = Math.max(maxWidth, legendElement.node().getBoundingClientRect().width)
       })
     // update
@@ -100,21 +101,21 @@ export class Legend implements Visitor {
 
   updateLabels() {
     this.labels = []
-    for( const chart of this.axis.charts) {
-      for ( const legendItem of chart.legend ) {
-        this.labels.push( {selector: chart.id, label: legendItem, legendId: chart.legendId(legendItem)})
+    for (const chart of this.axis.charts) {
+      for (const legendItem of chart.legend) {
+        this.labels.push({ selector: chart.id, label: legendItem, legendId: chart.legendId(legendItem) })
       }
     }
   }
 
   updateLabelPositions(selection, maxWidth) {
-    if ( this.labels.length > 0) {
-      const {columns, rows} = this.optimalColumnsRows(this.axis.width, maxWidth, this.labels.length)
+    if (this.labels.length > 0) {
+      const { columns, rows } = this.optimalColumnsRows(this.axis.width, maxWidth, this.labels.length)
       const dx = this.axis.width / columns
       const y = 15
       const dy = 25
-      this.svg.attr('height', rows* dy)
-      selection.attr('transform', function(d, i) {
+      this.svg.attr('height', rows * dy)
+      selection.attr('transform', function (d, i) {
         const column = Math.floor(i / rows)
         const row = i % rows
         return 'translate(' + column * dx + ',' + (y + row * dy) + ')'
@@ -123,7 +124,7 @@ export class Legend implements Visitor {
   }
 
   optimalColumnsRows(width: number, elementWidth: number, elementCount: number) {
-    let columns = Math.floor( width / elementWidth)
+    let columns = Math.floor(width / elementWidth)
     let rows = 1
     if (columns >= elementCount) {
       columns = elementCount
@@ -132,6 +133,6 @@ export class Legend implements Visitor {
       rows = Math.ceil(elementCount / columns)
       columns = Math.ceil(elementCount / rows)
     }
-    return {columns, rows}
+    return { columns, rows }
   }
 }

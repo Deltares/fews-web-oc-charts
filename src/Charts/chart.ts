@@ -1,9 +1,9 @@
 import * as d3 from 'd3'
 import { SvgPropertiesHyphen } from 'csstype';
-import { Axis, AxisIndex, CartesianAxis, PolarAxis } from '../Axis'
-import defaultsDeep from 'lodash/defaultsDeep'
-import merge from 'lodash/merge'
-import { TooltipAnchor, TooltipPosition } from '../Tooltip';
+import { Axis, AxisIndex } from '../Axis/axis.js'
+import { CartesianAxis, PolarAxis } from '../index.js';
+import { defaultsDeep, merge } from 'lodash-es'
+import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js';
 
 export const AUTO_SCALE = 1
 
@@ -46,15 +46,15 @@ enum CurveType {
   Basis = 'basis',
   Step = 'step',
   StepAfter = 'stepAfter',
-  StepBefore  = 'stepBefore'
+  StepBefore = 'stepBefore'
 }
 
 export interface ChartOptions {
-  x? : ChartOptionItem;
-  x1? : ChartOptionItem;
-  y? : ChartOptionItem;
-  radial? : ChartOptionItem;
-  angular? : ChartOptionItem;
+  x?: ChartOptionItem;
+  x1?: ChartOptionItem;
+  y?: ChartOptionItem;
+  radial?: ChartOptionItem;
+  angular?: ChartOptionItem;
   color?: ColorOptionItem;
   transitionTime?: number;
   colorScale?: any;
@@ -111,7 +111,7 @@ export abstract class Chart {
       this._extent = []
       for (const axisKey in this.axisIndex) {
         const path = this.axisIndex[axisKey].key
-        this._extent[path] = d3.extent(this._data, function(d) {
+        this._extent[path] = d3.extent(this._data, function (d) {
           return d[path]
         })
       }
@@ -140,29 +140,29 @@ export abstract class Chart {
       this.style = style
     }
     this.axisIndex = axisIndex
-    if ( axisIndex.x && axisIndex.x.axisIndex === undefined) {
+    if (axisIndex.x && axisIndex.x.axisIndex === undefined) {
       this.axisIndex.x.axisIndex = 0
     }
-    if ( axisIndex.y && axisIndex.y.axisIndex === undefined) {
+    if (axisIndex.y && axisIndex.y.axisIndex === undefined) {
       this.axisIndex.y.axisIndex = 0
     }
-    if ( axisIndex.radial && axisIndex.radial.axisIndex === undefined) {
+    if (axisIndex.radial && axisIndex.radial.axisIndex === undefined) {
       this.axisIndex.radial.axisIndex = 0
     }
-    if ( axisIndex.angular && axisIndex.angular.axisIndex === undefined) {
+    if (axisIndex.angular && axisIndex.angular.axisIndex === undefined) {
       this.axisIndex.angular.axisIndex = 0
     }
     axis.charts.push(this)
     return this
   }
 
-  setOptions (options: ChartOptions) {
+  setOptions(options: ChartOptions) {
     merge(this.options,
       options
     )
   }
 
-  setAxisIndex (axisIndex: AxisIndex) {
+  setAxisIndex(axisIndex: AxisIndex) {
     merge(this.axisIndex,
       axisIndex
     )
@@ -223,13 +223,13 @@ export abstract class Chart {
   abstract plotterCartesian(axis: CartesianAxis, dataKeys: any)
   abstract plotterPolar(axis: PolarAxis, dataKeys: any)
 
-  legendId (item: string) {
+  legendId(item: string) {
     return this.legend.findIndex((x) => x === item)
   }
 
   abstract drawLegendSymbol(legendId?: string, asSvgElement?: boolean)
 
-  protected selectGroup(axis: CartesianAxis|PolarAxis, cssClass: string) {
+  protected selectGroup(axis: CartesianAxis | PolarAxis, cssClass: string) {
     if (this.group == null) {
       this.group = axis.chartGroup.append('g')
       if (axis instanceof PolarAxis) {
@@ -238,7 +238,7 @@ export abstract class Chart {
         this.group.attr('transform', 'rotate(' + intercept + ')scale(' + direction + ' ,1)')
       }
       this.group.attr('data-chart-id', this.id)
-      if ( this.cssSelector ) {
+      if (this.cssSelector) {
         if (this.cssSelector.lastIndexOf('#', 0) === 0) this.group.attr('id', this.cssSelector.substring(1))
         if (this.cssSelector.lastIndexOf('.', 0) === 0) {
           this.group.attr('class', cssClass + ' ' + this.cssSelector.substring(1))
@@ -253,15 +253,15 @@ export abstract class Chart {
     return this.group
   }
 
-  get dataKeys () {
-    const dataKeys: {x?: string, x1?: string, y?: string, radial?: string, angular?: string, color?: string, value?: string} = {}
+  get dataKeys() {
+    const dataKeys: { x?: string, x1?: string, y?: string, radial?: string, angular?: string, color?: string, value?: string } = {}
     for (const key in this.axisIndex) {
       dataKeys[key] = this.axisIndex[key].key ? this.axisIndex[key].key : key
     }
     return dataKeys
   }
 
-  get curveGenerator (): d3.CurveFactory {
+  get curveGenerator(): d3.CurveFactory {
     if (this.options.curve === undefined) return
     let curve
     switch (this.options.curve) {
@@ -287,7 +287,7 @@ export abstract class Chart {
 
     const xKey = this.dataKeys.x
 
-    const bisectData = d3.bisector(function(d) {
+    const bisectData = d3.bisector(function (d) {
       return d[xKey]
     })
     let i0 = bisectData.right(this.data, domain[0])
@@ -300,12 +300,12 @@ export abstract class Chart {
   protected applyStyle(source: Element, element: d3.Selection<SVGElement, unknown, SVGElement, unknown>, props: string[]) {
     if (this.style === undefined) {
       const s = window.getComputedStyle(source)
-      for ( const key of props) {
+      for (const key of props) {
         element.style(key, s.getPropertyValue(key))
       }
     } else {
-      for ( const key of props) {
-        if ( this.style[key] ) element.style(key, this.style[key])
+      for (const key of props) {
+        if (this.style[key]) element.style(key, this.style[key])
       }
     }
   }

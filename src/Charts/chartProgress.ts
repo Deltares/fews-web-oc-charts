@@ -1,7 +1,7 @@
 import * as d3 from 'd3'
-import { CartesianAxis, PolarAxis } from '../Axis'
-import { TooltipAnchor, TooltipPosition } from '../Tooltip'
-import { Chart } from './chart'
+import { CartesianAxis, PolarAxis } from '../index.js';
+import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js'
+import { Chart } from './chart.js'
 
 function mean(x: number[] | number) {
   if (x instanceof Array) {
@@ -29,8 +29,8 @@ export class ChartProgress extends Chart {
   }
 
   dataExtentFor(key, path) {
-    if (key  === 'radial') {
-      return this._data.map((d) => {return d[path]})
+    if (key === 'radial') {
+      return this._data.map((d) => { return d[path] })
     } else {
       const min = d3.min(this._data, function (d: any) {
         if (d[path] === null) return undefined
@@ -67,7 +67,7 @@ export class ChartProgress extends Chart {
     let html = ''
     if (this.options.angular.includeInTooltip) {
       if (d[tKey][0] != d[tKey][1]) {
-        html += tKey+ ': ' + d[tKey][0].toFixed(0) + '-' + d[tKey][1].toFixed(0) + '<br/>'
+        html += tKey + ': ' + d[tKey][0].toFixed(0) + '-' + d[tKey][1].toFixed(0) + '<br/>'
       }
     }
     if (this.options.radial.includeInTooltip) {
@@ -78,7 +78,7 @@ export class ChartProgress extends Chart {
     return html
   }
 
-  plotterCartesian (axis: CartesianAxis, dataKeys: any) {
+  plotterCartesian(axis: CartesianAxis, dataKeys: any) {
     throw new Error("Not implemented");
   }
 
@@ -100,19 +100,19 @@ export class ChartProgress extends Chart {
 
     const arcGenerator = d3
       .arc()
-      .innerRadius(function(d: any, i) {
+      .innerRadius(function (d: any, i) {
         return scale(d[rKey])
       })
-      .outerRadius(function(d: any, i) {
+      .outerRadius(function (d: any, i) {
         return scale(d[rKey]) + scale.bandwidth()
       })
-      .startAngle(function(d: any, i) {
+      .startAngle(function (d: any, i) {
         return axis.angularScale(d[tKey][0])
       })
-      .endAngle(function(d: any, i) {
+      .endAngle(function (d: any, i) {
         return axis.angularScale(d[tKey][1])
       })
-      .cornerRadius(scale.bandwidth()/8)
+      .cornerRadius(scale.bandwidth() / 8)
 
 
     this.group = this.selectGroup(axis, 'chart-range')
@@ -170,7 +170,7 @@ export class ChartProgress extends Chart {
         })
     }
 
-    this.previousData = {...this.data}
+    this.previousData = { ...this.data }
 
     function arcTween(transition: any, p: any) {
       transition.attrTween('d', (d: any, i: number, a: any) => {
@@ -187,7 +187,7 @@ export class ChartProgress extends Chart {
 
         const tInterpolate = d3.interpolateArray(old[tKey], d[tKey])
         const rInterpolate = d3.interpolateArray(old[rKey], d[rKey])
-        return function(x: any) {
+        return function (x: any) {
           d[tKey] = tInterpolate(x)
           d[rKey] = rInterpolate(x)
           return arcGenerator(d)
@@ -202,8 +202,8 @@ export class ChartProgress extends Chart {
       .select('path')
       .node() as Element
     const svg = d3.create('svg')
-      .attr('width',20)
-      .attr('height',20)
+      .attr('width', 20)
+      .attr('height', 20)
     const group = svg
       .append('g')
       .attr('transform', 'translate(10 0)')

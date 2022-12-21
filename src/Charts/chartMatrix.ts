@@ -1,7 +1,7 @@
 import * as d3 from 'd3'
-import { CartesianAxis, PolarAxis } from '../Axis'
-import { Chart, AUTO_SCALE } from './chart'
-import { TooltipAnchor, TooltipPosition } from '../Tooltip'
+import { CartesianAxis, PolarAxis } from '../index.js';
+import { Chart, AUTO_SCALE } from './chart.js'
+import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js'
 
 export class ChartMatrix extends Chart {
   static readonly GROUP_CLASS: 'chart-matrix'
@@ -10,7 +10,7 @@ export class ChartMatrix extends Chart {
     const xKey = this.dataKeys.x
     const yKey = this.dataKeys.y
     const colorKey = this.dataKeys.color
-    const valueKey = this.dataKeys.value ?  this.dataKeys.value : this.dataKeys.color
+    const valueKey = this.dataKeys.value ? this.dataKeys.value : this.dataKeys.color
     const data = this.data
     const xScale = axis.xScale[axisIndex.x.axisIndex]
     const yScale = axis.yScale[axisIndex.y.axisIndex]
@@ -23,7 +23,7 @@ export class ChartMatrix extends Chart {
     const colorScale = d3.scaleLinear().domain([0, 1])
     if (this.options.colorScale === AUTO_SCALE) {
       colorScale.domain(
-        d3.extent(this.data, function(d: any): number {
+        d3.extent(this.data, function (d: any): number {
           return d[colorKey]
         })
       )
@@ -39,14 +39,14 @@ export class ChartMatrix extends Chart {
       .selectAll("rect")
       .data(data)
       .join("rect")
-        .attr('display', d => { return d[valueKey] === null ? 'none' : undefined })
-        .attr("x", d => x0(d[xKey]))
-        .attr("y", d => y0(d[yKey]))
-        .attr("width", x0.bandwidth())
-        .attr("height", y0.bandwidth())
-        .attr("stroke-width", 0)
-        .attr("shape-rendering", "auto")
-        .attr("fill", d => d[colorKey] !== null ? colorMap(d[colorKey]) : 'none' )
+      .attr('display', d => { return d[valueKey] === null ? 'none' : undefined })
+      .attr("x", d => x0(d[xKey]))
+      .attr("y", d => y0(d[yKey]))
+      .attr("width", x0.bandwidth())
+      .attr("height", y0.bandwidth())
+      .attr("stroke-width", 0)
+      .attr("shape-rendering", "auto")
+      .attr("fill", d => d[colorKey] !== null ? colorMap(d[colorKey]) : 'none')
     if (this.options.tooltip !== undefined) {
       elements
         .on('pointerover', (_e: any, d: any) => {
@@ -57,14 +57,14 @@ export class ChartMatrix extends Chart {
           axis.tooltip.update(
             this.toolTipFormatterCartesian(d),
             this.options.tooltip.position !== undefined ? this.options.tooltip.position : TooltipPosition.Top,
-            axis.margin.left + x0(d[xKey]) + x0.bandwidth() / 2 ,
+            axis.margin.left + x0(d[xKey]) + x0.bandwidth() / 2,
             axis.margin.top + y0(d[yKey])
           )
         })
         .on('pointerout', () => {
           axis.tooltip.hide()
         })
-      }
+    }
 
     if (this.options.text !== undefined) {
       const textSelection = this.group
@@ -73,8 +73,8 @@ export class ChartMatrix extends Chart {
         .join("text")
 
       textSelection
-        .attr("x", d => x0(d[xKey]) + x0.bandwidth()/2)
-        .attr("y", d => y0(d[yKey]) + y0.bandwidth()/2)
+        .attr("x", d => x0(d[xKey]) + x0.bandwidth() / 2)
+        .attr("y", d => y0(d[yKey]) + y0.bandwidth() / 2)
         .attr("dx", this.options.text.dx)
         .attr("dy", this.options.text.dy)
         .text(d => {
@@ -83,7 +83,7 @@ export class ChartMatrix extends Chart {
 
       for (const [key, value] of Object.entries(this.options.text.attributes)) {
         textSelection
-        .attr(key, value)
+          .attr(key, value)
       }
     }
   }
@@ -99,8 +99,8 @@ export class ChartMatrix extends Chart {
       .select('rect')
       .node() as Element
     const svg = d3.create('svg')
-      .attr('width',20)
-      .attr('height',20)
+      .attr('width', 20)
+      .attr('height', 20)
     const group = svg
       .append('g')
       .attr('transform', 'translate(0, 10)')
@@ -131,7 +131,7 @@ export class ChartMatrix extends Chart {
   }
 
   getColorMap(scale?: any): (x: number | Date) => string {
-    if ( this.options.color?.map ) {
+    if (this.options.color?.map) {
       return this.options.color?.map
     } else {
       return (value: any) => {
@@ -141,10 +141,10 @@ export class ChartMatrix extends Chart {
   }
 
   setPadding(scale: any, options) {
-    if ( options?.paddingOuter ) {
+    if (options?.paddingOuter) {
       scale.paddingOuter(options.paddingOuter)
     }
-    if ( options?.paddingInner ) {
+    if (options?.paddingInner) {
       scale.paddingInner(options.paddingInner)
     }
   }
