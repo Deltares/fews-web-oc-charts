@@ -15,8 +15,8 @@ export interface CartesianAxisOptions extends AxisOptions {
 }
 
 export interface CartesianAxesOptions extends AxesOptions {
-  x?: CartesianAxisOptions[];
-  y?: CartesianAxisOptions[];
+  x: CartesianAxisOptions[];
+  y: CartesianAxisOptions[];
 }
 
 const defaultAxesOptions = {
@@ -43,12 +43,12 @@ export class CartesianAxis extends Axis {
     container: HTMLElement,
     width: number | null,
     height: number | null,
-    options?: CartesianAxesOptions
+    options: CartesianAxesOptions
   ) {
-    super(container, width, height, options, CartesianAxis.defaultOptions)
+    super(container, width, height, options, defaultAxesOptions)
     // Set defaults for each x- and y-axis.
-    this.setDefaultAxisOptions(this.options.x, CartesianAxis.defaultOptions.x[0])
-    this.setDefaultAxisOptions(this.options.y, CartesianAxis.defaultOptions.y[0])
+    this.setDefaultAxisOptions(this.options.x, defaultAxesOptions.x[0])
+    this.setDefaultAxisOptions(this.options.y, defaultAxesOptions.y[0])
     this.setDefaultTimeOptions(this.options.x)
     this.setDefaultTimeOptions(this.options.y)
 
@@ -76,7 +76,7 @@ export class CartesianAxis extends Axis {
     }
   }
 
-  setOptions(options?: CartesianAxesOptions): void {
+  setOptions(options: CartesianAxesOptions): void {
     merge(this.options,
       options
     )
@@ -264,16 +264,15 @@ export class CartesianAxis extends Axis {
   updateXAxis(options: CartesianAxisOptions[]) {
     for (const key in this.xScale) {
       const scale = this.xScale[key]
-      let axis = undefined
-      const orientation = options[key].orientation || options[key].position
-      switch (orientation) {
-        case AxisOrientation.Top:
-          axis = d3.axisTop(scale).ticks(5)
-          break
-        case AxisOrientation.Bottom:
-        default:
-          axis = d3.axisBottom(scale).ticks(5)
+      let orientation: AxisOrientation = AxisOrientation.Bottom
+      const axisOrientation = options[key].orientation
+      const axisPosition = options[key].position
+      if (axisOrientation !== undefined) {
+        orientation = axisOrientation
+      } else if (axisPosition !== AxisPosition.AtZero && axisPosition !== undefined) {
+        orientation = axisPosition
       }
+      const axis = this.axis(orientation, scale)
       const grid = d3.axisBottom(scale)
       grid.ticks(5).tickSize(this.height)
       if (options[key].type === AxisType.time) {
@@ -336,19 +335,32 @@ export class CartesianAxis extends Axis {
     }
   }
 
+  axis(orientation: AxisOrientation, scale) {
+    switch (orientation) {
+      case 'bottom':
+        return d3.axisBottom(scale).ticks(5)
+        case 'top':
+          return d3.axisTop(scale).ticks(5)
+      case 'right':
+        return d3.axisRight(scale).ticks(5)
+      case 'left':
+      default:
+        return d3.axisLeft(scale).ticks(5)
+    }
+  }
+
   updateYAxis(options: CartesianAxisOptions[]): void {
     for (const key in this.yScale) {
       const scale = this.yScale[key]
-      let axis = undefined
-      const orientation = options[key].orientation || options[key].position
-      switch (orientation) {
-        case AxisOrientation.Right:
-          axis = d3.axisRight(scale).ticks(5)
-          break
-        case AxisOrientation.Left:
-        default:
-          axis = d3.axisLeft(scale).ticks(5)
+      let orientation: AxisOrientation = 'left'
+      const axisOrientation = options[key].orientation
+      const axisPosition = options[key].position
+      if (axisOrientation !== undefined) {
+        orientation = axisOrientation
+      } else if (axisPosition !== AxisPosition.AtZero && axisPosition !== undefined) {
+        orientation = axisPosition
       }
+      const axis = this.axis(orientation, scale)
       const grid = d3.axisRight(scale)
       grid.ticks(5).tickSize(this.width)
       if (options[key].type === AxisType.time) {
