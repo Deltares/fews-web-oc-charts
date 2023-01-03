@@ -1,8 +1,8 @@
 import * as d3 from 'd3'
-import defaultsDeep from 'lodash/defaultsDeep'
-import { CartesianAxis, PolarAxis } from '../Axis'
-import { TooltipAnchor, TooltipPosition } from '../Tooltip'
-import { Chart, SymbolOptions } from './chart'
+import { defaultsDeep } from 'lodash-es'
+import { CartesianAxis, PolarAxis } from '../index.js';
+import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js'
+import { Chart, SymbolOptions } from './chart.js'
 
 function mean(x: number[] | number) {
   if (x instanceof Array) {
@@ -81,7 +81,7 @@ export class ChartMarker extends Chart {
     function arcTranslation(p) {
       // We only use 'd', but list d,i,a as params just to show can have them as params.
       // Code only really uses d and t.
-      return function(d, i, a) {
+      return function (d, i, a) {
         const old = p[i]
         if (mean(old[tKey]) - mean(d[tKey]) > 180) {
           old[tKey] = old[tKey] - 360
@@ -90,7 +90,7 @@ export class ChartMarker extends Chart {
         }
         const tInterpolate = d3.interpolate(old[tKey], d[tKey])
         const rInterpolate = d3.interpolate(old[rKey], d[rKey])
-        return function(x) {
+        return function (x) {
           const theta = axis.angularScale(tInterpolate(x))
           const radius = axis.radialScale(rInterpolate(x))
           return 'translate(' + -radius * Math.sin(-theta) + ',' + -radius * Math.cos(-theta) + ')'
@@ -132,7 +132,7 @@ export class ChartMarker extends Chart {
         .on('pointerout', () => {
           axis.tooltip.hide()
         })
-      }
+    }
 
     const transition = d3
       .transition()
@@ -151,8 +151,8 @@ export class ChartMarker extends Chart {
       .node() as Element
     const svg = d3.create('svg')
       .append('svg')
-      .attr('width',20)
-      .attr('height',20)
+      .attr('width', 20)
+      .attr('height', 20)
     const outerGroup = svg
       .append('g')
       .attr('transform', 'translate(0, 10)')

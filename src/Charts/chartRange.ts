@@ -1,7 +1,8 @@
 import * as d3 from 'd3'
-import { CartesianAxis, PolarAxis, AxisIndex } from '../Axis'
-import { Chart, AUTO_SCALE } from './chart'
-import { TooltipAnchor, TooltipPosition } from '../Tooltip'
+import { AxisIndex } from '../Axis/axis.js'
+import { CartesianAxis, PolarAxis } from '../index.js';
+import { Chart, AUTO_SCALE } from './chart.js'
+import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js'
 
 function mean(x: number[] | number) {
   if (x instanceof Array) {
@@ -65,7 +66,7 @@ export class ChartRange extends Chart {
     let html = ''
     if (this.options.angular.includeInTooltip) {
       if (d[tKey][0] != d[tKey][1]) {
-        html += tKey+ ': ' + d[tKey][0].toFixed(0) + '-' + d[tKey][1].toFixed(0) + '<br/>'
+        html += tKey + ': ' + d[tKey][0].toFixed(0) + '-' + d[tKey][1].toFixed(0) + '<br/>'
       }
     }
     if (this.options.radial.includeInTooltip) {
@@ -124,21 +125,21 @@ export class ChartRange extends Chart {
 
     if (this.options.tooltip !== undefined) {
       update
-      .on('pointerover', (_e: any, d) => {
-        if (this.options.tooltip.anchor !== undefined && this.options.tooltip.anchor !== TooltipAnchor.Center) {
-          console.error('Tooltip not implemented for anchor ', this.options.tooltip.anchor, ', using ', TooltipAnchor.Center, ' instead.')
-        }
-        axis.tooltip.show()
-        axis.tooltip.update(
-          this.toolTipFormatterCartesian(d),
-          this.options.tooltip.position !== undefined ? this.options.tooltip.position : TooltipPosition.Top,
-          axis.margin.left + (xScale(d[xKey][1]) + xScale(d[xKey][0]))/2,
-          axis.margin.top + (yScale(d[yKey][1]) + yScale(d[yKey][0]))/2,
-        )
-      })
-      .on('pointerout', () => {
-        axis.tooltip.hide()
-      })
+        .on('pointerover', (_e: any, d) => {
+          if (this.options.tooltip.anchor !== undefined && this.options.tooltip.anchor !== TooltipAnchor.Center) {
+            console.error('Tooltip not implemented for anchor ', this.options.tooltip.anchor, ', using ', TooltipAnchor.Center, ' instead.')
+          }
+          axis.tooltip.show()
+          axis.tooltip.update(
+            this.toolTipFormatterCartesian(d),
+            this.options.tooltip.position !== undefined ? this.options.tooltip.position : TooltipPosition.Top,
+            axis.margin.left + (xScale(d[xKey][1]) + xScale(d[xKey][0])) / 2,
+            axis.margin.top + (yScale(d[yKey][1]) + yScale(d[yKey][0])) / 2,
+          )
+        })
+        .on('pointerout', () => {
+          axis.tooltip.hide()
+        })
     }
 
     if (colorKey) {
@@ -215,8 +216,8 @@ export class ChartRange extends Chart {
       const direction = -axis.direction
       const intercept = 90 - 180 * axis.intercept / Math.PI
       const range = [180 * axis.angularScale.range()[0] / Math.PI, 180 * axis.angularScale.range()[1] / Math.PI]
-      const scale = (axis.angularScale.domain()[1] - axis.angularScale.domain()[0])/(range[1]-range[0])
-      return (angle + direction*intercept*scale + (range[0] - direction*range[0])*scale)*direction
+      const scale = (axis.angularScale.domain()[1] - axis.angularScale.domain()[0]) / (range[1] - range[0])
+      return (angle + direction * intercept * scale + (range[0] - direction * range[0]) * scale) * direction
     }
 
     const enter = elements
@@ -233,9 +234,9 @@ export class ChartRange extends Chart {
           if (this.options.tooltip.anchor === TooltipAnchor.Center) {
             const start = angularPosition(d[tKey][0])
             const end = angularPosition(d[tKey][1])
-            const centroid = d3.arc().centroid({innerRadius: axis.radialScale(d[rKey][0]), outerRadius: axis.radialScale(d[rKey][1]), startAngle: axis.angularScale(start), endAngle: axis.angularScale(end)})
-            x = axis.margin.left + axis.width/2 + centroid[0]
-            y = axis.margin.top + axis.height/2 + centroid[1]
+            const centroid = d3.arc().centroid({ innerRadius: axis.radialScale(d[rKey][0]), outerRadius: axis.radialScale(d[rKey][1]), startAngle: axis.angularScale(start), endAngle: axis.angularScale(end) })
+            x = axis.margin.left + axis.width / 2 + centroid[0]
+            y = axis.margin.top + axis.height / 2 + centroid[1]
           } else {
             if (this.options.tooltip.anchor !== undefined && this.options.tooltip.anchor !== TooltipAnchor.Pointer) {
               console.error('Tooltip not implemented for anchor ', this.options.tooltip.anchor, ', using ', TooltipAnchor.Pointer, ' instead.')
@@ -251,9 +252,9 @@ export class ChartRange extends Chart {
             y
           )
         })
-      .on('pointerout', () => {
-        axis.tooltip.hide()
-      })
+        .on('pointerout', () => {
+          axis.tooltip.hide()
+        })
     }
 
     if (colorKey) {
@@ -270,7 +271,7 @@ export class ChartRange extends Chart {
       })
     }
 
-    this.previousData = {...this.data}
+    this.previousData = { ...this.data }
     function arcTween(transition: any, p: any) {
       transition.attrTween('d', (d: any, i: number, a: any) => {
         const old = p[i]
@@ -301,11 +302,11 @@ export class ChartRange extends Chart {
       .select('path')
       .node() as Element
     const svg = d3.create('svg')
-      .attr('width',20)
-      .attr('height',20)
+      .attr('width', 20)
+      .attr('height', 20)
     const group = svg
       .append('g')
-      .attr('transform','translate(0, 10)')
+      .attr('transform', 'translate(0, 10)')
     const element = group.append('rect')
       .attr('x', 0)
       .attr('y', -5)

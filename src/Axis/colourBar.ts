@@ -1,7 +1,7 @@
 import { Property } from 'csstype'
 import * as d3 from 'd3'
-import defaultsDeep from 'lodash/defaultsDeep'
-import { AxisPosition } from '../Types/axisPosition'
+import { defaultsDeep } from 'lodash-es'
+import { AxisPosition } from '../Types/axisPosition.js'
 
 /**
  * A single value in a colour map
@@ -17,7 +17,7 @@ export type ColourMap = ColourMapValue[]
 /**
  * A single value in a colour map
  */
- export interface ColourBarOptions {
+export interface ColourBarOptions {
   /** The lower value of this segment */
   useGradients: boolean;
   /** Colour associated with this segment */
@@ -106,15 +106,15 @@ export class ColourBar {
     return this.maximum - this.minimum
   }
 
-  get sizeAlongAxis() : number {
+  get sizeAlongAxis(): number {
     return this.isHorizontal ? this.width : this.height
   }
 
-  get sizeAcrossAxis() : number {
+  get sizeAcrossAxis(): number {
     return this.isHorizontal ? this.height : this.width
   }
 
-  get isHorizontal () {
+  get isHorizontal() {
     return this.options.position === AxisPosition.Bottom || this.options.position === AxisPosition.Top
   }
 
@@ -152,7 +152,7 @@ export class ColourBar {
     const gradientIdPrefix = generateRandomId(8)
     for (let i = 0; i < numColours - 1; i++) {
       const idCur = `${gradientIdPrefix}_${i}`
-      this.addGradient(defs, idCur, this.colourMap[i].color, this.colourMap[i+1].color)
+      this.addGradient(defs, idCur, this.colourMap[i].color, this.colourMap[i + 1].color)
       ids.push(idCur)
     }
     return ids
@@ -161,18 +161,18 @@ export class ColourBar {
   private createScale() {
     const tickValues = this.colourMap.map((val: ColourMapValue) => val.lowerValue)
     const scale = d3.scaleLinear()
-    if ( this.options.type === 'nonlinear' ) {
-      let range = tickValues.map( (_d, i) => {
-        return i * this.sizeAlongAxis / ( tickValues.length - 1 )
+    if (this.options.type === 'nonlinear') {
+      let range = tickValues.map((_d, i) => {
+        return i * this.sizeAlongAxis / (tickValues.length - 1)
       })
       if (!this.isHorizontal) range = range.reverse()
       scale
-      .domain(tickValues)
-      .range(range)
+        .domain(tickValues)
+        .range(range)
     } else {
       scale
-      .domain([this.minimum, this.maximum])
-      .range(this.isHorizontal ? [0, this.sizeAlongAxis] : [this.sizeAlongAxis, 0])
+        .domain([this.minimum, this.maximum])
+        .range(this.isHorizontal ? [0, this.sizeAlongAxis] : [this.sizeAlongAxis, 0])
     }
     this.scale = scale
   }
@@ -186,14 +186,14 @@ export class ColourBar {
     // Bounds of the colour map should be monotonically increasing.
     const startCoordinate =
       this.isHorizontal ? (lowerValue: number, _upperValue: number) => this.scale(lowerValue)
-                        : (_lowerValue: number, upperValue: number) => this.scale(upperValue)
+        : (_lowerValue: number, upperValue: number) => this.scale(upperValue)
     const barSize = (lowerValue: number, upperValue: number) => Math.abs(this.scale(upperValue) - this.scale(lowerValue))
 
     // Add rectangles for each segment of the colour bar.
     const barGroup = this.group.append('g')
     for (let i = 0; i < this.colourMap.length - 1; i++) {
       const lowerValue = this.colourMap[i].lowerValue
-      const upperValue = this.colourMap[i+1].lowerValue
+      const upperValue = this.colourMap[i + 1].lowerValue
 
       const posCur = startCoordinate(lowerValue, upperValue)
       const sizeCur = barSize(lowerValue, upperValue)
@@ -220,15 +220,15 @@ export class ColourBar {
     const scale = this.scale
     const axis = this.initAxis(scale, this.options)
 
-    if ( this.options.tickValues ) {
+    if (this.options.tickValues) {
       axis.tickValues(this.options.tickValues)
     }
-    else if ( this.options.type === 'nonlinear'  ) {
+    else if (this.options.type === 'nonlinear') {
       const count = this.options.ticks ?? 5
       const stride = Math.round(tickValues.length / count)
-      axis.tickValues(tickValues.filter((v, i) => { return i % stride === 0}) )
+      axis.tickValues(tickValues.filter((v, i) => { return i % stride === 0 }))
       axis.tickFormat((d) => d.toString())
-    } else if ( this.options.ticks ) {
+    } else if (this.options.ticks) {
       axis.ticks(this.options.ticks)
     } else {
       axis.tickValues(tickValues)
@@ -243,7 +243,7 @@ export class ColourBar {
     axisGroup.select('path').remove()
 
     // Add grid lines across the colour bar.
-    const gridTranslation = `translate(${this.isHorizontal ? 0 : this.width}, ${this.isHorizontal ? this.height : 0 })`
+    const gridTranslation = `translate(${this.isHorizontal ? 0 : this.width}, ${this.isHorizontal ? this.height : 0})`
     const gridGroup = this.group.append('g')
       .attr('class', 'grid colourbar')
       .attr('transform', gridTranslation)

@@ -1,10 +1,14 @@
-const path = require('path')
-const CopyPlugin = require('copy-webpack-plugin');
-const TerserPlugin = require('terser-webpack-plugin');
+import * as path from "path"
+import CopyPlugin from "copy-webpack-plugin"
+import TerserPlugin from "terser-webpack-plugin"
+import { fileURLToPath } from "url"
 
-module.exports = {
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+
+const webpackConfig = {
   mode: 'development',
-  entry: './src/wb-charts.ts',
+  entry: './lib/esm/index.js',
   output: {
     path: path.resolve(__dirname, 'dist'),
     library: 'wbCharts',
@@ -30,16 +34,8 @@ module.exports = {
       ],
     }),
   ],
-  module: {
-    rules: [
-      {
-        // Include ts, tsx, and js files.
-        test: /\.(tsx?)|(js)$/,
-        exclude: /node_modules/,
-        loader: 'ts-loader',
-      },
-    ],
-  },
   devtool: 'source-map',
   externals: ['d3']
 }
+
+export default webpackConfig

@@ -1,7 +1,8 @@
 import * as d3 from 'd3'
-import { AxisIndex, CartesianAxis, PolarAxis } from '../Axis'
-import { TooltipAnchor, TooltipPosition } from '../Tooltip'
-import { Chart, AUTO_SCALE } from './chart'
+import { AxisIndex } from '../Axis/axis.js'
+import { CartesianAxis, PolarAxis } from '../index.js';
+import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js'
+import { Chart, AUTO_SCALE } from './chart.js'
 
 export class ChartBar extends Chart {
   static readonly GROUP_CLASS: 'chart-bar'
@@ -15,7 +16,7 @@ export class ChartBar extends Chart {
     const xScale = axis.xScale[axisIndex.x.axisIndex]
     const yScale = axis.yScale[axisIndex.y.axisIndex]
 
-    const filterKeys: string[] = Array.from(new Set(data.map((item) => {return item[x1Key]}) ) )
+    const filterKeys: string[] = Array.from(new Set(data.map((item) => { return item[x1Key] })))
     this.legend = filterKeys
 
     const x0 = xScale.copy()
@@ -31,7 +32,7 @@ export class ChartBar extends Chart {
     const colorScale = d3.scaleLinear().domain([0, 1])
     if (this.options.colorScale === AUTO_SCALE) {
       colorScale.domain(
-        d3.extent(this.data, function(d: any): number {
+        d3.extent(this.data, function (d: any): number {
           return d[colorKey]
         })
       )
@@ -44,59 +45,59 @@ export class ChartBar extends Chart {
       .selectAll("rect")
       .data(data)
       .join("rect")
-        .attr("data-legend-id", (d) => this.legendId( d[x1Key]))
-        .attr("x", (d) => {return x0(d[xKey]) + x1(d[x1Key])})
-        .attr('y', (d: any) => {
-          return d[yKey] === null ? yScale(0) : Math.min(yScale(d[yKey]), yScale(0))
-        })
-        .attr("width", x1.bandwidth())
-        .attr('height', function(d: any) {
-          return d[yKey] === null ? 0 : Math.abs(yScale(0) - yScale(d[yKey]))
-        })
-        .attr("fill", d => d[colorKey] !== null ? colorMap(d[colorKey]) : 'none' )
+      .attr("data-legend-id", (d) => this.legendId(d[x1Key]))
+      .attr("x", (d) => { return x0(d[xKey]) + x1(d[x1Key]) })
+      .attr('y', (d: any) => {
+        return d[yKey] === null ? yScale(0) : Math.min(yScale(d[yKey]), yScale(0))
+      })
+      .attr("width", x1.bandwidth())
+      .attr('height', function (d: any) {
+        return d[yKey] === null ? 0 : Math.abs(yScale(0) - yScale(d[yKey]))
+      })
+      .attr("fill", d => d[colorKey] !== null ? colorMap(d[colorKey]) : 'none')
     if (this.options.tooltip !== undefined) {
       bar
-      .on('pointerover', (_e: any, d) => {
-        axis.tooltip.show()
-        if (this.options.tooltip.anchor !== undefined && this.options.tooltip.anchor !== TooltipAnchor.Bottom) {
-          console.error('Tooltip not implemented for anchor ', this.options.tooltip.anchor, ', using ', TooltipAnchor.Bottom, ' instead.')
-        }
-        axis.tooltip.update(
-          this.toolTipFormatterCartesian(d),
-          this.options.tooltip.position !== undefined ? this.options.tooltip.position : TooltipPosition.Top,
-          axis.margin.left + x0(d[xKey]) + x1(d[x1Key]) + x1.bandwidth() / 2 ,
-          axis.margin.top + Math.min(yScale(d[yKey]), yScale(0))
-        )
-      })
-      .on('pointerout', () => {
-        axis.tooltip.hide()
-      })
+        .on('pointerover', (_e: any, d) => {
+          axis.tooltip.show()
+          if (this.options.tooltip.anchor !== undefined && this.options.tooltip.anchor !== TooltipAnchor.Bottom) {
+            console.error('Tooltip not implemented for anchor ', this.options.tooltip.anchor, ', using ', TooltipAnchor.Bottom, ' instead.')
+          }
+          axis.tooltip.update(
+            this.toolTipFormatterCartesian(d),
+            this.options.tooltip.position !== undefined ? this.options.tooltip.position : TooltipPosition.Top,
+            axis.margin.left + x0(d[xKey]) + x1(d[x1Key]) + x1.bandwidth() / 2,
+            axis.margin.top + Math.min(yScale(d[yKey]), yScale(0))
+          )
+        })
+        .on('pointerout', () => {
+          axis.tooltip.hide()
+        })
     }
 
-        bar.data(data)
-        .order()
-        .attr("x", d => x0(d[xKey]) + x1(d[x1Key]));
+    bar.data(data)
+      .order()
+      .attr("x", d => x0(d[xKey]) + x1(d[x1Key]));
 
-        if (this.options.text !== undefined) {
-          const textSelection = this.group
-            .selectAll("text")
-            .data(data)
-            .join("text")
+    if (this.options.text !== undefined) {
+      const textSelection = this.group
+        .selectAll("text")
+        .data(data)
+        .join("text")
 
-          textSelection
-            .attr("x", d =>  x0(d[xKey]) + x1(d[x1Key]) + x1.bandwidth() / 2)
-            .attr("y", d => Math.min(yScale(d[yKey]), yScale(0)) )
-            .attr("dx", this.options.text.dx)
-            .attr("dy", this.options.text.dy)
-            .text(d => {
-              return this.options.text.formatter(d)
-            })
+      textSelection
+        .attr("x", d => x0(d[xKey]) + x1(d[x1Key]) + x1.bandwidth() / 2)
+        .attr("y", d => Math.min(yScale(d[yKey]), yScale(0)))
+        .attr("dx", this.options.text.dx)
+        .attr("dy", this.options.text.dy)
+        .text(d => {
+          return this.options.text.formatter(d)
+        })
 
-          for (const [key, value] of Object.entries(this.options.text.attributes)) {
-            textSelection
-            .attr(key, value)
-          }
-        }
+      for (const [key, value] of Object.entries(this.options.text.attributes)) {
+        textSelection
+          .attr(key, value)
+      }
+    }
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -110,8 +111,8 @@ export class ChartBar extends Chart {
       .select(`[data-legend-id="${legendId}"]`)
       .node() as Element
     const svg = d3.create('svg')
-      .attr('width',20)
-      .attr('height',20)
+      .attr('width', 20)
+      .attr('height', 20)
     const group = svg
       .append('g')
       .attr('transform', 'translate(0, 10)')
@@ -128,7 +129,7 @@ export class ChartBar extends Chart {
   }
 
   getColorMap(scale?: any): (x: number | Date) => string {
-    if ( this.options.color?.map ) {
+    if (this.options.color?.map) {
       return this.options.color?.map
     } else {
       return (value: any) => {
@@ -138,10 +139,10 @@ export class ChartBar extends Chart {
   }
 
   setPadding(scale: any, options) {
-    if ( options?.paddingOuter ) {
+    if (options?.paddingOuter) {
       scale.paddingOuter(options.paddingOuter)
     }
-    if ( options?.paddingInner ) {
+    if (options?.paddingInner) {
       scale.paddingInner(options.paddingInner)
     }
   }

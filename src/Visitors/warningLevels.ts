@@ -1,7 +1,8 @@
 import * as d3 from 'd3'
 import { isNull } from 'lodash';
-import { Axis, CartesianAxis } from '../Axis'
-import { Visitor } from './visitor'
+import { Axis } from '../Axis/axis.js'
+import { CartesianAxis } from '../index.js';
+import { Visitor } from './visitor.js'
 
 export interface WarningLevelOptions {
   y?: {
@@ -51,7 +52,7 @@ export class WarningLevels implements Visitor {
       .axisRight(this.scale)
       .tickValues(tickValues)
       .tickFormat((d, i) => {
-        const level = escalationLevels.find( (l) => l.val === d)
+        const level = escalationLevels.find((l) => l.val === d)
         return level.id
       })
 
@@ -82,7 +83,7 @@ export class WarningLevels implements Visitor {
     const scaleX = this.axis.xScale[0].copy()
     const domainY = scaleY.domain()
 
-    const bisect = d3.bisector((data:any) => {
+    const bisect = d3.bisector((data: any) => {
       return data.date
     }).left
 
@@ -91,7 +92,7 @@ export class WarningLevels implements Visitor {
       .map(el => {
         // set label at height of level at right side of chart
         const idx = bisect(el.events, scaleX.domain()[1])
-        return {id: el.id, val: el.events[Math.max(0,idx-1)].value}
+        return { id: el.id, val: el.events[Math.max(0, idx - 1)].value }
       })
       .filter(el => {
         return !isNull(el.val) && el.val >= domainY[0] && el.val <= domainY[1]
@@ -114,22 +115,22 @@ export class WarningLevels implements Visitor {
       .call(this.warningAxis)
 
     function generateAreaGenerator(d, i) {
-      const areaGen =  d3.area()
+      const areaGen = d3.area()
         .curve(d3.curveStepAfter)
         .defined((e: any) => !isNull(e.value))
         .x((e: any, j) => { return scaleX(e.date); })
       if (d.c === '<') {
-        if (i === 0 ) { //set lower bound to bottom of chart
+        if (i === 0) { //set lower bound to bottom of chart
           areaGen.y0((e, j) => { return scaleY(domainY[0]); })
         } else { // set lower bound to value of the threshold below this one
           areaGen.y0((e, j) => { return scaleY(escalationLevels[i - 1].events[j].value); })
         }
         // set upper bound to value of this threshold
         areaGen.y1((e: any, j) => { return scaleY(e.value); })
-      } else if (d.c === '>'){
+      } else if (d.c === '>') {
         // set lower bound to value of this threshold
         areaGen.y0((e: any, j) => { return scaleY(e.value); })
-        if ( i === escalationLevels.length - 1) {
+        if (i === escalationLevels.length - 1) {
           // set upper bound to top of chart
           areaGen.y1((e, j) => { return scaleY(domainY[1]); })
         } else {
@@ -149,8 +150,8 @@ export class WarningLevels implements Visitor {
       .enter()
       .append('path')
       .merge(areas)
-      .style('fill', (d) =>  {return d.color; })
-      .attr('d', (d,i) => { return generateAreaGenerator(d, i)(d.events); })
+      .style('fill', (d) => { return d.color; })
+      .attr('d', (d, i) => { return generateAreaGenerator(d, i)(d.events); })
 
   }
 }

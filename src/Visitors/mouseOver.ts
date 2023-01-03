@@ -1,8 +1,9 @@
 import * as d3 from 'd3'
-import { Axis, CartesianAxis } from '../Axis'
-import { Visitor } from './visitor'
-import { TooltipPosition } from '../Tooltip'
-import { dateFormatter } from '../Utils'
+import { Axis } from '../Axis/axis.js'
+import { CartesianAxis } from '../index.js';
+import { Visitor } from './visitor.js'
+import { TooltipPosition } from '../Tooltip/tooltip.js'
+import { dateFormatter } from '../Utils/date.js'
 import { isNull } from 'lodash'
 
 export class MouseOver implements Visitor {
@@ -31,7 +32,7 @@ export class MouseOver implements Visitor {
       .append('path')
       .attr('class', 'mouse-line')
       .style('opacity', '0')
-      .attr('d', function() {
+      .attr('d', function () {
         let d = 'M' + 0 + ',' + axis.height
         d += ' ' + 0 + ',' + 0
         return d
@@ -48,7 +49,7 @@ export class MouseOver implements Visitor {
 
     this.mouseGroup
       .on('pointerout', () => this.onPointerout())
-      .on('pointerover',() => this.onPointerover())
+      .on('pointerover', () => this.onPointerover())
       .on('pointermove', (event) => {
         // mouse moving over canvas
         const mouse = d3.pointer(event)
@@ -59,7 +60,7 @@ export class MouseOver implements Visitor {
   }
 
   // pointer event handlers
-  onPointerout (): void {
+  onPointerout(): void {
     // on mouse out hide line, circles and text
     this.group.select('.mouse-line').style('opacity', '0')
     this.group.selectAll('.mouse-per-line circle').style('opacity', '0')
@@ -68,7 +69,7 @@ export class MouseOver implements Visitor {
   }
 
 
-  onPointerover (): void {
+  onPointerover(): void {
     // on mouse in show line, circles and text
     this.axis.tooltip.show()
     this.group.select('.mouse-line').style('opacity', '1')
@@ -78,7 +79,7 @@ export class MouseOver implements Visitor {
       .style('fill', (d: string) => {
         const selector = `[data-chart-id="${d}"]`
         const element = this.axis.chartGroup.select(selector).select('path')
-        if (element.node() === null ) return
+        if (element.node() === null) return
         return window
           .getComputedStyle(element.node() as Element)
           .getPropertyValue('stroke')
@@ -98,7 +99,7 @@ export class MouseOver implements Visitor {
           //skip
         } else {
           const datum = element.datum();
-          [ xPos, rMin ] = this.closestPointForChart(d, datum, mouse[0], xPos, rMin)
+          [xPos, rMin] = this.closestPointForChart(d, datum, mouse[0], xPos, rMin)
         }
       }
     })
@@ -132,15 +133,15 @@ export class MouseOver implements Visitor {
       return data[xKey]
     }).right
     const idx = bisect(datum, mouseValue)
-    if ( idx -1 >= 0 && !yIsNull(datum[idx-1])[yKey]) {
-      const x0 = xScale(datum[idx-1][xKey])
+    if (idx - 1 >= 0 && !yIsNull(datum[idx - 1])[yKey]) {
+      const x0 = xScale(datum[idx - 1][xKey])
       const r0 = this.distanceSquared(x0, x)
       if (r0 < rMin) {
         rMin = r0
         xPos = x0
       }
     }
-    if ( idx < datum.length && !yIsNull(datum[idx])[yKey]) {
+    if (idx < datum.length && !yIsNull(datum[idx])[yKey]) {
       const x1 = xScale(datum[idx][xKey])
       const r1 = this.distanceSquared(x1, x)
       if (r1 < rMin) {
@@ -176,13 +177,13 @@ export class MouseOver implements Visitor {
       }
       const xValue = xScale.invert(mouse[0])
       let idx = this.findIndex(datum, xKey, yKey, xValue)
-      if ( idx === undefined) {
+      if (idx === undefined) {
         return
       }
       // find closest point
       let x0: number = xScale(datum[idx][xKey])
-      if ( idx -1 >= 0) {
-        const x1 = xScale(datum[idx-1][xKey])
+      if (idx - 1 >= 0) {
+        const x1 = xScale(datum[idx - 1][xKey])
         const x2 = xScale(datum[idx][xKey])
         const [closestX, offset] = this.findClosestPoint(xPos, x1, x2)
         x0 = closestX
@@ -193,7 +194,7 @@ export class MouseOver implements Visitor {
       // labels
       const yLabel = this.determineLabel(posy, yKey, valy, yScale)
       // outside range
-      if ( posy < yScale.range()[1] || posy > yScale.range()[0] ) {
+      if (posy < yScale.range()[1] || posy > yScale.range()[0]) {
         pointData[d] = { x0, y0: -window.innerHeight, x: xScale.invert(x0), color: stroke }
       } else {
         pointData[d] = { x0, y0: posy, x: xScale.invert(x0), y: yLabel, color: stroke }
@@ -236,7 +237,7 @@ export class MouseOver implements Visitor {
       return
     }
     // after last point
-    if (idx === datum.length-1 && datum[idx][xKey] < xValue) {
+    if (idx === datum.length - 1 && datum[idx][xKey] < xValue) {
       return
     }
     if (!datum[idx] || yIsNull(datum[idx])) {
@@ -245,10 +246,10 @@ export class MouseOver implements Visitor {
     return idx
   }
 
-  determineLabel(posy: number[] | number , yKey: string, valy, yScale) {
+  determineLabel(posy: number[] | number, yKey: string, valy, yScale) {
     const yExtent = this.axis.extent[yKey]
     const s = d3.formatSpecifier("f")
-    s.precision = d3.precisionFixed((yExtent[1] - yExtent[0]) / 100 )
+    s.precision = d3.precisionFixed((yExtent[1] - yExtent[0]) / 100)
     let yLabel
     if (Array.isArray(posy)) {
       const labels: string[] = []
@@ -284,9 +285,9 @@ export class MouseOver implements Visitor {
     const axis = this.axis
     this.group
       .select('.mouse-x')
-      .attr('transform', 'translate(' + ( xPos + 2) + ',' + (axis.height - 5) + ')')
+      .attr('transform', 'translate(' + (xPos + 2) + ',' + (axis.height - 5) + ')')
       .select('text')
-      .text(dateFormatter(axis.xScale[0].invert(xPos), 'yyyy-MM-dd HH:mm ZZZZ', { timeZone: axis.options.x[0].timeZone, locale: axis.options.x[0].locale } ) )
+      .text(dateFormatter(axis.xScale[0].invert(xPos), 'yyyy-MM-dd HH:mm ZZZZ', { timeZone: axis.options.x[0].timeZone, locale: axis.options.x[0].locale }))
   }
 
   updateTooltip(pointData, mouse) {
@@ -302,14 +303,14 @@ export class MouseOver implements Visitor {
         }
       }
       axis.tooltip.update(htmlContent, TooltipPosition.Right, mouse[0] + axis.margin.left, mouse[1] + axis.margin.top)
-      if ( axis.tooltip.isHidden ) { axis.tooltip.show() }
+      if (axis.tooltip.isHidden) { axis.tooltip.show() }
     }
   }
 
-  updateLineIndicators (): void {
+  updateLineIndicators(): void {
     const traces = (this.trace !== undefined)
-    ? this.trace
-    : this.axis.charts.map( (chart) => {return chart.id})
+      ? this.trace
+      : this.axis.charts.map((chart) => { return chart.id })
 
     const mousePerLine = this.group
       .selectAll('.mouse-per-line')

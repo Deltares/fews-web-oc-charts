@@ -1,8 +1,8 @@
 import * as d3 from 'd3'
-import { Axis, AxesOptions, AxisType, AxisOptions } from './axis'
-import defaultsDeep from 'lodash/defaultsDeep'
+import { Axis, AxesOptions, AxisType, AxisOptions } from './axis.js'
+import { defaultsDeep } from 'lodash-es'
 import { DateTime } from 'luxon'
-import { niceDegreeSteps } from '../Utils/niceDegreeSteps'
+import { niceDegreeSteps } from '../Utils/niceDegreeSteps.js'
 
 export enum Direction {
   CLOCKWISE = -1,
@@ -46,8 +46,8 @@ export class PolarAxis extends Axis {
     this.innerRadiusFactor = options.innerRadius ? options.innerRadius : 0
     this.angularRange = options.angular.range ? options.angular.range : [0, 2 * Math.PI]
     this.angularDomain = options.angular.domain ? options.angular.domain : [0, 360]
-    this.angularAxisOptions = defaultsDeep(this.angularAxisOptions, options.angular, { type: 'value'})
-    this.radialAxisOptions = defaultsDeep(this.radialAxisOptions, options.radial, { type: 'value'})
+    this.angularAxisOptions = defaultsDeep(this.angularAxisOptions, options.angular, { type: 'value' })
+    this.radialAxisOptions = defaultsDeep(this.radialAxisOptions, options.radial, { type: 'value' })
     this.setDefaultTimeOptions(this.angularAxisOptions)
     this.setDefaultTimeOptions(this.radialAxisOptions)
 
@@ -63,8 +63,8 @@ export class PolarAxis extends Axis {
 
   updateCanvas() {
     this.canvas.attr('transform', 'translate(' + this.width / 2 + ',' + this.height / 2 + ' )')
-    let startAngle = Math.PI/2  - this.intercept + this.angularRange[0]
-    let endAngle =  Math.PI/2 - this.intercept + this.angularRange[1]
+    let startAngle = Math.PI / 2 - this.intercept + this.angularRange[0]
+    let endAngle = Math.PI / 2 - this.intercept + this.angularRange[1]
     if (this.direction === Direction.ANTICLOCKWISE) {
       startAngle = Math.PI + startAngle
       endAngle = Math.PI + endAngle
@@ -166,7 +166,7 @@ export class PolarAxis extends Axis {
 
     if (
       (Math.cos(this.angularRange[0]) - Math.cos(this.angularRange[1]) < 1e-6) &&
-      (Math.sin(this.angularRange[0]) - Math.sin(this.angularRange[1]) < 1e-6 )
+      (Math.sin(this.angularRange[0]) - Math.sin(this.angularRange[1]) < 1e-6)
     ) angularTicks.shift()
 
     const ticksSelection = this.canvas
@@ -185,18 +185,18 @@ export class PolarAxis extends Axis {
       .attr('x2', this.outerRadius)
       .attr('y2', 0)
       .attr('transform', (d: number) => {
-        return 'rotate(' + (this.radToDegrees( -this.intercept - this.direction * this.angularScale(d))) + ')'
+        return 'rotate(' + (this.radToDegrees(-this.intercept - this.direction * this.angularScale(d))) + ')'
       })
 
-    const groupRotate = function(d: number) {
-      return 'rotate(' + this.radToDegrees( -this.direction * this.angularScale(d)) + ')'
+    const groupRotate = function (d: number) {
+      return 'rotate(' + this.radToDegrees(-this.direction * this.angularScale(d)) + ')'
     }.bind(this)
     const drawTicks = this.canvas
       .select('.t-axis')
       .selectAll('g')
       .data(angularTicks)
 
-    const tickElements= drawTicks
+    const tickElements = drawTicks
       .enter()
       .append('g')
       .attr('class', 'tick')
@@ -207,14 +207,14 @@ export class PolarAxis extends Axis {
 
     this.canvas
       .select('.t-axis')
-        .selectAll('.tick')
-          .select('line')
-          .attr('x1', this.outerRadius)
-          .attr('y1', 0)
-          .attr('x2', this.outerRadius + 6)
-          .attr('y2', 0)
+      .selectAll('.tick')
+      .select('line')
+      .attr('x1', this.outerRadius)
+      .attr('y1', 0)
+      .attr('x2', this.outerRadius + 6)
+      .attr('y2', 0)
 
-    const textRotate = function(d) {
+    const textRotate = function (d) {
       return (
         'rotate(' +
         this.radToDegrees(this.direction * this.angularScale(d) + this.intercept) +
@@ -225,8 +225,8 @@ export class PolarAxis extends Axis {
       )
     }.bind(this)
 
-    const anchor = function(d) {
-      const dNorthCW = (( this.radToDegrees(Math.PI / 2 - this.intercept - this.direction * this.angularScale(d)) % 360) + 360) % 360
+    const anchor = function (d) {
+      const dNorthCW = ((this.radToDegrees(Math.PI / 2 - this.intercept - this.direction * this.angularScale(d)) % 360) + 360) % 360
       if (dNorthCW > 0 && dNorthCW < 180) {
         return 'start'
       } else if (dNorthCW > 180 && dNorthCW < 360) {
@@ -240,14 +240,14 @@ export class PolarAxis extends Axis {
 
     this.canvas
       .select('.t-axis')
-        .selectAll('.tick')
-          .select('text')
-          .attr('text-anchor', anchor)
-          .attr('alignment-baseline', 'middle')
-          .attr('x', this.outerRadius + 15)
-          .attr('y', 0)
-          .text(labelFormat)
-          .attr('transform', textRotate)
+      .selectAll('.tick')
+      .select('text')
+      .attr('text-anchor', anchor)
+      .attr('alignment-baseline', 'middle')
+      .attr('x', this.outerRadius + 15)
+      .attr('y', 0)
+      .text(labelFormat)
+      .attr('transform', textRotate)
 
     this.updateCanvas()
   }

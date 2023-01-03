@@ -1,3 +1,3 @@
-export * from './date'
-export * from './legendHelper'
-export * from './niceDegreeSteps'
+export * from './date.js'
+export * from './legendHelper.js'
+export * from './niceDegreeSteps.js'

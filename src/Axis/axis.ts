@@ -1,10 +1,9 @@
 import * as d3 from 'd3'
-import { Chart } from '../Charts'
-import { Visitor } from '../Visitors'
-import defaultsDeep from 'lodash/defaultsDeep'
-import merge from 'lodash/merge'
-import { Tooltip } from '../Tooltip'
-import { AxisOrientation } from '../Types/axisOrientation'
+import { Chart } from '../Charts/chart.js'
+import { Visitor } from '../Visitors/visitor.js'
+import { defaultsDeep, merge } from 'lodash-es'
+import { Tooltip } from '../Tooltip/tooltip.js'
+import { AxisOrientation } from '../Types/axisOrientation.js'
 
 export interface Margin {
   top?: number;
@@ -65,12 +64,12 @@ interface AxisIndexItem {
 
 export interface AxisIndex {
   x?: AxisIndexItem;
-  x1?: { key: string};
+  x1?: { key: string };
   y?: AxisIndexItem;
   radial?: AxisIndexItem;
   angular?: AxisIndexItem;
-  value?: { key: string};
-  color?: { key: string};
+  value?: { key: string };
+  color?: { key: string };
 }
 
 export abstract class Axis {
@@ -86,12 +85,12 @@ export abstract class Axis {
   height: number
   margin: { top: number; right: number; bottom: number; left: number }
   options: AxesOptions = {}
-  chartGroup: d3.Selection<SVGElement,any,SVGElement,any>
+  chartGroup: d3.Selection<SVGElement, any, SVGElement, any>
   charts: Chart[]
   initialDraw = true
   visitors: Visitor[]
 
-  constructor(container: HTMLElement, width: number | null, height: number| null, options: AxesOptions, defaultOptions: any) {
+  constructor(container: HTMLElement, width: number | null, height: number | null, options: AxesOptions, defaultOptions: any) {
     this.container = container
     this.options = defaultsDeep(
       this.options,
@@ -100,7 +99,7 @@ export abstract class Axis {
     )
 
     this.observer = new ResizeObserver(entries => {
-      if(entries[0].contentBoxSize) this.resize()
+      if (entries[0].contentBoxSize) this.resize()
     })
     this.observer.observe(container)
 
@@ -177,7 +176,7 @@ export abstract class Axis {
   removeChart(id: string): void {
     let i: number
     for (i = 0; i < this.charts.length; i++) {
-      if ( this.charts[i].id === id) {
+      if (this.charts[i].id === id) {
         this.charts[i].group = null
         break
       }
@@ -204,10 +203,10 @@ export abstract class Axis {
     for (const chart of this.charts) {
       const chartExtent = chart.extent
       for (const path in chartExtent) {
-        if ( !(path in _extent) ) {
+        if (!(path in _extent)) {
           _extent[path] = chartExtent[path]
         } else {
-          _extent[path] = d3.extent([ ..._extent[path], ...chartExtent[path]])
+          _extent[path] = d3.extent([..._extent[path], ...chartExtent[path]])
         }
       }
     }

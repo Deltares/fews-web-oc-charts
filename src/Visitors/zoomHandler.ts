@@ -1,6 +1,7 @@
 import * as d3 from 'd3'
-import { Axis, CartesianAxis } from '../Axis'
-import { Visitor } from './visitor'
+import { Axis } from '../Axis/axis.js'
+import { CartesianAxis } from '../index.js';
+import { Visitor } from './visitor.js'
 
 enum SelectionMode {
   CANCEL = 0,
@@ -26,7 +27,7 @@ export class ZoomHandler implements Visitor {
   createHandler(axis: CartesianAxis): void {
     this.mouseGroup = axis.canvas.select('.mouse-events')
     const mouseRect = this.mouseGroup.select('rect').attr('pointer-events', 'all')
-    this.brushGroup = axis.canvas.insert('g','.mouse-events').attr('class', 'brush')
+    this.brushGroup = axis.canvas.insert('g', '.mouse-events').attr('class', 'brush')
     this.brushGroup
       .append('rect')
       .attr('class', 'select-rect')
@@ -173,7 +174,7 @@ export class ZoomHandler implements Visitor {
     this.brushGroup.select('.select-rect').attr('visibility', 'hidden')
     switch (this.mode) {
       case SelectionMode.X: {
-        for ( const key in this.axis.xScale) {
+        for (const key in this.axis.xScale) {
           const scale = this.axis.xScale[key]
           const extent = d3.extent([point[0], this.brushStartPoint[0]].map(scale.invert))
           scale.domain(extent)
@@ -181,7 +182,7 @@ export class ZoomHandler implements Visitor {
         break
       }
       case SelectionMode.Y: {
-        for ( const key in this.axis.yScale) {
+        for (const key in this.axis.yScale) {
           const scale = this.axis.yScale[key]
           const extent = d3.extent([point[1], this.brushStartPoint[1]].map(scale.invert))
           scale.domain(extent)
@@ -189,12 +190,12 @@ export class ZoomHandler implements Visitor {
         break
       }
       case SelectionMode.XY: {
-        for ( const key in this.axis.xScale) {
+        for (const key in this.axis.xScale) {
           const scale = this.axis.xScale[key]
           const extent = d3.extent([point[0], this.brushStartPoint[0]].map(scale.invert))
           scale.domain(extent)
         }
-        for ( const key in this.axis.yScale) {
+        for (const key in this.axis.yScale) {
           const scale = this.axis.yScale[key]
           const extent = d3.extent([point[1], this.brushStartPoint[1]].map(scale.invert))
           scale.domain(extent)

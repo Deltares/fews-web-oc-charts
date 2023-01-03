@@ -5,9 +5,10 @@
   "keywords": [],
   "main": "./dist/wb-charts.umd.js",
   "typings": "./dist/types/wb-charts.d.ts",
+  "type": "module",
   "files": [
     "dist/*",
-    "src/*"
+    "lib/*"
   ],
   "author": "Werner Kramer <werner.kramer@vortech.nl>",
   "repository": {
@@ -19,36 +20,14 @@
     "node": ">=6.0.0"
   },
   "scripts": {
-    "build": "npm run clean && tsc && webpack",
+    "build": "npm run clean && npm run build:esm && npm run build:cjs && webpack",
+    "build:esm": "tsc",
+    "build:cjs": "tsc --module commonjs --outDir lib/cjs",
     "clean": "shx rm -rf dist",
     "lint": "eslint src/**.ts",
     "lint:fix": "eslint src/**.ts --fix",
     "prepare": "npm run build",
     "test": "jest"
-  },
-  "jest": {
-    "transform": {
-      ".(ts|tsx)": "<rootDir>/node_modules/ts-jest/preprocessor.js"
-    },
-    "testRegex": "(/__tests__/.*|\\.(test|spec))\\.(ts|tsx|js)$",
-    "moduleFileExtensions": [
-      "ts",
-      "tsx",
-      "js"
-    ],
-    "coveragePathIgnorePatterns": [
-      "/node_modules/",
-      "/test/"
-    ],
-    "coverageThreshold": {
-      "global": {
-        "branches": 90,
-        "functions": 95,
-        "lines": 95,
-        "statements": 95
-      }
-    },
-    "collectCoverage": true
   },
   "prettier": {
     "semi": false,
@@ -58,6 +37,7 @@
     "@types/d3": "^7.1.0",
     "@types/jest": "^27.0.0",
     "@types/lodash": "^4.14.157",
+    "@types/lodash-es": "^4.17.6",
     "@types/luxon": "^2.0.7",
     "@types/node": "^14.0.20",
     "@typescript-eslint/eslint-plugin": "^5.4.0",
@@ -66,6 +46,8 @@
     "copy-webpack-plugin": "^10.0.0",
     "eslint": "^8.3.0",
     "jest": "^27.3.1",
+    "jest-junit": "^15.0.0",
+    "jest-teamcity-reporter": "^0.9.0",
     "shx": "^0.3.2",
     "terser-webpack-plugin": "^5.2.5",
     "ts-jest": "^27.0.7",
@@ -78,6 +60,7 @@
     "csstype": "^3.0.0",
     "d3": "^7.1.1",
     "lodash": "^4.17.19",
+    "lodash-es": "^4.17.21",
     "luxon": "^2.1.1"
   }
 }

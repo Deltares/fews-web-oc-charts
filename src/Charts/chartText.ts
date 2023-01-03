@@ -1,6 +1,6 @@
 import * as d3 from 'd3'
-import { CartesianAxis, PolarAxis } from '../Axis'
-import { Chart, SymbolOptions } from './chart'
+import { CartesianAxis, PolarAxis } from '../index.js';
+import { Chart, SymbolOptions } from './chart.js'
 
 export class ChartText extends Chart {
   private previousData: any[] = []
@@ -33,8 +33,8 @@ export class ChartText extends Chart {
       .attr('dominant-baseline', 'central')
     text
       .merge(text)
-      .attr('x',(d) => xScale(d[xKey]))
-      .attr('x',(d) => yScale(d[yKey]))
+      .attr('x', (d) => xScale(d[xKey]))
+      .attr('x', (d) => yScale(d[yKey]))
       .text((d) => d[yKey])
   }
 
@@ -50,8 +50,8 @@ export class ChartText extends Chart {
       .node() as Element
     const svg = d3.create('svg')
       .append('svg')
-      .attr('width',20)
-      .attr('height',20)
+      .attr('width', 20)
+      .attr('height', 20)
     const group = svg
       .append('g')
       .attr('transform', 'translate(10 10)')

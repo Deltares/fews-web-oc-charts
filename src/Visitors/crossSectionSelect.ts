@@ -1,8 +1,9 @@
 import * as d3 from 'd3'
-import { Axis, CartesianAxis } from '../Axis'
-import { Visitor } from './visitor'
-import defaultsDeep from 'lodash/defaultsDeep'
-import { bboxCollide } from '../Utils/bboxCollide'
+import { Axis } from '../Axis/axis.js'
+import { CartesianAxis } from '../index.js';
+import { Visitor } from './visitor.js'
+import { defaultsDeep } from 'lodash-es'
+import { bboxCollide } from '../Utils/bboxCollide.js'
 
 type CrossSectionSelectOptions = {
   x: { axisIndex: number };
@@ -15,20 +16,20 @@ export class CrossSectionSelect implements Visitor {
   private backGroup: any
   private frontGroup: any
   private pointRadius = 3
-  private simulation: d3.Simulation<any,any>
+  private simulation: d3.Simulation<any, any>
   private axis: CartesianAxis
   value: number | Date
   currentData: any
-  callback: (value: number | Date ) => void
-  format: (n: number | {valueOf(): number;} | Date) => string
+  callback: (value: number | Date) => void
+  format: (n: number | { valueOf(): number; } | Date) => string
   private options: CrossSectionSelectOptions = {
-    x: { axisIndex : 0 },
+    x: { axisIndex: 0 },
     draggable: false
   }
   private visible: boolean
 
   // use shared Visitor constuctor (Visitor should be a abstract class)
-  constructor(value: number | Date, callback: (value: number | Date ) => void, options: CrossSectionSelectOptions, trace?: string[]) {
+  constructor(value: number | Date, callback: (value: number | Date) => void, options: CrossSectionSelectOptions, trace?: string[]) {
     this.value = value
     this.callback = callback
     this.format = d3.format('.2f')
@@ -62,19 +63,19 @@ export class CrossSectionSelect implements Visitor {
 
     if (this.options.draggable) {
       handle
-      .call(
-        d3
-          .drag()
-          .on('start', (event) => {
-            this.start(event)
-          })
-          .on('drag', (event) => {
-            this.drag(event)
-          })
-          .on('end', () => {
-            this.end()
-          })
-      )
+        .call(
+          d3
+            .drag()
+            .on('start', (event) => {
+              this.start(event)
+            })
+            .on('drag', (event) => {
+              this.drag(event)
+            })
+            .on('end', () => {
+              this.end()
+            })
+        )
     }
 
     this.frontGroup.append('g').attr('class', 'data-point-per-line')
@@ -99,10 +100,12 @@ export class CrossSectionSelect implements Visitor {
         styles[chart.id] = this.styleForChart(chart.id)
       }
     }
-    this.currentData = points.map( (p) => { return {
-      id: p.id, data: p.d, value: p.value
-    }})
-    points = points.filter( (p) => p.y !== undefined )
+    this.currentData = points.map((p) => {
+      return {
+        id: p.id, data: p.d, value: p.value
+      }
+    })
+    points = points.filter((p) => p.y !== undefined)
     this.updateLabels(points, styles)
     this.updateDataPoints(points, styles)
   }
@@ -161,14 +164,14 @@ export class CrossSectionSelect implements Visitor {
       .attr('x', xPos)
       .text(timeString)
       .style('visibility', visibility)
-      // handle
+    // handle
     this.backGroup.select('polygon')
       .attr('transform', 'translate(' + xPos + ',' + this.axis.height + ')')
       .style('visibility', visibility)
   }
 
 
-  updateDataPoints (points, styles): void {
+  updateDataPoints(points, styles): void {
     const visibility = this.visible ? 'visible' : 'hidden'
     this.frontGroup.selectAll('.data-point-per-line')
       .selectAll('circle')
@@ -197,9 +200,9 @@ export class CrossSectionSelect implements Visitor {
     const centerY = sortedPoint.reduce((total, p) => { return total + p.y }, 0) / sortedPoint.length
     for (const p of sortedPoint) {
       if (p.y === undefined) continue
-      nodes.push({ id: p.id, fx: p.x + 50, y: p.y + Math.random()/10, py: p.y, label: p.value, width: 100, height: 20 })
+      nodes.push({ id: p.id, fx: p.x + 50, y: p.y + Math.random() / 10, py: p.y, label: p.value, width: 100, height: 20 })
       // nodes.push({ id: p.id, fx: p.x + 50, x: p.x + 1000, y: (j - sortedPoint.length / 2) * 20 + centerY, py: p.y, label: p.value })
-      nodes.push({ fx: p.x, fy: p.y, width: 4, height: 4})
+      nodes.push({ fx: p.x, fy: p.y, width: 4, height: 4 })
       links.push({ source: nodes[i + 1], target: nodes[i], label: p.value })
       j = j + 1
       i = i + 2
@@ -208,7 +211,7 @@ export class CrossSectionSelect implements Visitor {
     const visibility = this.visible ? 'visible' : 'hidden'
 
     const rectSelection = this.frontGroup.selectAll(".back")
-      .data(nodes.filter((d) => d.label !== undefined) )
+      .data(nodes.filter((d) => d.label !== undefined))
 
     const rectsUpdate = rectSelection
       .join("rect")
@@ -218,7 +221,7 @@ export class CrossSectionSelect implements Visitor {
       .style('visibility', visibility)
 
     const labelsSelection = this.frontGroup.selectAll(".label")
-      .data(nodes.filter((d) =>  d.label !== undefined) )
+      .data(nodes.filter((d) => d.label !== undefined))
 
     const labelsUpdate = labelsSelection
       .join("text")
@@ -244,7 +247,7 @@ export class CrossSectionSelect implements Visitor {
     const widths = [], heights = []
     const margin = 2
     const radius = 2 * this.pointRadius
-    labelsUpdate.each(function(this) {
+    labelsUpdate.each(function (this) {
       const height = this.getBoundingClientRect().height + 2 * margin
       heights.push(height)
       heights.push(radius)
@@ -254,10 +257,10 @@ export class CrossSectionSelect implements Visitor {
     })
 
     rectsUpdate
-      .attr("rx", (d, j) => heights[2*j] / 2)
-      .attr("ry", (d, j) => heights[2*j] / 2)
-      .attr("width", (d, j) => widths[2*j])
-      .attr("height",(d, j) => heights[2*j])
+      .attr("rx", (d, j) => heights[2 * j] / 2)
+      .attr("ry", (d, j) => heights[2 * j] / 2)
+      .attr("width", (d, j) => widths[2 * j])
+      .attr("height", (d, j) => heights[2 * j])
 
     const tick = (): void => {
       link
@@ -266,21 +269,21 @@ export class CrossSectionSelect implements Visitor {
         .attr("x2", d => d.target.x)
         .attr("y2", d => d.target.y);
       rectsUpdate
-        .attr("x", (d, j) => d.x - heights[2*j] / 2)
-        .attr("y", (d, j) => d.y - heights[2*j] / 2)
+        .attr("x", (d, j) => d.x - heights[2 * j] / 2)
+        .attr("y", (d, j) => d.y - heights[2 * j] / 2)
       labelsUpdate
         .attr("x", d => d.x)
         .attr("y", d => d.y)
     }
 
-    if ( this.simulation !== undefined) this.simulation.stop()
+    if (this.simulation !== undefined) this.simulation.stop()
 
-    const collisionForce = bboxCollide(function (d,j) {
+    const collisionForce = bboxCollide(function (d, j) {
       let bbox
-      if ( d.label !== undefined) {
-        bbox = [[- heights[j] / 2, - heights[j] / 2],[ widths[j]- heights[j] / 2, heights[j] / 2]]
+      if (d.label !== undefined) {
+        bbox = [[- heights[j] / 2, - heights[j] / 2], [widths[j] - heights[j] / 2, heights[j] / 2]]
       } else {
-        bbox = [[- widths[j] / 2, -heights[j]/2 ], [widths[j] / 2, heights[j]/2 ]]
+        bbox = [[- widths[j] / 2, -heights[j] / 2], [widths[j] / 2, heights[j] / 2]]
       }
       return bbox
     })
@@ -302,19 +305,19 @@ export class CrossSectionSelect implements Visitor {
     const axis = this.axis
     const scale = axis.xScale[axisIndex]
     const domain = scale.domain()
-    if ( this.value < domain[0]) {
+    if (this.value < domain[0]) {
       this.value = domain[0]
       return true
-    } else if(this.value > domain[1]) {
+    } else if (this.value > domain[1]) {
       this.value = domain[1]
       return true
     }
     return false
   }
 
-  findNearestPoint(chart, xPos): {id: string; x: number; y: number; value?: string, d: any} {
+  findNearestPoint(chart, xPos): { id: string; x: number; y: number; value?: string, d: any } {
     const axis = this.axis
-    if (chart.data.length < 2) return { id: chart.id, x: undefined, y: undefined, d: undefined}
+    if (chart.data.length < 2) return { id: chart.id, x: undefined, y: undefined, d: undefined }
     const xIndex = chart.axisIndex.x.axisIndex
     const xScale = axis.xScale[xIndex]
     const yIndex = chart.axisIndex.y.axisIndex
@@ -333,7 +336,7 @@ export class CrossSectionSelect implements Visitor {
     let yValue = data[idx][yKey]
     // look back
     if (yValue === null) {
-      for(let i = idx; i >= 0; i--) {
+      for (let i = idx; i >= 0; i--) {
         yValue = data[i][yKey]
         if (yValue !== null) {
           idx = i
@@ -345,7 +348,7 @@ export class CrossSectionSelect implements Visitor {
     const y = yScale(data[idx][yKey])
     const yExtent = this.axis.extent.y
     const s = d3.formatSpecifier("f")
-    s.precision = d3.precisionFixed((yExtent[1] - yExtent[0]) / 100 )
+    s.precision = d3.precisionFixed((yExtent[1] - yExtent[0]) / 100)
     const d = data[idx]
     if (yValue === null || yValue < yScale.domain()[0] || yValue > yScale.domain()[1]) {
       return { id: chart.id, x: undefined, y: undefined, d }

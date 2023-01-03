@@ -1,14 +1,13 @@
 import * as d3 from 'd3'
-import { Axis, AxesOptions, AxisType, AxisOptions, ZoomOptions, AxisScaleOptions, resetZoom } from './axis'
-import { AxisPosition } from '../Types/axisPosition'
+import { Axis, AxesOptions, AxisType, AxisOptions, ZoomOptions, AxisScaleOptions, resetZoom } from './axis.js'
+import { AxisPosition } from '../Types/axisPosition.js'
 
-import { generateMultiFormat } from '../Utils/date'
+import { generateMultiFormat } from '../Utils/date.js'
 import { DateTime } from 'luxon'
-import merge from 'lodash/merge'
-import defaultsDeep from 'lodash/defaults'
-import { niceDomain } from './niceDomain'
-import { niceDegreeSteps } from '../Utils/niceDegreeSteps'
-import { AxisOrientation } from '../Types/axisOrientation'
+import { defaultsDeep, merge } from 'lodash-es'
+import { niceDomain } from './niceDomain.js'
+import { niceDegreeSteps } from '../Utils/niceDegreeSteps.js'
+import { AxisOrientation } from '../Types/axisOrientation.js'
 
 export interface CartesianAxisOptions extends AxisOptions {
   position?: AxisPosition;
@@ -20,12 +19,12 @@ export interface CartesianAxesOptions extends AxesOptions {
 }
 
 function normalizeAngle(angle) {
-  return angle - 360 * Math.floor( (angle) / 360)
+  return angle - 360 * Math.floor((angle) / 360)
 }
 
 function anchorForAngle(angle, orientation) {
   let rotate
-  switch(orientation) {
+  switch (orientation) {
     case AxisOrientation.Top:
       rotate = 180
       break
@@ -59,14 +58,14 @@ export class CartesianAxis extends Axis {
   timeZoneOffset: number
   options: CartesianAxesOptions
   static readonly defaultOptions = {
-    x: [ { type: AxisType.value, labelAngle: 0 } ],
-    y: [ { type: AxisType.value, labelAngle: 0 } ]
+    x: [{ type: AxisType.value, labelAngle: 0 }],
+    y: [{ type: AxisType.value, labelAngle: 0 }]
   }
 
   constructor(
     container: HTMLElement,
-    width: number| null,
-    height: number| null,
+    width: number | null,
+    height: number | null,
     options?: CartesianAxesOptions
   ) {
     super(container, width, height, options, CartesianAxis.defaultOptions)
@@ -174,7 +173,7 @@ export class CartesianAxis extends Axis {
       scales = this.yScale
       initialExtents = this.yInitialExtent
     }
-    for ( const key in scales) {
+    for (const key in scales) {
       const scale = scales[key]
       const axisOptions = this.options[axisKey][key]
       const axisScaleOptions: AxisScaleOptions = {
@@ -200,7 +199,7 @@ export class CartesianAxis extends Axis {
           dataExtent[1] = max
         }
         if (defaultExtent !== undefined) {
-          if (defaultExtent[0] < dataExtent[0] || defaultExtent[1] > dataExtent[1] ) {
+          if (defaultExtent[0] < dataExtent[0] || defaultExtent[1] > dataExtent[1]) {
             dataExtent = d3.extent([...defaultExtent, ...dataExtent])
           }
           if (zoomOptions?.includeZero === true) {
@@ -212,7 +211,7 @@ export class CartesianAxis extends Axis {
       } else if (this.options[axisKey][key].type === AxisType.band) {
         let extent = new Array(0)
         for (const chart of this.charts) {
-          if ( chart.axisIndex[axisKey]?.axisIndex === +key ) {
+          if (chart.axisIndex[axisKey]?.axisIndex === +key) {
             extent = chart.data.map(d => d[chart.dataKeys[axisKey]])
             break
           }
@@ -227,7 +226,7 @@ export class CartesianAxis extends Axis {
   chartsExtent(axisKey: keyof CartesianAxesOptions, axisIndex: string, options: ZoomOptions): any[] {
     let extent = new Array(2)
     for (const chart of this.charts) {
-      if ( (options.fullExtent || chart.options[axisKey].includeInAutoScale) && chart.axisIndex[axisKey]?.axisIndex === +axisIndex ) {
+      if ((options.fullExtent || chart.options[axisKey].includeInAutoScale) && chart.axisIndex[axisKey]?.axisIndex === +axisIndex) {
         const chartExtent = chart.extent[chart.dataKeys[axisKey]]
         extent = d3.extent(d3.merge([extent, [].concat(...chartExtent)]))
       }
@@ -285,7 +284,7 @@ export class CartesianAxis extends Axis {
     }
   }
 
-  updateXAxis (options: CartesianAxisOptions[]) {
+  updateXAxis(options: CartesianAxisOptions[]) {
     for (const key in this.xScale) {
       const scale = this.xScale[key]
       let axis = undefined
@@ -300,7 +299,7 @@ export class CartesianAxis extends Axis {
       }
       const grid = d3.axisBottom(scale)
       grid.ticks(5).tickSize(this.height)
-      if (options[key].type === AxisType.time ) {
+      if (options[key].type === AxisType.time) {
 
         const offsetDomain = scale.domain().map((d) => {
           const m = DateTime.fromJSDate(d).setZone(options[key].timeZone)
@@ -334,7 +333,7 @@ export class CartesianAxis extends Axis {
         .attr('transform', translateString)
         .call(axis)
 
-      switch(angle) {
+      switch (angle) {
         case 0:
           break
         case 180:
@@ -359,86 +358,86 @@ export class CartesianAxis extends Axis {
       if (options[key].showGrid) this.canvas.select('.x-grid')
         .call(grid)
         .call(g => g.selectAll(".tick")
-        .attr("class", (d) => { return d === 0 ? 'tick zero-crossing' : 'tick'} ))
+          .attr("class", (d) => { return d === 0 ? 'tick zero-crossing' : 'tick' }))
     }
   }
 
-updateYAxis (options: CartesianAxisOptions[]): void {
-  for (const key in this.yScale) {
-    const scale = this.yScale[key]
-    let axis = undefined
-    const orientation = options[key].orientation || options[key].position
-    switch (orientation) {
-      case AxisOrientation.Right:
-      axis = d3.axisRight(scale).ticks(5)
-      break
-      case AxisOrientation.Left:
-      default:
-      axis = d3.axisLeft(scale).ticks(5)
-    }
-    const grid = d3.axisRight(scale)
-    grid.ticks(5).tickSize(this.width)
-    if (options[key].type === AxisType.time ) {
-      const offsetDomain = scale.domain().map((d) => {
-        const m = DateTime.fromJSDate(d).setZone(options[key].timeZone)
-        return new Date(d.getTime() + m.offset * 60000);
-      })
-      const offsetScale = d3.scaleUtc().domain(offsetDomain)
-      const tickValues = offsetScale.ticks(5)
-      const offsetValues = tickValues.map((d) => {
-        const m = DateTime.fromJSDate(d).setZone(options[key].timeZone)
-        return new Date(d.getTime() - m.offset * 60000);
-      })
-      axis.tickValues(offsetValues)
-      axis.tickFormat(generateMultiFormat(options[key].timeZone, options[key].locale))
-      grid.tickValues(offsetValues)
-    } else if (options[key].type === AxisType.degrees) {
-      const domain = scale.domain()
-      let step = d3.tickIncrement(domain[0], domain[1], 5)
-      step = niceDegreeSteps(step)
-      const start = Math.ceil(domain[0] / step) * step
-      const stop = Math.floor(domain[1] / step + 1) * step
-      axis.tickValues(d3.range(start, stop, step))
-      grid.tickValues(d3.range(start, stop, step))
-    }
+  updateYAxis(options: CartesianAxisOptions[]): void {
+    for (const key in this.yScale) {
+      const scale = this.yScale[key]
+      let axis = undefined
+      const orientation = options[key].orientation || options[key].position
+      switch (orientation) {
+        case AxisOrientation.Right:
+          axis = d3.axisRight(scale).ticks(5)
+          break
+        case AxisOrientation.Left:
+        default:
+          axis = d3.axisLeft(scale).ticks(5)
+      }
+      const grid = d3.axisRight(scale)
+      grid.ticks(5).tickSize(this.width)
+      if (options[key].type === AxisType.time) {
+        const offsetDomain = scale.domain().map((d) => {
+          const m = DateTime.fromJSDate(d).setZone(options[key].timeZone)
+          return new Date(d.getTime() + m.offset * 60000);
+        })
+        const offsetScale = d3.scaleUtc().domain(offsetDomain)
+        const tickValues = offsetScale.ticks(5)
+        const offsetValues = tickValues.map((d) => {
+          const m = DateTime.fromJSDate(d).setZone(options[key].timeZone)
+          return new Date(d.getTime() - m.offset * 60000);
+        })
+        axis.tickValues(offsetValues)
+        axis.tickFormat(generateMultiFormat(options[key].timeZone, options[key].locale))
+        grid.tickValues(offsetValues)
+      } else if (options[key].type === AxisType.degrees) {
+        const domain = scale.domain()
+        let step = d3.tickIncrement(domain[0], domain[1], 5)
+        step = niceDegreeSteps(step)
+        const start = Math.ceil(domain[0] / step) * step
+        const stop = Math.floor(domain[1] / step + 1) * step
+        axis.tickValues(d3.range(start, stop, step))
+        grid.tickValues(d3.range(start, stop, step))
+      }
 
-    const x = this.xPositionAxis(options[key].position)
-    const y = 0
-    const translateString = `translate(${x},${y})`
+      const x = this.xPositionAxis(options[key].position)
+      const y = 0
+      const translateString = `translate(${x},${y})`
 
-    const angle = options[key].labelAngle || 0
-    const axisHandle = this.canvas
-      .select(`.y-axis-${key}`)
-      .attr('transform', translateString)
-      .call(axis)
+      const angle = options[key].labelAngle || 0
+      const axisHandle = this.canvas
+        .select(`.y-axis-${key}`)
+        .attr('transform', translateString)
+        .call(axis)
 
-    switch(angle) {
-      case 0:
-        break
-      case 180:
-        axisHandle
-          .selectAll("text")
-          .attr("transform", `rotate(${angle})`);
-        break
-      default:
-        const anchor = anchorForAngle(angle, orientation)
-        const offset = orientation === AxisOrientation.Right ? 15 : -15
-        axisHandle
-          .selectAll("text")
-          .attr("x", undefined)
-          .attr("dx", undefined)
-          .attr("y", undefined)
-          .attr("dy", undefined)
-          .attr("text-anchor", anchor)
-          .attr("dominant-baseline", "middle")
-          .attr("transform", `translate(${offset}, 0) rotate(${angle})`);
+      switch (angle) {
+        case 0:
+          break
+        case 180:
+          axisHandle
+            .selectAll("text")
+            .attr("transform", `rotate(${angle})`);
+          break
+        default:
+          const anchor = anchorForAngle(angle, orientation)
+          const offset = orientation === AxisOrientation.Right ? 15 : -15
+          axisHandle
+            .selectAll("text")
+            .attr("x", undefined)
+            .attr("dx", undefined)
+            .attr("y", undefined)
+            .attr("dy", undefined)
+            .attr("text-anchor", anchor)
+            .attr("dominant-baseline", "middle")
+            .attr("transform", `translate(${offset}, 0) rotate(${angle})`);
+      }
+      if (options[key].showGrid) this.canvas.select('.y-grid')
+        .call(grid)
+        .call(g => g.selectAll(".tick")
+          .attr("class", (d) => { return d === 0 ? 'tick zero-crossing' : 'tick' }))
     }
-    if (options[key].showGrid) this.canvas.select('.y-grid')
-      .call(grid)
-      .call(g => g.selectAll(".tick")
-        .attr("class", (d) => { return d === 0 ? 'tick zero-crossing' : 'tick'} ))
   }
-}
 
   updateGrid(): void {
     this.setClipPath()
@@ -448,7 +447,7 @@ updateYAxis (options: CartesianAxisOptions[]): void {
     this.updateLabels()
   }
 
-  updateLabels (): void {
+  updateLabels(): void {
     const g = this.canvas.select('.axis.labels')
     if (this.options.y) {
       if (this.options.y[0]?.label) {
@@ -472,13 +471,13 @@ updateYAxis (options: CartesianAxisOptions[]): void {
     }
     if (this.options.x[0]?.label) {
       g.select('.x0.label')
-      .attr('x', this.width / 2)
+        .attr('x', this.width / 2)
         .attr('y', this.height + 30)
         .text(this.options.x[0].label)
     }
     if (this.options.x[0]?.unit) {
       g.select('.x0.unit')
-      .attr('x', this.width + 10)
+        .attr('x', this.width + 10)
         .attr('y', this.height + 9)
         .text(this.options.x[0].unit)
     }
@@ -490,8 +489,8 @@ updateYAxis (options: CartesianAxisOptions[]): void {
     }
   }
 
-  protected initXScales (options: CartesianAxisOptions[]): void {
-    for ( const key in options) {
+  protected initXScales(options: CartesianAxisOptions[]): void {
+    for (const key in options) {
       let scale
       switch (options[key].type) {
         case AxisType.time:
@@ -508,8 +507,8 @@ updateYAxis (options: CartesianAxisOptions[]): void {
     }
   }
 
-  protected initYScales (options: CartesianAxisOptions[]): void {
-    for ( const key in options) {
+  protected initYScales(options: CartesianAxisOptions[]): void {
+    for (const key in options) {
       let scale
       switch (options[key].type) {
         case AxisType.time:
@@ -526,13 +525,13 @@ updateYAxis (options: CartesianAxisOptions[]): void {
     }
   }
 
-  protected setRange(): void{
+  protected setRange(): void {
     this.setRangeX(this.options.x)
     this.setRangeY(this.options.y)
   }
 
-  protected setRangeX(options): void{
-    for ( const key in this.xScale ) {
+  protected setRangeX(options): void {
+    for (const key in this.xScale) {
       const scale = this.xScale[key]
       if (options[key].reverse) {
         scale.range([this.width, 0])
@@ -542,8 +541,8 @@ updateYAxis (options: CartesianAxisOptions[]): void {
     }
   }
 
-  protected setRangeY(options): void{
-    for ( const key in this.yScale ) {
+  protected setRangeY(options): void {
+    for (const key in this.yScale) {
       const scale = this.yScale[key]
       if (options[key].reverse) {
         scale.range([0, this.height])
@@ -578,7 +577,7 @@ updateYAxis (options: CartesianAxisOptions[]): void {
     if (this.options.y) {
       if (this.options.y[0]?.label) {
         labelGroup.append('text')
-        .attr('class','y0 label')
+          .attr('class', 'y0 label')
           .attr('x', 0)
           .attr('y', -9)
           .attr('text-anchor', 'start')
@@ -586,7 +585,7 @@ updateYAxis (options: CartesianAxisOptions[]): void {
       }
       if (this.options.y[0]?.unit) {
         labelGroup.append('text')
-          .attr('class','y0 unit')
+          .attr('class', 'y0 unit')
           .attr('x', -9)
           .attr('y', -9)
           .attr('text-anchor', 'end')
@@ -594,7 +593,7 @@ updateYAxis (options: CartesianAxisOptions[]): void {
       }
       if (this.options.y[1]?.label) {
         labelGroup.append('text')
-          .attr('class','y1 label')
+          .attr('class', 'y1 label')
           .attr('x', this.width)
           .attr('y', -9)
           .attr('text-anchor', 'end')
@@ -602,7 +601,7 @@ updateYAxis (options: CartesianAxisOptions[]): void {
       }
       if (this.options.y[1]?.unit) {
         labelGroup.append('text')
-          .attr('class','y1 unit')
+          .attr('class', 'y1 unit')
           .attr('x', this.width + 10)
           .attr('y', -9)
           .attr('text-anchor', 'start')
@@ -611,7 +610,7 @@ updateYAxis (options: CartesianAxisOptions[]): void {
     }
     if (this.options.x[0]?.label) {
       labelGroup.append('text')
-        .attr('class','x0 label')
+        .attr('class', 'x0 label')
         .attr('x', this.width / 2)
         .attr('y', this.height + 30)
         .attr('text-anchor', 'middle')
@@ -619,7 +618,7 @@ updateYAxis (options: CartesianAxisOptions[]): void {
     }
     if (this.options.x[0]?.unit) {
       labelGroup.append('text')
-        .attr('class','x0 unit')
+        .attr('class', 'x0 unit')
         .attr('x', this.width + 10)
         .attr('y', this.height + 9)
         .attr('dy', '0.71em')
@@ -629,7 +628,7 @@ updateYAxis (options: CartesianAxisOptions[]): void {
 
     if (this.options.x[1]?.unit) {
       labelGroup.append('text')
-        .attr('class','x1 unit')
+        .attr('class', 'x1 unit')
         .attr('x', this.width + 10)
         .attr('y', -9)
         .attr('text-anchor', 'start')
