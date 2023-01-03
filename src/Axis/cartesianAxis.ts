@@ -355,10 +355,7 @@ export class CartesianAxis extends Axis {
             .attr("transform", `translate(0, ${offset}) rotate(${angle})`);
       }
 
-      if (options[key].showGrid) this.canvas.select('.x-grid')
-        .call(grid)
-        .call(g => g.selectAll(".tick")
-          .attr("class", (d) => { return d === 0 ? 'tick zero-crossing' : 'tick' }))
+      if (options[key].showGrid) this.updateTicks(this.canvas.select('.x-grid'), grid)
     }
   }
 
@@ -432,11 +429,15 @@ export class CartesianAxis extends Axis {
             .attr("dominant-baseline", "middle")
             .attr("transform", `translate(${offset}, 0) rotate(${angle})`);
       }
-      if (options[key].showGrid) this.canvas.select('.y-grid')
-        .call(grid)
-        .call(g => g.selectAll(".tick")
-          .attr("class", (d) => { return d === 0 ? 'tick zero-crossing' : 'tick' }))
+      if (options[key].showGrid) this.updateTicks(this.canvas.select('.y-grid'), grid)
     }
+  }
+
+  updateTicks(selection, gridAxis: d3.Axis<d3.AxisDomain>) {
+    selection
+    .call(gridAxis)
+    .call(g => g.selectAll(".tick")
+      .attr("class", (d) => { return d === 0 ? 'tick zero-crossing' : 'tick' }))
   }
 
   updateGrid(): void {
