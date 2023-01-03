@@ -1,4 +1,4 @@
-export * from './axis.js'
-export * from './cartesianAxis.js'
+export * from './axes.js'
+export * from './cartesianAxes.js'
 export * from './colourBar.js'
-export * from './polarAxis.js'
+export * from './polarAxes.js'

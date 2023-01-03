@@ -1,6 +1,6 @@
 import * as d3 from 'd3'
-import { AxisIndex } from '../Axes/axis.js'
-import { CartesianAxis, PolarAxis } from '../index.js';
+import { AxisIndex } from '../Axes/axes.js'
+import { CartesianAxes, PolarAxes } from '../index.js';
 import { Chart, AUTO_SCALE } from './chart.js'
 import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js'
 
@@ -77,7 +77,7 @@ export class ChartRange extends Chart {
     return html
   }
 
-  plotterCartesian(axis: CartesianAxis, axisIndex: AxisIndex) {
+  plotterCartesian(axis: CartesianAxes, axisIndex: AxisIndex) {
     const xKey = this.dataKeys.x
     const yKey = this.dataKeys.y
     const xScale = axis.xScale[axisIndex.x.axisIndex]
@@ -170,7 +170,7 @@ export class ChartRange extends Chart {
     }
   }
 
-  plotterPolar(axis: PolarAxis, axisIndex: AxisIndex) {
+  plotterPolar(axis: PolarAxes, axisIndex: AxisIndex) {
     const rKey = this.dataKeys.radial
     const tKey = this.dataKeys.angular
     const colorKey = this.dataKeys.color

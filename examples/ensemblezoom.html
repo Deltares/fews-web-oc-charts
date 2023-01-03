@@ -51,7 +51,7 @@ var height = null;
 var width = null;
 var container1 = document.getElementById("chart-container-1");
 
-var axis1 = new wbCharts.CartesianAxis(container1, width, height,
+var axis1 = new wbCharts.CartesianAxes(container1, width, height,
     {   x: [{
             type: wbCharts.AxisType.time,
             label: 'datum',
@@ -60,7 +60,7 @@ var axis1 = new wbCharts.CartesianAxis(container1, width, height,
         }, ],
     });
 var container2 = document.getElementById("chart-container-2");
-var axis = new wbCharts.CartesianAxis(container2, width, height,
+var axis = new wbCharts.CartesianAxes(container2, width, height,
     {   x: [{
             type: wbCharts.AxisType.time,
             label: 'datum',

@@ -1,6 +1,6 @@
 import { SvgPropertiesHyphen } from 'csstype'
 import * as d3 from 'd3'
-import { CartesianAxis, PolarAxis } from '../index.js';
+import { CartesianAxes, PolarAxes } from '../index.js';
 import { Chart } from './chart.js'
 import { TooltipPosition } from '../Tooltip/tooltip.js'
 
@@ -47,7 +47,7 @@ export class ChartLine extends Chart {
     return html
   }
 
-  plotterCartesian(axis: CartesianAxis, axisIndex: any) {
+  plotterCartesian(axis: CartesianAxes, axisIndex: any) {
 
     const xKey = this.dataKeys.x
     const yKey = this.dataKeys.y
@@ -101,7 +101,7 @@ export class ChartLine extends Chart {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  plotterPolar(axis: PolarAxis, axisIndex: any) {
+  plotterPolar(axis: PolarAxes, axisIndex: any) {
     const rKey = this.dataKeys.radial
     const tKey = this.dataKeys.angular
     const lineGenerator = d3

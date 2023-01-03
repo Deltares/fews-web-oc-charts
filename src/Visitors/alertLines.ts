@@ -1,22 +1,22 @@
-import { Axis } from '../Axes/axis.js'
-import { CartesianAxis } from '../index.js';
+import { Axes } from '../Axes/axes.js'
+import { CartesianAxes } from '../index.js';
 import { Visitor } from './visitor.js'
 
 export class AlertLines implements Visitor {
   public options: any[]
   private group: any
-  private axis: CartesianAxis
+  private axis: CartesianAxes
 
   constructor(options) {
     this.options = options
   }
 
-  visit(axis: Axis): void {
-    this.axis = axis as CartesianAxis
-    this.create(axis as CartesianAxis)
+  visit(axis: Axes): void {
+    this.axis = axis as CartesianAxes
+    this.create(axis as CartesianAxes)
   }
 
-  create(axis: CartesianAxis): void {
+  create(axis: CartesianAxes): void {
     this.group = this.axis.canvas.select('.front')
       .append('g')
       .attr('class', 'alert-lines')

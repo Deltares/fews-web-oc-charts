@@ -1,6 +1,6 @@
 import * as d3 from 'd3'
-import { Axis } from '../Axes/axis.js'
-import { CartesianAxis } from '../index.js';
+import { Axes } from '../Axes/axes.js'
+import { CartesianAxes } from '../index.js';
 import { dateFormatter } from '../Utils/date.js'
 import { Visitor } from './visitor.js'
 
@@ -12,7 +12,7 @@ export class CurrentTime implements Visitor {
   private group: any
   private line: any
   private indicator: any
-  private axis: CartesianAxis
+  private axis: CartesianAxes
   private options: CurrentTimeOptions
   private datetime: Date
   static readonly REFRESH_INTERVAL: number = 10000
@@ -26,16 +26,16 @@ export class CurrentTime implements Visitor {
     this.datetime = dt
   }
 
-  visit(axis: Axis) {
-    this.axis = axis as CartesianAxis
-    this.create(axis as CartesianAxis)
+  visit(axis: Axes) {
+    this.axis = axis as CartesianAxes
+    this.create(axis as CartesianAxes)
     this.redraw()
     d3.interval(() => {
       this.redraw()
     }, CurrentTime.REFRESH_INTERVAL)
   }
 
-  create(axis: CartesianAxis) {
+  create(axis: CartesianAxes) {
     const front = axis.canvas.select('.front')
     this.group = front.append('g').attr('class', 'current-time')
     this.line = this.group.append('line').attr('class', 'current-time')

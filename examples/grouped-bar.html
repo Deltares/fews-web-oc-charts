@@ -71,7 +71,7 @@
     const labelAngle = -45
 
     var container1 = document.getElementById("chart-container-1");
-    var axis1 = new wbCharts.CartesianAxis(container1, null, null, {
+    var axis1 = new wbCharts.CartesianAxes(container1, null, null, {
       x: [{
         type: 'band',
         position: 'bottom',
@@ -92,7 +92,7 @@
     });
 
     var containerMatrix = document.getElementById("chart-matrix");
-    var axis3 = new wbCharts.CartesianAxis(containerMatrix, null, null, {
+    var axis3 = new wbCharts.CartesianAxes(containerMatrix, null, null, {
       x: [{
         type: 'band',
         position: 'top',

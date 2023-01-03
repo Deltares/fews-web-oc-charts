@@ -1,6 +1,6 @@
 import * as d3 from 'd3'
-import { Axis } from '../Axes/axis.js'
-import { CartesianAxis } from '../index.js';
+import { Axes } from '../Axes/axes.js'
+import { CartesianAxes } from '../index.js';
 import { Visitor } from './visitor.js'
 import { defaultsDeep } from 'lodash-es'
 
@@ -11,7 +11,7 @@ type LevelSelectOptions = {
 export class LevelSelect implements Visitor {
   group: any
   line: any
-  axis: CartesianAxis
+  axis: CartesianAxes
   value: number
   callback: Function
   format: any
@@ -29,12 +29,12 @@ export class LevelSelect implements Visitor {
     ) as LevelSelectOptions
   }
 
-  visit(axis: Axis) {
-    this.axis = axis as CartesianAxis
-    this.create(axis as CartesianAxis)
+  visit(axis: Axes) {
+    this.axis = axis as CartesianAxes
+    this.create(axis as CartesianAxes)
   }
 
-  create(axis: CartesianAxis) {
+  create(axis: CartesianAxes) {
     if (!this.group) {
       this.group = axis.canvas.append('g').attr('class', 'level-select')
       this.group.append('line')

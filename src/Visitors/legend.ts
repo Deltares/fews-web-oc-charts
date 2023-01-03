@@ -1,6 +1,6 @@
 import * as d3 from 'd3'
-import { Axis } from '../Axes/axis.js'
-import { CartesianAxis } from '../index.js';
+import { Axes } from '../Axes/axes.js'
+import { CartesianAxes } from '../index.js';
 import { Visitor } from './visitor.js'
 
 interface LegendEntry {
@@ -13,7 +13,7 @@ export class Legend implements Visitor {
   private labels: LegendEntry[]
   private svg: any
   private group: any
-  private axis: CartesianAxis
+  private axis: CartesianAxes
   private configuredLabels = false
 
   constructor(labels: any, container?: HTMLElement) {
@@ -28,8 +28,8 @@ export class Legend implements Visitor {
     this.group = this.svg.append('g')
   }
 
-  visit(axis: Axis) {
-    this.axis = axis as CartesianAxis
+  visit(axis: Axes) {
+    this.axis = axis as CartesianAxes
     this.redraw()
   }
 

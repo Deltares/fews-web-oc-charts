@@ -94,7 +94,7 @@
     }).format
 
     var container1 = document.getElementById("1");
-    var polarAxis1 = new wbCharts.PolarAxis(container1, null, null, {
+    var polarAxis1 = new wbCharts.PolarAxes(container1, null, null, {
       angular: {
         direction: -1,
         range: [0, 2 * Math.PI],
@@ -112,7 +112,7 @@
     });
 
     var container2 = document.getElementById("2");
-    var polarAxis2 = new wbCharts.PolarAxis(container2, null, null, {
+    var polarAxis2 = new wbCharts.PolarAxes(container2, null, null, {
       angular: {
         direction: -1,
         range: [Math.PI / 3, 5 * Math.PI / 3],

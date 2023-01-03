@@ -31,7 +31,7 @@ export interface AxisIndex {
   color?: { key: string };
 }
 
-export abstract class Axis {
+export abstract class Axes {
   tooltip: Tooltip
   type: string
   view: any

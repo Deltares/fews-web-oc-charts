@@ -1,5 +1,5 @@
 import * as d3 from 'd3'
-import { Axis, AxesOptions } from './axis.js'
+import { Axes, AxesOptions } from './axes.js'
 import { AxisType } from '../Axis/axisType.js'
 import { AxisOptions } from '../Axis/axisOptions'
 
@@ -20,28 +20,30 @@ interface AngularAxisOptions extends AxisOptions {
   intercept?: number
 }
 
-export interface PolarAxisOptions extends AxesOptions {
+export interface PolarAxesOptions extends AxesOptions {
   innerRadius?: number
   radial: RadialAxisOptions
   angular: AngularAxisOptions
 }
 
 
-export class PolarAxis extends Axis {
+const polarAxesDefaultOptions = {}
+
+
+export class PolarAxes extends Axes {
   radialScale: any
   angularScale: any
   innerRadiusFactor: number
   intercept: number
   direction: number
   private angularRange: number[]
-  static readonly defaultOptions = {}
   private angularDomain: number[] | Date[]
   angularAxisOptions: AngularAxisOptions = {}
   radialAxisOptions: RadialAxisOptions = {}
 
 
-  constructor(container: HTMLElement, width: number | null, height: number | null, options: PolarAxisOptions) {
-    super(container, width, height, options, PolarAxis.defaultOptions)
+  constructor(container: HTMLElement, width: number | null, height: number | null, options: PolarAxesOptions) {
+    super(container, width, height, options, polarAxesDefaultOptions)
     this.canvas = this.canvas
       .append('g')
     this.direction = options.angular.direction ? options.angular.direction : Direction.ANTICLOCKWISE

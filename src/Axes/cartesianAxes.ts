@@ -2,7 +2,7 @@ import * as d3 from 'd3'
 import { DateTime } from 'luxon'
 import { defaultsDeep, merge } from 'lodash-es'
 
-import { Axis, AxesOptions } from './axis.js'
+import { Axes, AxesOptions } from './axes.js'
 import { AxisType } from '../Axis/axisType.js'
 import { AxisOptions } from '../Axis/axisOptions.js'
 import { AxisPosition } from '../Axis/axisPosition.js'
@@ -28,7 +28,7 @@ const defaultAxesOptions = {
   y: [{ type: AxisType.value, labelAngle: 0 }]
 } as const
 
-export class CartesianAxis extends Axis {
+export class CartesianAxes extends Axes {
   canvas: any
   gridHandles: Record<string, Grid> = {}
   axisHandles: any[] = []

@@ -1,6 +1,6 @@
 import * as d3 from 'd3'
 import { defaultsDeep } from 'lodash-es'
-import { CartesianAxis, PolarAxis } from '../index.js';
+import { CartesianAxes, PolarAxes } from '../index.js';
 import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js'
 import { Chart, SymbolOptions } from './chart.js'
 
@@ -24,7 +24,7 @@ export class ChartMarker extends Chart {
     this.options = defaultsDeep(this.options, this.options, { symbol: DefaultSymbolOptions })
   }
 
-  plotterCartesian(axis: CartesianAxis, axisIndex: any) {
+  plotterCartesian(axis: CartesianAxes, axisIndex: any) {
     const xKey = this.dataKeys.x
     const yKey = this.dataKeys.y
     const xScale = axis.xScale[axisIndex.x.axisIndex]
@@ -71,7 +71,7 @@ export class ChartMarker extends Chart {
     }
   }
 
-  plotterPolar(axis: PolarAxis, dataKeys: any) {
+  plotterPolar(axis: PolarAxes, dataKeys: any) {
     this.group = this.selectGroup(axis, 'chart-marker')
     const rKey = this.dataKeys.radial
     const tKey = this.dataKeys.angular

@@ -1,5 +1,5 @@
 import d3 from 'd3';
-import { CartesianAxis } from '../index.js';
+import { CartesianAxes } from '../index.js';
 
 export interface GridOptions {
   axisKey: 'x' | 'y';
@@ -9,9 +9,9 @@ export interface GridOptions {
 
 export class Grid {
   public options: GridOptions
-  public axis: CartesianAxis
+  public axis: CartesianAxes
 
-  constructor(axis: CartesianAxis, options: GridOptions) {
+  constructor(axis: CartesianAxes, options: GridOptions) {
     this.options = options
     this.axis = axis
     this.create()
