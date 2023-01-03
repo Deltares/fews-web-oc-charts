@@ -533,7 +533,7 @@ export class CartesianAxes extends Axes {
   protected initGridX(options: CartesianAxisOptions[]): void {
     for (const index in options) {
       if (options[index].showGrid) {
-        this.gridHandles[`x${index}`] = new Grid(this, {axisKey: 'x', axisIndex: Number.parseInt(index)})
+        this.gridHandles[`x${index}`] = new Grid(this.canvas, this.xScale[index], this.yScale[0], {axisKey: 'x', axisIndex: Number.parseInt(index)})
       }
     }
   }
@@ -541,7 +541,7 @@ export class CartesianAxes extends Axes {
   protected initGridY(options: CartesianAxisOptions[]): void {
     for (const index in options) {
       if (options[index].showGrid) {
-        this.gridHandles[`x${index}`] = new Grid(this, {axisKey: 'y', axisIndex: Number.parseInt(index)})
+        this.gridHandles[`x${index}`] = new Grid(this.canvas, this.yScale[index], this.xScale[0] , {axisKey: 'y', axisIndex: Number.parseInt(index)})
       }
     }
   }

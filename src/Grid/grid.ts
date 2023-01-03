@@ -9,42 +9,45 @@ export interface GridOptions {
 
 export class Grid {
   public options: GridOptions
-  public axis: CartesianAxes
+  public scale: any
+  public span: any
+  private group: any
 
-  constructor(axis: CartesianAxes, options: GridOptions) {
+  constructor(group, scale: any, span: any, options: GridOptions) {
     this.options = options
-    this.axis = axis
-    this.create()
+    this.scale = scale
+    this.span = span
+    this.create(group)
   }
 
   get gridClass(): string {
     return `${this.options.axisKey}-grid-${this.options.axisIndex}`
   }
 
-  protected create(): void {
-    const g = this.axis.canvas
-      g.append('g').attr('class', `grid ${this.gridClass}`)
+  protected create(group): void {
+    this.group = group.append('g').attr('class', `grid ${this.gridClass}`)
   }
 
   redraw(): void {
     if (this.options.axisKey === 'x') {
-      const scale = this.axis.xScale[this.options.axisIndex]
-      const grid = d3.axisBottom(scale)
+      const grid = d3.axisBottom(this.scale)
+      const size = d3.max(this.span.range() as number[]) as number
       grid.ticks(5)
-      grid.tickSize(this.axis.height)
-      this.updateTicks(this.axis.canvas.select(`.${this.gridClass}`), grid)
+      grid.tickSize(size)
+      this.updateTicks(this.group, grid)
     } else if (this.options.axisKey === 'y') {
-      const scale = this.axis.yScale[this.options.axisIndex]
-      console.log('scale', scale.domain(), scale.range())
-      const grid = d3.axisRight(scale)
+      const grid = d3.axisRight(this.scale)
       grid.ticks(5)
-      grid.tickSize(this.axis.width)
-      this.updateTicks(this.axis.canvas.select(`.${this.gridClass}`), grid)
+      // grid.tickValues(this.scale.ticks())
+      console.log(grid.scale().range(), grid.scale().domain())
+      const size = d3.max(this.span.range() as number[]) as number
+      console.log('size', size)
+      grid.tickSize(size)
+      this.updateTicks(this.group, grid)
     }
   }
 
   updateTicks(selection, gridAxis: d3.Axis<d3.AxisDomain>) {
-    console.log('updateTicks', selection)
     selection
     .call(gridAxis)
     .call(g => g.selectAll(".tick")
