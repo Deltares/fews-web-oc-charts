@@ -8,7 +8,7 @@ import { defaultsDeep, merge } from 'lodash-es'
 import { niceDomain } from './niceDomain.js'
 import { niceDegreeSteps } from '../Utils/niceDegreeSteps.js'
 import { AxisOrientation } from '../Types/axisOrientation.js'
-import { anchorForAngle } from '../Utils/anchorForAngle.js'
+import { textAnchorForAngle } from '../Utils/textAnchorForAngle.js'
 
 export interface CartesianAxisOptions extends AxisOptions {
   position?: AxisPosition;
@@ -319,7 +319,7 @@ export class CartesianAxis extends Axis {
             .attr("transform", `rotate(${angle})`);
           break
         default:
-          const anchor = anchorForAngle(angle, orientation)
+          const anchor = textAnchorForAngle(angle, orientation)
           const offset = orientation === AxisOrientation.Top ? -15 : 15
           axisHandle
             .selectAll("text")
@@ -394,7 +394,7 @@ export class CartesianAxis extends Axis {
             .attr("transform", `rotate(${angle})`);
           break
         default:
-          const anchor = anchorForAngle(angle, orientation)
+          const anchor = textAnchorForAngle(angle, orientation)
           const offset = orientation === AxisOrientation.Right ? 15 : -15
           axisHandle
             .selectAll("text")
