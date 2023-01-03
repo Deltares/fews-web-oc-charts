@@ -24,9 +24,6 @@ const defaultAxesOptions = {
   y: [{ type: AxisType.value, labelAngle: 0 }]
 } as const
 
-type AxisKey = keyof typeof defaultAxesOptions
-
-
 export class CartesianAxis extends Axis {
   canvas: any
   container: HTMLElement
@@ -212,8 +209,8 @@ export class CartesianAxis extends Axis {
   }
 
   redraw(options?): void {
-    this.updateAxisScales(options?.x ?? {}, 'x')
-    this.updateAxisScales(options?.y ?? {}, 'y')
+    this.updateAxisScales(options.x ?? {}, 'x')
+    this.updateAxisScales(options.y ?? {}, 'y')
     for (const chart of this.charts) {
       chart.plotter(this, chart.axisIndex)
     }
