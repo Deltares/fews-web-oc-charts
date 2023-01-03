@@ -8,6 +8,7 @@ import { defaultsDeep, merge } from 'lodash-es'
 import { niceDomain } from './niceDomain.js'
 import { niceDegreeSteps } from '../Utils/niceDegreeSteps.js'
 import { AxisOrientation } from '../Types/axisOrientation.js'
+import { anchorForAngle } from '../Utils/anchorForAngle.js'
 
 export interface CartesianAxisOptions extends AxisOptions {
   position?: AxisPosition;
@@ -18,34 +19,13 @@ export interface CartesianAxesOptions extends AxesOptions {
   y?: CartesianAxisOptions[];
 }
 
-function normalizeAngle(angle) {
-  return angle - 360 * Math.floor((angle) / 360)
-}
+const defaultAxesOptions = {
+  x: [{ type: AxisType.value, labelAngle: 0 }],
+  y: [{ type: AxisType.value, labelAngle: 0 }]
+} as const
 
-function anchorForAngle(angle, orientation) {
-  let rotate
-  switch (orientation) {
-    case AxisOrientation.Top:
-      rotate = 180
-      break
-    case AxisOrientation.Right:
-      rotate = -90
-      break
-    case AxisOrientation.Bottom:
-      rotate = 0
-      break
-    case AxisOrientation.Left:
-    default:
-      rotate = 90
-  }
-  const normalizedAngle = normalizeAngle(angle - rotate)
-  if (normalizedAngle < 180) {
-    return 'start'
-  } else if (normalizedAngle > 180) {
-    return 'end'
-  }
-  return 'middle'
-}
+type AxisKey = keyof typeof defaultAxesOptions
+
 
 export class CartesianAxis extends Axis {
   canvas: any
@@ -57,10 +37,7 @@ export class CartesianAxis extends Axis {
   clipPathId: string
   timeZoneOffset: number
   options: CartesianAxesOptions
-  static readonly defaultOptions = {
-    x: [{ type: AxisType.value, labelAngle: 0 }],
-    y: [{ type: AxisType.value, labelAngle: 0 }]
-  }
+
 
   constructor(
     container: HTMLElement,
