@@ -1,4 +1,4 @@
-import { Axis } from '../Axis/axis.js'
+import { Axis } from '../Axes/axis.js'
 import { Visitor } from './visitor.js'
 import * as d3 from 'd3'
 import { defaultsDeep } from 'lodash-es'

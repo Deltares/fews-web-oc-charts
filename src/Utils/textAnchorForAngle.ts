@@ -1,4 +1,4 @@
-import { AxisOrientation } from "../Types/axisOrientation.js"
+import { AxisOrientation } from "../Axis/axisOrientation.js"
 import { normalizeAngle } from "./normalizeAngle.js"
 
 export function textAnchorForAngle(angle, orientation) {

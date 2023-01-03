@@ -1,7 +1,7 @@
 import * as d3 from 'd3'
 import { isNull } from 'lodash'
 import { CartesianAxis, PolarAxis } from '../index.js';
-import { AxisIndex } from '../Axis/axis.js'
+import { AxisIndex } from '../Axes/axis.js'
 import { Chart, AUTO_SCALE } from './chart.js'
 
 function mean(x: number[] | number) {

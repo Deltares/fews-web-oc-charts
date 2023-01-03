@@ -1,4 +1,5 @@
-import { Axis, AxisType } from '../Axis/axis.js'
+import { Axis } from '../Axes/axis.js'
+import { AxisType } from '../Axis/axisType.js'
 import { CartesianAxis } from '../index.js';
 import { Visitor } from './visitor.js'
 import { DateTime, Duration } from 'luxon'

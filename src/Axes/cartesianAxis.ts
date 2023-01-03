@@ -1,13 +1,17 @@
 import * as d3 from 'd3'
-import { Axis, AxesOptions, AxisType, AxisOptions, ZoomOptions, AxisScaleOptions, resetZoom } from './axis.js'
-import { AxisPosition } from '../Types/axisPosition.js'
+import { Axis, AxesOptions } from './axis.js'
+import { AxisType } from '../Axis/axisType.js'
+import { AxisOptions } from '../Axis/axisOptions.js'
+import { AxisPosition } from '../Axis/axisPosition.js'
+import { ResetZoom, ScaleOptions, ZoomOptions } from '../Scale/scaleOptions.js'
+
 
 import { generateMultiFormat } from '../Utils/date.js'
 import { DateTime } from 'luxon'
 import { defaultsDeep, merge } from 'lodash-es'
 import { niceDomain } from './niceDomain.js'
 import { niceDegreeSteps } from '../Utils/niceDegreeSteps.js'
-import { AxisOrientation } from '../Types/axisOrientation.js'
+import { AxisOrientation } from '../Axis/axisOrientation.js'
 import { textAnchorForAngle } from '../Utils/textAnchorForAngle.js'
 
 export interface CartesianAxisOptions extends AxisOptions {
@@ -150,7 +154,7 @@ export class CartesianAxis extends Axis {
     for (const key in scales) {
       const scale = scales[key]
       const axisOptions = this.options[axisKey][key]
-      const axisScaleOptions: AxisScaleOptions = {
+      const axisScaleOptions: ScaleOptions = {
         domain: axisOptions.domain,
         nice: axisOptions.nice,
         includeZero: axisOptions.includeZero,
@@ -228,11 +232,11 @@ export class CartesianAxis extends Axis {
 
   resetZoom(): void {
     const xOptions: ZoomOptions = { autoScale: true }
-    if (this.options['x'][0].resetZoom === resetZoom.full || (this.options['x'][0].resetZoom === resetZoom.toggle && this.atInitialExtent(this.xScale[0].domain(), this.xInitialExtent[0]))) {
+    if (this.options['x'][0].resetZoom === ResetZoom.full || (this.options['x'][0].resetZoom === ResetZoom.toggle && this.atInitialExtent(this.xScale[0].domain(), this.xInitialExtent[0]))) {
       xOptions.fullExtent = true
     }
     const yOptions: ZoomOptions = { autoScale: true }
-    if (this.options['y'][0].resetZoom === resetZoom.full || (this.options['y'][0].resetZoom === resetZoom.toggle && this.atInitialExtent(this.yScale[0].domain(), this.yInitialExtent[0]))) {
+    if (this.options['y'][0].resetZoom === ResetZoom.full || (this.options['y'][0].resetZoom === ResetZoom.toggle && this.atInitialExtent(this.yScale[0].domain(), this.yInitialExtent[0]))) {
       yOptions.fullExtent = true
     }
     this.redraw({ x: xOptions, y: yOptions })

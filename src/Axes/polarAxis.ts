@@ -1,5 +1,8 @@
 import * as d3 from 'd3'
-import { Axis, AxesOptions, AxisType, AxisOptions } from './axis.js'
+import { Axis, AxesOptions } from './axis.js'
+import { AxisType } from '../Axis/axisType.js'
+import { AxisOptions } from '../Axis/axisOptions'
+
 import { defaultsDeep } from 'lodash-es'
 import { DateTime } from 'luxon'
 import { niceDegreeSteps } from '../Utils/niceDegreeSteps.js'
@@ -19,8 +22,8 @@ interface AngularAxisOptions extends AxisOptions {
 
 export interface PolarAxisOptions extends AxesOptions {
   innerRadius?: number
-  radial?: RadialAxisOptions
-  angular?: AngularAxisOptions
+  radial: RadialAxisOptions
+  angular: AngularAxisOptions
 }
 
 
@@ -37,7 +40,7 @@ export class PolarAxis extends Axis {
   radialAxisOptions: RadialAxisOptions = {}
 
 
-  constructor(container: HTMLElement, width: number | null, height: number | null, options?: PolarAxisOptions) {
+  constructor(container: HTMLElement, width: number | null, height: number | null, options: PolarAxisOptions) {
     super(container, width, height, options, PolarAxis.defaultOptions)
     this.canvas = this.canvas
       .append('g')

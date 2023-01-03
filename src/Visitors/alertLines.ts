@@ -1,4 +1,4 @@
-import { Axis } from '../Axis/axis.js'
+import { Axis } from '../Axes/axis.js'
 import { CartesianAxis } from '../index.js';
 import { Visitor } from './visitor.js'
 

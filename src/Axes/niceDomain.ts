@@ -1,4 +1,4 @@
-import { AxisType } from './axis.js'
+import { AxisType } from '../Axis/axisType.js'
 
 const valueSteps = [1, 2, 2.5, 5, 10 ] // keep the 10 at the end
 const degreeSteps = [1, 5, 15, 30, 45, 60, 90] // keep the 10 at the end

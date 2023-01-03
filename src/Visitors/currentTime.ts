@@ -1,5 +1,5 @@
 import * as d3 from 'd3'
-import { Axis } from '../Axis/axis.js'
+import { Axis } from '../Axes/axis.js'
 import { CartesianAxis } from '../index.js';
 import { dateFormatter } from '../Utils/date.js'
 import { Visitor } from './visitor.js'

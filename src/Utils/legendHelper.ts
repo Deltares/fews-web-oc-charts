@@ -1,4 +1,4 @@
-import { Axis } from '../Axis/axis.js'
+import { Axis } from '../Axes/axis.js'
 
 export function toggleChartVisisbility(axis: Axis, id: string): void {
   for (const chart of axis.charts.filter(c => c.id === id)) {

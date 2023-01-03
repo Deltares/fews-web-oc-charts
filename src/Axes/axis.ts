@@ -3,54 +3,13 @@ import { Chart } from '../Charts/chart.js'
 import { Visitor } from '../Visitors/visitor.js'
 import { defaultsDeep, merge } from 'lodash-es'
 import { Tooltip } from '../Tooltip/tooltip.js'
-import { AxisOrientation } from '../Types/axisOrientation.js'
+import { AxisOptions } from '../Axis/axisOptions.js'
 
 export interface Margin {
   top?: number;
   right?: number;
   bottom?: number;
   left?: number;
-}
-
-export enum AxisType {
-  time = 'time',
-  value = 'value',
-  degrees = 'degrees',
-  band = 'band'
-}
-
-export enum resetZoom {
-  initial = 'initial',
-  full = 'full',
-  toggle = 'toggle'
-}
-
-
-export interface AxisOptions extends AxisScaleOptions {
-  label?: string;
-  labelAngle?: number;
-  type?: AxisType;
-  unit?: string;
-  showGrid?: boolean;
-  format?: (x: number | Date) => string;
-  reverse?: boolean;
-  locale?: string;
-  timeZone?: string;
-  orientation?: AxisOrientation;
-  defaultDomain?: [number, number] | [Date, Date];
-}
-
-export interface AxisScaleOptions {
-  domain?: [number, number] | [Date, Date];
-  nice?: boolean;
-  includeZero?: boolean;
-  symmetric?: boolean;
-  resetZoom?: resetZoom;
-}
-
-export interface ZoomOptions extends AxisScaleOptions {
-  autoScale?: boolean;
-  fullExtent?: boolean;
 }
 
 export interface AxesOptions {

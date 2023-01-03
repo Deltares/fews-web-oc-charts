@@ -1,6 +1,6 @@
 import * as d3 from 'd3'
 import { isNull } from 'lodash';
-import { Axis } from '../Axis/axis.js'
+import { Axis } from '../Axes/axis.js'
 import { CartesianAxis } from '../index.js';
 import { Visitor } from './visitor.js'
 
