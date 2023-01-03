@@ -177,5 +177,4 @@ export abstract class Axis {
   }
 
   protected abstract setRange(): void
-  protected abstract initGrid(): void
 }

@@ -1,18 +1,18 @@
 import * as d3 from 'd3'
+import { DateTime } from 'luxon'
+import { defaultsDeep, merge } from 'lodash-es'
+
 import { Axis, AxesOptions } from './axis.js'
 import { AxisType } from '../Axis/axisType.js'
 import { AxisOptions } from '../Axis/axisOptions.js'
 import { AxisPosition } from '../Axis/axisPosition.js'
 import { ResetZoom, ScaleOptions, ZoomOptions } from '../Scale/scaleOptions.js'
-
-
 import { generateMultiFormat } from '../Utils/date.js'
-import { DateTime } from 'luxon'
-import { defaultsDeep, merge } from 'lodash-es'
 import { niceDomain } from './niceDomain.js'
 import { niceDegreeSteps } from '../Utils/niceDegreeSteps.js'
 import { AxisOrientation } from '../Axis/axisOrientation.js'
 import { textAnchorForAngle } from '../Utils/textAnchorForAngle.js'
+import { Grid } from '../Grid/grid.js'
 
 export interface CartesianAxisOptions extends AxisOptions {
   position?: AxisPosition;
@@ -30,6 +30,8 @@ const defaultAxesOptions = {
 
 export class CartesianAxis extends Axis {
   canvas: any
+  gridHandles: Record<string, Grid> = {}
+  axisHandles: any[] = []
   container: HTMLElement
   xScale: Array<any> = []
   yScale: Array<any> = []
@@ -38,7 +40,6 @@ export class CartesianAxis extends Axis {
   clipPathId: string
   timeZoneOffset: number
   options: CartesianAxesOptions
-
 
   constructor(
     container: HTMLElement,
@@ -57,7 +58,8 @@ export class CartesianAxis extends Axis {
     this.setCanvas()
     this.initXScales(this.options.x)
     this.initYScales(this.options.y)
-    this.initGrid()
+    this.initGridX(this.options.x)
+    this.initGridY(this.options.y)
     this.setClipPath()
     this.chartGroup = this.canvas
       .append('g')
@@ -273,9 +275,7 @@ export class CartesianAxis extends Axis {
       } else if (axisPosition !== AxisPosition.AtZero && axisPosition !== undefined) {
         orientation = axisPosition
       }
-      const axis = this.axis(orientation, scale)
-      const grid = d3.axisBottom(scale)
-      grid.ticks(5).tickSize(this.height)
+      const axis = this.createAxis(orientation, scale)
       if (options[key].type === AxisType.time) {
 
         const offsetDomain = scale.domain().map((d) => {
@@ -290,7 +290,6 @@ export class CartesianAxis extends Axis {
         })
         axis.tickValues(offsetValues)
         axis.tickFormat(generateMultiFormat(options[key].timeZone, options[key].locale))
-        grid.tickValues(offsetValues)
       } else if (options[key].type === AxisType.degrees) {
         const domain = scale.domain()
         let step = d3.tickIncrement(domain[0], domain[1], 5)
@@ -298,7 +297,6 @@ export class CartesianAxis extends Axis {
         const start = Math.ceil(domain[0] / step) * step
         const stop = Math.floor(domain[1] / step + 1) * step
         axis.tickValues(d3.range(start, stop, step))
-        grid.tickValues(d3.range(start, stop, step))
       }
       const x = 0
       const y = this.yPositionAxis(options[key].position)
@@ -331,12 +329,10 @@ export class CartesianAxis extends Axis {
             .attr("dominant-baseline", "middle")
             .attr("transform", `translate(0, ${offset}) rotate(${angle})`);
       }
-
-      if (options[key].showGrid) this.updateTicks(this.canvas.select('.x-grid'), grid)
     }
   }
 
-  axis(orientation: AxisOrientation, scale) {
+  createAxis(orientation: AxisOrientation, scale) {
     switch (orientation) {
       case 'bottom':
         return d3.axisBottom(scale).ticks(5)
@@ -361,9 +357,7 @@ export class CartesianAxis extends Axis {
       } else if (axisPosition !== AxisPosition.AtZero && axisPosition !== undefined) {
         orientation = axisPosition
       }
-      const axis = this.axis(orientation, scale)
-      const grid = d3.axisRight(scale)
-      grid.ticks(5).tickSize(this.width)
+      const axis = this.createAxis(orientation, scale)
       if (options[key].type === AxisType.time) {
         const offsetDomain = scale.domain().map((d) => {
           const m = DateTime.fromJSDate(d).setZone(options[key].timeZone)
@@ -377,7 +371,6 @@ export class CartesianAxis extends Axis {
         })
         axis.tickValues(offsetValues)
         axis.tickFormat(generateMultiFormat(options[key].timeZone, options[key].locale))
-        grid.tickValues(offsetValues)
       } else if (options[key].type === AxisType.degrees) {
         const domain = scale.domain()
         let step = d3.tickIncrement(domain[0], domain[1], 5)
@@ -385,7 +378,6 @@ export class CartesianAxis extends Axis {
         const start = Math.ceil(domain[0] / step) * step
         const stop = Math.floor(domain[1] / step + 1) * step
         axis.tickValues(d3.range(start, stop, step))
-        grid.tickValues(d3.range(start, stop, step))
       }
 
       const x = this.xPositionAxis(options[key].position)
@@ -419,15 +411,7 @@ export class CartesianAxis extends Axis {
             .attr("dominant-baseline", "middle")
             .attr("transform", `translate(${offset}, 0) rotate(${angle})`);
       }
-      if (options[key].showGrid) this.updateTicks(this.canvas.select('.y-grid'), grid)
     }
-  }
-
-  updateTicks(selection, gridAxis: d3.Axis<d3.AxisDomain>) {
-    selection
-    .call(gridAxis)
-    .call(g => g.selectAll(".tick")
-      .attr("class", (d) => { return d === 0 ? 'tick zero-crossing' : 'tick' }))
   }
 
   updateGrid(): void {
@@ -436,6 +420,9 @@ export class CartesianAxis extends Axis {
     this.updateXAxis(this.options.x)
     this.updateYAxis(this.options.y)
     this.updateLabels()
+    Object.values(this.gridHandles).forEach(
+      (grid) => grid.redraw()
+    )
   }
 
   updateLabels(): void {
@@ -543,10 +530,20 @@ export class CartesianAxis extends Axis {
     }
   }
 
-  protected initGrid(): void {
-    const g = this.canvas
-    g.append('g').attr('class', 'grid y-grid')
-    g.append('g').attr('class', 'grid x-grid')
+  protected initGridX(options: CartesianAxisOptions[]): void {
+    for (const index in options) {
+      if (options[index].showGrid) {
+        this.gridHandles[`x${index}`] = new Grid(this, {axisKey: 'x', axisIndex: Number.parseInt(index)})
+      }
+    }
+  }
+
+  protected initGridY(options: CartesianAxisOptions[]): void {
+    for (const index in options) {
+      if (options[index].showGrid) {
+        this.gridHandles[`x${index}`] = new Grid(this, {axisKey: 'y', axisIndex: Number.parseInt(index)})
+      }
+    }
   }
 
   protected initAxis(): void {
