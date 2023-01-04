@@ -61,8 +61,8 @@ export class CartesianAxes extends Axes {
     this.setClipPath()
     this.initAxisX(this.options.x)
     this.initAxisY(this.options.y)
-    this.initGridX(this.options.x)
-    this.initGridY(this.options.y)
+    // this.initGridX(this.options.x)
+    // this.initGridY(this.options.y)
     this.chartGroup = this.canvas
       .append('g')
       .attr('class', 'group')
@@ -521,22 +521,6 @@ export class CartesianAxes extends Axes {
     }
   }
 
-  protected initGridX(options: CartesianAxisOptions[]): void {
-    for (const index in options) {
-      if (options[index].showGrid) {
-        this.gridHandles[`x${index}`] = new Grid(this.canvas, this.xScale[index], this.yScale[0], {axisKey: 'x', axisIndex: Number.parseInt(index)})
-      }
-    }
-  }
-
-  protected initGridY(options: CartesianAxisOptions[]): void {
-    for (const index in options) {
-      if (options[index].showGrid) {
-        this.gridHandles[`x${index}`] = new Grid(this.canvas, this.yScale[index], this.xScale[0] , {axisKey: 'y', axisIndex: Number.parseInt(index)})
-      }
-    }
-  }
-
   protected initAxisX(options: CartesianAxisOptions[]): void {
     for (const index in options) {
       this.axisHandles[`x${index}`] = new XAxis(this.canvas, this.xScale[index], this.yScale[0], {
@@ -546,6 +530,9 @@ export class CartesianAxes extends Axes {
         position: AxisPosition.Bottom,
         ...options[index]
       })
+      if (options[index].showGrid) {
+        this.gridHandles[`x${index}`] = new Grid(this.canvas, this.axisHandles[`x${index}`].axis, this.yScale[0], {axisKey: 'x', axisIndex: Number.parseInt(index)})
+      }
     }
   }
 
@@ -558,6 +545,9 @@ export class CartesianAxes extends Axes {
         position: AxisPosition.Left,
         ...options[index]
       })
+      if (options[index].showGrid) {
+        this.gridHandles[`y${index}`] = new Grid(this.canvas, this.axisHandles[`y${index}`].axis, this.xScale[0], {axisKey: 'y', axisIndex: Number.parseInt(index)})
+      }
     }
   }
 
