@@ -11,14 +11,12 @@ export interface GridOptions {
 export class XAxis extends Axis {
 
   constructor(group: d3.Selection<SVGGElement, unknown, null, unknown>, scale: any, spanScale: any, options: Partial<BaseAxisOptions>) {
-    console.log('XAxis', options)
     if ( options.orientation === undefined ) {
       options.orientation = options.position !== undefined && options.position !== AxisPosition.AtZero ? options.position : AxisOrientation.Bottom
     }
     if ( options.position === undefined ) {
       options.position = AxisOrientation.Bottom
     }
-    console.log('XAxis', options)
     super(group, scale, spanScale, options)
   }
 
@@ -32,7 +30,6 @@ export class XAxis extends Axis {
   }
 
   translateTickLabels(orientation: AxisOrientation, angle: number) {
-    console.log('updateTickLabel', angle)
     switch (angle) {
       case 0:
         break
