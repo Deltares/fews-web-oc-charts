@@ -4,7 +4,6 @@ import { defaultsDeep, merge } from 'lodash-es'
 
 import { Axes, AxesOptions } from './axes.js'
 import { AxisType } from '../Axis/axisType.js'
-import { AxisOptions } from '../Axis/axisOptions.js'
 import { AxisPosition } from '../Axis/axisPosition.js'
 import { ResetZoom, ScaleOptions, ZoomOptions } from '../Scale/scaleOptions.js'
 import { generateMultiFormat } from '../Utils/date.js'
@@ -13,10 +12,11 @@ import { niceDegreeSteps } from '../Utils/niceDegreeSteps.js'
 import { AxisOrientation } from '../Axis/axisOrientation.js'
 import { textAnchorForAngle } from '../Utils/textAnchorForAngle.js'
 import { Grid } from '../Grid/grid.js'
+import { CartesianAxisOptions } from '../Axis/cartesianAxisOptions.js'
+import { XAxis } from '../Axis/xAxis.js'
+import { YAxis } from '../Axis/yAxis.js'
+import { createAxis } from '../Axis/createAxis.js'
 
-export interface CartesianAxisOptions extends AxisOptions {
-  position?: AxisPosition;
-}
 
 export interface CartesianAxesOptions extends AxesOptions {
   x: CartesianAxisOptions[];
@@ -31,7 +31,7 @@ const defaultAxesOptions = {
 export class CartesianAxes extends Axes {
   canvas: any
   gridHandles: Record<string, Grid> = {}
-  axisHandles: any[] = []
+  axisHandles: Record<string, XAxis|YAxis> = {}
   container: HTMLElement
   xScale: Array<any> = []
   yScale: Array<any> = []
@@ -58,15 +58,16 @@ export class CartesianAxes extends Axes {
     this.setCanvas()
     this.initXScales(this.options.x)
     this.initYScales(this.options.y)
+    this.setClipPath()
+    this.initAxisX(this.options.x)
+    this.initAxisY(this.options.y)
     this.initGridX(this.options.x)
     this.initGridY(this.options.y)
-    this.setClipPath()
     this.chartGroup = this.canvas
       .append('g')
       .attr('class', 'group')
       .attr('clip-path', 'url(#' + this.clipPathId + ')')
       .append('g')
-    this.initAxis()
     this.canvas
       .append('g')
       .attr('class', 'front')
@@ -275,7 +276,7 @@ export class CartesianAxes extends Axes {
       } else if (axisPosition !== AxisPosition.AtZero && axisPosition !== undefined) {
         orientation = axisPosition
       }
-      const axis = this.createAxis(orientation, scale)
+      const axis = createAxis(orientation, scale)
       if (options[key].type === AxisType.time) {
 
         const offsetDomain = scale.domain().map((d) => {
@@ -332,19 +333,6 @@ export class CartesianAxes extends Axes {
     }
   }
 
-  createAxis(orientation: AxisOrientation, scale) {
-    switch (orientation) {
-      case 'bottom':
-        return d3.axisBottom(scale).ticks(5)
-        case 'top':
-          return d3.axisTop(scale).ticks(5)
-      case 'right':
-        return d3.axisRight(scale).ticks(5)
-      case 'left':
-      default:
-        return d3.axisLeft(scale).ticks(5)
-    }
-  }
 
   updateYAxis(options: CartesianAxisOptions[]): void {
     for (const key in this.yScale) {
@@ -357,7 +345,7 @@ export class CartesianAxes extends Axes {
       } else if (axisPosition !== AxisPosition.AtZero && axisPosition !== undefined) {
         orientation = axisPosition
       }
-      const axis = this.createAxis(orientation, scale)
+      const axis = createAxis(orientation, scale)
       if (options[key].type === AxisType.time) {
         const offsetDomain = scale.domain().map((d) => {
           const m = DateTime.fromJSDate(d).setZone(options[key].timeZone)
@@ -417,8 +405,11 @@ export class CartesianAxes extends Axes {
   updateGrid(): void {
     this.setClipPath()
     this.setCanvas()
-    this.updateXAxis(this.options.x)
-    this.updateYAxis(this.options.y)
+    // this.updateXAxis(this.options.x)
+    // this.updateYAxis(this.options.y)
+    Object.values(this.axisHandles).forEach(
+      (axis) => axis.redraw()
+    )
     this.updateLabels()
     Object.values(this.gridHandles).forEach(
       (grid) => grid.redraw()
@@ -542,6 +533,32 @@ export class CartesianAxes extends Axes {
     for (const index in options) {
       if (options[index].showGrid) {
         this.gridHandles[`x${index}`] = new Grid(this.canvas, this.yScale[index], this.xScale[0] , {axisKey: 'y', axisIndex: Number.parseInt(index)})
+      }
+    }
+  }
+
+  protected initAxisX(options: CartesianAxisOptions[]): void {
+    for (const index in options) {
+      if (options[index].showGrid) {
+        this.axisHandles[`x${index}`] = new XAxis(this.canvas, this.xScale[index], this.yScale[0], {
+          axisKey: 'x',
+          axisIndex: Number.parseInt(index),
+          orientation: AxisOrientation.Bottom,
+          position: AxisPosition.Bottom
+        })
+      }
+    }
+  }
+
+  protected initAxisY(options: CartesianAxisOptions[]): void {
+    for (const index in options) {
+      if (options[index].showGrid) {
+        this.axisHandles[`y${index}`] = new YAxis(this.canvas, this.yScale[index], this.xScale[0], {
+          axisKey: 'y',
+          axisIndex: Number.parseInt(index),
+          orientation: AxisOrientation.Left,
+          position: AxisPosition.Left
+        })
       }
     }
   }
