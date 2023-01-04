@@ -1,5 +1,6 @@
 import { ScaleOptions } from "../Scale/scaleOptions.js";
 import { AxisOrientation } from "./axisOrientation.js";
+import { AxisPosition } from "./axisPosition.js";
 import { AxisType } from "./axisType.js";
 
 export interface AxisOptions extends ScaleOptions {
@@ -13,5 +14,6 @@ export interface AxisOptions extends ScaleOptions {
   locale?: string;
   timeZone?: string;
   orientation?: AxisOrientation;
+  position?: AxisPosition;
   defaultDomain?: [number, number] | [Date, Date];
 }
