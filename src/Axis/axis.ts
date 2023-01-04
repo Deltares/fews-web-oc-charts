@@ -7,7 +7,7 @@ import { generateMultiFormat } from '../Utils/date.js'
 import { AxisType } from "./axisType.js";
 import { niceDegreeSteps } from "../Utils/niceDegreeSteps.js";
 
-interface AxisOptions {
+export interface BaseAxisOptions {
   axisKey: string;
   axisIndex: number;
   orientation: AxisOrientation;
@@ -15,20 +15,21 @@ interface AxisOptions {
   type: AxisType;
   timeZone: string;
   locale: string;
+  labelAngle?: number
 }
 
 export abstract class Axis {
-  options: AxisOptions
+  options: BaseAxisOptions
   position: AxisPosition
   orientation: AxisOrientation
   group: d3.Selection<SVGGElement, unknown, null, unknown>
   axis: d3.Axis<any>
   spanScale: any
 
-  constructor(group: d3.Selection<SVGGElement, unknown, null, unknown>, scale: any, spanScale: any, options: Partial<AxisOptions>) {
-    this.position = options.position ?? AxisPosition.Bottom
-    this.orientation = options.orientation ?? AxisOrientation.Bottom
+  constructor(group: d3.Selection<SVGGElement, unknown, null, unknown>, scale: any, spanScale: any, options: Partial<BaseAxisOptions>) {
     this.options = options as any
+    this.orientation = options.orientation!
+    this.position = options.position!
     this.spanScale = spanScale
     this.create(group, scale)
   }
@@ -45,19 +46,20 @@ export abstract class Axis {
   redraw(): void {
     if (this.options.type === AxisType.time) {
       this.updateTicksForTime()
-    }
-    if (this.options.type === AxisType.degrees) {
+    } else if (this.options.type === AxisType.degrees) {
       this.updateTicksForDegrees()
     }
     this.group
       .attr('transform', this.translateAxis(this.position))
       .call(this.axis)
-
-    console.log('redraw')
+    if (this.options.labelAngle !== undefined) {
+      this.translateTickLabels(this.orientation, this.options.labelAngle)
+    }
   }
 
-  abstract translateAxis(position): string
+  abstract translateAxis(position: AxisPosition): string
 
+  abstract translateTickLabels(orientation: AxisOrientation, angle: number): void
 
   updateTicksForTime() {
     const scale = this.axis.scale()
