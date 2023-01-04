@@ -539,27 +539,25 @@ export class CartesianAxes extends Axes {
 
   protected initAxisX(options: CartesianAxisOptions[]): void {
     for (const index in options) {
-      if (options[index].showGrid) {
-        this.axisHandles[`x${index}`] = new XAxis(this.canvas, this.xScale[index], this.yScale[0], {
-          axisKey: 'x',
-          axisIndex: Number.parseInt(index),
-          orientation: AxisOrientation.Bottom,
-          position: AxisPosition.Bottom
-        })
-      }
+      this.axisHandles[`x${index}`] = new XAxis(this.canvas, this.xScale[index], this.yScale[0], {
+        axisKey: 'x',
+        axisIndex: Number.parseInt(index),
+        orientation: AxisOrientation.Bottom,
+        position: AxisPosition.Bottom,
+        ...options[index]
+      })
     }
   }
 
   protected initAxisY(options: CartesianAxisOptions[]): void {
     for (const index in options) {
-      if (options[index].showGrid) {
-        this.axisHandles[`y${index}`] = new YAxis(this.canvas, this.yScale[index], this.xScale[0], {
-          axisKey: 'y',
-          axisIndex: Number.parseInt(index),
-          orientation: AxisOrientation.Left,
-          position: AxisPosition.Left
-        })
-      }
+      this.axisHandles[`y${index}`] = new YAxis(this.canvas, this.yScale[index], this.xScale[0], {
+        axisKey: 'y',
+        axisIndex: Number.parseInt(index),
+        orientation: AxisOrientation.Left,
+        position: AxisPosition.Left,
+        ...options[index]
+      })
     }
   }
 
