@@ -25,9 +25,9 @@ export class ZoomHandler implements Visitor {
   }
 
   createHandler(axis: CartesianAxes): void {
-    this.mouseGroup = axis.canvas.select('.mouse-events')
+    this.mouseGroup = axis.layers.mouse
     const mouseRect = this.mouseGroup.select('rect').attr('pointer-events', 'all')
-    this.brushGroup = axis.canvas.insert('g', '.mouse-events').attr('class', 'brush')
+    this.brushGroup = axis.canvas.insert('g', '.mouse').attr('class', 'brush')
     this.brushGroup
       .append('rect')
       .attr('class', 'select-rect')

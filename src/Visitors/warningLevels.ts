@@ -71,7 +71,7 @@ export class WarningLevels implements Visitor {
       })
 
     this.sections = this.axis.canvas
-      .select('.axis-canvas')
+      .select('.canvas')
       .append('g')
       .attr('class', 'warning-sections')
 

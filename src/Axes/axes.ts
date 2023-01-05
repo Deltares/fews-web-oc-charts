@@ -120,7 +120,6 @@ export abstract class Axes {
   resize(): void {
     this.setSize()
     this.setRange()
-    this.updateGrid()
     this.redraw()
   }
 
@@ -130,7 +129,7 @@ export abstract class Axes {
     this.redraw()
   }
 
-  abstract updateGrid(): void
+  abstract update(): void
 
   removeChart(id: string): void {
     let i: number

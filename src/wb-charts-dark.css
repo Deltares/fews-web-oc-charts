@@ -15,7 +15,7 @@
   font-size: 1em;
 }
 
-.axis-canvas {
+.canvas {
     fill: rgb(54, 54, 54);
 }
 
@@ -36,11 +36,6 @@
 .grid text { display: none; }
 .grid .tick line { stroke: black;}
 .grid .tick.zero-crossing line { stroke-dasharray: none; stroke: white;}
-
-.charts g {
-  stroke: white;
-  color: white;
-}
 
 .view {
   fill: none;
@@ -153,7 +148,7 @@
   fill: white;
 }
 
-.mouse-events {
+.mouse {
   cursor: crosshair;
 }
 
@@ -175,7 +170,7 @@
   stroke-dasharray: 5, 2;
 }
 
-.mouse-events .overlay {
+.mouse .overlay {
   visibility: hidden;
 }
 

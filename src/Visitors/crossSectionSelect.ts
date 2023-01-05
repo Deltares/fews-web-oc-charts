@@ -46,8 +46,7 @@ export class CrossSectionSelect implements Visitor {
   }
 
   create(axis: CartesianAxes): void {
-    axis.canvas.select('.mouse-events')
-    this.group = axis.canvas.insert('g', '.mouse-events')
+    this.group = axis.canvas.insert('g', '.mouse')
       .attr('class', 'cross-section-select')
       .attr('font-family', 'sans-serif')
       .attr('font-size', 10)

@@ -3,13 +3,13 @@ import { defaultsDeep, merge } from 'lodash-es'
 
 import { Axes, AxesOptions } from './axes.js'
 import { AxisType } from '../Axis/axisType.js'
-import { AxisPosition } from '../Axis/axisPosition.js'
 import { ResetZoom, ScaleOptions, ZoomOptions } from '../Scale/scaleOptions.js'
 import { niceDomain } from './niceDomain.js'
 import { Grid } from '../Grid/grid.js'
 import { CartesianAxisOptions } from '../Axis/cartesianAxisOptions.js'
 import { XAxis } from '../Axis/xAxis.js'
 import { YAxis } from '../Axis/yAxis.js'
+import { createLayers } from '../Layers/layers.js'
 
 
 export interface CartesianAxesOptions extends AxesOptions {
@@ -26,6 +26,7 @@ export class CartesianAxes extends Axes {
   canvas: any
   gridHandles: Record<string, Grid> = {}
   axisHandles: Record<string, XAxis|YAxis> = {}
+  layers: any
   container: HTMLElement
   xScale: Array<any> = []
   yScale: Array<any> = []
@@ -47,23 +48,24 @@ export class CartesianAxes extends Axes {
     this.setDefaultAxisOptions(this.options.y, defaultAxesOptions.y[0])
     this.setDefaultTimeOptions(this.options.x)
     this.setDefaultTimeOptions(this.options.y)
+    this.clipPathId ='id-' + Math.random().toString(36).substring(2, 18)
+    this.setClipPath()
 
     this.view = this.canvas
-    this.setCanvas()
+    this.layers = createLayers(this.canvas, this.width, this.height)
+
+    this.chartGroup = this.layers.charts
+      .attr('clip-path', `url(#${this.clipPathId})`)
+      .append('g')
+    this.createCanvas()
+    this.createMouseLayer()
+
     this.initXScales(this.options.x)
     this.initYScales(this.options.y)
-    this.setClipPath()
+    this.initLabels()
     this.initAxisX(this.options.x)
     this.initAxisY(this.options.y)
-    this.chartGroup = this.canvas
-      .append('g')
-      .attr('class', 'group')
-      .attr('clip-path', 'url(#' + this.clipPathId + ')')
-      .append('g')
-    this.canvas
-      .append('g')
-      .attr('class', 'front')
-    this.updateMouseEventLayer()
+    this.update()
   }
 
   setDefaultAxisOptions(axisOptions: CartesianAxisOptions[], defaultOptions: CartesianAxisOptions) {
@@ -78,49 +80,38 @@ export class CartesianAxes extends Axes {
     )
   }
 
-  setCanvas(): void {
-    const rect = this.canvas.select('.axis-canvas')
-    if (rect.size() === 0) {
-      this.clipPathId =
-        'id-' +
-        Math.random()
-          .toString(36)
-          .substr(2, 16)
-      this.canvas
-        .append('g')
-        .attr('class', 'axis-canvas')
-        .attr('clip-path', 'url(#' + this.clipPathId + ')')
-        .append('rect')
-        .attr('width', this.width)
-        .attr('height', this.height)
-    } else {
-      rect
-        .select('rect')
-        .attr('height', this.height)
-        .attr('width', this.width)
-    }
+  createCanvas(): void {
+    this.layers.canvas
+      .attr('clip-path', `url(#${this.clipPathId})`)
+      .append('rect')
+      .attr('width', this.width)
+      .attr('height', this.height)
   }
 
-  updateMouseEventLayer(): void {
-    const mouseGroup = this.canvas.select('.mouse-events')
-    if (mouseGroup.size() === 0) {
-      this.canvas
-        .append('g')
-        .attr('class', 'mouse-events')
-        .append('rect')
-        .attr('width', this.width)
-        .attr('height', this.height)
-        .attr('fill', 'none')
-    } else {
-      mouseGroup
-        .select('rect')
-        .attr('height', this.height)
-        .attr('width', this.width)
-    }
+  createMouseLayer(): void {
+    this.layers.mouse
+      .append('rect')
+      .attr('width', this.width)
+      .attr('height', this.height)
+      .attr('fill', 'none')
+}
+
+  updateCanvas(): void {
+    this.layers.canvas
+      .select('rect')
+      .attr('height', this.height)
+      .attr('width', this.width)
+  }
+
+  updateMouseLayer(): void {
+    this.layers.mouse
+      .select('rect')
+      .attr('height', this.height)
+      .attr('width', this.width)
   }
 
   setClipPath() {
-    const clipPath = this.defs.select('#' + this.clipPathId)
+    const clipPath = this.defs.select(`#${this.clipPathId}`)
     if (clipPath.size() === 0) {
       this.defs
         .append('clipPath')
@@ -213,8 +204,7 @@ export class CartesianAxes extends Axes {
     for (const chart of this.charts) {
       chart.plotter(this, chart.axisIndex)
     }
-    this.updateGrid()
-    this.updateMouseEventLayer()
+    this.update()
     for (const visitor of this.visitors) {
       visitor.redraw()
     }
@@ -251,27 +241,19 @@ export class CartesianAxes extends Axes {
     for (const chart of this.charts) {
       chart.plotter(this, chart.axisIndex)
     }
-    this.updateGrid()
+    this.update()
     for (const visitor of this.visitors) {
       visitor.redraw()
     }
   }
 
-
-
-
-
-
-
-
-
-
-  updateGrid(): void {
-    this.setClipPath()
-    this.setCanvas()
+  update(): void {
     Object.values(this.axisHandles).forEach(
       (axis) => axis.redraw()
     )
+    this.setClipPath()
+    this.updateCanvas()
+    this.updateMouseLayer()
     this.updateLabels()
     Object.values(this.gridHandles).forEach(
       (grid) => grid.redraw()
@@ -279,7 +261,7 @@ export class CartesianAxes extends Axes {
   }
 
   updateLabels(): void {
-    const g = this.canvas.select('.axis.labels')
+    const g = this.canvas.select('g.labels')
     if (this.options.y) {
       if (this.options.y[0]?.label) {
         g.select('.y0.label')
@@ -385,43 +367,32 @@ export class CartesianAxes extends Axes {
 
   protected initAxisX(options: CartesianAxisOptions[]): void {
     for (const index in options) {
-      this.axisHandles[`x${index}`] = new XAxis(this.canvas, this.xScale[index], this.yScale[0], {
+      this.axisHandles[`x${index}`] = new XAxis(this.layers.axis, this.xScale[index], this.yScale[0], {
         axisKey: 'x',
         axisIndex: Number.parseInt(index),
         ...options[index]
       })
       if (options[index].showGrid) {
-        this.gridHandles[`x${index}`] = new Grid(this.canvas, this.axisHandles[`x${index}`].axis, this.yScale[0], {axisKey: 'x', axisIndex: Number.parseInt(index)})
+        this.gridHandles[`x${index}`] = new Grid(this.layers.grid, this.axisHandles[`x${index}`].axis, this.yScale[0], {axisKey: 'x', axisIndex: Number.parseInt(index)})
       }
     }
   }
 
   protected initAxisY(options: CartesianAxisOptions[]): void {
     for (const index in options) {
-      this.axisHandles[`y${index}`] = new YAxis(this.canvas, this.yScale[index], this.xScale[0], {
+      this.axisHandles[`y${index}`] = new YAxis(this.layers.axis, this.yScale[index], this.xScale[0], {
         axisKey: 'y',
         axisIndex: Number.parseInt(index),
         ...options[index]
       })
       if (options[index].showGrid) {
-        this.gridHandles[`y${index}`] = new Grid(this.canvas, this.axisHandles[`y${index}`].axis, this.xScale[0], {axisKey: 'y', axisIndex: Number.parseInt(index)})
+        this.gridHandles[`y${index}`] = new Grid(this.layers.grid, this.axisHandles[`y${index}`].axis, this.xScale[0], {axisKey: 'y', axisIndex: Number.parseInt(index)})
       }
     }
   }
 
-  protected initAxis(): void {
-    const g = this.canvas
-    g.append('g')
-      .attr('class', 'axis x-axis-0')
-    g.append('g')
-      .attr('class', 'axis x-axis-1')
-    g.append('g')
-      .attr('class', 'axis y-axis-0')
-    g.append('g')
-      .attr('class', 'axis y-axis-1')
-
-    const labelGroup = this.canvas.append('g')
-      .attr('class', 'axis labels')
+  protected initLabels(): void {
+    const labelGroup = this.layers.labels
       .attr('font-family', 'sans-serif')
       .attr('font-size', 10)
 

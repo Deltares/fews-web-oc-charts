@@ -58,7 +58,7 @@ export class PolarAxes extends Axes {
 
     this.canvas
       .append('g')
-      .attr('class', 'axis-canvas')
+      .attr('class', 'canvas')
       .append('path')
     this.updateCanvas()
     this.setRange()
@@ -75,7 +75,7 @@ export class PolarAxes extends Axes {
       endAngle = Math.PI + endAngle
     }
     this.canvas
-      .select('.axis-canvas')
+      .select('.canvas')
       .select('path')
       .attr(
         'd',
@@ -110,7 +110,7 @@ export class PolarAxes extends Axes {
     for (const chart of this.charts) {
       chart.plotter(this, chart.axisIndex)
     }
-    this.updateGrid()
+    this.update()
     for (const visitor of this.visitors) {
       visitor.redraw()
     }
@@ -120,7 +120,7 @@ export class PolarAxes extends Axes {
     return (value * 180) / Math.PI
   }
 
-  updateGrid() {
+  update() {
     // draw the circular grid lines
     // draw the radial axis
     const rAxis = d3.axisBottom(this.radialScale).ticks(5)
