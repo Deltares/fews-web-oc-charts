@@ -258,7 +258,7 @@ export class ColourBar {
     const g = this.group.append('g')
       .attr('class', 'title')
       .attr('font-family', 'sans-serif')
-      .attr('font-size', 10)
+      .attr('fill', 'currentColor')
 
     if (this.options.title) {
       g.append('text')

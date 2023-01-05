@@ -26,7 +26,7 @@ export class MouseOver implements Visitor {
     this.group = axis.canvas.insert('g', '.mouse')
       .attr('class', 'mouse-over')
       .attr('font-family', 'sans-serif')
-      .attr('font-size', 10)
+      .attr('fill', 'currentColor')
 
     this.group
       .append('path')

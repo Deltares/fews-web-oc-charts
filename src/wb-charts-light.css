@@ -1,6 +1,5 @@
 .wb-charts svg {
   color: black;
-  fill: black;
 }
 
 .axis {
@@ -155,7 +154,7 @@
   fill: black;
 }
 
-.mouse-events {
+.mouse-per-line {
   cursor: crosshair;
 }
 

@@ -394,7 +394,6 @@ export class CartesianAxes extends Axes {
   protected initLabels(): void {
     const labelGroup = this.layers.labels
       .attr('font-family', 'sans-serif')
-      .attr('font-size', 10)
 
     if (this.options.y) {
       if (this.options.y[0]?.label) {
@@ -403,6 +402,7 @@ export class CartesianAxes extends Axes {
           .attr('x', 0)
           .attr('y', -9)
           .attr('text-anchor', 'start')
+          .attr('fill', 'currentColor')
           .text(this.options.y[0].label)
       }
       if (this.options.y[0]?.unit) {
@@ -411,6 +411,7 @@ export class CartesianAxes extends Axes {
           .attr('x', -9)
           .attr('y', -9)
           .attr('text-anchor', 'end')
+          .attr('fill', 'currentColor')
           .text(this.options.y[0].unit)
       }
       if (this.options.y[1]?.label) {
@@ -419,6 +420,7 @@ export class CartesianAxes extends Axes {
           .attr('x', this.width)
           .attr('y', -9)
           .attr('text-anchor', 'end')
+          .attr('fill', 'currentColor')
           .text(this.options.y[1].label)
       }
       if (this.options.y[1]?.unit) {
@@ -427,6 +429,7 @@ export class CartesianAxes extends Axes {
           .attr('x', this.width + 10)
           .attr('y', -9)
           .attr('text-anchor', 'start')
+          .attr('fill', 'currentColor')
           .text(this.options.y[1].unit)
       }
     }
@@ -436,6 +439,7 @@ export class CartesianAxes extends Axes {
         .attr('x', this.width / 2)
         .attr('y', this.height + 30)
         .attr('text-anchor', 'middle')
+        .attr('fill', 'currentColor')
         .text(this.options.x[0].label)
     }
     if (this.options.x[0]?.unit) {
@@ -445,6 +449,7 @@ export class CartesianAxes extends Axes {
         .attr('y', this.height + 9)
         .attr('dy', '0.71em')
         .attr('text-anchor', 'start')
+        .attr('fill', 'currentColor')
         .text(this.options.x[0].unit)
     }
 
@@ -454,6 +459,7 @@ export class CartesianAxes extends Axes {
         .attr('x', this.width + 10)
         .attr('y', -9)
         .attr('text-anchor', 'start')
+        .attr('fill', 'currentColor')
         .text(this.options.x[1].unit)
     }
   }

@@ -287,13 +287,13 @@ export class PolarAxes extends Axes {
     this.canvas.append('g').attr('class', 'grid t-grid')
     this.canvas.append('g').attr('class', 'axis r-axis')
       .attr('font-family', 'sans-serif')
-      .attr('font-size', '10')
+      .attr('fill', 'currentColor')
     this.canvas
       .append('g')
       .attr('class', 'axis t-axis')
       .attr('transform', 'rotate(' + -this.intercept * 180 / Math.PI + ')')
       .attr('font-family', 'sans-serif')
-      .attr('font-size', '10')
-    this.updateGrid()
+      .attr('fill', 'currentColor')
+    this.update()
   }
 }
