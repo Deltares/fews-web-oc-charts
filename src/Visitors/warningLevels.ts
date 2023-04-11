@@ -1,5 +1,5 @@
 import * as d3 from 'd3'
-import { isNull } from 'lodash';
+import { isNull } from 'lodash-es';
 import { Axes } from '../Axes/axes.js'
 import { CartesianAxes } from '../index.js';
 import { Visitor } from './visitor.js'

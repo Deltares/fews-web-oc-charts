@@ -1,5 +1,5 @@
 import * as d3 from 'd3'
-import { isNull } from 'lodash'
+import { isNull } from 'lodash-es'
 import { CartesianAxes, PolarAxes } from '../index.js';
 import { AxisIndex } from '../Axes/axes.js'
 import { Chart, AUTO_SCALE } from './chart.js'

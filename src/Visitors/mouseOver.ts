@@ -4,7 +4,7 @@ import { CartesianAxes } from '../index.js';
 import { Visitor } from './visitor.js'
 import { TooltipPosition } from '../Tooltip/tooltip.js'
 import { dateFormatter } from '../Utils/date.js'
-import { isNull } from 'lodash'
+import { isNull } from 'lodash-es'
 
 export class MouseOver implements Visitor {
   private trace: string[]
