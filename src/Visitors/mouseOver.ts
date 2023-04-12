@@ -1,32 +1,32 @@
 import * as d3 from 'd3'
-import { Axis } from '../Axis/axis.js'
-import { CartesianAxis } from '../index.js';
+import { Axes } from '../Axes/axes.js'
+import { CartesianAxes } from '../index.js';
 import { Visitor } from './visitor.js'
 import { TooltipPosition } from '../Tooltip/tooltip.js'
 import { dateFormatter } from '../Utils/date.js'
-import { isNull } from 'lodash'
+import { isNull } from 'lodash-es'
 
 export class MouseOver implements Visitor {
   private trace: string[]
   private group: d3.Selection<SVGElement, unknown, SVGElement, unknown>
-  private axis: CartesianAxis
+  private axis: CartesianAxes
   private mouseGroup: d3.Selection<SVGElement, unknown, SVGElement, unknown>
 
   constructor(trace?: string[]) {
     this.trace = trace
   }
 
-  visit(axis: Axis): void {
-    this.axis = axis as CartesianAxis
-    this.create(axis as CartesianAxis)
+  visit(axis: Axes): void {
+    this.axis = axis as CartesianAxes
+    this.create(axis as CartesianAxes)
   }
 
-  create(axis: CartesianAxis): void {
-    this.mouseGroup = axis.canvas.select('.mouse-events')
-    this.group = axis.canvas.insert('g', '.mouse-events')
+  create(axis: CartesianAxes): void {
+    this.mouseGroup = axis.canvas.select('.mouse')
+    this.group = axis.canvas.insert('g', '.mouse')
       .attr('class', 'mouse-over')
       .attr('font-family', 'sans-serif')
-      .attr('font-size', 10)
+      .attr('fill', 'currentColor')
 
     this.group
       .append('path')

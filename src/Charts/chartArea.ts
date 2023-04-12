@@ -1,7 +1,7 @@
 import * as d3 from 'd3'
-import { isNull } from 'lodash'
-import { CartesianAxis, PolarAxis } from '../index.js';
-import { AxisIndex } from '../Axis/axis.js'
+import { isNull } from 'lodash-es'
+import { CartesianAxes, PolarAxes } from '../index.js';
+import { AxisIndex } from '../Axes/axes.js'
 import { Chart, AUTO_SCALE } from './chart.js'
 
 function mean(x: number[] | number) {
@@ -44,7 +44,7 @@ export class ChartArea extends Chart {
     }
   }
 
-  plotterCartesian(axis: CartesianAxis, axisIndex: AxisIndex) {
+  plotterCartesian(axis: CartesianAxes, axisIndex: AxisIndex) {
     const xKey = this.dataKeys.x
     const yKey = this.dataKeys.y
     const colorKey = this.dataKeys.color
@@ -100,7 +100,7 @@ export class ChartArea extends Chart {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  plotterPolar(axis: PolarAxis, dataKeys: any) {
+  plotterPolar(axis: PolarAxes, dataKeys: any) {
     console.error('plotterPolar is not implemented for ChartArea')
   }
 

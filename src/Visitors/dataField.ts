@@ -1,4 +1,4 @@
-import { Axis } from '../Axis/axis.js'
+import { Axes } from '../Axes/axes.js'
 import { Visitor } from './visitor.js'
 import * as d3 from 'd3'
 import { defaultsDeep } from 'lodash-es'
@@ -33,7 +33,7 @@ export class DataField implements Visitor {
   private container: any
   private group: any
   private options: DataFieldOptions
-  private axis: Axis
+  private axis: Axes
   private text: any
   private value: any
   private values: any[] = []
@@ -52,12 +52,12 @@ export class DataField implements Visitor {
     this.formatter = formatter !== undefined ? formatter : this.valueFormatter
   }
 
-  visit(axis: Axis) {
+  visit(axis: Axes) {
     this.axis = axis
     this.create(axis)
   }
 
-  create(axis: Axis) {
+  create(axis: Axes) {
     if (!this.group) {
       this.group = this.container.append('g').attr('class', 'data-field')
       this.text = this.group

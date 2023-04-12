@@ -1,6 +1,6 @@
 import * as d3 from 'd3'
-import { Axis } from '../Axis/axis.js'
-import { CartesianAxis } from '../index.js';
+import { Axes } from '../Axes/axes.js'
+import { CartesianAxes } from '../index.js';
 import { Visitor } from './visitor.js'
 import { defaultsDeep } from 'lodash-es'
 import { bboxCollide } from '../Utils/bboxCollide.js'
@@ -17,7 +17,7 @@ export class CrossSectionSelect implements Visitor {
   private frontGroup: any
   private pointRadius = 3
   private simulation: d3.Simulation<any, any>
-  private axis: CartesianAxis
+  private axis: CartesianAxes
   value: number | Date
   currentData: any
   callback: (value: number | Date) => void
@@ -40,17 +40,16 @@ export class CrossSectionSelect implements Visitor {
     this.visible = true
   }
 
-  visit(axis: Axis): void {
-    this.axis = axis as CartesianAxis
-    this.create(axis as CartesianAxis)
+  visit(axis: Axes): void {
+    this.axis = axis as CartesianAxes
+    this.create(axis as CartesianAxes)
   }
 
-  create(axis: CartesianAxis): void {
-    axis.canvas.select('.mouse-events')
-    this.group = axis.canvas.insert('g', '.mouse-events')
+  create(axis: CartesianAxes): void {
+    this.group = axis.canvas.insert('g', '.mouse')
       .attr('class', 'cross-section-select')
       .attr('font-family', 'sans-serif')
-      .attr('font-size', 10)
+      .attr('fill', 'currentColor')
 
     this.backGroup = this.group.append('g')
     this.frontGroup = this.group.append('g')

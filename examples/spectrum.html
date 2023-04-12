@@ -72,7 +72,7 @@
     }
     // set constants
     var container1 = document.getElementById("chart-container-1");
-    var polarAxis = new wbCharts.PolarAxis(container1, null, null, {
+    var polarAxis = new wbCharts.PolarAxes(container1, null, null, {
       angular: {
         direction: wbCharts.CLOCKWISE,
       },
@@ -168,7 +168,7 @@
       }
     });
     var container2 = document.getElementById("chart-container-2");
-    var axis = new wbCharts.CartesianAxis(container2, null, null, {
+    var axis = new wbCharts.CartesianAxes(container2, null, null, {
       x: [{
         position: 'bottom',
         axisIndex: 0

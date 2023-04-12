@@ -1,5 +1,5 @@
 import * as d3 from 'd3'
-import { CartesianAxis, PolarAxis } from '../index.js';
+import { CartesianAxes, PolarAxes } from '../index.js';
 import { Chart, SymbolOptions } from './chart.js'
 
 export class ChartText extends Chart {
@@ -10,7 +10,7 @@ export class ChartText extends Chart {
     super(data, options)
   }
 
-  plotterCartesian(axis: CartesianAxis, axisIndex: any) {
+  plotterCartesian(axis: CartesianAxes, axisIndex: any) {
     const xKey = this.dataKeys.x
     const yKey = this.dataKeys.y
     const xScale = axis.xScale[axisIndex.x.axisIndex]
@@ -39,7 +39,7 @@ export class ChartText extends Chart {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-empty-function
-  plotterPolar(axis: PolarAxis, dataKeys: any) {
+  plotterPolar(axis: PolarAxes, dataKeys: any) {
     throw new Error('Polar axis are not supported by ChartText')
   }
 

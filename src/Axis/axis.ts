@@ -1,222 +1,89 @@
-import * as d3 from 'd3'
-import { Chart } from '../Charts/chart.js'
-import { Visitor } from '../Visitors/visitor.js'
-import { defaultsDeep, merge } from 'lodash-es'
-import { Tooltip } from '../Tooltip/tooltip.js'
-import { AxisOrientation } from '../Types/axisOrientation.js'
+import d3 from "d3";
+import { DateTime } from "luxon";
+import { AxisOrientation } from "./axisOrientation.js";
+import { AxisPosition } from "./axisPosition.js";
+import { createAxis } from "./createAxis.js";
+import { generateMultiFormat } from '../Utils/date.js'
+import { AxisType } from "./axisType.js";
+import { niceDegreeSteps } from "../Utils/niceDegreeSteps.js";
 
-export interface Margin {
-  top?: number;
-  right?: number;
-  bottom?: number;
-  left?: number;
-}
-
-export enum AxisType {
-  time = 'time',
-  value = 'value',
-  degrees = 'degrees',
-  band = 'band'
-}
-
-export enum resetZoom {
-  initial = 'initial',
-  full = 'full',
-  toggle = 'toggle'
-}
-
-
-export interface AxisOptions extends AxisScaleOptions {
-  label?: string;
-  labelAngle?: number;
-  type?: AxisType;
-  unit?: string;
-  showGrid?: boolean;
-  format?: (x: number | Date) => string;
-  reverse?: boolean;
-  locale?: string;
-  timeZone?: string;
-  orientation?: AxisOrientation;
-  defaultDomain?: [number, number] | [Date, Date];
-}
-
-export interface AxisScaleOptions {
-  domain?: [number, number] | [Date, Date];
-  nice?: boolean;
-  includeZero?: boolean;
-  symmetric?: boolean;
-  resetZoom?: resetZoom;
-}
-
-export interface ZoomOptions extends AxisScaleOptions {
-  autoScale?: boolean;
-  fullExtent?: boolean;
-}
-
-export interface AxesOptions {
-  transitionTime?: number;
-  margin?: Margin;
-}
-
-interface AxisIndexItem {
-  key: string; axisIndex: number;
-}
-
-export interface AxisIndex {
-  x?: AxisIndexItem;
-  x1?: { key: string };
-  y?: AxisIndexItem;
-  radial?: AxisIndexItem;
-  angular?: AxisIndexItem;
-  value?: { key: string };
-  color?: { key: string };
+export interface BaseAxisOptions {
+  axisKey: string;
+  axisIndex: number;
+  orientation: AxisOrientation;
+  position: AxisPosition;
+  type: AxisType;
+  timeZone: string;
+  locale: string;
+  labelAngle?: number
 }
 
 export abstract class Axis {
-  tooltip: Tooltip
-  type: string
-  view: any
-  defs: any
-  canvas: any
-  svg: d3.Selection<SVGElement, any, SVGElement, any>
-  container: HTMLElement
-  observer: ResizeObserver
-  width: number
-  height: number
-  margin: { top: number; right: number; bottom: number; left: number }
-  options: AxesOptions = {}
-  chartGroup: d3.Selection<SVGElement, any, SVGElement, any>
-  charts: Chart[]
-  initialDraw = true
-  visitors: Visitor[]
+  options: BaseAxisOptions
+  position: AxisPosition
+  orientation: AxisOrientation
+  group: d3.Selection<SVGGElement, unknown, null, unknown>
+  axis: d3.Axis<any>
+  spanScale: any
 
-  constructor(container: HTMLElement, width: number | null, height: number | null, options: AxesOptions, defaultOptions: any) {
-    this.container = container
-    this.options = defaultsDeep(
-      this.options,
-      options,
-      defaultOptions
-    )
-
-    this.observer = new ResizeObserver(entries => {
-      if (entries[0].contentBoxSize) this.resize()
-    })
-    this.observer.observe(container)
-
-    // Using the d3.formatLocale is not easy for generic plotting
-    d3.formatDefaultLocale({
-      decimal: '.',
-      thousands: '\u2009',
-      grouping: [3],
-      currency: ['$', '']
-    })
-
-    this.margin = { ...{ top: 40, right: 40, bottom: 40, left: 40 }, ...options.margin }
-    this.svg = d3
-      .select(container)
-      .append('svg')
-      .attr('class', 'wb-charts')
-      .attr('overflow', 'visible')
-    this.setSize(height, width)
-
-    this.defs = this.svg.append('defs')
-    this.canvas = this.svg
-      .append('g')
-      .attr('transform', 'translate(' + this.margin.left + ',' + this.margin.top + ')')
-    this.tooltip = new Tooltip(container)
-    this.charts = []
-    this.visitors = []
+  constructor(group: d3.Selection<SVGGElement, unknown, null, unknown>, scale: any, spanScale: any, options: Partial<BaseAxisOptions>) {
+    this.options = options as any
+    this.orientation = options.orientation!
+    this.position = options.position!
+    this.spanScale = spanScale
+    this.create(group, scale)
   }
 
-  setDefaultTimeOptions(axisOptions: AxisOptions | AxisOptions[]) {
-    const optionsArray = Array.isArray(axisOptions) ? axisOptions : [axisOptions]
-    for (const options of optionsArray) {
-      options.timeZone = options.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone
-      options.locale = options.locale ?? navigator.language
-    }
+  get class(): string {
+    return `${this.options.axisKey}-axis-${this.options.axisIndex}`
   }
-
-  setOptions(options: AxesOptions): void {
-    merge(this.options,
-      options
-    )
-  }
-
-  setSize(height?: number, width?: number): void {
-    const containerWidth = width == null ? this.container.offsetWidth : width
-    const containerHeight = height == null ? this.container.offsetHeight : height
-    this.height = containerHeight - this.margin.top - this.margin.bottom
-    this.width = containerWidth - this.margin.left - this.margin.right
-    if (this.height < 0 || this.width < 0) {
-      this.height = 0
-      this.width = 0
-    }
-    this.svg
-      .attr('width', containerWidth)
-      .attr('height', containerHeight)
-      .attr('viewBox', `0 0 ${containerWidth} ${containerHeight}`)
-
-  }
-
-  resize(): void {
-    this.setSize()
-    this.setRange()
-    this.updateGrid()
+  protected create(group, scale): void {
+    this.group = group.append('g').attr('class', `axis ${this.class}`)
+    this.axis = createAxis(this.orientation, scale)
     this.redraw()
   }
 
-  abstract redraw(): void
-
-  resetZoom(): void {
-    this.redraw()
-  }
-
-  abstract updateGrid(): void
-
-  removeChart(id: string): void {
-    let i: number
-    for (i = 0; i < this.charts.length; i++) {
-      if (this.charts[i].id === id) {
-        this.charts[i].group = null
-        break
-      }
+  redraw(): void {
+    if (this.options.type === AxisType.time) {
+      this.updateTicksForTime()
+    } else if (this.options.type === AxisType.degrees) {
+      this.updateTicksForDegrees()
     }
-    this.charts.splice(i, 1)
-    this.chartGroup.selectAll(`[data-chart-id="${id}"]`).remove()
-  }
-
-  removeAllCharts(): void {
-    for (const chart of this.charts) {
-      chart.group = null
+    this.group
+      .attr('transform', this.translateAxis(this.position))
+      .call(this.axis)
+    if (this.options.labelAngle !== undefined) {
+      this.translateTickLabels(this.orientation, this.options.labelAngle)
     }
-    this.charts = []
-    this.chartGroup.selectAll('g').remove()
   }
 
-  accept(v: Visitor): void {
-    this.visitors.push(v)
-    v.visit(this)
+  abstract translateAxis(position: AxisPosition): string
+
+  abstract translateTickLabels(orientation: AxisOrientation, angle: number): void
+
+  updateTicksForTime() {
+    const scale = this.axis.scale()
+    const offsetDomain = scale.domain().map((d: Date) => {
+      const m = DateTime.fromJSDate(d).setZone(this.options.timeZone)
+      return new Date(d.getTime() + m.offset * 60000);
+    })
+    const offsetScale = d3.scaleUtc().domain(offsetDomain)
+    const tickValues = offsetScale.ticks(5)
+    const offsetValues = tickValues.map((d) => {
+      const m = DateTime.fromJSDate(d).setZone(this.options.timeZone)
+      return new Date(d.getTime() - m.offset * 60000);
+    })
+    this.axis.tickValues(offsetValues)
+    this.axis.tickFormat(generateMultiFormat(this.options.timeZone, this.options.locale))
   }
 
-  get extent(): any {
-    const _extent = {}
-    for (const chart of this.charts) {
-      const chartExtent = chart.extent
-      for (const path in chartExtent) {
-        if (!(path in _extent)) {
-          _extent[path] = chartExtent[path]
-        } else {
-          _extent[path] = d3.extent([..._extent[path], ...chartExtent[path]])
-        }
-      }
-    }
-    return _extent
+  updateTicksForDegrees() {
+    const scale = this.axis.scale()
+    const domain = scale.domain()
+    let step = d3.tickIncrement(domain[0], domain[1], 5)
+    step = niceDegreeSteps(step)
+    const start = Math.ceil(domain[0] / step) * step
+    const stop = Math.floor(domain[1] / step + 1) * step
+    this.axis.tickValues(d3.range(start, stop, step))
   }
-
-  createChartGroup(): void {
-    this.chartGroup = this.canvas.append('g').attr('class', 'charts')
-  }
-
-  protected abstract setRange(): void
-  protected abstract initGrid(): void
 }

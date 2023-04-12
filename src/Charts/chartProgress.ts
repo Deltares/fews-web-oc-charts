@@ -1,5 +1,5 @@
 import * as d3 from 'd3'
-import { CartesianAxis, PolarAxis } from '../index.js';
+import { CartesianAxes, PolarAxes } from '../index.js';
 import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js'
 import { Chart } from './chart.js'
 
@@ -78,11 +78,11 @@ export class ChartProgress extends Chart {
     return html
   }
 
-  plotterCartesian(axis: CartesianAxis, dataKeys: any) {
+  plotterCartesian(axis: CartesianAxes, dataKeys: any) {
     throw new Error("Not implemented");
   }
 
-  plotterPolar(axis: PolarAxis, dataKeys: any) {
+  plotterPolar(axis: PolarAxes, dataKeys: any) {
 
     const tKey = this.dataKeys.angular
     const rKey = this.dataKeys.radial

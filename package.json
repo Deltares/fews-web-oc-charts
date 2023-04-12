@@ -36,9 +36,8 @@
   "devDependencies": {
     "@types/d3": "^7.1.0",
     "@types/jest": "^27.0.0",
-    "@types/lodash": "^4.14.157",
     "@types/lodash-es": "^4.17.6",
-    "@types/luxon": "^2.0.7",
+    "@types/luxon": "^3.3.0",
     "@types/node": "^14.0.20",
     "@typescript-eslint/eslint-plugin": "^5.4.0",
     "@typescript-eslint/parser": "^5.4.0",
@@ -59,8 +58,7 @@
   "dependencies": {
     "csstype": "^3.0.0",
     "d3": "^7.1.1",
-    "lodash": "^4.17.19",
     "lodash-es": "^4.17.21",
-    "luxon": "^2.1.1"
+    "luxon": "^3.3.0"
   }
 }

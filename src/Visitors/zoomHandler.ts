@@ -1,6 +1,6 @@
 import * as d3 from 'd3'
-import { Axis } from '../Axis/axis.js'
-import { CartesianAxis } from '../index.js';
+import { Axes } from '../Axes/axes.js'
+import { CartesianAxes } from '../index.js';
 import { Visitor } from './visitor.js'
 
 enum SelectionMode {
@@ -14,20 +14,20 @@ export class ZoomHandler implements Visitor {
   private brushStartPoint: [number, number]
   private brushGroup: any
   private mouseGroup: any
-  private axis: CartesianAxis
+  private axis: CartesianAxes
   private mode: SelectionMode
   private readonly MINMOVE = 15
   private lastPoint: [number, number]
 
-  visit(axis: Axis): void {
-    this.axis = axis as CartesianAxis
-    this.createHandler(axis as CartesianAxis)
+  visit(axis: Axes): void {
+    this.axis = axis as CartesianAxes
+    this.createHandler(axis as CartesianAxes)
   }
 
-  createHandler(axis: CartesianAxis): void {
-    this.mouseGroup = axis.canvas.select('.mouse-events')
+  createHandler(axis: CartesianAxes): void {
+    this.mouseGroup = axis.layers.mouse
     const mouseRect = this.mouseGroup.select('rect').attr('pointer-events', 'all')
-    this.brushGroup = axis.canvas.insert('g', '.mouse-events').attr('class', 'brush')
+    this.brushGroup = axis.canvas.insert('g', '.mouse').attr('class', 'brush')
     this.brushGroup
       .append('rect')
       .attr('class', 'select-rect')

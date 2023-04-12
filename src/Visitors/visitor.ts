@@ -1,6 +1,6 @@
-import { Axis } from '../Axis/axis.js'
+import { Axes } from '../Axes/axes.js'
 
 export interface Visitor {
-  visit(axis: Axis)
+  visit(axis: Axes)
   redraw()
 }

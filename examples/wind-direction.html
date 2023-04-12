@@ -370,7 +370,7 @@
 
         // Wind rose chart
         var containerWindrose = document.getElementById("chart-wind-rose");
-        polarAxis = new wbCharts.PolarAxis(containerWindrose, null, null, {
+        polarAxis = new wbCharts.PolarAxes(containerWindrose, null, null, {
           angular: {
             direction: wbCharts.Direction.CLOCKWISE,
             intercept: Math.PI / 2
@@ -408,7 +408,7 @@
 
         // Wind speed chart
         var containerWindSpeed = document.getElementById("chart-wind-speed");
-        windSpeedAxis = new wbCharts.CartesianAxis(containerWindSpeed, null, null, {
+        windSpeedAxis = new wbCharts.CartesianAxes(containerWindSpeed, null, null, {
           transitionTime: transitionTime,
           x: [
             {
@@ -450,7 +450,7 @@
 
         // Wind stoot chart
         var containerWindstoot = document.getElementById("chart-wind-stoot");
-        windStootAxis = new wbCharts.CartesianAxis(containerWindstoot, null, null, {
+        windStootAxis = new wbCharts.CartesianAxes(containerWindstoot, null, null, {
           transitionTime: transitionTime,
           x: [{
             unit: "[m/s]",
@@ -475,7 +475,7 @@
 
         // Time chart wind speed
         var containerWindSpeedTime = document.getElementById("chart-wind-speed-time");
-        windTimeAxis = new wbCharts.CartesianAxis(containerWindSpeedTime, null, null, {
+        windTimeAxis = new wbCharts.CartesianAxes(containerWindSpeedTime, null, null, {
           transitionTime: transitionTime,
           x: [{ type: 'time', position: 'bottom', showGrid: true }],
           y: [{

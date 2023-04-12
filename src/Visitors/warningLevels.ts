@@ -1,7 +1,7 @@
 import * as d3 from 'd3'
-import { isNull } from 'lodash';
-import { Axis } from '../Axis/axis.js'
-import { CartesianAxis } from '../index.js';
+import { isNull } from 'lodash-es';
+import { Axes } from '../Axes/axes.js'
+import { CartesianAxes } from '../index.js';
 import { Visitor } from './visitor.js'
 
 export interface WarningLevelOptions {
@@ -13,7 +13,7 @@ export interface WarningLevelOptions {
 export class WarningLevels implements Visitor {
   public escalationLevels: any[]
   private group: any
-  private axis: CartesianAxis
+  private axis: CartesianAxes
   private scale: any
   private warningAxis: any
   private sections: any
@@ -29,12 +29,12 @@ export class WarningLevels implements Visitor {
     }
   }
 
-  visit(axis: Axis): void {
-    this.axis = axis as CartesianAxis
-    this.create(axis as CartesianAxis)
+  visit(axis: Axes): void {
+    this.axis = axis as CartesianAxes
+    this.create(axis as CartesianAxes)
   }
 
-  create(axis: CartesianAxis): void {
+  create(axis: CartesianAxes): void {
     const scale = (this.scale = d3.scaleLinear())
     this.scale.domain(axis.yScale[this.options.y.axisIndex].domain()).range(axis.yScale[this.options.y.axisIndex].range())
     const escalationLevels = this.escalationLevels
@@ -71,7 +71,7 @@ export class WarningLevels implements Visitor {
       })
 
     this.sections = this.axis.canvas
-      .select('.axis-canvas')
+      .select('.canvas')
       .append('g')
       .attr('class', 'warning-sections')
 

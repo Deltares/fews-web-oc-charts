@@ -1,13 +1,13 @@
 import * as d3 from 'd3'
-import { AxisIndex } from '../Axis/axis.js'
-import { CartesianAxis, PolarAxis } from '../index.js';
+import { AxisIndex } from '../Axes/axes.js'
+import { CartesianAxes, PolarAxes } from '../index.js';
 import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js'
 import { Chart, AUTO_SCALE } from './chart.js'
 
 export class ChartBar extends Chart {
   static readonly GROUP_CLASS: 'chart-bar'
 
-  plotterCartesian(axis: CartesianAxis, axisIndex: AxisIndex) {
+  plotterCartesian(axis: CartesianAxes, axisIndex: AxisIndex) {
     const xKey = this.dataKeys.x
     const yKey = this.dataKeys.y
     const x1Key = this.dataKeys.x1
@@ -101,7 +101,7 @@ export class ChartBar extends Chart {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  plotterPolar(axis: PolarAxis, dataKeys: any) {
+  plotterPolar(axis: PolarAxes, dataKeys: any) {
     throw new Error('plotterPolar is not implemented for ChartBar')
   }
 

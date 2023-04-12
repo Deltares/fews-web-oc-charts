@@ -1,6 +1,6 @@
 import * as d3 from 'd3'
-import { Axis } from '../Axis/axis.js'
-import { CartesianAxis } from '../index.js';
+import { Axes } from '../Axes/axes.js'
+import { CartesianAxes } from '../index.js';
 import { scaleBeaufort } from '../Scale/index.js';
 import { Visitor } from './visitor.js'
 import { Property } from 'csstype'
@@ -17,7 +17,7 @@ export interface BeaufortAxisOptions {
 
 export class BeaufortAxis implements Visitor {
   private group: any
-  private axis: CartesianAxis
+  private axis: CartesianAxes
   private options: any
   private isVertical = true
 
@@ -25,12 +25,12 @@ export class BeaufortAxis implements Visitor {
     this.options = options
   }
 
-  visit(axis: Axis): void {
-    this.axis = axis as CartesianAxis
-    this.create(axis as CartesianAxis)
+  visit(axis: Axes): void {
+    this.axis = axis as CartesianAxes
+    this.create(axis as CartesianAxes)
   }
 
-  create(axis: CartesianAxis): void {
+  create(axis: CartesianAxes): void {
     this.isVertical = this.options.x === undefined
     this.group = axis.canvas
       .insert('g', '.group')

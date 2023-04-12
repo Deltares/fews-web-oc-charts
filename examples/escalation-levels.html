@@ -159,7 +159,7 @@
     ]
 
     var container1 = document.getElementById("chart-waterlevel-1");
-    var axis1 = new wbCharts.CartesianAxis(container1, null, null, axisOptions)
+    var axis1 = new wbCharts.CartesianAxes(container1, null, null, axisOptions)
     var legend1 = new wbCharts.Legend(legendLabels, document.getElementById("legend-waterlevel-1"));
 
     const axisOptions2 = {
@@ -185,11 +185,11 @@
     }
 
     var container2 = document.getElementById("chart-waterlevel-2");
-    var axis2 = new wbCharts.CartesianAxis(container2, null, null, axisOptions2)
+    var axis2 = new wbCharts.CartesianAxes(container2, null, null, axisOptions2)
     var legend2 = new wbCharts.Legend(legendLabels, document.getElementById("legend-waterlevel-2"));
 
     var container3 = document.getElementById("chart-waterlevel-3");
-    var axis3 = new wbCharts.CartesianAxis(container3, null, null, axisOptions)
+    var axis3 = new wbCharts.CartesianAxes(container3, null, null, axisOptions)
     var legend3 = new wbCharts.Legend(legendLabels, document.getElementById("legend-waterlevel-3"));
 
     function getRoundedDate(minutes, d = new Date()) {

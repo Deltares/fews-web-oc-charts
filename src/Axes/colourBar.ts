@@ -1,7 +1,7 @@
 import { Property } from 'csstype'
 import * as d3 from 'd3'
 import { defaultsDeep } from 'lodash-es'
-import { AxisPosition } from '../Types/axisPosition.js'
+import { AxisPosition } from '../Axis/axisPosition.js'
 
 /**
  * A single value in a colour map
@@ -258,7 +258,7 @@ export class ColourBar {
     const g = this.group.append('g')
       .attr('class', 'title')
       .attr('font-family', 'sans-serif')
-      .attr('font-size', 10)
+      .attr('fill', 'currentColor')
 
     if (this.options.title) {
       g.append('text')

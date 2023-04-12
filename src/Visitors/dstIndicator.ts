@@ -1,5 +1,6 @@
-import { Axis, AxisType } from '../Axis/axis.js'
-import { CartesianAxis } from '../index.js';
+import { Axes } from '../Axes/axes.js'
+import { AxisType } from '../Axis/axisType.js'
+import { CartesianAxes } from '../index.js';
 import { Visitor } from './visitor.js'
 import { DateTime, Duration } from 'luxon'
 import { defaultsDeep } from 'lodash-es'
@@ -9,7 +10,7 @@ type DstIndicatorOptions = { x: { axisIndex: number } } | { y: { axisIndex: numb
 export class DstIndicator implements Visitor {
   private group: any
   private indicator: any
-  private axis: CartesianAxis
+  private axis: CartesianAxes
   private dstDate: Date
   private options: DstIndicatorOptions
 
@@ -23,19 +24,19 @@ export class DstIndicator implements Visitor {
     ) as DstIndicatorOptions
   }
 
-  visit(axis: Axis) {
-    this.axis = axis as CartesianAxis
+  visit(axis: Axes) {
+    this.axis = axis as CartesianAxes
     if ("x" in this.options) {
       const axisIndex = this.options.x.axisIndex
       if (this.axis.options.x[axisIndex] && this.axis.options.x[axisIndex].type === AxisType.time) {
-        this.create(axis as CartesianAxis)
+        this.create(axis as CartesianAxes)
       } else {
         throw new Error(`x-axis [${axisIndex}] does not exist or is not of type 'time'`)
       }
     }
   }
 
-  create(axis: CartesianAxis) {
+  create(axis: CartesianAxes) {
     if (!this.group) {
       this.group = axis.canvas.append('g').attr('class', 'dst-indicator')
     }

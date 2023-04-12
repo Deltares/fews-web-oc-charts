@@ -1,6 +1,5 @@
 .wb-charts svg {
   color: black;
-  fill: black;
 }
 
 .axis {
@@ -19,7 +18,7 @@
   font-size: 1em;
 }
 
-.axis-canvas {
+.canvas {
   /* 0.87 * 255 = 223 */
   fill: rgba(223, 223, 223);
 }
@@ -155,7 +154,7 @@
   fill: black;
 }
 
-.mouse-events {
+.mouse-per-line {
   cursor: crosshair;
 }
 
@@ -177,7 +176,7 @@
   stroke-dasharray: 5, 2;
 }
 
-.mouse-events .overlay {
+.mouse .overlay {
   visibility: hidden;
 }
 

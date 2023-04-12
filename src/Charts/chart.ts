@@ -1,7 +1,7 @@
 import * as d3 from 'd3'
 import { SvgPropertiesHyphen } from 'csstype';
-import { Axis, AxisIndex } from '../Axis/axis.js'
-import { CartesianAxis, PolarAxis } from '../index.js';
+import { Axes, AxisIndex } from '../Axes/axes.js'
+import { CartesianAxes, PolarAxes } from '../index.js';
 import { defaultsDeep, merge } from 'lodash-es'
 import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js';
 
@@ -132,7 +132,7 @@ export abstract class Chart {
     this._isVisible = value
   }
 
-  addTo(axis: Axis, axisIndex: AxisIndex, id: string, style: SvgPropertiesHyphen | string) {
+  addTo(axis: Axes, axisIndex: AxisIndex, id: string, style: SvgPropertiesHyphen | string) {
     this.id = id ? id : ''
     if (typeof style === 'string') {
       this.cssSelector = style
@@ -168,10 +168,10 @@ export abstract class Chart {
     )
   }
 
-  plotter(axis: Axis, axisIndex: AxisIndex) {
-    if (axis instanceof CartesianAxis) {
+  plotter(axis: Axes, axisIndex: AxisIndex) {
+    if (axis instanceof CartesianAxes) {
       this.plotterCartesian(axis, axisIndex)
-    } else if (axis instanceof PolarAxis) {
+    } else if (axis instanceof PolarAxes) {
       this.plotterPolar(axis, axisIndex)
     }
   }
@@ -220,8 +220,8 @@ export abstract class Chart {
     return html
   }
 
-  abstract plotterCartesian(axis: CartesianAxis, dataKeys: any)
-  abstract plotterPolar(axis: PolarAxis, dataKeys: any)
+  abstract plotterCartesian(axis: CartesianAxes, dataKeys: any)
+  abstract plotterPolar(axis: PolarAxes, dataKeys: any)
 
   legendId(item: string) {
     return this.legend.findIndex((x) => x === item)
@@ -229,10 +229,10 @@ export abstract class Chart {
 
   abstract drawLegendSymbol(legendId?: string, asSvgElement?: boolean)
 
-  protected selectGroup(axis: CartesianAxis | PolarAxis, cssClass: string) {
+  protected selectGroup(axis: CartesianAxes | PolarAxes, cssClass: string) {
     if (this.group == null) {
       this.group = axis.chartGroup.append('g')
-      if (axis instanceof PolarAxis) {
+      if (axis instanceof PolarAxes) {
         const direction = -axis.direction
         const intercept = 90 - 180 * axis.intercept / Math.PI
         this.group.attr('transform', 'rotate(' + intercept + ')scale(' + direction + ' ,1)')

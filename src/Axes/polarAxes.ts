@@ -1,5 +1,8 @@
 import * as d3 from 'd3'
-import { Axis, AxesOptions, AxisType, AxisOptions } from './axis.js'
+import { Axes, AxesOptions } from './axes.js'
+import { AxisType } from '../Axis/axisType.js'
+import { AxisOptions } from '../Axis/axisOptions'
+
 import { defaultsDeep } from 'lodash-es'
 import { DateTime } from 'luxon'
 import { niceDegreeSteps } from '../Utils/niceDegreeSteps.js'
@@ -17,28 +20,30 @@ interface AngularAxisOptions extends AxisOptions {
   intercept?: number
 }
 
-export interface PolarAxisOptions extends AxesOptions {
+export interface PolarAxesOptions extends AxesOptions {
   innerRadius?: number
-  radial?: RadialAxisOptions
-  angular?: AngularAxisOptions
+  radial: RadialAxisOptions
+  angular: AngularAxisOptions
 }
 
 
-export class PolarAxis extends Axis {
+const polarAxesDefaultOptions = {}
+
+
+export class PolarAxes extends Axes {
   radialScale: any
   angularScale: any
   innerRadiusFactor: number
   intercept: number
   direction: number
   private angularRange: number[]
-  static readonly defaultOptions = {}
   private angularDomain: number[] | Date[]
   angularAxisOptions: AngularAxisOptions = {}
   radialAxisOptions: RadialAxisOptions = {}
 
 
-  constructor(container: HTMLElement, width: number | null, height: number | null, options?: PolarAxisOptions) {
-    super(container, width, height, options, PolarAxis.defaultOptions)
+  constructor(container: HTMLElement, width: number | null, height: number | null, options: PolarAxesOptions) {
+    super(container, width, height, options, polarAxesDefaultOptions)
     this.canvas = this.canvas
       .append('g')
     this.direction = options.angular.direction ? options.angular.direction : Direction.ANTICLOCKWISE
@@ -53,7 +58,7 @@ export class PolarAxis extends Axis {
 
     this.canvas
       .append('g')
-      .attr('class', 'axis-canvas')
+      .attr('class', 'canvas')
       .append('path')
     this.updateCanvas()
     this.setRange()
@@ -70,7 +75,7 @@ export class PolarAxis extends Axis {
       endAngle = Math.PI + endAngle
     }
     this.canvas
-      .select('.axis-canvas')
+      .select('.canvas')
       .select('path')
       .attr(
         'd',
@@ -105,7 +110,7 @@ export class PolarAxis extends Axis {
     for (const chart of this.charts) {
       chart.plotter(this, chart.axisIndex)
     }
-    this.updateGrid()
+    this.update()
     for (const visitor of this.visitors) {
       visitor.redraw()
     }
@@ -115,7 +120,7 @@ export class PolarAxis extends Axis {
     return (value * 180) / Math.PI
   }
 
-  updateGrid() {
+  update() {
     // draw the circular grid lines
     // draw the radial axis
     const rAxis = d3.axisBottom(this.radialScale).ticks(5)
@@ -282,13 +287,13 @@ export class PolarAxis extends Axis {
     this.canvas.append('g').attr('class', 'grid t-grid')
     this.canvas.append('g').attr('class', 'axis r-axis')
       .attr('font-family', 'sans-serif')
-      .attr('font-size', '10')
+      .attr('fill', 'currentColor')
     this.canvas
       .append('g')
       .attr('class', 'axis t-axis')
       .attr('transform', 'rotate(' + -this.intercept * 180 / Math.PI + ')')
       .attr('font-family', 'sans-serif')
-      .attr('font-size', '10')
-    this.updateGrid()
+      .attr('fill', 'currentColor')
+    this.update()
   }
 }
