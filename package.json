@@ -19,6 +19,7 @@
   "main": "./lib/cjs/index.js",
   "module": "./lib/esm/index.js",
   "typings": "./lib/types/index.d.ts",
+  "private": false,
   "files": [
     "dist/*",
     "lib/*"
