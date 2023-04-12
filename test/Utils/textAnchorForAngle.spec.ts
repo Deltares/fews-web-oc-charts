@@ -1,4 +1,4 @@
-import { AxisOrientation } from '../../src/Types/axisOrientation.js'
+import { AxisOrientation } from '../../src/Axis/axisOrientation.js'
 import { textAnchorForAngle } from '../../src/Utils/textAnchorForAngle.js'
 
 describe("anchor for axis orientation top", () => {
