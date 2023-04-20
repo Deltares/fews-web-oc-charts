@@ -11,6 +11,7 @@ export class MouseOver implements Visitor {
   private group: d3.Selection<SVGElement, unknown, SVGElement, unknown>
   private axes: CartesianAxes
   private mouseGroup: d3.Selection<SVGElement, unknown, SVGElement, unknown>
+  private mousePerLine!: d3.Selection<d3.BaseType, string, SVGElement, unknown>
 
   constructor(trace?: string[]) {
     this.trace = trace
@@ -91,8 +92,7 @@ export class MouseOver implements Visitor {
     const axes = this.axes
     let rMin = Infinity
     let xPos = mouse[0]
-    axes.canvas
-      .selectAll<SVGElement, string>('.mouse-per-line')
+    this.mousePerLine
       .each(d => {
         const selector = `[data-chart-id="${d}"]`
         const element = axes.canvas
@@ -160,7 +160,7 @@ export class MouseOver implements Visitor {
     const axis = this.axes
     const pointData = {}
 
-    axis.canvas.selectAll<SVGElement, any>('.mouse-per-line').each((d, i) => {
+    this.mousePerLine.each((d, i) => {
       const selector = `[data-chart-id="${d}"]`
       const chart = axis.charts.find(c => c.id === d)
       const xIndex = chart.axisIndex.x.axisIndex
@@ -271,7 +271,7 @@ export class MouseOver implements Visitor {
 
   updatePoints(pointData) {
     const axes = this.axes
-    axes.canvas.selectAll<SVGElement, string>('.mouse-per-line').attr('transform', (id, i) => {
+   this.mousePerLine.attr('transform', (id, i) => {
       const keys = Object.keys(pointData)
       if (keys.includes(id)) {
         return `translate(${pointData[id].x0} , ${pointData[id].y0})`
@@ -316,7 +316,7 @@ export class MouseOver implements Visitor {
       ? this.trace
       : this.axes.charts.map((chart) => { return chart.id })
 
-    const mousePerLine = this.group
+    const mousePerLine = this.mousePerLine = this.group
       .selectAll('.mouse-per-line')
       .data(traces)
 
