@@ -68,7 +68,7 @@ export abstract class Chart {
   protected _data: any
   protected _extent: any
   protected _isVisible: boolean = true
-  group: d3.Selection<SVGElement, any, SVGElement, any>
+  group: d3.Selection<SVGElement, any, SVGElement, any> | null
   colorMap: any
   id: string
   options: ChartOptions

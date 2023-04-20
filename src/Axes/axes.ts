@@ -1,6 +1,7 @@
 import * as d3 from 'd3'
 import { Chart } from '../Charts/chart.js'
 import { Visitor } from '../Visitors/visitor.js'
+// TODO: do we really need lodash?
 import { defaultsDeep, merge } from 'lodash-es'
 import { Tooltip } from '../Tooltip/tooltip.js'
 import { AxisOptions } from '../Axis/axisOptions.js'
@@ -33,24 +34,32 @@ export interface AxisIndex {
 }
 
 export abstract class Axes {
-  tooltip: Tooltip
-  type: string
-  view: any
-  defs: any
-  canvas: any
-  svg: d3.Selection<SVGElement, any, SVGElement, any>
-  container: HTMLElement
-  observer: ResizeObserver
-  width: number
-  height: number
+  width: number = 0
+  height: number = 0
   margin: { top: number; right: number; bottom: number; left: number }
+
   options: AxesOptions = {}
-  chartGroup: d3.Selection<SVGElement, any, SVGElement, any>
+
+  container: HTMLElement
+  svg: d3.Selection<SVGSVGElement, any, null, any>
+  defs: d3.Selection<SVGDefsElement, any, null, any>
+  canvas: d3.Selection<SVGGElement, any, null, any>
+  // TODO: is this still used?
+  chartGroup: d3.Selection<SVGGElement, any, null, any> | null = null
+
+  tooltip: Tooltip
+  observer: ResizeObserver
+
   charts: Chart[]
-  initialDraw = true
   visitors: Visitor[]
 
-  constructor(container: HTMLElement, width: number | null, height: number | null, options: AxesOptions, defaultOptions: any) {
+  constructor(
+    container: HTMLElement,
+    width: number | null,
+    height: number | null,
+    options: AxesOptions,
+    defaultOptions: any  // TODO: used to assign default options from other axis types too, move to those implementations?
+  ) {
     this.container = container
     this.options = defaultsDeep(
       this.options,
@@ -64,6 +73,7 @@ export abstract class Axes {
     this.observer.observe(container)
 
     // Using the d3.formatLocale is not easy for generic plotting
+    // TODO: why? Why is formatDefaultLocale easier?
     d3.formatDefaultLocale({
       decimal: '.',
       thousands: '\u2009',
@@ -71,18 +81,21 @@ export abstract class Axes {
       currency: ['$', '']
     })
 
+    // TODO: move default margin to default options?
     this.margin = { ...{ top: 40, right: 40, bottom: 40, left: 40 }, ...options.margin }
     this.svg = d3
       .select(container)
       .append('svg')
       .attr('class', 'wb-charts')
       .attr('overflow', 'visible')
+
     this.setSize(height, width)
 
     this.defs = this.svg.append('defs')
     this.canvas = this.svg
       .append('g')
       .attr('transform', 'translate(' + this.margin.left + ',' + this.margin.top + ')')
+
     this.tooltip = new Tooltip(container)
     this.charts = []
     this.visitors = []
@@ -97,12 +110,10 @@ export abstract class Axes {
   }
 
   setOptions(options: AxesOptions): void {
-    merge(this.options,
-      options
-    )
+    merge(this.options, options)
   }
 
-  setSize(height?: number, width?: number): void {
+  setSize(height: number | null, width: number | null): void {
     const containerWidth = width == null ? this.container.offsetWidth : width
     const containerHeight = height == null ? this.container.offsetHeight : height
     this.height = containerHeight - this.margin.top - this.margin.bottom
@@ -118,7 +129,7 @@ export abstract class Axes {
   }
 
   resize(): void {
-    this.setSize()
+    this.setSize(null, null)
     this.setRange()
     this.redraw()
   }
@@ -140,7 +151,7 @@ export abstract class Axes {
       }
     }
     this.charts.splice(i, 1)
-    this.chartGroup.selectAll(`[data-chart-id="${id}"]`).remove()
+    if (this.chartGroup) this.chartGroup.selectAll(`[data-chart-id="${id}"]`).remove()
   }
 
   removeAllCharts(): void {
@@ -148,7 +159,7 @@ export abstract class Axes {
       chart.group = null
     }
     this.charts = []
-    this.chartGroup.selectAll('g').remove()
+    if (this.chartGroup) this.chartGroup.selectAll('g').remove()
   }
 
   accept(v: Visitor): void {
@@ -157,7 +168,7 @@ export abstract class Axes {
   }
 
   get extent(): any {
-    const _extent = {}
+    const _extent: { [key:string]: any } = {}
     for (const chart of this.charts) {
       const chartExtent = chart.extent
       for (const path in chartExtent) {
