@@ -3,7 +3,7 @@ import { defaultsDeep, merge } from 'lodash-es'
 
 import { Axes, AxesOptions } from './axes.js'
 import { AxisType } from '../Axis/axisType.js'
-import { ResetZoom, ScaleOptions, ZoomOptions } from '../Scale/scaleOptions.js'
+import { AxesZoomOptions, ResetZoom, ScaleOptions, ZoomOptions } from '../Scale/scaleOptions.js'
 import { niceDomain } from './niceDomain.js'
 import { Grid } from '../Grid/grid.js'
 import { CartesianAxisOptions } from '../Axis/cartesianAxisOptions.js'
@@ -13,28 +13,29 @@ import { createLayers } from '../Layers/layers.js'
 
 
 export interface CartesianAxesOptions extends AxesOptions {
-  x: CartesianAxisOptions[];
-  y: CartesianAxisOptions[];
+  x: CartesianAxisOptions[]
+  y: CartesianAxisOptions[]
 }
 
-const defaultAxesOptions = {
+const defaultAxesOptions: CartesianAxesOptions = {
   x: [{ type: AxisType.value, labelAngle: 0 }],
   y: [{ type: AxisType.value, labelAngle: 0 }]
-} as const
+}
 
-export class CartesianAxes extends Axes {
-  canvas: any
-  gridHandles: Record<string, Grid> = {}
-  axisHandles: Record<string, XAxis|YAxis> = {}
+type Scale = d3.ScaleTime<number, number, never> | d3.ScaleBand<string> | d3.ScaleLinear<number, number, never>
+
+export class CartesianAxes extends Axes<CartesianAxesOptions> {
   layers: any
-  container: HTMLElement
-  xScale: Array<any> = []
-  yScale: Array<any> = []
-  xInitialExtent: Array<any> = []
-  yInitialExtent: Array<any> = []
   clipPathId: string
-  timeZoneOffset: number
-  options: CartesianAxesOptions
+
+  gridHandles: Record<string, Grid> = {}
+  axisHandles: Record<string, XAxis | YAxis> = {}
+
+  // TODO: at most two scales and initial extents: left and right?
+  xScale: Scale[] = []
+  yScale: Scale[] = []
+  xInitialExtent: (number | Date)[] = []
+  yInitialExtent: (number | Date)[] = []
 
   constructor(
     container: HTMLElement,
@@ -43,6 +44,7 @@ export class CartesianAxes extends Axes {
     options: CartesianAxesOptions
   ) {
     super(container, width, height, options, defaultAxesOptions)
+
     // Set defaults for each x- and y-axis.
     this.setDefaultAxisOptions(this.options.x, defaultAxesOptions.x[0])
     this.setDefaultAxisOptions(this.options.y, defaultAxesOptions.y[0])
@@ -51,7 +53,6 @@ export class CartesianAxes extends Axes {
     this.clipPathId ='id-' + Math.random().toString(36).substring(2, 18)
     this.setClipPath()
 
-    this.view = this.canvas
     this.layers = createLayers(this.canvas, this.width, this.height)
 
     this.chartGroup = this.layers.charts
@@ -75,9 +76,8 @@ export class CartesianAxes extends Axes {
   }
 
   setOptions(options: CartesianAxesOptions): void {
-    merge(this.options,
-      options
-    )
+    // TODO: move to base class?
+    merge(this.options, options)
   }
 
   createCanvas(): void {
@@ -94,7 +94,7 @@ export class CartesianAxes extends Axes {
       .attr('width', this.width)
       .attr('height', this.height)
       .attr('fill', 'none')
-}
+  }
 
   updateCanvas(): void {
     this.layers.canvas
@@ -127,16 +127,10 @@ export class CartesianAxes extends Axes {
     }
   }
 
-  updateAxisScales(options: ZoomOptions, axisKey: keyof CartesianAxesOptions): void {
-    let scales: Array<any>
-    let initialExtents: Array<any>
-    if (axisKey === 'x') {
-      scales = this.xScale
-      initialExtents = this.xInitialExtent
-    } else {
-      scales = this.yScale
-      initialExtents = this.yInitialExtent
-    }
+  updateAxisScales(options: ZoomOptions, axisKey: 'x' | 'y'): void {
+    let scales = axisKey === 'x' ? this.xScale : this.yScale
+    let initialExtents = axisKey === 'x' ? this.xInitialExtent : this.yInitialExtent
+
     for (const key in scales) {
       const scale = scales[key]
       const axisOptions = this.options[axisKey][key]
@@ -148,9 +142,14 @@ export class CartesianAxes extends Axes {
       }
       const zoomOptions = { ... { autoScale: false }, ...axisScaleOptions, ...options }
       if (zoomOptions?.domain) {
+        // The domain was specified explicitly.
         scale.domain(zoomOptions.domain)
-        if (zoomOptions?.nice === true) scale.domain(niceDomain(scale.domain(), 16))
+        if (zoomOptions?.nice === true) {
+          // TODO: not supported for anything other than number... throw error?
+          scale.domain(niceDomain(scale.domain(), 16))
+        }
       } else if (zoomOptions.autoScale === true || zoomOptions.fullExtent === true) {
+        // The domain should  be determined automatically.
         let defaultExtent
         let dataExtent = new Array(2)
         if (axisOptions?.defaultDomain !== undefined) {
@@ -176,21 +175,24 @@ export class CartesianAxes extends Axes {
         let extent = new Array(0)
         for (const chart of this.charts) {
           if (chart.axisIndex[axisKey]?.axisIndex === +key) {
+            // TODO: fix data and dataKeys type in Chart...
             extent = chart.data.map(d => d[chart.dataKeys[axisKey]])
             break
           }
         }
         scale.domain(extent)
       }
+      // TODO: only valid for numeric domains...
       const domain = scale.domain()
       if (initialExtents[key] === undefined && !isNaN(domain[0]) && !isNaN(domain[1])) initialExtents[key] = domain
     }
   }
 
-  chartsExtent(axisKey: keyof CartesianAxesOptions, axisIndex: string, options: ZoomOptions): any[] {
+  chartsExtent(axisKey: 'x' | 'y', axisIndex: string, options: ZoomOptions): any[] {
     let extent = new Array(2)
     for (const chart of this.charts) {
-      if ((options.fullExtent || chart.options[axisKey].includeInAutoScale) && chart.axisIndex[axisKey]?.axisIndex === +axisIndex) {
+      if ((options.fullExtent || chart.options[axisKey]?.includeInAutoScale) && chart.axisIndex[axisKey]?.axisIndex === +axisIndex) {
+            // TODO: fix dataKeys type in Chart...
         const chartExtent = chart.extent[chart.dataKeys[axisKey]]
         extent = d3.extent(d3.merge([extent, [].concat(...chartExtent)]))
       }
@@ -198,9 +200,10 @@ export class CartesianAxes extends Axes {
     return extent
   }
 
-  redraw(options?): void {
-    this.updateAxisScales(options.x ?? {}, 'x')
-    this.updateAxisScales(options.y ?? {}, 'y')
+  redraw(options?: AxesZoomOptions): void {
+    // TODO: where do these ZoomOptions come from? What type should options be? Should ZoomOptions be in AxesOptions?
+    this.updateAxisScales(options?.x ?? {}, 'x')
+    this.updateAxisScales(options?.y ?? {}, 'y')
     for (const chart of this.charts) {
       chart.plotter(this, chart.axisIndex)
     }
@@ -217,6 +220,7 @@ export class CartesianAxes extends Axes {
 
   resetZoom(): void {
     const xOptions: ZoomOptions = { autoScale: true }
+    // TODO: what does this huge boolean mean?
     if (this.options['x'][0].resetZoom === ResetZoom.full || (this.options['x'][0].resetZoom === ResetZoom.toggle && this.atInitialExtent(this.xScale[0].domain(), this.xInitialExtent[0]))) {
       xOptions.fullExtent = true
     }
@@ -232,7 +236,7 @@ export class CartesianAxes extends Axes {
   }
 
   resize(): void {
-    this.setSize()
+    this.setSize(null, null)
     this.setRange()
     this.zoom()
   }
@@ -328,6 +332,7 @@ export class CartesianAxes extends Axes {
           scale = d3.scaleUtc()
           break
         case AxisType.band:
+          // TODO: is this used?
           scale = d3.scaleBand()
           break
         default:
@@ -343,7 +348,7 @@ export class CartesianAxes extends Axes {
     this.setRangeY(this.options.y)
   }
 
-  protected setRangeX(options): void {
+  protected setRangeX(options: CartesianAxisOptions[]): void {
     for (const key in this.xScale) {
       const scale = this.xScale[key]
       if (options[key].reverse) {
@@ -354,7 +359,7 @@ export class CartesianAxes extends Axes {
     }
   }
 
-  protected setRangeY(options): void {
+  protected setRangeY(options: CartesianAxisOptions[]): void {
     for (const key in this.yScale) {
       const scale = this.yScale[key]
       if (options[key].reverse) {

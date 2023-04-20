@@ -33,19 +33,19 @@ export interface AxisIndex {
   color?: { key: string }
 }
 
-export abstract class Axes {
+export abstract class Axes<OptionsType extends AxesOptions> {
   width: number = 0
   height: number = 0
   margin: { top: number; right: number; bottom: number; left: number }
 
-  options: AxesOptions = {}
+  options: OptionsType
 
   container: HTMLElement
-  svg: d3.Selection<SVGSVGElement, any, null, any>
-  defs: d3.Selection<SVGDefsElement, any, null, any>
-  canvas: d3.Selection<SVGGElement, any, null, any>
-  // TODO: is this still used?
-  chartGroup: d3.Selection<SVGGElement, any, null, any> | null = null
+  svg: d3.Selection<SVGSVGElement, unknown, null, unknown>
+  defs: d3.Selection<SVGDefsElement, unknown, null, unknown>
+  canvas: d3.Selection<SVGGElement, unknown, null, unknown>
+  // TODO: should be created by subclasses... abstract method?
+  chartGroup: d3.Selection<SVGGElement, unknown, null, unknown> | null = null
 
   tooltip: Tooltip
   observer: ResizeObserver
@@ -57,12 +57,14 @@ export abstract class Axes {
     container: HTMLElement,
     width: number | null,
     height: number | null,
-    options: AxesOptions,
-    defaultOptions: any  // TODO: used to assign default options from other axis types too, move to those implementations?
+    options: OptionsType,
+    defaultOptions: OptionsType
   ) {
     this.container = container
+
+    const completeOptions = {}
     this.options = defaultsDeep(
-      this.options,
+      completeOptions,
       options,
       defaultOptions
     )

@@ -26,11 +26,13 @@ export interface PolarAxesOptions extends AxesOptions {
   angular: AngularAxisOptions
 }
 
+const polarAxesDefaultOptions: PolarAxesOptions = {
+  radial: {},
+  angular: {}
+}
 
-const polarAxesDefaultOptions = {}
 
-
-export class PolarAxes extends Axes {
+export class PolarAxes extends Axes<PolarAxesOptions> {
   radialScale: any
   angularScale: any
   innerRadiusFactor: number
@@ -99,6 +101,7 @@ export class PolarAxes extends Axes {
   redraw() {
     let radialExtent = new Array(0)
     for (const chart of this.charts) {
+      // TODO: fix dataKeys type in Chart...
       const chartRadialExtent = chart.extent[chart.dataKeys.radial]
       if (this.radialAxisOptions.type === AxisType.band) {
         radialExtent = d3.merge([radialExtent, [].concat(...chartRadialExtent)])
@@ -124,24 +127,35 @@ export class PolarAxes extends Axes {
     // draw the circular grid lines
     // draw the radial axis
     const rAxis = d3.axisBottom(this.radialScale).ticks(5)
-    this.canvas.select('.r-axis').call(rAxis)
-    const draw = (context, radius) => {
-      context.arc(0, 0, radius, -this.direction * this.angularRange[0] - this.intercept, -this.direction * this.angularRange[1] - this.intercept, this.direction === Direction.ANTICLOCKWISE) // draw an arc, the turtle ends up at ⟨194.4,108.5⟩
-      return context;
-    }
+    this.canvas
+      .select('.r-axis')
+      .call(rAxis)
 
     if (this.radialAxisOptions.type !== AxisType.band) {
       const radialTicks = this.radialScale.ticks(5).map(this.radialScale)
       const drawRadial = this.canvas
-        .select('.r-grid')
+        .select('.r-grid') // TODO: pass via properties rather than class? Also, why not an ID?
         .selectAll('path')
         .data(radialTicks)
       drawRadial.exit().remove()
+
+      const draw = (d: unknown) => {
+        const radius = d as number
+        const path = d3.path()
+        path.arc(
+          0, 0,
+          radius, -this.direction * this.angularRange[0] - this.intercept,
+          -this.direction * this.angularRange[1] - this.intercept,
+          this.direction === Direction.ANTICLOCKWISE
+        ) // draw an arc, the turtle ends up at ⟨194.4,108.5⟩ // TODO: this comment seems unlikely to be still accurate?
+        // TODO: should this have a .toString()?
+        return path;
+      }
       drawRadial
         .enter()
         .append('path')
         .merge(drawRadial)
-        .attr('d', (d) => { return draw(d3.path(), d) })
+        .attr('d', draw)
     }
 
     let angularTicks
@@ -172,13 +186,14 @@ export class PolarAxes extends Axes {
     if (
       (Math.cos(this.angularRange[0]) - Math.cos(this.angularRange[1]) < 1e-6) &&
       (Math.sin(this.angularRange[0]) - Math.sin(this.angularRange[1]) < 1e-6)
-    ) angularTicks.shift()
+    ) {
+      angularTicks.shift()
+    }
 
     const ticksSelection = this.canvas
       .select('.t-grid')
       .selectAll('line')
       .data(angularTicks)
-
     ticksSelection.exit().remove()
 
     ticksSelection
@@ -193,9 +208,7 @@ export class PolarAxes extends Axes {
         return 'rotate(' + (this.radToDegrees(-this.intercept - this.direction * this.angularScale(d))) + ')'
       })
 
-    const groupRotate = function (d: number) {
-      return 'rotate(' + this.radToDegrees(-this.direction * this.angularScale(d)) + ')'
-    }.bind(this)
+    const groupRotate = (d: number) => 'rotate(' + this.radToDegrees(-this.direction * this.angularScale(d)) + ')'
     const drawTicks = this.canvas
       .select('.t-axis')
       .selectAll('g')
@@ -219,18 +232,14 @@ export class PolarAxes extends Axes {
       .attr('x2', this.outerRadius + 6)
       .attr('y2', 0)
 
-    const textRotate = function (d) {
-      return (
-        'rotate(' +
-        this.radToDegrees(this.direction * this.angularScale(d) + this.intercept) +
-        ',' +
-        (this.outerRadius + 15) +
-        ',0' +
-        ')'
-      )
-    }.bind(this)
+    const textRotate = (d: unknown) => {
+      const angle = this.radToDegrees(this.direction * this.angularScale(d) + this.intercept)
+      const x = this.outerRadius + 15
+      const y = 0
+      return `rotate(${angle},${x},${y})`
+    }
 
-    const anchor = function (d) {
+    const anchor = (d: unknown) => {
       const dNorthCW = ((this.radToDegrees(Math.PI / 2 - this.intercept - this.direction * this.angularScale(d)) % 360) + 360) % 360
       if (dNorthCW > 0 && dNorthCW < 180) {
         return 'start'
@@ -239,9 +248,9 @@ export class PolarAxes extends Axes {
       } else {
         return 'middle'
       }
-    }.bind(this)
+    }
 
-    const labelFormat = this.angularAxisOptions.format ? this.angularAxisOptions.format : d => d
+    const labelFormat = this.angularAxisOptions.format ? this.angularAxisOptions.format : (d: unknown) => d
 
     this.canvas
       .select('.t-axis')
