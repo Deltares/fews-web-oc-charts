@@ -91,18 +91,22 @@ export class MouseOver implements Visitor {
     const axis = this.axis
     let rMin = Infinity
     let xPos = mouse[0]
-    axis.canvas.selectAll('.mouse-per-line').each((d, i) => {
-      const selector = `[data-chart-id="${d}"]`
-      const element = axis.canvas.select(selector).select('path')
-      if (element.node() !== null) {
-        if (this.isHidden(element) || element.datum().length === 0) {
-          //skip
-        } else {
-          const datum = element.datum();
-          [xPos, rMin] = this.closestPointForChart(d, datum, mouse[0], xPos, rMin)
+    axis.canvas
+      .selectAll('.mouse-per-line')
+      .each(d => {
+        const selector = `[data-chart-id="${d}"]`
+        const element = axis.canvas
+          .select(selector)
+          .select('path')
+        if (element.node() !== null) {
+          if (this.isHidden(element) || element.datum().length === 0) {
+            //skip
+          } else {
+            const datum = element.datum();
+            [xPos, rMin] = this.closestPointForChart(d, datum, mouse[0], xPos, rMin)
+          }
         }
-      }
-    })
+      })
     return xPos
   }
 

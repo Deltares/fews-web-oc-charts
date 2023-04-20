@@ -23,17 +23,14 @@ const defaultAxesOptions = {
 } as const
 
 export class CartesianAxes extends Axes {
-  canvas: any
   gridHandles: Record<string, Grid> = {}
   axisHandles: Record<string, XAxis|YAxis> = {}
   layers: any
-  container: HTMLElement
   xScale: Array<any> = []
   yScale: Array<any> = []
   xInitialExtent: Array<any> = []
   yInitialExtent: Array<any> = []
   clipPathId: string
-  timeZoneOffset: number
   options: CartesianAxesOptions
 
   constructor(
