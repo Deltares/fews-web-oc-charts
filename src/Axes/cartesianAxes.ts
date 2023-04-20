@@ -51,7 +51,6 @@ export class CartesianAxes extends Axes {
     this.clipPathId ='id-' + Math.random().toString(36).substring(2, 18)
     this.setClipPath()
 
-    this.view = this.canvas
     this.layers = createLayers(this.canvas, this.width, this.height)
 
     this.chartGroup = this.layers.charts
