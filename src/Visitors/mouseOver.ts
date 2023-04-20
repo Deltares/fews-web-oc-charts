@@ -6,6 +6,10 @@ import { TooltipPosition } from '../Tooltip/tooltip.js'
 import { dateFormatter } from '../Utils/date.js'
 import { isNull } from 'lodash-es'
 
+function distanceSquared(x0, x1) {
+  return (x0 - x1) ** 2
+}
+
 export class MouseOver implements Visitor {
   private trace: string[]
   private group: d3.Selection<SVGElement, unknown, SVGElement, unknown>
@@ -115,9 +119,6 @@ export class MouseOver implements Visitor {
     return style === null || style.getPropertyValue('visibility') === 'hidden'
   }
 
-  distanceSquared(x0, x1) {
-    return (x0 - x1) ** 2
-  }
 
   closestPointForChart(id: string, datum: any[], x: number, xPos: number, rMin: number) {
     const axis = this.axes
@@ -139,7 +140,7 @@ export class MouseOver implements Visitor {
     const idx = bisect(datum, mouseValue)
     if (idx - 1 >= 0 && !yIsNull(datum[idx - 1])[yKey]) {
       const x0 = xScale(datum[idx - 1][xKey])
-      const r0 = this.distanceSquared(x0, x)
+      const r0 =  distanceSquared(x0, x)
       if (r0 < rMin) {
         rMin = r0
         xPos = x0
@@ -147,7 +148,7 @@ export class MouseOver implements Visitor {
     }
     if (idx < datum.length && !yIsNull(datum[idx])[yKey]) {
       const x1 = xScale(datum[idx][xKey])
-      const r1 = this.distanceSquared(x1, x)
+      const r1 = distanceSquared(x1, x)
       if (r1 < rMin) {
         rMin = r1
         xPos = x1
