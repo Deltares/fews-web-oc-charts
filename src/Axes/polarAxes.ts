@@ -6,6 +6,7 @@ import { AxisOptions } from '../Axis/axisOptions'
 import { defaultsDeep } from 'lodash-es'
 import { DateTime } from 'luxon'
 import { niceDegreeSteps } from '../Utils/niceDegreeSteps.js'
+import { D3Selection } from '../Utils/elementTypes.js'
 
 export enum Direction {
   CLOCKWISE = -1,
@@ -41,6 +42,10 @@ export class PolarAxes extends Axes {
   angularAxisOptions: AngularAxisOptions = {}
   radialAxisOptions: RadialAxisOptions = {}
 
+  radialAxis: D3Selection<SVGGElement> | null = null
+  angularAxis: D3Selection<SVGGElement> | null = null
+  radialGrid: D3Selection<SVGGElement> | null = null
+  angularGrid: D3Selection<SVGGElement> | null = null
 
   constructor(container: HTMLElement, width: number | null, height: number | null, options: PolarAxesOptions) {
     super(container, width, height, options, polarAxesDefaultOptions)
@@ -124,7 +129,8 @@ export class PolarAxes extends Axes {
     // draw the circular grid lines
     // draw the radial axis
     const rAxis = d3.axisBottom(this.radialScale).ticks(5)
-    this.canvas.select('.r-axis').call(rAxis)
+    this.radialAxis.call(rAxis)
+
     const draw = (context, radius) => {
       context.arc(0, 0, radius, -this.direction * this.angularRange[0] - this.intercept, -this.direction * this.angularRange[1] - this.intercept, this.direction === Direction.ANTICLOCKWISE) // draw an arc, the turtle ends up at ⟨194.4,108.5⟩
       return context;
@@ -132,9 +138,8 @@ export class PolarAxes extends Axes {
 
     if (this.radialAxisOptions.type !== AxisType.band) {
       const radialTicks = this.radialScale.ticks(5).map(this.radialScale)
-      const drawRadial = this.canvas
-        .select('.r-grid')
-        .selectAll('path')
+      const drawRadial = this.radialAxis
+        .selectAll<SVGPathElement, unknown>('path')
         .data(radialTicks)
       drawRadial.exit().remove()
       drawRadial
@@ -174,9 +179,8 @@ export class PolarAxes extends Axes {
       (Math.sin(this.angularRange[0]) - Math.sin(this.angularRange[1]) < 1e-6)
     ) angularTicks.shift()
 
-    const ticksSelection = this.canvas
-      .select('.t-grid')
-      .selectAll('line')
+    const ticksSelection = this.angularGrid
+      .selectAll<SVGLineElement, unknown>('line')
       .data(angularTicks)
 
     ticksSelection.exit().remove()
@@ -196,8 +200,7 @@ export class PolarAxes extends Axes {
     const groupRotate = function (d: number) {
       return 'rotate(' + this.radToDegrees(-this.direction * this.angularScale(d)) + ')'
     }.bind(this)
-    const drawTicks = this.canvas
-      .select('.t-axis')
+    const drawTicks = this.angularAxis
       .selectAll('g')
       .data(angularTicks)
 
@@ -210,8 +213,7 @@ export class PolarAxes extends Axes {
     tickElements.append('line')
     tickElements.append('text')
 
-    this.canvas
-      .select('.t-axis')
+    this.angularAxis
       .selectAll('.tick')
       .select('line')
       .attr('x1', this.outerRadius)
@@ -243,8 +245,7 @@ export class PolarAxes extends Axes {
 
     const labelFormat = this.angularAxisOptions.format ? this.angularAxisOptions.format : d => d
 
-    this.canvas
-      .select('.t-axis')
+    this.angularAxis
       .selectAll('.tick')
       .select('text')
       .attr('text-anchor', anchor)
@@ -283,12 +284,19 @@ export class PolarAxes extends Axes {
   }
 
   protected initGrid() {
-    this.canvas.append('g').attr('class', 'grid r-grid')
-    this.canvas.append('g').attr('class', 'grid t-grid')
-    this.canvas.append('g').attr('class', 'axis r-axis')
+    this.radialGrid = this.canvas
+      .append('g')
+      .attr('class', 'grid r-grid')
+    this.angularGrid = this.canvas
+      .append('g')
+      .attr('class', 'grid t-grid')
+
+    this.radialAxis = this.canvas
+      .append('g')
+      .attr('class', 'axis r-axis')
       .attr('font-family', 'sans-serif')
       .attr('fill', 'currentColor')
-    this.canvas
+    this.angularAxis = this.canvas
       .append('g')
       .attr('class', 'axis t-axis')
       .attr('transform', 'rotate(' + -this.intercept * 180 / Math.PI + ')')
