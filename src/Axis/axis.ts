@@ -31,16 +31,17 @@ export abstract class Axis {
     this.orientation = options.orientation!
     this.position = options.position!
     this.spanScale = spanScale
-    this.create(group, scale)
+
+    this.group = group
+      .append('g')
+      .attr('class', `axis ${this.class}`)
+    this.axis = createAxis(this.orientation, scale)
+
+    this.redraw()
   }
 
   get class(): string {
     return `${this.options.axisKey}-axis-${this.options.axisIndex}`
-  }
-  protected create(group, scale): void {
-    this.group = group.append('g').attr('class', `axis ${this.class}`)
-    this.axis = createAxis(this.orientation, scale)
-    this.redraw()
   }
 
   redraw(): void {
