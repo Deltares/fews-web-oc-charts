@@ -316,15 +316,17 @@ export class MouseOver implements Visitor {
       ? this.trace
       : this.axes.charts.map((chart) => { return chart.id })
 
-    const mousePerLine = this.mousePerLine = this.group
-      .selectAll('.mouse-per-line')
+    const mousePerLine = this.group
+      .selectAll<SVGGElement, string>('.mouse-per-line')
       .data(traces)
 
-    mousePerLine
+    const enter = mousePerLine
       .enter()
       .append('g')
       .attr('class', 'mouse-per-line')
       .attr('data-mouse-id', d => d)
+  
+     enter
       .append('circle')
       .attr('r', 3)
       .style('fill', 'white')
@@ -333,6 +335,8 @@ export class MouseOver implements Visitor {
     mousePerLine
       .exit()
       .remove()
+
+    this.mousePerLine = enter.merge(mousePerLine)
   }
 
   redraw(): void {
