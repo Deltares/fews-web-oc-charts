@@ -6,29 +6,30 @@ import { Tooltip } from '../Tooltip/tooltip.js'
 import { AxisOptions } from '../Axis/axisOptions.js'
 
 export interface Margin {
-  top?: number;
-  right?: number;
-  bottom?: number;
-  left?: number;
+  top?: number
+  right?: number
+  bottom?: number
+  left?: number
 }
 
 export interface AxesOptions {
-  transitionTime?: number;
-  margin?: Margin;
+  transitionTime?: number
+  margin?: Margin
 }
 
 interface AxisIndexItem {
-  key: string; axisIndex: number;
+  key: string
+  axisIndex: number
 }
 
 export interface AxisIndex {
-  x?: AxisIndexItem;
-  x1?: { key: string };
-  y?: AxisIndexItem;
-  radial?: AxisIndexItem;
-  angular?: AxisIndexItem;
-  value?: { key: string };
-  color?: { key: string };
+  x?: AxisIndexItem
+  x1?: { key: string }
+  y?: AxisIndexItem
+  radial?: AxisIndexItem
+  angular?: AxisIndexItem
+  value?: { key: string }
+  color?: { key: string }
 }
 
 export abstract class Axes {
@@ -114,7 +115,6 @@ export abstract class Axes {
       .attr('width', containerWidth)
       .attr('height', containerHeight)
       .attr('viewBox', `0 0 ${containerWidth} ${containerHeight}`)
-
   }
 
   resize(): void {
