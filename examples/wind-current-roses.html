@@ -47,14 +47,14 @@
       display: block;
     }
 
-    .chart-wind-rose {
+    .chart-rose {
       position: relative;
       display: inline-block;
       width: 49%;
       height: 100%;
     }
 
-    .chart-wind-rose .data-field{
+    .chart-rose .data-field{
       text-anchor: middle
     }
 
@@ -71,12 +71,12 @@
 </head>
 <body>
   <div class="chart-row">
-    <div id="chart-wind-rose1" class="chart-wind-rose"></div>
-    <div id="chart-current-rose1"></div>
+    <div id="chart-wind-rose1" class="chart-rose"></div>
+    <div id="chart-current-rose1" class="chart-rose"></div>
   </div>
   <div class="chart-row">
-    <div id="chart-wind-rose2" class="chart-wind-rose"></div>
-    <div id="chart-current-rose2"></div>
+    <div id="chart-wind-rose2" class="chart-rose"></div>
+    <div id="chart-current-rose2" class="chart-rose"></div>
   </div>
   <script src="../dist/wb-charts.umd.js"></script>
   <script type="text/javascript">
@@ -114,11 +114,95 @@
 
     var transitionTime = null;
 
-    var unitsSpeed = [{unit: ' m/s', factor : 1.0 }, {unit: ' kt', factor: 1.943844 }, {unit: ' km/h', factor: 3.6 }, {unit: ' Bft', scale: wbCharts.scaleBeaufort }]
+    var unitsSpeedWind = [{unit: ' m/s', factor : 1.0 }, {unit: ' kt', factor: 1.943844 }, {unit: ' km/h', factor: 3.6 }, {unit: ' Bft', scale: wbCharts.scaleBeaufort }]
     var unitsStoot = [{unit: ' m/s', factor : 1.0 }, {unit: ' kt', factor: 1.943844 }, {unit: ' km/h', factor: 3.6 } ]
-    var degree = [{unit: '°', factor : 1.0, precision: '.0f' }, {unit: '', scale : wbCharts.scaleWindCategories }]
+    var unitsSpeedCurrent = [{unit: ' m/s', factor : 1.0, precision:'.2f' }, {unit: ' kt', factor: 1.943844, precision:'.2f' }, {unit: ' km/h', factor: 3.6, precision:'.2f' } ]
+    var unitsDegreeWind = [{unit: '°', factor : 1.0, precision: '.0f' }, {unit: '', scale : wbCharts.scaleWindCategories }]
+    var unitsDegreeCurrent = [{unit: '°', factor : 1.0, precision: '.0f' }, {unit: '', scale : wbCharts.scaleCurrentCategories }]
 
     const arrowSize = 64
+
+    const currentSpeedMeasurement = 0.41 // m/s
+    const currentSpeedForecast = 0.42 // m/s
+    const currentDirectionMeasurement = 189 // degrees
+    const currentDirectionForecast = 186 // degrees
+    const crossCurrentSpeedMeasurement = 0.408 // m/s
+    const crossCurrentSpeedForecast = 0.412 // m/s
+
+    function setupCurrentRose() {
+      // Current rose charts
+      // Create two charts, with different intersects and direction
+      var containerCurrentrose1 = document.getElementById("chart-current-rose1");
+      polarAxisCurrent1 = new wbCharts.PolarAxes(containerCurrentrose1, null, null, {
+        angular: {
+          direction: wbCharts.Direction.CLOCKWISE,
+          intercept: Math.PI/ 2,
+          format: (value) => `${value}°`
+        },
+        innerRadius: 0.5
+      });
+
+      var containerCurrentrose2 = document.getElementById("chart-current-rose2");
+      polarAxisCurrent2 = new wbCharts.PolarAxes(containerCurrentrose2, null, null, {
+        angular: {
+          direction: wbCharts.Direction.ANTICLOCKWISE,
+          intercept: 0,
+          format: (value) => `${value}°`
+        },
+        innerRadius: 0.5
+      });
+
+      const polarAxesCurrent = [polarAxisCurrent1, polarAxisCurrent2]
+      polarAxesCurrent.forEach(polarAxisCurrent => {
+        // Invisible lines used for datafields
+        CurrentSpeedMeasurement = new wbCharts.ChartLine([{x: 0, y: currentSpeedMeasurement}, {x: 0, y: currentSpeedMeasurement}], {});
+        CurrentSpeedForecast = new wbCharts.ChartLine([{x: 0, y: currentSpeedForecast}, {x: 0, y: currentSpeedForecast}], {});
+        CrossCurrentSpeedMeasurement = new wbCharts.ChartLine([{x: 0, y: crossCurrentSpeedMeasurement}, {x: 0, y: crossCurrentSpeedMeasurement}], {});
+        CrossCurrentSpeedForecast = new wbCharts.ChartLine([{x: 0, y: crossCurrentSpeedForecast}, {x: 0, y: crossCurrentSpeedForecast}], {});
+
+        // Arrows. Draw in two different ways: One as a line combined with a direction marker, and one as a arrow symbol.
+        CurrentDirectionArrowMeasurement = new wbCharts.ChartArrow( [{x: [0, 1], y: [currentDirectionMeasurement,currentDirectionMeasurement]}],{transitionTime: transitionTime, symbol: { size: arrowSize }});
+        CurrentDirectionArrowForecast = new wbCharts.ChartArrow( [{x: [0, 1], y: [currentDirectionForecast,currentDirectionForecast]}], {transitionTime: transitionTime,  symbol: { size: arrowSize }, radial:{includeInTooltip:false}, tooltip: {anchor: 'pointer'}});
+
+        CurrentSpeedMeasurement.addTo(polarAxisCurrent, { radial: { key: "x" }, angular: { key: "y" } }, 'current-measured', styleMeasurement);
+        CurrentSpeedForecast.addTo(polarAxisCurrent, { radial: { key: "x" }, angular: { key: "y" } }, 'current-forecast', styleForecast);
+        CrossCurrentSpeedMeasurement.addTo(polarAxisCurrent, { radial: { key: "x" }, angular: { key: "y" } }, 'cross-current-measured', styleMeasurement);
+        CrossCurrentSpeedForecast.addTo(polarAxisCurrent, { radial: { key: "x" }, angular: { key: "y" } }, 'cross-current-forecast', styleForecast);
+        CurrentDirectionArrowMeasurement.addTo(polarAxisCurrent, { radial: { key: "x" } , angular: {key: "y" } }, 'current-direction-measurement-arrow', styleMeasurement);
+        CurrentDirectionArrowForecast.addTo(polarAxisCurrent, { radial: { key: "x" } , angular: {key: "y" } }, 'current-direction-forecast-arrow', styleForecast);
+
+        datafieldCurrentDirection = new wbCharts.DataField(
+        polarAxisCurrent.canvas, {
+          selector: ['current-direction-measurement-arrow', 'current-direction-forecast-arrow'],
+          labelField: {text: 'richting', dy: '-50px' },
+          valueField: [{dy: '-30px', hyphen: ' / '}, {units: unitsDegreeCurrent }]
+        }
+        );
+
+        datafieldCurrentSpeed = new wbCharts.DataField(
+        polarAxisCurrent.canvas, {
+          selector: ['current-measured', 'current-forecast'],
+          labelField: {text: 'stroomsnelheid', dy: '-10px' },
+          valueField: [{dy:'10px', hyphen: ' / '}, {units: unitsSpeedCurrent }]
+        });
+
+        datafieldCrossCurrentSpeed = new wbCharts.DataField(
+        polarAxisCurrent.canvas, {
+          selector: ['cross-current-measured', 'cross-current-forecast'],
+          labelField: {text: 'dwarsstroomsnelheid', dy: '30px' },
+          valueField: [{dy:'50px', hyphen: ' / '}, {units: unitsSpeedCurrent }]
+        });
+
+        // Draw
+        polarAxisCurrent.redraw();
+
+        // Add visitors
+        polarAxisCurrent.accept(datafieldCurrentDirection);
+        polarAxisCurrent.accept(datafieldCurrentSpeed);
+        polarAxisCurrent.accept(datafieldCrossCurrentSpeed);
+      })
+    }
+
 
     function setupWindRose(windRichtingMetingen,
     windRichtingVerwachtingen,
@@ -174,7 +258,7 @@
         polarAxisWind.canvas, {
           selector: ['wind-direction-measurement-arrow', 'wind-direction-forecast-arrow'],
           labelField: {text: 'richting', dy: '-50px' },
-          valueField: [{dy: '-30px', hyphen: ' / '}, {units: degree }]
+          valueField: [{dy: '-30px', hyphen: ' / '}, {units: unitsDegreeWind }]
         }
         );
 
@@ -182,7 +266,7 @@
         polarAxisWind.canvas, {
           selector: ['wind-measured', 'wind-forecast'],
           labelField: {text: 'windsnelheid', dy: '-10px' },
-          valueField: [{dy:'10px', hyphen: ' / '}, {units: unitsSpeed }]
+          valueField: [{dy:'10px', hyphen: ' / '}, {units: unitsSpeedWind }]
         });
 
         datafieldWindStoot = new wbCharts.DataField(
@@ -318,7 +402,10 @@
       request.send();
     }
 
+    // get wind data and draw the wind roses
     get_wind_data();
+    // draw the current roses
+    setupCurrentRose();
   </script>
 </body>
 </html>
