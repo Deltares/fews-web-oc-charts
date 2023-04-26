@@ -161,7 +161,7 @@
         CrossCurrentSpeedForecast = new wbCharts.ChartLine([{x: 0, y: crossCurrentSpeedForecast}, {x: 0, y: crossCurrentSpeedForecast}], {});
 
         // Arrows. Draw in two different ways: One as a line combined with a direction marker, and one as a arrow symbol.
-        CurrentDirectionArrowMeasurement = new wbCharts.ChartArrow( [{x: [0, 1], y: [currentDirectionMeasurement,currentDirectionMeasurement]}],{transitionTime: transitionTime, symbol: { size: arrowSize }});
+        CurrentDirectionArrowMeasurement = new wbCharts.ChartArrow( [{x: [0, 1], y: [currentDirectionMeasurement,currentDirectionMeasurement]}],{transitionTime: transitionTime, symbol: { size: arrowSize }, radial:{includeInTooltip:false}, tooltip: {anchor: 'pointer'}});
         CurrentDirectionArrowForecast = new wbCharts.ChartArrow( [{x: [0, 1], y: [currentDirectionForecast,currentDirectionForecast]}], {transitionTime: transitionTime,  symbol: { size: arrowSize }, radial:{includeInTooltip:false}, tooltip: {anchor: 'pointer'}});
 
         CurrentSpeedMeasurement.addTo(polarAxisCurrent, { radial: { key: "x" }, angular: { key: "y" } }, 'current-measured', styleMeasurement);
