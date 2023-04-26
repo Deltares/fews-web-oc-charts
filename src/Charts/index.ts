@@ -1,5 +1,6 @@
 export * from './chart.js'
 export * from './chartArea.js'
+export * from './chartArrow.js'
 export * from './chartBar.js'
 export * from './chartDirection.js'
 export * from './chartHistogram.js'

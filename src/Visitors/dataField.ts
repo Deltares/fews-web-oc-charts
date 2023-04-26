@@ -121,14 +121,26 @@ export class DataField implements Visitor {
     if (value === null) {
       return '-' + symbol;
     }
-    if (units.factor !== undefined) {
-      const format = units.precision !== undefined ? d3.format(units.precision) : d3.format(".1f");
-      const valueString = value !== null ? format(value * units.factor) : '-';
-      return valueString + symbol;
-    } else {
-      const valueString: string = value !== null ? units.scale(value) : '-';
+    const format  = (value): string => {
+      if (value === null) return '-'
+      if (units.factor !== undefined) {
+        const d3Format = units.precision !== undefined ? d3.format(units.precision) : d3.format(".1f");
+        return d3Format(value * units.factor)
+      }
+      return units.scale(value)
+    }
+    if (Array.isArray(value)) {
+      const min = Math.min(...value)
+      const max = Math.max(...value)
+      if (min === max) {
+        const valueString: string = format(min);
+        return valueString + symbol;
+      }
+      const valueString: string = `${format(min)} - ${format(max)}`
       return valueString + symbol;
     }
+    const valueString: string = format(value);
+    return valueString + symbol;
   }
 
   getSymbol(units, i) {

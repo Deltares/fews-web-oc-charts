@@ -47,46 +47,16 @@
       display: block;
     }
 
-    #chart-wind-rose {
+    .chart-wind-rose {
       position: relative;
       display: inline-block;
       width: 49%;
       height: 100%;
     }
 
-    #chart-wind-rose .data-field{
+    .chart-wind-rose .data-field{
       text-anchor: middle
     }
-
-    #polar-range {
-      fill:rgba(79, 193, 255, 0.5);
-      stroke: none;
-    }
-
-    #polar-line { fill: none; stroke: rgb(79, 193, 255); stroke-width: 3px; }
-    #polar-line-forecast { fill: none; stroke: rgb(214, 39, 40); stroke-width: 3px; }
-
-    #chart-wind-speed-time {
-      position: relative;
-      display: block;
-      width: 100%;
-      height: calc(100% - 60px);
-    }
-
-    #chart-wind-direction-time {
-      position: relative;
-      display: block;
-      width: 100%;
-      height: calc(100% - 60px);
-    }
-
-    #wind-line { fill: none; stroke: rgb(79, 193, 255); stroke-width: 1.5px;}
-    #windstoot-line { fill: none; stroke: rgb(156, 220, 254); stroke-width: 1.5px;}
-
-    #wind-forecast-line{ fill: none; stroke: rgb(214, 39, 40); stroke-width: 1.5px;}
-
-    #winddirection-line{ fill: none; stroke:rgb(79, 193, 255); stroke-width: 1.5px;}
-    #directionforecast-rose {stroke: rgb(214, 39, 40); stroke-width: 1px; }
 
   </style>
 
@@ -101,16 +71,40 @@
 </head>
 <body>
   <div class="chart-row">
-    <div id="chart-wind-rose"></div>
-    <div id="chart-current-rose"></div>
+    <div id="chart-wind-rose1" class="chart-wind-rose"></div>
+    <div id="chart-current-rose1"></div>
+  </div>
+  <div class="chart-row">
+    <div id="chart-wind-rose2" class="chart-wind-rose"></div>
+    <div id="chart-current-rose2"></div>
   </div>
   <script src="../dist/wb-charts.umd.js"></script>
   <script type="text/javascript">
 
-    var polarAxis;
+    const styleForecast = {
+      fill: 'rgb(214, 39, 40)',
+      stroke: 'rgb(214, 39, 40)',
+      'stroke-width': '1.5px'
+    }
+    const styleMeasurement = {
+      fill: 'rgb(79, 193, 255)',
+      stroke: 'rgb(79, 193, 255)',
+      'stroke-width': '1.5px'
+    }
+    const styleSurge = {
+      fill: 'none',
+      stroke: 'rgb(156, 220, 254)',
+      'stroke-width': '1.5px'
+    }
+    const styleRange = {
+      fill: 'rgba(79, 193, 255, 0.5)',
+      stroke: 'none'
+    }
+
+    var polarAxisWind1;
+    var polarAxisWind2;
 
     var windDirectionMeasurement;
-    var windDirectionForecast;
     var windSpeedMeasurement;
     var windSpeedForecast;
     var windDirectionRange;
@@ -118,22 +112,24 @@
     var datafieldWindSpeed;
     var datafieldWindStoot;
 
-    var target = 40;
     var transitionTime = null;
 
     var unitsSpeed = [{unit: ' m/s', factor : 1.0 }, {unit: ' kt', factor: 1.943844 }, {unit: ' km/h', factor: 3.6 }, {unit: ' Bft', scale: wbCharts.scaleBeaufort }]
     var unitsStoot = [{unit: ' m/s', factor : 1.0 }, {unit: ' kt', factor: 1.943844 }, {unit: ' km/h', factor: 3.6 } ]
     var degree = [{unit: '°', factor : 1.0, precision: '.0f' }, {unit: '', scale : wbCharts.scaleWindCategories }]
 
+    const arrowSize = 64
+
     function setupWindRose(windRichtingMetingen,
     windRichtingVerwachtingen,
-    windSnelheiMetingen, windSnelheiVerwachtingen, windStoot,
+    windSnelheidMetingen, windSnelheidVerwachtingen, windStoot,
     allWindSpreidingR, allWindSpreidingV,
     allWindStoot) {
 
-      // Wind rose chart
-      var containerWindrose = document.getElementById("chart-wind-rose");
-      polarAxis = new wbCharts.PolarAxes(containerWindrose, null, null, {
+      // Wind rose charts
+      // Create two charts, with different intersects and direction
+      var containerWindrose1 = document.getElementById("chart-wind-rose1");
+      polarAxisWind1 = new wbCharts.PolarAxes(containerWindrose1, null, null, {
         angular: {
           direction: wbCharts.Direction.CLOCKWISE,
           intercept: Math.PI/ 2,
@@ -141,72 +137,69 @@
         },
         innerRadius: 0.5
       });
-      windDirectionMeasurement = new wbCharts.ChartLine(windRichtingMetingen[0], {transitionTime: transitionTime, radial:{includeInTooltip:false}, tooltip: {anchor: 'pointer'}});
-      windDirectionForecast = new wbCharts.ChartLine(windRichtingVerwachtingen[0], {transitionTime: transitionTime, radial:{includeInTooltip:false}, tooltip: {anchor: 'pointer'}});
-      windDirectionRange = new wbCharts.ChartRange(allWindSpreidingR[0], {transitionTime: transitionTime, radial:{includeInTooltip:false}, tooltip: {anchor: 'center'}});
 
-      // Invisible lines used for datafields
-      windSpeedMeasurement = new wbCharts.ChartLine(windSnelheiMetingen[0], {});
-      windSpeedForecast = new wbCharts.ChartLine(windSnelheiVerwachtingen[0], {});
-      windSurge = new wbCharts.ChartLine(windSnelheiVerwachtingen[0], {});
-
-      windDirectionRange.addTo(polarAxis, { radial: { key: "x" }, angular: { key: "y" } }, 'direction-range', '#polar-range');
-      windDirectionMeasurement.addTo(polarAxis, { radial: { key: "x" }, angular: { key: "y" } }, 'direction-measured', '#polar-line');
-      windDirectionForecast.addTo(polarAxis, { radial: { key: "x" }, angular: { key: "y" } }, 'direction-forecast','#polar-line-forecast');
-      windSpeedMeasurement.addTo(polarAxis, { radial: { key: "x" }, angular: { key: "y" } }, 'wind-measured', '#wind-line');
-      windSpeedForecast.addTo(polarAxis, { radial: { key: "x" }, angular: { key: "y" } }, 'wind-forecast', '#wind-forecast-line');
-      windSurge.addTo(polarAxis, { radial: { key: "x" }, angular: { key: "y" } }, 'windstoot', '#windstoot-line');
-
-      datafieldWindDirection = new wbCharts.DataField(
-      polarAxis.canvas, {
-        selector: ['direction-measured', 'direction-forecast'],
-        labelField: {text: 'richting', dy: '-50px' },
-        valueField: [{dy: '-30px', hyphen: ' / '}, {units: degree }]
-      }
-      );
-
-      datafieldWindSpeed = new wbCharts.DataField(
-      polarAxis.canvas, {
-        selector: ['wind-measured', 'wind-forecast'],
-        labelField: {text: 'windsnelheid', dy: '-10px' },
-        valueField: [{dy:'10px', hyphen: ' / '}, {units: unitsSpeed }]
+      var containerWindrose2 = document.getElementById("chart-wind-rose2");
+      polarAxisWind2 = new wbCharts.PolarAxes(containerWindrose2, null, null, {
+        angular: {
+          direction: wbCharts.Direction.ANTICLOCKWISE,
+          intercept: Math.PI,
+          format: (value) => `${value}°`
+        },
+        innerRadius: 0.5
       });
 
-      datafieldWindStoot = new wbCharts.DataField(
-      polarAxis.canvas, {
-        selector: 'windstoot',
-        labelField: {text: 'windstoot', dy: '30px' },
-        valueField: {dy: '50px', units: unitsStoot }
-      });
+      const polarAxesWind = [polarAxisWind1, polarAxisWind2]
+      polarAxesWind.forEach(polarAxisWind => {
 
-      // Draw
-      polarAxis.redraw();
+        position = 277
+        windDirectionRange = new wbCharts.ChartRange(allWindSpreidingR[position], {transitionTime: transitionTime, radial:{includeInTooltip:false}, tooltip: {anchor: 'center'}});
 
-      // Add visitors
-      polarAxis.accept(datafieldWindDirection);
-      polarAxis.accept(datafieldWindSpeed);
-      polarAxis.accept(datafieldWindStoot);
-    }
+        // Invisible lines used for datafields
+        windSpeedMeasurement = new wbCharts.ChartLine(windSnelheidMetingen[position], {});
+        windSpeedForecast = new wbCharts.ChartLine(windSnelheidVerwachtingen[position], {});
+        windSurge = new wbCharts.ChartLine(windStoot[position], {});
 
+        // Arrows
+        windDirectionArrowMeasurement = new wbCharts.ChartArrow( windRichtingMetingen[position], {transitionTime: transitionTime, symbol: { size: arrowSize }});
+        windDirectionArrowForecast = new wbCharts.ChartArrow( windRichtingVerwachtingen[position], {transitionTime: transitionTime,  symbol: { size: arrowSize }, radial:{includeInTooltip:false}, tooltip: {anchor: 'pointer'}});
 
-    function updateWindrose(
-      windRichtingMetingen,
-      windRichtingVerwachtingen,
-      windSnelheidMetingen,
-      windSnelheidVerwachtingen,
-      windSpreidingR,
-      windSpreidingV,
-      windStoot,
-    ) {
-      const position = 277; // Some time index
-      windDirectionMeasurement.data = windRichtingMetingen[position];
-      windDirectionForecast.data = windRichtingVerwachtingen[position];
-      windDirectionRange.data = windSpreidingR[position];
-      windSpeedMeasurement.data = windSnelheidMetingen[position];
-      windSpeedForecast.data = windSnelheidVerwachtingen[position];
-      windSurge.data = windStoot[position];
+        windDirectionRange.addTo(polarAxisWind, { radial: { key: "x" }, angular: { key: "y" } }, 'wind-direction-range', styleRange);
+        windSpeedMeasurement.addTo(polarAxisWind, { radial: { key: "x" }, angular: { key: "y" } }, 'wind-measured', styleMeasurement);
+        windSpeedForecast.addTo(polarAxisWind, { radial: { key: "x" }, angular: { key: "y" } }, 'wind-forecast', styleForecast);
+        windSurge.addTo(polarAxisWind, { radial: { key: "x" }, angular: { key: "y" } }, 'windstoot', styleSurge);
+        windDirectionArrowMeasurement.addTo(polarAxisWind, { radial: { key: "x" } , angular: {key: "y" } }, 'wind-direction-measurement-arrow', styleMeasurement);
+        windDirectionArrowForecast.addTo(polarAxisWind, { radial: { key: "x" } , angular: {key: "y" } }, 'wind-direction-forecast-arrow', styleForecast);
 
-      polarAxis.redraw();
+        datafieldWindDirection = new wbCharts.DataField(
+        polarAxisWind.canvas, {
+          selector: ['wind-direction-measurement-arrow', 'wind-direction-forecast-arrow'],
+          labelField: {text: 'richting', dy: '-50px' },
+          valueField: [{dy: '-30px', hyphen: ' / '}, {units: degree }]
+        }
+        );
+
+        datafieldWindSpeed = new wbCharts.DataField(
+        polarAxisWind.canvas, {
+          selector: ['wind-measured', 'wind-forecast'],
+          labelField: {text: 'windsnelheid', dy: '-10px' },
+          valueField: [{dy:'10px', hyphen: ' / '}, {units: unitsSpeed }]
+        });
+
+        datafieldWindStoot = new wbCharts.DataField(
+        polarAxisWind.canvas, {
+          selector: 'windstoot',
+          labelField: {text: 'windstoot', dy: '30px' },
+          valueField: {dy: '50px', units: unitsStoot }
+        });
+
+        // Draw
+        polarAxisWind.redraw();
+
+        // Add visitors
+        polarAxisWind.accept(datafieldWindDirection);
+        polarAxisWind.accept(datafieldWindSpeed);
+        polarAxisWind.accept(datafieldWindStoot);
+      })
     }
 
     function get_wind_data() {
@@ -257,25 +250,18 @@
             metingvalues[i][3] !== null;
             timesdata.push([times[i],timedatapresent]);
 
-            var metingRichtingData1 = {};
-            var metingRichtingData2 = {};
+            var metingRichtingData = {
+              x : [metingvalues[i][0] !== null ? 1 : 0, 0],
+              y : [metingvalues[i][0], metingvalues[i][0]]
+            }
+            allWindRichtingMetingen.push([metingRichtingData]);
 
-            metingRichtingData1.x = 0;
-            metingRichtingData1.y = metingvalues[i][0];
 
-            metingRichtingData2.x = metingvalues[i][0] !== null ? 1 : 0;
-            metingRichtingData2.y = metingvalues[i][0];
-            allWindRichtingMetingen.push([metingRichtingData1,metingRichtingData2]);
-
-            var verwachtingRichtingData1 = {};
-            verwachtingRichtingData1.x = 0;
-            verwachtingRichtingData1.y = verwachtingvalues[i][1];
-
-            var verwachtingRichtingData2 = {
-              x : verwachtingvalues[i][1] !== null ? 1 : 0,
-              y : verwachtingvalues[i][1]
+            var verwachtingRichtingData = {
+              x : [verwachtingvalues[i][0] !== null ? 1 : 0, 0],
+              y : [verwachtingvalues[i][1], verwachtingvalues[i][1]]
             };
-            allWindRichtingVerwachtingen.push([verwachtingRichtingData1,verwachtingRichtingData2]);
+            allWindRichtingVerwachtingen.push([verwachtingRichtingData]);
 
             var metingSnelheidData1 = {};
             var metingSnelheidData2 = {};
@@ -321,14 +307,13 @@
             allWindSpreidingV.push([windSpreidingVData]);
           }
 
-          updateWindrose(allWindRichtingMetingen,allWindRichtingVerwachtingen,allWindSnelheidMetingen,
-            allWindSnelheidVerwachtingen, allWindSpreidingR, allWindSpreidingV, allWindStoot);
+          setupWindRose(allWindRichtingMetingen,
+            allWindRichtingVerwachtingen,
+            allWindSnelheidMetingen, allWindSnelheidVerwachtingen, allWindStoot,
+            allWindSpreidingR, allWindSpreidingV,
+            allWindStoot)
         }
       }
-      var initRange = [[{ x:[0,1], y:[0,1], v:100}],[{ x:[0,1], y:[0,1], v:100}]];
-      var initScalar = [[{ x:0, y:0 }, { x:1, y:1} ]];
-
-      setupWindRose(initScalar, initScalar, initScalar, initScalar, initScalar, initRange, initRange, initRange);
       request.open("GET", '/examples/wind_data3.json',true);
       request.send();
     }

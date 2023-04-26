@@ -138,7 +138,8 @@
       stroke: none;
     }
 
-    #polar-line { fill: none; stroke: rgb(0, 128, 255); stroke-width: 3px; }
+    #polar-line { fill: rgb(0, 128, 255); stroke: rgb(0, 128, 255); stroke-width: 3px; }
+    #polar-line-forecast { fill: rgb(255, 128, 255); stroke: rgb(255, 128, 255); stroke-width: 3px; }
     #forecast { fill: none; stroke: rgb(255, 128, 255); stroke-width: 3px; }
 
     #cartesian-dot { fill: #999999; stroke: white; }
@@ -381,8 +382,8 @@
           },
           innerRadius: 0.5
         });
-        windDirectionMeasurement = new wbCharts.ChartLine(windRichtingMetingen[0], {transitionTime: transitionTime});
-        windDirectionForecast = new wbCharts.ChartLine(windRichtingVerwachtingen[0], {transitionTime: transitionTime});
+        windDirectionMeasurement = new wbCharts.ChartArrow(windRichtingMetingen[0], {transitionTime: transitionTime, symbol: {size: 64}});
+        windDirectionForecast = new wbCharts.ChartArrow(windRichtingVerwachtingen[0], {transitionTime: transitionTime, symbol: {size: 64}});
         windDirectionRange = new wbCharts.ChartRange(allWindSpreidingR[0], {transitionTime: transitionTime, r:{includeInTooltip:false}, tooltip: {anchor: 'center'} });
         windDirectionRange.addTo(polarAxis, { radial: { key: "x" }, angular: { key: "y" } }, 'direction-range', '#polar-range');
         windDirectionMeasurement.addTo(polarAxis, { radial: { key: "x" }, angular: { key: "y" } }, 'direction-measured', '#polar-line');
@@ -664,25 +665,18 @@
               metingvalues[i][3] !== null;
               timesdata.push([times[i],timedatapresent]);
 
-              var metingRichtingData1 = {};
-              var metingRichtingData2 = {};
+              var metingRichtingData = {
+                x: [metingvalues[i][0] !== null ? 1 : 0, 0],
+                y: [metingvalues[i][0], metingvalues[i][0]]
+              }
+              allWindRichtingMetingen.push([metingRichtingData]);
 
-              metingRichtingData1.x = 0;
-              metingRichtingData1.y = metingvalues[i][0];
 
-              metingRichtingData2.x = metingvalues[i][0] !== null ? 1 : 0;
-              metingRichtingData2.y = metingvalues[i][0];
-              allWindRichtingMetingen.push([metingRichtingData1,metingRichtingData2]);
-
-              var verwachtingRichtingData1 = {};
-              verwachtingRichtingData1.x = 0;
-              verwachtingRichtingData1.y = verwachtingvalues[i][1];
-
-              var verwachtingRichtingData2 = {
-                x : verwachtingvalues[i][1] !== null ? 1 : 0,
-                y : verwachtingvalues[i][1]
+              var verwachtingRichtingData = {
+                x : [verwachtingvalues[i][0] !== null ? 1 : 0, 0],
+                y : [verwachtingvalues[i][1], verwachtingvalues[i][1]]
               };
-              allWindRichtingVerwachtingen.push([verwachtingRichtingData1,verwachtingRichtingData2]);
+              allWindRichtingVerwachtingen.push([verwachtingRichtingData]);
 
               var metingSnelheidData1 = {};
               var metingSnelheidData2 = {};
