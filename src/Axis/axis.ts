@@ -1,4 +1,4 @@
-import d3 from "d3";
+import * as d3 from "d3";
 import { DateTime } from "luxon";
 import { AxisOrientation } from "./axisOrientation.js";
 import { AxisPosition } from "./axisPosition.js";

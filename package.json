@@ -48,7 +48,7 @@
     "singleQuote": true
   },
   "devDependencies": {
-    "@types/d3": "^7.1.0",
+    "@types/d3": "^7.4.0",
     "@types/jest": "^27.0.0",
     "@types/lodash-es": "^4.17.6",
     "@types/luxon": "^3.3.0",
@@ -70,7 +70,7 @@
   },
   "dependencies": {
     "csstype": "^3.0.0",
-    "d3": "^7.1.1",
+    "d3": "^7.8.4",
     "jest-environment-jsdom": "^29.5.0",
     "lodash-es": "^4.17.21",
     "luxon": "^3.3.0"
