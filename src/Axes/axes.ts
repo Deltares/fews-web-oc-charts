@@ -4,6 +4,7 @@ import { Visitor } from '../Visitors/visitor.js'
 import { defaultsDeep, merge } from 'lodash-es'
 import { Tooltip } from '../Tooltip/tooltip.js'
 import { AxisOptions } from '../Axis/axisOptions.js'
+import { D3Selection } from '../Utils'
 
 export interface Margin {
   top?: number;
@@ -32,21 +33,22 @@ export interface AxisIndex {
 }
 
 export abstract class Axes {
-  tooltip: Tooltip
-  type: string
-  view: any
-  defs: any
-  canvas: any
-  svg: d3.Selection<SVGElement, any, SVGElement, any>
   container: HTMLElement
+  svg: D3Selection<SVGSVGElement>
+  chartGroup: D3Selection<SVGGElement>
+  canvas: D3Selection<SVGGElement>
+  defs: D3Selection<SVGDefsElement>
+
+  tooltip: Tooltip
   observer: ResizeObserver
+
   width: number
   height: number
   margin: { top: number; right: number; bottom: number; left: number }
+
   options: AxesOptions = {}
-  chartGroup: d3.Selection<SVGElement, any, SVGElement, any>
+
   charts: Chart[]
-  initialDraw = true
   visitors: Visitor[]
 
   constructor(container: HTMLElement, width: number | null, height: number | null, options: AxesOptions, defaultOptions: any) {
