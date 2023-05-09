@@ -10,7 +10,7 @@
     "FEWS",
     "Charts"
   ],
-  "license": "MIT",
+  "license": "AGPL",
   "type": "module",
   "exports": {
     "import": "./lib/esm/index.js",
