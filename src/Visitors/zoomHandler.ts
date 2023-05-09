@@ -77,8 +77,15 @@ export class ZoomHandler implements Visitor {
         this.resetZoom()
         this.mouseGroup.dispatch('pointerover')
       })
-  }
 
+    const zoomAndPan = d3.zoom()
+      .on('zoom', (event) => {
+        axis.chartGroup.attr('transform', event.transform)
+
+      })
+    d3.select('svg').call(zoomAndPan)
+}
+  
   initSelection(point: [number, number]): void {
     this.brushStartPoint = point
     this.lastPoint = null
