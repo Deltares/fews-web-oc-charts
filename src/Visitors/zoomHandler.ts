@@ -78,13 +78,30 @@ export class ZoomHandler implements Visitor {
         this.mouseGroup.dispatch('pointerover')
       })
 
-    const zoomAndPan = d3.zoom()
-      .on('zoom', (event) => {
-        axis.chartGroup.attr('transform', event.transform)
-
+    this.axis.svg.on('wheel', (event) => {
+        event.preventDefault() // prevent page scrolling
+        const delta = event.deltaY 
+        const factor = delta > 0 ? 1.1 : 0.9
+        this.zoom(factor, d3.pointer(event)) 
+        this.axis.svg.dispatch('zoom')
       })
-    d3.select('svg').call(zoomAndPan)
-}
+  }
+
+  zoom(factor: number, point: [number, number]): void {  
+    // loop through all the x scales and update their domains
+    for (const scale of this.axis.xScale) {
+      const x = scale.invert(point[0])
+      scale.domain([x - (x - scale.domain()[0]) * factor, x - (x - scale.domain()[1]) * factor])
+      this.axis.update()
+    }
+    // loop through all the y scales and update their domains
+    for (const scale of this.axis.yScale) {
+      const y = scale.invert(point[1])
+      scale.domain([y - (y - scale.domain()[0]) * factor, y - (y - scale.domain()[1]) * factor])
+      this.axis.update()
+    }
+    this.axis.zoom() 
+  }
   
   initSelection(point: [number, number]): void {
     this.brushStartPoint = point
