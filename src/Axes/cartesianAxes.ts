@@ -64,6 +64,14 @@ export class CartesianAxes extends Axes {
     this.update()
   }
 
+  get xScalesDomains(): Array<Array<number>> {
+    return this.xScales.map((scale) => scale.domain())
+  }
+
+  get yScalesDomains(): Array<Array<number>> {
+    return this.yScales.map((scale) => scale.domain())
+  }
+  
   setDefaultAxisOptions(axisOptions: CartesianAxisOptions[], defaultOptions: CartesianAxisOptions) {
     for (const options of axisOptions) {
       defaultsDeep(options, defaultOptions)
@@ -75,7 +83,7 @@ export class CartesianAxes extends Axes {
       options
     )
   }
-
+  
   createCanvas(): void {
     this.layers.canvas
       .attr('clip-path', `url(#${this.clipPathId})`)

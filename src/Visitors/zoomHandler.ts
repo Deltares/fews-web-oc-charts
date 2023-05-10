@@ -2,6 +2,7 @@ import * as d3 from 'd3'
 import { Axes } from '../Axes/axes.js'
 import { CartesianAxes } from '../index.js';
 import { Visitor } from './visitor.js'
+import { EventEmitter } from 'events';
 
 enum SelectionMode {
   CANCEL = 0,
@@ -34,6 +35,7 @@ export class ZoomHandler implements Visitor {
     this.createHandler(axis as CartesianAxes)
   }
   createHandler(axis: CartesianAxes): void {
+    const zoomEmitter = new EventEmitter();
     this.mouseGroup = axis.layers.mouse
     const mouseRect = this.mouseGroup.select('rect').attr('pointer-events', 'all')
     this.brushGroup = axis.canvas.insert('g', '.mouse').attr('class', 'brush')
@@ -81,6 +83,10 @@ export class ZoomHandler implements Visitor {
         document.removeEventListener('mouseup', documentMouseUp)
         this.endSelection(d3.pointer(event))
         this.mouseGroup.dispatch('pointerover')
+        zoomEmitter.emit('zoom', { 
+          'xScalesDomains': this.axis.xScalesDomains, 
+          'yScalesDomains': this.axis.yScalesDomains 
+        }); 
       })
       .on('dblclick', () => {
         this.resetZoom()
@@ -89,11 +95,14 @@ export class ZoomHandler implements Visitor {
 
     this.axis.svg.on('wheel', (event) => {
         event.preventDefault() // prevent page scrolling
-        console.log(event.target)
         const delta = event.deltaY 
         const factor = delta > 0 ? 1.1 : 0.9
         this.zoom(factor, d3.pointer(event)) 
-        this.axis.svg.dispatch('zoom')
+        
+        zoomEmitter.emit('zoom', { 
+          'xScalesDomains': this.axis.xScalesDomains, 
+          'yScalesDomains': this.axis.yScalesDomains 
+        });       
       })
   }  
 
