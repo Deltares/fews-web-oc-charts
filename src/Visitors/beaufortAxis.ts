@@ -45,7 +45,7 @@ export class BeaufortAxis implements Visitor {
 
   redraw(): void {
     const axis = this.axis
-    const sourceScale = this.isVertical ? this.axis.yScale[0] : this.axis.xScale[0]
+    const sourceScale = this.isVertical ? this.axis.yScales[0] : this.axis.xScales[0]
     const windSpeedDomain = sourceScale.domain()
     const domain = scaleBeaufort.domain()
     domain.unshift(windSpeedDomain[0])

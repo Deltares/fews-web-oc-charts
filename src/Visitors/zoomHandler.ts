@@ -89,6 +89,7 @@ export class ZoomHandler implements Visitor {
 
     this.axis.svg.on('wheel', (event) => {
         event.preventDefault() // prevent page scrolling
+        console.log(event.target)
         const delta = event.deltaY 
         const factor = delta > 0 ? 1.1 : 0.9
         this.zoom(factor, d3.pointer(event)) 
@@ -106,14 +107,14 @@ export class ZoomHandler implements Visitor {
   zoom(factor: number, point: [number, number]): void {  
     switch (this.wheelMode) {
       case WheelMode.X:
-        this.updateAxisScales(this.axis.xScale, point[0], factor)
+        this.updateAxisScales(this.axis.xScales, point[0], factor)
         break
       case WheelMode.Y:
-        this.updateAxisScales(this.axis.yScale, point[1], factor)
+        this.updateAxisScales(this.axis.yScales, point[1], factor)
         break
       case WheelMode.XY:
-        this.updateAxisScales(this.axis.xScale, point[0], factor)
-        this.updateAxisScales(this.axis.yScale, point[1], factor)
+        this.updateAxisScales(this.axis.xScales, point[0], factor)
+        this.updateAxisScales(this.axis.yScales, point[1], factor)
         break
       }
     this.axis.update()
@@ -215,29 +216,29 @@ export class ZoomHandler implements Visitor {
     this.brushGroup.select('.select-rect').attr('visibility', 'hidden')
     switch (this.mode) {
       case SelectionMode.X: {
-        for (const key in this.axis.xScale) {
-          const scale = this.axis.xScale[key]
+        for (const key in this.axis.xScales) {
+          const scale = this.axis.xScales[key]
           const extent = d3.extent([point[0], this.brushStartPoint[0]].map(scale.invert))
           scale.domain(extent)
         }
         break
       }
       case SelectionMode.Y: {
-        for (const key in this.axis.yScale) {
-          const scale = this.axis.yScale[key]
+        for (const key in this.axis.yScales) {
+          const scale = this.axis.yScales[key]
           const extent = d3.extent([point[1], this.brushStartPoint[1]].map(scale.invert))
           scale.domain(extent)
         }
         break
       }
       case SelectionMode.XY: {
-        for (const key in this.axis.xScale) {
-          const scale = this.axis.xScale[key]
+        for (const key in this.axis.xScales) {
+          const scale = this.axis.xScales[key]
           const extent = d3.extent([point[0], this.brushStartPoint[0]].map(scale.invert))
           scale.domain(extent)
         }
-        for (const key in this.axis.yScale) {
-          const scale = this.axis.yScale[key]
+        for (const key in this.axis.yScales) {
+          const scale = this.axis.yScales[key]
           const extent = d3.extent([point[1], this.brushStartPoint[1]].map(scale.invert))
           scale.domain(extent)
         }

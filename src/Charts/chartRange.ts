@@ -80,8 +80,8 @@ export class ChartRange extends Chart {
   plotterCartesian(axis: CartesianAxes, axisIndex: AxisIndex) {
     const xKey = this.dataKeys.x
     const yKey = this.dataKeys.y
-    const xScale = axis.xScale[axisIndex.x.axisIndex]
-    const yScale = axis.yScale[axisIndex.y.axisIndex]
+    const xScale = axis.xScales[axisIndex.x.axisIndex]
+    const yScale = axis.yScales[axisIndex.y.axisIndex]
     const colorKey = this.dataKeys.color
 
     const colorScale = d3.scaleLinear().domain([0, 1])

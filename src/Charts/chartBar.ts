@@ -13,8 +13,8 @@ export class ChartBar extends Chart {
     const x1Key = this.dataKeys.x1
     const colorKey = this.dataKeys.color
     const data = this.data
-    const xScale = axis.xScale[axisIndex.x.axisIndex]
-    const yScale = axis.yScale[axisIndex.y.axisIndex]
+    const xScale = axis.xScales[axisIndex.x.axisIndex]
+    const yScale = axis.yScales[axisIndex.y.axisIndex]
 
     const filterKeys: string[] = Array.from(new Set(data.map((item) => { return item[x1Key] })))
     this.legend = filterKeys

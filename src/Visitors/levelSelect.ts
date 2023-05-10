@@ -61,7 +61,7 @@ export class LevelSelect implements Visitor {
 
   redraw() {
     const axisIndex = this.options.y.axisIndex
-    const scale = this.axis.yScale[axisIndex]
+    const scale = this.axis.yScales[axisIndex]
     let y = scale(this.value)
     y = (y === undefined) ? scale.range()[1] : y
     // line
@@ -81,7 +81,7 @@ export class LevelSelect implements Visitor {
 
   start(event) {
     const axisIndex = this.options.y.axisIndex
-    const scale = this.axis.yScale[axisIndex]
+    const scale = this.axis.yScales[axisIndex]
     this.value = scale.invert(event.y)
     this.group
       .append('text')
@@ -95,7 +95,7 @@ export class LevelSelect implements Visitor {
 
   drag(event) {
     const axisIndex = this.options.y.axisIndex
-    const scale = this.axis.yScale[axisIndex]
+    const scale = this.axis.yScales[axisIndex]
     this.value = scale.invert(event.y)
     this.redraw()
   }

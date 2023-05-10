@@ -47,10 +47,10 @@ export class CurrentTime implements Visitor {
     let scale
     if (this.options.x) {
       const index = this.options.x.axisIndex
-      scale = this.axis.xScale[index]
+      scale = this.axis.xScales[index]
     } else if (this.options.y) {
       const index = this.options.y.axisIndex
-      scale = this.axis.yScale[index]
+      scale = this.axis.yScales[index]
     } else {
       return
     }
