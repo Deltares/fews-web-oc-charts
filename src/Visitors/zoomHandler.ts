@@ -10,20 +10,29 @@ enum SelectionMode {
   Y = 3
 }
 
+ export enum WheelMode {
+  X = 0,
+  XY = 1,
+  Y = 2
+}
+
 export class ZoomHandler implements Visitor {
   private brushStartPoint: [number, number]
   private brushGroup: any
   private mouseGroup: any
   private axis: CartesianAxes
   private mode: SelectionMode
+  private wheelMode: WheelMode
   private readonly MINMOVE = 15
   private lastPoint: [number, number]
 
+  constructor(wheelMode?: WheelMode) {
+    this.wheelMode = wheelMode ?? WheelMode.XY
+  }
   visit(axis: Axes): void {
     this.axis = axis as CartesianAxes
     this.createHandler(axis as CartesianAxes)
   }
-
   createHandler(axis: CartesianAxes): void {
     this.mouseGroup = axis.layers.mouse
     const mouseRect = this.mouseGroup.select('rect').attr('pointer-events', 'all')
@@ -85,21 +94,29 @@ export class ZoomHandler implements Visitor {
         this.zoom(factor, d3.pointer(event)) 
         this.axis.svg.dispatch('zoom')
       })
-  }
+  }  
 
-  zoom(factor: number, point: [number, number]): void {  
-    // loop through all the x scales and update their domains
-    for (const scale of this.axis.xScale) {
-      const x = scale.invert(point[0])
+  private updateAxisScales(scales: Array<any> , coord: number, factor: number): void { 
+    for (const scale of scales) {
+      const x = scale.invert(coord)
       scale.domain([x - (x - scale.domain()[0]) * factor, x - (x - scale.domain()[1]) * factor])
-      this.axis.update()
     }
-    // loop through all the y scales and update their domains
-    for (const scale of this.axis.yScale) {
-      const y = scale.invert(point[1])
-      scale.domain([y - (y - scale.domain()[0]) * factor, y - (y - scale.domain()[1]) * factor])
-      this.axis.update()
-    }
+  }
+  
+  zoom(factor: number, point: [number, number]): void {  
+    switch (this.wheelMode) {
+      case WheelMode.X:
+        this.updateAxisScales(this.axis.xScale, point[0], factor)
+        break
+      case WheelMode.Y:
+        this.updateAxisScales(this.axis.yScale, point[1], factor)
+        break
+      case WheelMode.XY:
+        this.updateAxisScales(this.axis.xScale, point[0], factor)
+        this.updateAxisScales(this.axis.yScale, point[1], factor)
+        break
+      }
+    this.axis.update()
     this.axis.zoom() 
   }
   
