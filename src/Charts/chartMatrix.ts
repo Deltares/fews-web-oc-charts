@@ -12,8 +12,8 @@ export class ChartMatrix extends Chart {
     const colorKey = this.dataKeys.color
     const valueKey = this.dataKeys.value ? this.dataKeys.value : this.dataKeys.color
     const data = this.data
-    const xScale = axis.xScale[axisIndex.x.axisIndex]
-    const yScale = axis.yScale[axisIndex.y.axisIndex]
+    const xScale = axis.xScales[axisIndex.x.axisIndex]
+    const yScale = axis.yScales[axisIndex.y.axisIndex]
 
     const x0 = xScale.copy()
     const y0 = yScale.copy()

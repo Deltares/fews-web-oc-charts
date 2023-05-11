@@ -84,7 +84,7 @@ export class CrossSectionSelect implements Visitor {
   redraw(): void {
     const axis = this.axis
     const axisIndex = this.options.x.axisIndex
-    const scale = axis.xScale[axisIndex]
+    const scale = axis.xScales[axisIndex]
     const domain = scale.domain()
     const xPos = scale(this.value)
     this.visible = (this.value >= domain[0] && this.value <= domain[1])
@@ -111,7 +111,7 @@ export class CrossSectionSelect implements Visitor {
 
   start(event): void {
     const axisIndex = this.options.x.axisIndex
-    const scale = this.axis.xScale[axisIndex]
+    const scale = this.axis.xScales[axisIndex]
     this.value = scale.invert(event.x)
     this.backGroup
       .append('text')
@@ -126,7 +126,7 @@ export class CrossSectionSelect implements Visitor {
 
   drag(event): void {
     const axisIndex = this.options.x.axisIndex
-    const scale = this.axis.xScale[axisIndex]
+    const scale = this.axis.xScales[axisIndex]
     this.value = scale.invert(event.x)
     this.limitValue()
     this.redraw()
@@ -302,7 +302,7 @@ export class CrossSectionSelect implements Visitor {
   limitValue(): boolean {
     const axisIndex = this.options.x.axisIndex
     const axis = this.axis
-    const scale = axis.xScale[axisIndex]
+    const scale = axis.xScales[axisIndex]
     const domain = scale.domain()
     if (this.value < domain[0]) {
       this.value = domain[0]
@@ -318,9 +318,9 @@ export class CrossSectionSelect implements Visitor {
     const axis = this.axis
     if (chart.data.length < 2) return { id: chart.id, x: undefined, y: undefined, d: undefined }
     const xIndex = chart.axisIndex.x.axisIndex
-    const xScale = axis.xScale[xIndex]
+    const xScale = axis.xScales[xIndex]
     const yIndex = chart.axisIndex.y.axisIndex
-    const yScale = axis.yScale[yIndex]
+    const yScale = axis.yScales[yIndex]
     const xKey = chart.dataKeys.x
     const yKey = chart.dataKeys.y
     const data = chart.data

@@ -9,8 +9,8 @@ export class ChartHistogram extends Chart {
     const yKey = this.dataKeys.y
     const colorKey = this.dataKeys.color
     const data = this.data
-    const xScale = axis.xScale[axisIndex.x.axisIndex]
-    const yScale = axis.yScale[axisIndex.y.axisIndex]
+    const xScale = axis.xScales[axisIndex.x.axisIndex]
+    const yScale = axis.yScales[axisIndex.y.axisIndex]
 
     const x1 = d3.scaleBand().domain(
       data.map(function (d: any) {

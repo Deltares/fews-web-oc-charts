@@ -48,8 +48,8 @@ export class ChartArea extends Chart {
     const xKey = this.dataKeys.x
     const yKey = this.dataKeys.y
     const colorKey = this.dataKeys.color
-    const xScale = axis.xScale[axisIndex.x.axisIndex]
-    const yScale = axis.yScale[axisIndex.y.axisIndex]
+    const xScale = axis.xScales[axisIndex.x.axisIndex]
+    const yScale = axis.yScales[axisIndex.y.axisIndex]
 
     const colorScale = d3.scaleLinear().domain([0, 1])
     if (this.options.colorScale === AUTO_SCALE) {

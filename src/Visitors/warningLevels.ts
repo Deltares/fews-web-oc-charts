@@ -36,7 +36,7 @@ export class WarningLevels implements Visitor {
 
   create(axis: CartesianAxes): void {
     const scale = (this.scale = d3.scaleLinear())
-    this.scale.domain(axis.yScale[this.options.y.axisIndex].domain()).range(axis.yScale[this.options.y.axisIndex].range())
+    this.scale.domain(axis.yScales[this.options.y.axisIndex].domain()).range(axis.yScales[this.options.y.axisIndex].range())
     const escalationLevels = this.escalationLevels
 
     const tickValues = escalationLevels
@@ -79,8 +79,8 @@ export class WarningLevels implements Visitor {
   }
 
   redraw(): void {
-    const scaleY = this.axis.yScale[0].copy()
-    const scaleX = this.axis.xScale[0].copy()
+    const scaleY = this.axis.yScales[0].copy()
+    const scaleX = this.axis.xScales[0].copy()
     const domainY = scaleY.domain()
 
     const bisect = d3.bisector((data: any) => {

@@ -29,7 +29,7 @@ export class AlertLines implements Visitor {
     if (this.options === undefined || this.options.length === 0) {
       return
     }
-    const xScale = this.axis.xScale[0]
+    const xScale = this.axis.xScales[0]
     const selection = this.group.selectAll('g')
       .data(this.options)
     const enter = selection
@@ -44,14 +44,14 @@ export class AlertLines implements Visitor {
         return Math.max(xScale(d.x1), 0)
       })
       .attr("y1", (d: any) => {
-        const yScale = this.axis.yScale[d.yAxisIndex];
+        const yScale = this.axis.yScales[d.yAxisIndex];
         return yScale(d.value)
       })
       .attr("x2", (d: any) => {
         return Math.min(this.axis.width, xScale(d.x2))
       })
       .attr("y2", (d: any) => {
-        const yScale = this.axis.yScale[d.yAxisIndex]
+        const yScale = this.axis.yScales[d.yAxisIndex]
         return yScale(d.value)
       })
     enter.append('text')
@@ -64,7 +64,7 @@ export class AlertLines implements Visitor {
         return Math.min(x, this.axis.width);
       })
       .attr("y", (d: any) => {
-        const yScale = this.axis.yScale[d.yAxisIndex];
+        const yScale = this.axis.yScales[d.yAxisIndex];
         return yScale(d.value)
       })
       .attr("dx", "-10px")

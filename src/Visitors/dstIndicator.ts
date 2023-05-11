@@ -46,7 +46,7 @@ export class DstIndicator implements Visitor {
   redraw() {
     if ("x" in this.options) {
       const axisIndex = this.options.x.axisIndex
-      const scale = this.axis.xScale[axisIndex]
+      const scale = this.axis.xScales[axisIndex]
       const domain = scale.domain()
       const startDate = DateTime.fromJSDate(domain[0]).setZone(this.axis.options.x[axisIndex].timeZone)
       const endDate = DateTime.fromJSDate(domain[1]).setZone(this.axis.options.x[axisIndex].timeZone)

@@ -124,7 +124,7 @@ export class MouseOver implements Visitor {
     const axis = this.axes
     const chart = axis.charts.find(c => c.id === id)
     const xIndex = chart.axisIndex.x.axisIndex
-    const xScale = axis.xScale[xIndex]
+    const xScale = axis.xScales[xIndex]
     const mouseValue = xScale.invert(x)
     const xKey = chart.dataKeys.x
     const yKey = chart.dataKeys.y
@@ -165,9 +165,9 @@ export class MouseOver implements Visitor {
       const selector = `[data-chart-id="${d}"]`
       const chart = axis.charts.find(c => c.id === d)
       const xIndex = chart.axisIndex.x.axisIndex
-      const xScale = axis.xScale[xIndex]
+      const xScale = axis.xScales[xIndex]
       const yIndex = chart.axisIndex.y.axisIndex
-      const yScale = axis.yScale[yIndex]
+      const yScale = axis.yScales[yIndex]
       const xKey = chart.dataKeys.x
       const yKey = chart.dataKeys.y
       const element = axis.canvas.select(selector).select('path')
@@ -292,7 +292,7 @@ export class MouseOver implements Visitor {
       .select('.mouse-x')
       .attr('transform', 'translate(' + (xPos + 2) + ',' + (axes.height - 5) + ')')
       .select('text')
-      .text(dateFormatter(axes.xScale[0].invert(xPos), 'yyyy-MM-dd HH:mm ZZZZ', { timeZone: axes.options.x[0].timeZone, locale: axes.options.x[0].locale }))
+      .text(dateFormatter(axes.xScales[0].invert(xPos), 'yyyy-MM-dd HH:mm ZZZZ', { timeZone: axes.options.x[0].timeZone, locale: axes.options.x[0].locale }))
   }
 
   updateTooltip(pointData, mouse) {

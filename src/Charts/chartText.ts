@@ -13,8 +13,8 @@ export class ChartText extends Chart {
   plotterCartesian(axis: CartesianAxes, axisIndex: any) {
     const xKey = this.dataKeys.x
     const yKey = this.dataKeys.y
-    const xScale = axis.xScale[axisIndex.x.axisIndex]
-    const yScale = axis.yScale[axisIndex.y.axisIndex]
+    const xScale = axis.xScales[axisIndex.x.axisIndex]
+    const yScale = axis.yScales[axisIndex.y.axisIndex]
 
     const mappedData = this.mapDataCartesian(xScale.domain())
 

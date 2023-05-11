@@ -26,8 +26,8 @@ export class CartesianAxes extends Axes {
   gridHandles: Record<string, Grid> = {}
   axisHandles: Record<string, XAxis|YAxis> = {}
   layers: any
-  xScale: Array<any> = []
-  yScale: Array<any> = []
+  xScales: Array<any> = []
+  yScales: Array<any> = []
   xInitialExtent: Array<any> = []
   yInitialExtent: Array<any> = []
   clipPathId: string
@@ -64,6 +64,14 @@ export class CartesianAxes extends Axes {
     this.update()
   }
 
+  get xScalesDomains(): Array<Array<number>> {
+    return this.xScales.map((scale) => scale.domain())
+  }
+
+  get yScalesDomains(): Array<Array<number>> {
+    return this.yScales.map((scale) => scale.domain())
+  }
+  
   setDefaultAxisOptions(axisOptions: CartesianAxisOptions[], defaultOptions: CartesianAxisOptions) {
     for (const options of axisOptions) {
       defaultsDeep(options, defaultOptions)
@@ -75,7 +83,7 @@ export class CartesianAxes extends Axes {
       options
     )
   }
-
+  
   createCanvas(): void {
     this.layers.canvas
       .attr('clip-path', `url(#${this.clipPathId})`)
@@ -127,10 +135,10 @@ export class CartesianAxes extends Axes {
     let scales: Array<any>
     let initialExtents: Array<any>
     if (axisKey === 'x') {
-      scales = this.xScale
+      scales = this.xScales
       initialExtents = this.xInitialExtent
     } else {
-      scales = this.yScale
+      scales = this.yScales
       initialExtents = this.yInitialExtent
     }
     for (const key in scales) {
@@ -213,11 +221,11 @@ export class CartesianAxes extends Axes {
 
   resetZoom(): void {
     const xOptions: ZoomOptions = { autoScale: true }
-    if (this.options['x'][0].resetZoom === ResetZoom.full || (this.options['x'][0].resetZoom === ResetZoom.toggle && this.atInitialExtent(this.xScale[0].domain(), this.xInitialExtent[0]))) {
+    if (this.options['x'][0].resetZoom === ResetZoom.full || (this.options['x'][0].resetZoom === ResetZoom.toggle && this.atInitialExtent(this.xScales[0].domain(), this.xInitialExtent[0]))) {
       xOptions.fullExtent = true
     }
     const yOptions: ZoomOptions = { autoScale: true }
-    if (this.options['y'][0].resetZoom === ResetZoom.full || (this.options['y'][0].resetZoom === ResetZoom.toggle && this.atInitialExtent(this.yScale[0].domain(), this.yInitialExtent[0]))) {
+    if (this.options['y'][0].resetZoom === ResetZoom.full || (this.options['y'][0].resetZoom === ResetZoom.toggle && this.atInitialExtent(this.yScales[0].domain(), this.yInitialExtent[0]))) {
       yOptions.fullExtent = true
     }
     this.redraw({ x: xOptions, y: yOptions })
@@ -312,7 +320,7 @@ export class CartesianAxes extends Axes {
           scale = d3.scaleLinear()
       }
       this.setRangeX(options)
-      this.xScale.push(scale)
+      this.xScales.push(scale)
     }
   }
 
@@ -330,7 +338,7 @@ export class CartesianAxes extends Axes {
           scale = d3.scaleLinear()
       }
       this.setRangeY(options)
-      this.yScale.push(scale)
+      this.yScales.push(scale)
     }
   }
 
@@ -340,8 +348,8 @@ export class CartesianAxes extends Axes {
   }
 
   protected setRangeX(options): void {
-    for (const key in this.xScale) {
-      const scale = this.xScale[key]
+    for (const key in this.xScales) {
+      const scale = this.xScales[key]
       if (options[key].reverse) {
         scale.range([this.width, 0])
       } else {
@@ -351,8 +359,8 @@ export class CartesianAxes extends Axes {
   }
 
   protected setRangeY(options): void {
-    for (const key in this.yScale) {
-      const scale = this.yScale[key]
+    for (const key in this.yScales) {
+      const scale = this.yScales[key]
       if (options[key].reverse) {
         scale.range([0, this.height])
       } else {
@@ -363,26 +371,26 @@ export class CartesianAxes extends Axes {
 
   protected initAxisX(options: CartesianAxisOptions[]): void {
     for (const index in options) {
-      this.axisHandles[`x${index}`] = new XAxis(this.layers.axis, this.xScale[index], this.yScale[0], {
+      this.axisHandles[`x${index}`] = new XAxis(this.layers.axis, this.xScales[index], this.yScales[0], {
         axisKey: 'x',
         axisIndex: Number.parseInt(index),
         ...options[index]
       })
       if (options[index].showGrid) {
-        this.gridHandles[`x${index}`] = new Grid(this.layers.grid, this.axisHandles[`x${index}`].axis, this.yScale[0], {axisKey: 'x', axisIndex: Number.parseInt(index)})
+        this.gridHandles[`x${index}`] = new Grid(this.layers.grid, this.axisHandles[`x${index}`].axis, this.yScales[0], {axisKey: 'x', axisIndex: Number.parseInt(index)})
       }
     }
   }
 
   protected initAxisY(options: CartesianAxisOptions[]): void {
     for (const index in options) {
-      this.axisHandles[`y${index}`] = new YAxis(this.layers.axis, this.yScale[index], this.xScale[0], {
+      this.axisHandles[`y${index}`] = new YAxis(this.layers.axis, this.yScales[index], this.xScales[0], {
         axisKey: 'y',
         axisIndex: Number.parseInt(index),
         ...options[index]
       })
       if (options[index].showGrid) {
-        this.gridHandles[`y${index}`] = new Grid(this.layers.grid, this.axisHandles[`y${index}`].axis, this.xScale[0], {axisKey: 'y', axisIndex: Number.parseInt(index)})
+        this.gridHandles[`y${index}`] = new Grid(this.layers.grid, this.axisHandles[`y${index}`].axis, this.xScales[0], {axisKey: 'y', axisIndex: Number.parseInt(index)})
       }
     }
   }
