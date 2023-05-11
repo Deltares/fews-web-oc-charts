@@ -19,6 +19,11 @@
       max-height: 414px;
       fill: white;
     }
+    .chart-title {
+      color: white;
+      font-weight: bold;
+      text-align: center;
+    }
   </style>
   </script>
   <script src="https://d3js.org/d3.v7.js"></script>
@@ -27,9 +32,15 @@
 
 <body>
   <div>
-    <div id="chart-container-zoom-xy" class="chart-container"></div>
-    <div id="chart-container-zoom-x" class="chart-container"></div>
-    <div id="chart-container-zoom-y" class="chart-container"></div>
+    <div id="chart-container-zoom-xy" class="chart-container">
+      <div class="chart-title">Zoom XY</div>
+    </div>
+    <div id="chart-container-zoom-x" class="chart-container">
+      <div class="chart-title">Zoom X</div>
+    </div>
+    <div id="chart-container-zoom-y" class="chart-container">
+      <div class="chart-title">Zoom Y</div>
+    </div>
   </div>
   <script src="../dist/wb-charts.umd.js"></script>
   <script type="text/javascript">
