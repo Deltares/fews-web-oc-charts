@@ -93,7 +93,7 @@ export class ZoomHandler implements Visitor {
         this.mouseGroup.dispatch('pointerover')
       })
 
-    this.axis.svg.on('wheel', (event) => {
+      mouseRect.on('wheel', (event) => {
         event.preventDefault() // prevent page scrolling
         const delta = event.deltaY 
         const factor = delta > 0 ? 1.1 : 0.9
