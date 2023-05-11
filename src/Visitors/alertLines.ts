@@ -54,18 +54,20 @@ export class AlertLines implements Visitor {
       .style("stroke-dasharray", "40 2")
       .style("stroke-width", "40 2")
       .attr("x1", (d: any) => {
-        return Math.max(xScale(d.x1), 0)
+        const x = Math.max(xScale(d.x1) ?? NaN, 0);
+        return Number.isFinite(x) ? x : 0;
       })
       .attr("y1", (d: AlertLineOptions) => {
         const yScale = this.axis.yScales[d.yAxisIndex];
-        return yScale(d.value)
+        return Number.isFinite(yScale(d.value)) ? yScale(d.value) : 0;
       })
       .attr("x2", (d: AlertLineOptions) => {
-        return Math.min(this.axis.width, xScale(d.x2))
+        const x = Math.min(this.axis.width, xScale(d.x2) ?? NaN);
+        return Number.isFinite(x) ? x : this.axis.width;
       })
       .attr("y2", (d: AlertLineOptions) => {
         const yScale = this.axis.yScales[d.yAxisIndex]
-        return yScale(d.value)
+        return Number.isFinite(yScale(d.value)) ? yScale(d.value) : 0;
       })
     enter.append('text')
       .filter((d) => {
