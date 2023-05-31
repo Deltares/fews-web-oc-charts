@@ -36,8 +36,12 @@ export class CrossSectionSelect implements Visitor {
     this.options = defaultsDeep(options,
       this.options
     ) as CrossSectionSelectOptions
-    this.trace = trace
+    this.setTrace(trace)
     this.visible = true
+  }
+
+  setTrace(trace: string[]) {
+    this.trace = trace
   }
 
   visit(axis: Axes): void {

@@ -18,6 +18,10 @@ export class MouseOver implements Visitor {
   private mousePerLine!: d3.Selection<d3.BaseType, string, SVGElement, unknown>
 
   constructor(trace?: string[]) {
+    this.setTrace(trace)
+  }
+
+  setTrace(trace: string[]) {
     this.trace = trace
   }
 
@@ -326,7 +330,7 @@ export class MouseOver implements Visitor {
       .append('g')
       .attr('class', 'mouse-per-line')
       .attr('data-mouse-id', d => d)
-  
+
      enter
       .append('circle')
       .attr('r', 3)
