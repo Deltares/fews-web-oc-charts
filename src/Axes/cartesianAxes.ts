@@ -71,19 +71,19 @@ export class CartesianAxes extends Axes {
   get yScalesDomains(): Array<Array<number>> {
     return this.yScales.map((scale) => scale.domain())
   }
-  
+
   setDefaultAxisOptions(axisOptions: CartesianAxisOptions[], defaultOptions: CartesianAxisOptions) {
     for (const options of axisOptions) {
       defaultsDeep(options, defaultOptions)
     }
   }
 
-  setOptions(options: CartesianAxesOptions): void {
+  setOptions(options: Partial<CartesianAxesOptions>): void {
     merge(this.options,
       options
     )
   }
-  
+
   createCanvas(): void {
     this.layers.canvas
       .attr('clip-path', `url(#${this.clipPathId})`)
