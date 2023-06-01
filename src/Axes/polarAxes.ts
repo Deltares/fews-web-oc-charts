@@ -3,7 +3,7 @@ import { Axes, AxesOptions } from './axes.js'
 import { AxisType } from '../Axis/axisType.js'
 import { AxisOptions } from '../Axis/axisOptions'
 
-import { defaultsDeep } from 'lodash-es'
+import { merge } from 'lodash-es'
 import { DateTime } from 'luxon'
 import { niceDegreeSteps } from '../Utils/niceDegreeSteps.js'
 import { D3Selection } from '../Utils/elementTypes.js'
@@ -13,9 +13,9 @@ export enum Direction {
   ANTICLOCKWISE = 1
 }
 
-type RadialAxisOptions = AxisOptions
+export type RadialAxisOptions = AxisOptions
 
-interface AngularAxisOptions extends AxisOptions {
+export interface AngularAxisOptions extends AxisOptions {
   direction?: number
   range?: number[];
   intercept?: number
@@ -28,19 +28,23 @@ export interface PolarAxesOptions extends AxesOptions {
 }
 
 
-const polarAxesDefaultOptions = {}
-
+const polarAxesDefaultOptions: PolarAxesOptions = {
+  innerRadius: 0,
+  angular: {
+    direction: Direction.ANTICLOCKWISE,
+    intercept: 0,
+    range: [0, 2 * Math.PI],
+    domain: [0, 360]
+  },
+  radial: {
+    type: AxisType.value
+  }
+}
 
 export class PolarAxes extends Axes {
   radialScale: any
   angularScale: any
-  innerRadiusFactor: number
-  intercept: number
-  direction: number
-  private angularRange: number[]
-  private angularDomain: number[] | Date[]
-  angularAxisOptions: AngularAxisOptions = {}
-  radialAxisOptions: RadialAxisOptions = {}
+  options: PolarAxesOptions
 
   radialAxis: D3Selection<SVGGElement> | null = null
   angularAxis: D3Selection<SVGGElement> | null = null
@@ -51,15 +55,8 @@ export class PolarAxes extends Axes {
     super(container, width, height, options, polarAxesDefaultOptions)
     this.canvas = this.canvas
       .append('g')
-    this.direction = options.angular.direction ? options.angular.direction : Direction.ANTICLOCKWISE
-    this.intercept = options.angular.intercept ? options.angular.intercept : 0
-    this.innerRadiusFactor = options.innerRadius ? options.innerRadius : 0
-    this.angularRange = options.angular.range ? options.angular.range : [0, 2 * Math.PI]
-    this.angularDomain = options.angular.domain ? options.angular.domain : [0, 360]
-    this.angularAxisOptions = defaultsDeep(this.angularAxisOptions, options.angular, { type: 'value' })
-    this.radialAxisOptions = defaultsDeep(this.radialAxisOptions, options.radial, { type: 'value' })
-    this.setDefaultTimeOptions(this.angularAxisOptions)
-    this.setDefaultTimeOptions(this.radialAxisOptions)
+    this.setDefaultTimeOptions(this.options.angular)
+    this.setDefaultTimeOptions(this.options.radial)
 
     this.canvas
       .append('g')
@@ -71,10 +68,36 @@ export class PolarAxes extends Axes {
     this.createChartGroup()
   }
 
+  setOptions(options: Partial<PolarAxesOptions>): void {
+    merge(this.options,
+      options
+    )
+  }
+
+  get direction(): number {
+    return this.options.angular.direction ? this.options.angular.direction : polarAxesDefaultOptions.angular.direction
+  }
+
+  get intercept(): number {
+    return this.options.angular.intercept ? this.options.angular.intercept : polarAxesDefaultOptions.angular.intercept
+  }
+
+  get innerRadiusFactor(): number {
+    return this.options.innerRadius ? this.options.innerRadius : polarAxesDefaultOptions.innerRadius
+  }
+
+  get innerRadius(): number {
+    return this.innerRadiusFactor * this.outerRadius
+  }
+
+  get outerRadius(): number {
+    return Math.min(this.width, this.height) / 2
+  }
+
   updateCanvas() {
     this.canvas.attr('transform', 'translate(' + this.width / 2 + ',' + this.height / 2 + ' )')
-    let startAngle = Math.PI / 2 - this.intercept + this.angularRange[0]
-    let endAngle = Math.PI / 2 - this.intercept + this.angularRange[1]
+    let startAngle = Math.PI / 2 - this.intercept + this.options.angular.range[0]
+    let endAngle = Math.PI / 2 - this.intercept + this.options.angular.range[1]
     if (this.direction === Direction.ANTICLOCKWISE) {
       startAngle = Math.PI + startAngle
       endAngle = Math.PI + endAngle
@@ -93,19 +116,11 @@ export class PolarAxes extends Axes {
       )
   }
 
-  get innerRadius(): number {
-    return this.innerRadiusFactor * this.outerRadius
-  }
-
-  get outerRadius(): number {
-    return Math.min(this.width, this.height) / 2
-  }
-
   redraw() {
     let radialExtent = new Array(0)
     for (const chart of this.charts) {
       const chartRadialExtent = chart.extent[chart.dataKeys.radial]
-      if (this.radialAxisOptions.type === AxisType.band) {
+      if (this.options.radial.type === AxisType.band) {
         radialExtent = d3.merge([radialExtent, [].concat(...chartRadialExtent)])
       } else {
         radialExtent = d3.extent(d3.merge([radialExtent, [].concat(...chartRadialExtent)]))
@@ -132,11 +147,11 @@ export class PolarAxes extends Axes {
     this.radialAxis.call(rAxis)
 
     const draw = (context, radius) => {
-      context.arc(0, 0, radius, -this.direction * this.angularRange[0] - this.intercept, -this.direction * this.angularRange[1] - this.intercept, this.direction === Direction.ANTICLOCKWISE) // draw an arc, the turtle ends up at ⟨194.4,108.5⟩
+      context.arc(0, 0, radius, -this.direction * this.options.angular.range[0] - this.intercept, -this.direction * this.options.angular.range[1] - this.intercept, this.direction === Direction.ANTICLOCKWISE) // draw an arc, the turtle ends up at ⟨194.4,108.5⟩
       return context;
     }
 
-    if (this.radialAxisOptions.type !== AxisType.band) {
+    if (this.options.radial.type !== AxisType.band) {
       const radialTicks = this.radialScale.ticks(5).map(this.radialScale)
       const drawRadial = this.radialAxis
         .selectAll<SVGPathElement, unknown>('path')
@@ -150,21 +165,21 @@ export class PolarAxes extends Axes {
     }
 
     let angularTicks
-    if (this.angularAxisOptions.type === AxisType.time) {
+    if (this.options.angular.type === AxisType.time) {
       const scale = this.angularScale.copy()
       const offsetDomain = scale.domain().map((d) => {
-        const m = DateTime.fromJSDate(d).setZone(this.angularAxisOptions.timeZone)
+        const m = DateTime.fromJSDate(d).setZone(this.options.angular.timeZone)
         return new Date(d.getTime() + m.offset * 60000);
       })
       const offsetScale = d3.scaleUtc().domain(offsetDomain)
       const tickValues = offsetScale.ticks(10)
       const offsetValues = tickValues.map((d) => {
-        const m = DateTime.fromJSDate(d).setZone(this.angularAxisOptions.timeZone)
+        const m = DateTime.fromJSDate(d).setZone(this.options.angular.timeZone)
         return new Date(d.getTime() - m.offset * 60000);
       })
       angularTicks = offsetValues
     } else {
-      const domain = this.angularDomain as number[]
+      const domain = this.options.angular.domain as [number, number]
 
       let step = d3.tickIncrement(domain[0], domain[1], 8)
 
@@ -175,8 +190,8 @@ export class PolarAxes extends Axes {
     }
 
     if (
-      (Math.cos(this.angularRange[0]) - Math.cos(this.angularRange[1]) < 1e-6) &&
-      (Math.sin(this.angularRange[0]) - Math.sin(this.angularRange[1]) < 1e-6)
+      (Math.cos(this.options.angular.range[0]) - Math.cos(this.options.angular.range[1]) < 1e-6) &&
+      (Math.sin(this.options.angular.range[0]) - Math.sin(this.options.angular.range[1]) < 1e-6)
     ) angularTicks.shift()
 
     const ticksSelection = this.angularGrid
@@ -243,7 +258,7 @@ export class PolarAxes extends Axes {
       }
     }.bind(this)
 
-    const labelFormat = this.angularAxisOptions.format ? this.angularAxisOptions.format : d => d
+    const labelFormat = this.options.angular.format ? this.options.angular.format : d => d
 
     this.angularAxis
       .selectAll('.tick')
@@ -259,7 +274,7 @@ export class PolarAxes extends Axes {
   }
 
   protected setRange() {
-    switch (this.angularAxisOptions.type) {
+    switch (this.options.angular.type) {
       case AxisType.time:
         this.angularScale = d3.scaleUtc()
         break
@@ -267,9 +282,9 @@ export class PolarAxes extends Axes {
       default:
         this.angularScale = d3.scaleLinear()
     }
-    this.angularScale.domain(this.angularDomain).range(this.angularRange)
+    this.angularScale.domain(this.options.angular.domain).range(this.options.angular.range)
 
-    switch (this.radialAxisOptions.type) {
+    switch (this.options.radial.type) {
       case AxisType.time:
         this.radialScale = d3.scaleUtc()
         break

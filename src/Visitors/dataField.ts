@@ -7,10 +7,10 @@ export interface UnitOptions {
   unit: string;
   factor: number;
   precision: string;
-  scale: (x: number) => string;
+  scale?: (x: number) => string;
 }
 
-export interface valueFieldOptions {
+export interface ValueFieldOptions {
   dx?: string | number
   dy?: string | number
   margin?: string | number
@@ -26,7 +26,7 @@ export interface DataFieldOptions {
     dy?: string | number
     text?: string
   },
-  valueField?: valueFieldOptions | valueFieldOptions[]
+  valueField?: ValueFieldOptions | ValueFieldOptions[]
 }
 
 export class DataField implements Visitor {
@@ -37,18 +37,13 @@ export class DataField implements Visitor {
   private text: any
   private value: any
   private values: any[] = []
-  private units: any[] = []
+  private units: UnitOptions[] = []
   private formatter: any
   private clickCount = 0
 
   constructor(container, options: DataFieldOptions, formatter?: any) {
     this.container = container
-    this.options = defaultsDeep({},
-      options,
-      {
-        labelField: { dx: 0, dy: 0 },
-        valueField: { dx: 0, dy: 0, units: [{ unit: '', factor: 1.0 }], precision: "0.1f" }
-      })
+    this.options = defaultsDeep({},options)
     this.formatter = formatter !== undefined ? formatter : this.valueFormatter
   }
 
