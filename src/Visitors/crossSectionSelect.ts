@@ -1,6 +1,6 @@
 import * as d3 from 'd3'
 import { Axes } from '../Axes/axes.js'
-import { CartesianAxes } from '../index.js';
+import { CartesianAxes, Chart } from '../index.js';
 import { Visitor } from './visitor.js'
 import { defaultsDeep } from 'lodash-es'
 import { bboxCollide } from '../Utils/bboxCollide.js'
@@ -318,45 +318,45 @@ export class CrossSectionSelect implements Visitor {
     return false
   }
 
-  findNearestPoint(chart, xPos): { id: string; x: number; y: number; value?: string, d: any } {
+  findNearestPoint(chart: Chart, xPos): { id: string; x: number; y: number; value?: string, d: any } {
     const axis = this.axis
     if (chart.data.length < 2) return { id: chart.id, x: undefined, y: undefined, d: undefined }
     const xIndex = chart.axisIndex.x.axisIndex
     const xScale = axis.xScales[xIndex]
     const yIndex = chart.axisIndex.y.axisIndex
     const yScale = axis.yScales[yIndex]
-    const xKey = chart.dataKeys.x
-    const yKey = chart.dataKeys.y
+    const xDataKey = chart.dataKeys.x
+    const yDataKey = chart.dataKeys.y
     const data = chart.data
     const bisect = d3.bisector(function (datum) {
-      return datum[xKey]
+      return datum[xDataKey]
     }).left
 
     const xValue = xScale.invert(xPos)
     let idx = bisect(data, xValue)
     if (idx < 0) return { id: chart.id, x: undefined, y: undefined, d: undefined }
     idx = Math.min(idx, data.length - 1)
-    let yValue = data[idx][yKey]
+    let yValue = data[idx][yDataKey]
     // look back
     if (yValue === null) {
       for (let i = idx; i >= 0; i--) {
-        yValue = data[i][yKey]
+        yValue = data[i][yDataKey]
         if (yValue !== null) {
           idx = i
           break
         }
       }
     }
-    const x = xScale(data[idx][xKey])
-    const y = yScale(data[idx][yKey])
-    const yExtent = this.axis.extent.y
+    const x = xScale(data[idx][xDataKey])
+    const y = yScale(data[idx][yDataKey])
+    const yExtent = this.axis.chartsExtent('y', yIndex, {})
     const s = d3.formatSpecifier("f")
     s.precision = d3.precisionFixed((yExtent[1] - yExtent[0]) / 100)
     const d = data[idx]
     if (yValue === null || yValue < yScale.domain()[0] || yValue > yScale.domain()[1]) {
       return { id: chart.id, x: undefined, y: undefined, d }
     }
-    return { id: chart.id, x, y, value: d3.format(s.toString())(d[yKey]), d }
+    return { id: chart.id, x, y, value: d3.format(s.toString())(d[yDataKey]), d }
   }
 
 }

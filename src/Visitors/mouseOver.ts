@@ -201,7 +201,8 @@ export class MouseOver implements Visitor {
       const valy = datum[idx][yKey]
       const posy = yScale(valy)
       // labels
-      const yLabel = this.determineLabel(posy, yKey, valy, yScale)
+      const yExtent = this.axes.chartsExtent('y', yIndex, {})
+      const yLabel = this.determineLabel(posy, yExtent, valy, yScale)
       // outside range
       if (posy < yScale.range()[1] || posy > yScale.range()[0]) {
         pointData[d] = { x0, y0: -window.innerHeight, x: xScale.invert(x0), color: stroke }
@@ -255,8 +256,7 @@ export class MouseOver implements Visitor {
     return idx
   }
 
-  determineLabel(posy: number[] | number, yKey: string, valy, yScale) {
-    const yExtent = this.axes.extent[yKey]
+  determineLabel(posy: number[] | number, yExtent, valy, yScale) {
     const s = d3.formatSpecifier("f")
     s.precision = d3.precisionFixed((yExtent[1] - yExtent[0]) / 100)
     let yLabel
