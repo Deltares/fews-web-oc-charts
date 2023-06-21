@@ -271,15 +271,21 @@ export class MouseOver implements Visitor {
   }
 
   updatePoints(pointData) {
-    const axes = this.axes
-   this.mousePerLine.attr('transform', (id, i) => {
-      const keys = Object.keys(pointData)
-      if (keys.includes(id)) {
-        return `translate(${pointData[id].x0} , ${pointData[id].y0})`
-      } else {
-        return `translate(0, ${-window.innerWidth})`
-      }
-    })
+    const keys = Object.keys(pointData)
+    this.mousePerLine
+      .attr('transform', (id, i) => {
+        if (keys.includes(id)) {
+          return `translate(${pointData[id].x0} , ${pointData[id].y0})`
+        } else {
+          return `translate(0, ${-window.innerWidth})`
+        }
+      })
+      .style('opacity', (id, i) => {
+        if (keys.includes(id) && pointData[id].x0 !== undefined && pointData[id].y0 !== undefined) {
+          return '1'
+        }
+        return '0'
+      })
   }
 
   updateXLine(xPos: number) {
