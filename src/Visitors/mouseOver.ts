@@ -267,7 +267,7 @@ export class MouseOver implements Visitor {
       }
       yLabel = labels.join(':')
     } else if (Array.isArray(valy)) {
-      yLabel = `${d3.format(s.toString())(valy[0])} &ndash; ${d3.format(s.toString())(valy[1])}`
+      yLabel = `${d3.format(s.toString())(valy[0])} – ${d3.format(s.toString())(valy[1])}`
     } else {
       yLabel = d3.format(s.toString())(valy)
     }

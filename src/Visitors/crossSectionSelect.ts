@@ -348,15 +348,34 @@ export class CrossSectionSelect implements Visitor {
       }
     }
     const x = xScale(data[idx][xDataKey])
-    const y = yScale(data[idx][yDataKey])
+    const valy = data[idx][yDataKey]
+    const y = yScale(valy)
+    // labels
     const yExtent = this.axis.chartsExtent('y', yIndex, {})
-    const s = d3.formatSpecifier("f")
-    s.precision = d3.precisionFixed((yExtent[1] - yExtent[0]) / 100)
     const d = data[idx]
     if (yValue === null || yValue < yScale.domain()[0] || yValue > yScale.domain()[1]) {
       return { id: chart.id, x: undefined, y: undefined, d }
     }
-    return { id: chart.id, x, y, value: d3.format(s.toString())(d[yDataKey]), d }
+    const yLabel = this.determineLabel(y, yExtent, data[idx][yDataKey], yScale)
+    return { id: chart.id, x, y, value: yLabel, d }
+  }
+
+  determineLabel(posy: number[] | number, yExtent, valy, yScale) {
+    const s = d3.formatSpecifier("f")
+    s.precision = d3.precisionFixed((yExtent[1] - yExtent[0]) / 100)
+    let yLabel
+    if (Array.isArray(posy)) {
+      const labels: string[] = []
+      for (let j = 0; j < posy.length; j++) {
+        labels[j] = d3.format(s.toString())(yScale.invert(posy[j]))
+      }
+      yLabel = labels.join(':')
+    } else if (Array.isArray(valy)) {
+      yLabel = `${d3.format(s.toString())(valy[0])} – ${d3.format(s.toString())(valy[1])}`
+    } else {
+      yLabel = d3.format(s.toString())(valy)
+    }
+    return yLabel
   }
 
 }
