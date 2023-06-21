@@ -351,6 +351,7 @@ export class MouseOver implements Visitor {
       .append('circle')
       .attr('r', 3)
       .style('fill', 'white')
+      .style('opacity', '0')
       .style('stroke-width', '1px')
 
     mousePerLine
