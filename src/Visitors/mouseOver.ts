@@ -18,6 +18,10 @@ export class MouseOver implements Visitor {
   private mousePerLine!: d3.Selection<d3.BaseType, string, SVGElement, unknown>
 
   constructor(trace?: string[]) {
+    this.setTrace(trace)
+  }
+
+  setTrace(trace: string[]) {
     this.trace = trace
   }
 
@@ -194,10 +198,11 @@ export class MouseOver implements Visitor {
         x0 = closestX
         idx = idx - 1 + offset
       }
-      const valy = datum[idx][yKey]
-      const posy = yScale(valy)
+      const yValue = datum[idx][yKey]
+      const posy = yScale(yValue)
       // labels
-      const yLabel = this.determineLabel(posy, yKey, valy, yScale)
+      const yExtent = this.axes.chartsExtent('y', yIndex, {})
+      const yLabel = this.determineLabel(yExtent, yValue)
       // outside range
       if (posy < yScale.range()[1] || posy > yScale.range()[0]) {
         pointData[d] = { x0, y0: -window.innerHeight, x: xScale.invert(x0), color: stroke }
@@ -251,21 +256,18 @@ export class MouseOver implements Visitor {
     return idx
   }
 
-  determineLabel(posy: number[] | number, yKey: string, valy, yScale) {
-    const yExtent = this.axes.extent[yKey]
+  determineLabel(yExtent: any[], yValue: any[] | any) {
     const s = d3.formatSpecifier("f")
     s.precision = d3.precisionFixed((yExtent[1] - yExtent[0]) / 100)
     let yLabel
-    if (Array.isArray(posy)) {
+    if (Array.isArray(yValue)) {
       const labels: string[] = []
-      for (let j = 0; j < posy.length; j++) {
-        labels[j] = d3.format(s.toString())(yScale.invert(posy[j]))
+      for (let j = 0; j < yValue.length; j++) {
+        labels[j] = d3.format(s.toString())(yValue[j])
       }
-      yLabel = labels.join(':')
-    } else if (Array.isArray(valy)) {
-      yLabel = `${d3.format(s.toString())(valy[0])} &ndash; ${d3.format(s.toString())(valy[1])}`
+      yLabel = labels.join('–')
     } else {
-      yLabel = d3.format(s.toString())(valy)
+      yLabel = d3.format(s.toString())(yValue)
     }
     return yLabel
   }
@@ -326,7 +328,7 @@ export class MouseOver implements Visitor {
       .append('g')
       .attr('class', 'mouse-per-line')
       .attr('data-mouse-id', d => d)
-  
+
      enter
       .append('circle')
       .attr('r', 3)

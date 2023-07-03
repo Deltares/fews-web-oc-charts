@@ -71,19 +71,19 @@ export class CartesianAxes extends Axes {
   get yScalesDomains(): Array<Array<number>> {
     return this.yScales.map((scale) => scale.domain())
   }
-  
+
   setDefaultAxisOptions(axisOptions: CartesianAxisOptions[], defaultOptions: CartesianAxisOptions) {
     for (const options of axisOptions) {
       defaultsDeep(options, defaultOptions)
     }
   }
 
-  setOptions(options: CartesianAxesOptions): void {
+  setOptions(options: Partial<CartesianAxesOptions>): void {
     merge(this.options,
       options
     )
   }
-  
+
   createCanvas(): void {
     this.layers.canvas
       .attr('clip-path', `url(#${this.clipPathId})`)
@@ -160,7 +160,7 @@ export class CartesianAxes extends Axes {
         if (axisOptions?.defaultDomain !== undefined) {
           defaultExtent = axisOptions?.defaultDomain
         }
-        dataExtent = this.chartsExtent(axisKey, key, zoomOptions)
+        dataExtent = this.chartsExtent(axisKey, +key, zoomOptions)
         if (zoomOptions?.symmetric === true) {
           const max = Math.max(Math.abs(dataExtent[0]), Math.abs(dataExtent[1]))
           dataExtent[0] = -max
@@ -191,7 +191,7 @@ export class CartesianAxes extends Axes {
     }
   }
 
-  chartsExtent(axisKey: keyof CartesianAxesOptions, axisIndex: string, options: ZoomOptions): any[] {
+  chartsExtent(axisKey: keyof CartesianAxesOptions, axisIndex: number, options: ZoomOptions): any[] {
     let extent = new Array(2)
     for (const chart of this.charts) {
       if ((options.fullExtent || chart.options[axisKey].includeInAutoScale) && chart.axisIndex[axisKey]?.axisIndex === +axisIndex) {
