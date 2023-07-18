@@ -1,36 +1,12 @@
 import * as d3 from 'd3'
+
 import { Chart } from '../Charts/chart.js'
 import { Visitor } from '../Visitors/visitor.js'
 import { defaultsDeep, merge } from 'lodash-es'
 import { Tooltip } from '../Tooltip/tooltip.js'
 import { AxisOptions } from '../Axis/axisOptions.js'
 import { D3Selection } from '../Utils'
-
-export interface Margin {
-  top?: number;
-  right?: number;
-  bottom?: number;
-  left?: number;
-}
-
-export interface AxesOptions {
-  transitionTime?: number;
-  margin?: Margin;
-}
-
-interface AxisIndexItem {
-  key: string; axisIndex: number;
-}
-
-export interface AxisIndex {
-  x?: AxisIndexItem;
-  x1?: { key: string };
-  y?: AxisIndexItem;
-  radial?: AxisIndexItem;
-  angular?: AxisIndexItem;
-  value?: { key: string };
-  color?: { key: string };
-}
+import { AxesOptions } from './types.js'
 
 /**
  * Base class representing a set of axes (i.e., a domain) in which data are visualised.

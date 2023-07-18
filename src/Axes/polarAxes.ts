@@ -1,5 +1,5 @@
 import * as d3 from 'd3'
-import { Axes, AxesOptions } from './axes.js'
+import { Axes } from './axes.js'
 import { AxisType } from '../Axis/axisType.js'
 import { AxisOptions } from '../Axis/axisOptions'
 
@@ -7,6 +7,7 @@ import { merge } from 'lodash-es'
 import { DateTime } from 'luxon'
 import { niceDegreeSteps } from '../Utils/niceDegreeSteps.js'
 import { D3Selection } from '../Utils/elementTypes.js'
+import type { AxesOptions } from './types.js'
 
 export enum Direction {
   CLOCKWISE = -1,

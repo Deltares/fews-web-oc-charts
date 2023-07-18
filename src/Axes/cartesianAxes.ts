@@ -1,7 +1,7 @@
 import * as d3 from 'd3'
 import { defaultsDeep, merge } from 'lodash-es'
 
-import { Axes, AxesOptions } from './axes.js'
+import { Axes } from './axes.js'
 import { AxisType } from '../Axis/axisType.js'
 import { ResetZoom, ScaleOptions, ZoomOptions } from '../Scale/scaleOptions.js'
 import { niceDomain } from './niceDomain.js'
@@ -10,6 +10,7 @@ import { CartesianAxisOptions } from '../Axis/cartesianAxisOptions.js'
 import { XAxis } from '../Axis/xAxis.js'
 import { YAxis } from '../Axis/yAxis.js'
 import { createLayers } from '../Layers/layers.js'
+import type { AxesOptions } from './types.js'
 
 
 export interface CartesianAxesOptions extends AxesOptions {

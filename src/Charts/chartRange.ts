@@ -1,6 +1,5 @@
 import * as d3 from 'd3'
-import { AxisIndex } from '../Axes/axes.js'
-import { CartesianAxes, PolarAxes } from '../index.js';
+import { AxisIndex, CartesianAxes, PolarAxes } from '../Axes/index.js';
 import { Chart, AUTO_SCALE } from './chart.js'
 import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js'
 

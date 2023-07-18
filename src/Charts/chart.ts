@@ -1,7 +1,6 @@
 import * as d3 from 'd3'
 import { SvgPropertiesHyphen } from 'csstype';
-import { Axes, AxisIndex } from '../Axes/axes.js'
-import { CartesianAxes, PolarAxes } from '../index.js';
+import { AxisIndex, Axes, CartesianAxes, PolarAxes } from '../Axes/index.js'
 import { defaultsDeep, merge } from 'lodash-es'
 import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js';
 
