@@ -5,6 +5,7 @@ import { TooltipPosition } from '../Tooltip/tooltip.js'
 import { aspectRatio } from '../Symbols/arrow.js';
 
 import { defaultsDeep } from 'lodash-es'
+import { symbolArrow } from '../Symbols/index.js';
 
 function mean(x: number[] | number) {
   if (x instanceof Array) {
@@ -157,6 +158,38 @@ export class ChartArrow extends Chart {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   drawLegendSymbol(legendId?: string, asSvgElement?: boolean) {
-    throw new Error('drawLegendSymbol is not implemented for ChartArrow')
+    const props = ['stroke', 'stroke-width', 'stroke-dasharray', 'fill']
+    const source = this.group
+      .select('path')
+      .node() as Element
+    const svg = d3.create('svg')
+      .attr('width', 20)
+      .attr('height', 20)
+    const outerGroup = svg
+      .append('g')
+      .attr('transform', 'translate(0, 10)')
+
+    // Make sure the marker is aligned horizontally even when returning the
+    // "bare" SVG element.
+    const innerGroup = outerGroup
+      .append('g')
+
+    const lineEndX = Math.sqrt(this.options.symbol.size * aspectRatio) / 3 * 2
+    const line = innerGroup
+      .append('line')
+        .attr('x1', 0)
+        .attr('x2', lineEndX)
+        .attr('y1', 0)
+        .attr('y2', 0)
+
+    const arrowhead =innerGroup
+      .append('path')
+        .attr('d', d3.symbol().type(symbolArrow).size(this.options.symbol.size))
+        .attr('transform', `translate(${lineEndX}, 0) rotate(90)`)
+
+    this.applyStyle(source, line, props)
+    this.applyStyle(source, arrowhead, props)
+    if (asSvgElement) return innerGroup.node()
+    return svg.node()
   }
 }

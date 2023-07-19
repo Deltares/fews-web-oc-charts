@@ -62,10 +62,16 @@
       background:gray;
     }
 
+    #wind-rose {
+      display: inline-block;
+      height: calc(100% - 60px);
+      width: 49%;
+    }
+
     #chart-wind-rose {
       position: relative;
       display: inline-block;
-      width: 49%;
+      width: 100%;
       height: 100%;
     }
 
@@ -191,7 +197,10 @@
   </head>
   <body>
     <div class="chart-wind-time">
-      <div id="chart-wind-rose"></div>
+      <div id="wind-rose">
+        <div id="legend-wind-rose"></div><br>
+        <div id="chart-wind-rose"></div>
+      </div>
       <div id="wind-gauges">
         <span id="slider-datetime"> -</span>
         <input id="slider" type="range" name="points" min="0" max="10" title="time selection">
@@ -355,6 +364,15 @@
           valueField: {dy: '50px', units: unitsStoot }
         });
 
+        var legendWindRose = new wbCharts.Legend( [
+          {selector: 'direction-range', label : 'Windrichting spreiding'},
+          {selector: 'direction-measured', label : 'Windrichting meting'},
+          {selector: 'direction-forecast', label : 'Windrichting verwachting'},
+        ],
+        document.getElementById("legend-wind-rose")
+        );
+
+        // Wind speed chart
         beaufortVisitor = new wbCharts.BeaufortAxis({
           x: { axisIndex: 0 },
           colors: {
@@ -366,25 +384,7 @@
             11: "rgba(255, 255, 255, 0.2)",
           }
         });
-        beaufortVisitor1 = new wbCharts.BeaufortAxis({
-          y: { axisIndex: 0 },
-          colors: {
-            0: "rgba(255, 255, 255, 0.2)",
-            1: "rgba(174, 241, 249, 0.2)",
-            2: "rgba(150, 247, 220, 0.2)",
-            3: "rgba(150, 247, 180, 0.2)",
-            4: "rgba(111, 244, 111, 0.2)",
-            5: "rgba(115, 237, 19, 0.2)",
-            6: "rgba(164, 237, 18, 0.2)",
-            7: "rgba(218, 237, 19, 0.2)",
-            8: "rgba(237, 194, 18, 0.2)",
-            9: "rgba(237, 143, 18, 0.2)",
-            10: "rgba(237, 99, 18, 0.2)",
-            11: "rgba(237, 41, 17, 0.2)",
-            12: "rgba(213, 16, 44, 0.2)",
-          }
-        });
-        // Wind speed chart
+
         var containerWindSpeed = document.getElementById("chart-wind-speed");
         windSpeedAxis = new wbCharts.CartesianAxes(containerWindSpeed, null, null, {
           transitionTime: transitionTime,
@@ -455,6 +455,25 @@
         );
 
         // Time chart wind speed
+        beaufortVisitor1 = new wbCharts.BeaufortAxis({
+          y: { axisIndex: 0 },
+          colors: {
+            0: "rgba(255, 255, 255, 0.2)",
+            1: "rgba(174, 241, 249, 0.2)",
+            2: "rgba(150, 247, 220, 0.2)",
+            3: "rgba(150, 247, 180, 0.2)",
+            4: "rgba(111, 244, 111, 0.2)",
+            5: "rgba(115, 237, 19, 0.2)",
+            6: "rgba(164, 237, 18, 0.2)",
+            7: "rgba(218, 237, 19, 0.2)",
+            8: "rgba(237, 194, 18, 0.2)",
+            9: "rgba(237, 143, 18, 0.2)",
+            10: "rgba(237, 99, 18, 0.2)",
+            11: "rgba(237, 41, 17, 0.2)",
+            12: "rgba(213, 16, 44, 0.2)",
+          }
+        });
+
         var containerWindSpeedTime = document.getElementById("chart-wind-speed-time");
         windTimeAxis = new wbCharts.CartesianAxes(containerWindSpeedTime, null, null, {
           transitionTime: transitionTime,
@@ -535,6 +554,7 @@
 
         // Add visitors
         polarAxis.accept(polarText);
+        polarAxis.accept(legendWindRose);
         windSpeedAxis.accept(polarText1);
         windSpeedAxis.accept(windAmplitudeText);
         windSpeedAxis.accept(beaufortVisitor);
