@@ -99,7 +99,9 @@
       display: inline-block;
     }
 
-    #chart-wind-time {
+    .chart-wind-time {
+      height: 49%;
+      position: relative;
       display: block;
     }
 
@@ -136,7 +138,8 @@
       stroke: none;
     }
 
-    #polar-line { fill: none; stroke: rgb(0, 128, 255); stroke-width: 3px; }
+    #polar-line { fill: rgb(0, 128, 255); stroke: rgb(0, 128, 255); stroke-width: 3px; }
+    #polar-line-forecast { fill: rgb(255, 128, 255); stroke: rgb(255, 128, 255); stroke-width: 3px; }
     #forecast { fill: none; stroke: rgb(255, 128, 255); stroke-width: 3px; }
 
     #cartesian-dot { fill: #999999; stroke: white; }
@@ -223,20 +226,22 @@
     <link rel="stylesheet" href="../dist/wb-charts-dark.css">
   </head>
   <body>
-    <div id="chart-wind-rose"></div>
-    <div id="wind-gauges">
-      <span id="slider-datetime"> -</span>
-      <input id="slider" type="range" name="points" min="0" max="10">
-      <div id="slider-reset">
-        <input id="slider-reset-button" type="button" value="actueel" onclick="resetTimeSlider(timesdata, true);">
-        <input id="slider-reset-checkbox" type="checkbox">
-        Volg actuele tijd
+    <div class="chart-wind-time">
+      <div id="chart-wind-rose"></div>
+      <div id="wind-gauges">
+        <span id="slider-datetime"> -</span>
+        <input id="slider" type="range" name="points" min="0" max="10">
+        <div id="slider-reset">
+          <input id="slider-reset-button" type="button" value="actueel" onclick="resetTimeSlider(timesdata, true);">
+          <input id="slider-reset-checkbox" type="checkbox">
+          Volg actuele tijd
+        </div>
+        <div id="chart-wind-stoot"></div>
+        <div id="chart-wind-speed"></div>
       </div>
-      <div id="chart-wind-stoot"></div>
-      <div id="chart-wind-speed"></div>
     </div>
     <div id="chart-wind-time">
-      <div style="display: inline-block;">
+      <div style="display: inline-block; height: 100%; width: 49%;">
         <div id="chart-wind-speed-time"></div>
         <div id="legend-wind-speed-time"></div>
       </div>
@@ -375,10 +380,10 @@
             direction: wbCharts.Direction.CLOCKWISE,
             intercept: Math.PI / 2
           },
-          innerRadius: 80
+          innerRadius: 0.5
         });
-        windDirectionMeasurement = new wbCharts.ChartLine(windRichtingMetingen[0], {transitionTime: transitionTime});
-        windDirectionForecast = new wbCharts.ChartLine(windRichtingVerwachtingen[0], {transitionTime: transitionTime});
+        windDirectionMeasurement = new wbCharts.ChartArrow(windRichtingMetingen[0], {transitionTime: transitionTime, symbol: {size: 64}});
+        windDirectionForecast = new wbCharts.ChartArrow(windRichtingVerwachtingen[0], {transitionTime: transitionTime, symbol: {size: 64}});
         windDirectionRange = new wbCharts.ChartRange(allWindSpreidingR[0], {transitionTime: transitionTime, r:{includeInTooltip:false}, tooltip: {anchor: 'center'} });
         windDirectionRange.addTo(polarAxis, { radial: { key: "x" }, angular: { key: "y" } }, 'direction-range', '#polar-range');
         windDirectionMeasurement.addTo(polarAxis, { radial: { key: "x" }, angular: { key: "y" } }, 'direction-measured', '#polar-line');
@@ -660,25 +665,18 @@
               metingvalues[i][3] !== null;
               timesdata.push([times[i],timedatapresent]);
 
-              var metingRichtingData1 = {};
-              var metingRichtingData2 = {};
+              var metingRichtingData = {
+                x: [metingvalues[i][0] !== null ? 1 : 0, 0],
+                y: [metingvalues[i][0], metingvalues[i][0]]
+              }
+              allWindRichtingMetingen.push([metingRichtingData]);
 
-              metingRichtingData1.x = 0;
-              metingRichtingData1.y = metingvalues[i][0];
 
-              metingRichtingData2.x = metingvalues[i][0] !== null ? 1 : 0;
-              metingRichtingData2.y = metingvalues[i][0];
-              allWindRichtingMetingen.push([metingRichtingData1,metingRichtingData2]);
-
-              var verwachtingRichtingData1 = {};
-              verwachtingRichtingData1.x = 0;
-              verwachtingRichtingData1.y = verwachtingvalues[i][1];
-
-              var verwachtingRichtingData2 = {
-                x : verwachtingvalues[i][1] !== null ? 1 : 0,
-                y : verwachtingvalues[i][1]
+              var verwachtingRichtingData = {
+                x : [verwachtingvalues[i][0] !== null ? 1 : 0, 0],
+                y : [verwachtingvalues[i][1], verwachtingvalues[i][1]]
               };
-              allWindRichtingVerwachtingen.push([verwachtingRichtingData1,verwachtingRichtingData2]);
+              allWindRichtingVerwachtingen.push([verwachtingRichtingData]);
 
               var metingSnelheidData1 = {};
               var metingSnelheidData2 = {};

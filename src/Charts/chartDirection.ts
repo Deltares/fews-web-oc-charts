@@ -104,7 +104,7 @@ export class ChartDirection extends Chart {
 
     const elements = this.group.selectAll<SVGPathElement, any>('path').data(this.data)
 
-    function arcTranslation(p) {
+    function arcTransform(p) {
       // We only use 'd', but list d,i,a as params just to show can have them as params.
       // Code only really uses d and t.
       return function (d, i, a) {
@@ -119,7 +119,7 @@ export class ChartDirection extends Chart {
         return function (x) {
           const theta = axis.angularScale(tInterpolate(x))
           const radius = axis.radialScale(rInterpolate(x))
-          return 'translate(' + -radius * Math.sin(-theta) + ',' + -radius * Math.cos(-theta) + ')'
+          return 'translate(' + -radius * Math.sin(-theta) + ',' + -radius * Math.cos(-theta) + ')' + ' rotate(' + axis.radToDegrees(theta) +')'
         }
       }
     }
@@ -165,7 +165,7 @@ export class ChartDirection extends Chart {
       .duration(this.options.transitionTime)
       .ease(d3.easeLinear)
 
-    elements.transition(transition).attrTween('transform', arcTranslation(this.previousData))
+    elements.transition(transition).attrTween('transform', arcTransform(this.previousData))
 
     this.previousData = this.data
   }

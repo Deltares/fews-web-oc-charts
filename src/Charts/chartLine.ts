@@ -10,18 +10,10 @@ export class ChartLine extends Chart {
     const yKey = this.dataKeys.y
     let html = ''
     if (this.options.x.includeInTooltip) {
-      if (d[0][xKey] != d[1][xKey]) {
-        html += xKey + ': ' + d[0][xKey].toFixed(2) + '-' + d[1][xKey].toFixed(2) + '<br/>'
-      } else {
-        html += xKey + ': ' + d[0][xKey].toFixed(2) + '<br/>'
-      }
+      html += this.defaultToolTipText([d[0][xKey], d[1][xKey]], xKey, 2) + '<br/>'
     }
     if (this.options.y.includeInTooltip) {
-      if (d[0][yKey] != d[1][yKey]) {
-        html += yKey + ': ' + d[0][yKey].toFixed(2) + '-' + d[1][yKey].toFixed(2)
-      } else {
-        html += yKey + ': ' + d[0][yKey].toFixed(2)
-      }
+      html += this.defaultToolTipText([d[0][yKey], d[1][yKey]], yKey, 2)
     }
     return html
   }
@@ -31,18 +23,10 @@ export class ChartLine extends Chart {
     const rKey = this.dataKeys.radial
     let html = ''
     if (this.options.angular.includeInTooltip) {
-      if (d[0][tKey] != d[1][tKey]) {
-        html += tKey + ': ' + d[0][tKey].toFixed(0) + '-' + d[1][tKey].toFixed(0) + '<br/>'
-      } else {
-        html += tKey + ': ' + d[0][tKey].toFixed(0) + '<br/>'
-      }
+      html += this.defaultToolTipText([d[0][tKey], d[1][tKey]], tKey, 0) + '<br/>'
     }
     if (this.options.radial.includeInTooltip) {
-      if (d[0][rKey] != d[1][rKey]) {
-        html += rKey + ': ' + d[0][rKey].toFixed(0) + '-' + d[1][rKey].toFixed(0)
-      } else {
-        html += rKey + ': ' + d[0][rKey].toFixed(0)
-      }
+      html += this.defaultToolTipText([d[0][rKey], d[1][rKey]], rKey, 0)
     }
     return html
   }
