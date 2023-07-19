@@ -40,22 +40,10 @@ export class ChartArrow extends Chart {
     const rKey = this.dataKeys.radial
     let html = ''
     if (this.options.angular.includeInTooltip) {
-      const t1 = d[0][tKey][0]
-      const t2 = d[0][tKey][1]
-      if (t1 != t2) {
-        html += tKey + ': ' + t1.toFixed(0) + '-' + t2.toFixed(0) + '<br/>'
-      } else {
-        html += tKey + ': ' + t1.toFixed(0) + '<br/>'
-      }
+      html += this.defaultToolTipText([d[0][tKey][0], d[0][tKey][1]], tKey, 0) + '<br/>'
     }
     if (this.options.radial.includeInTooltip) {
-      const r1 = d[0][rKey][0]
-      const r2 = d[0][rKey][1]
-      if (r1 != r2) {
-        html += rKey + ': ' + r1.toFixed(0) + '-' + r2.toFixed(0)
-      } else {
-        html += rKey + ': ' + r1.toFixed(0)
-      }
+      html += this.defaultToolTipText([d[0][rKey][0], d[0][rKey][1]], rKey, 0)
     }
     return html
   }

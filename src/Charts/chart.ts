@@ -64,6 +64,16 @@ export interface ChartOptions {
   tooltip?: TooltipOptions;
 }
 
+export interface DataKeys {
+  x?: string;
+  x1?: string;
+  y?: string;
+  radial?: string;
+  angular?: string;
+  color?: string;
+  value?: string;
+}
+
 export abstract class Chart {
   protected _data: any
   protected _extent: any
@@ -181,10 +191,10 @@ export abstract class Chart {
     const yKey = this.dataKeys.y
     let html = ''
     if (this.options.x.includeInTooltip) {
-      html += xKey + ': ' + d[xKey] + '<br/>'
+      html += this.defaultToolTipText(d[xKey], xKey, 2) + '<br/>'
     }
     if (this.options.y.includeInTooltip) {
-      html += yKey + ': ' + d[yKey]
+      html += this.defaultToolTipText(d[yKey], yKey, 2)
     }
     return html
   }
@@ -208,16 +218,30 @@ export abstract class Chart {
   }
 
   protected defaultToolTipFormatterPolar(d) {
-    const rKey = this.dataKeys.x
-    const tKey = this.dataKeys.y
+    const tKey = this.dataKeys.angular
+    const rKey = this.dataKeys.radial
     let html = ''
     if (this.options.angular.includeInTooltip) {
-      html += tKey + ': ' + d[tKey] + '<br/>'
+      html += this.defaultToolTipText(d[tKey], tKey, 0) + '<br/>'
     }
     if (this.options.radial.includeInTooltip) {
-      html += rKey + ': ' + d[rKey]
+      html += this.defaultToolTipText(d[rKey], rKey, 0)
     }
     return html
+  }
+
+  protected defaultToolTipText(data: number | number[] | any, key: string, decimals: number): string {
+    if (data instanceof Array) {
+      if (data[0] != data[1]){
+        return key + ': ' + data[0].toFixed(decimals) + ' - ' + data[1].toFixed(decimals)
+      } else {
+        return key + ': ' + data[0].toFixed(decimals)
+      }
+    } else if (typeof data === 'number') {
+      return key + ': ' + data.toFixed(decimals)
+    } else {
+      return key + ': ' + data
+    }
   }
 
   abstract plotterCartesian(axis: CartesianAxes, dataKeys: any)
@@ -254,7 +278,7 @@ export abstract class Chart {
   }
 
   get dataKeys() {
-    const dataKeys: { x?: string, x1?: string, y?: string, radial?: string, angular?: string, color?: string, value?: string } = {}
+    const dataKeys: DataKeys = {}
     for (const key in this.axisIndex) {
       dataKeys[key] = this.axisIndex[key].key ? this.axisIndex[key].key : key
     }

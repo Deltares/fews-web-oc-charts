@@ -44,40 +44,6 @@ export class ChartProgress extends Chart {
     }
   }
 
-  defaultToolTipFormatterCartesian(d) {
-    const xKey = this.dataKeys.x
-    const yKey = this.dataKeys.y
-    let html = ''
-    if (this.options.x.includeInTooltip) {
-      if (d[xKey][0] != d[xKey][1]) {
-        html += xKey + ': ' + d[xKey][0].toFixed(2) + '-' + d[xKey][1].toFixed(2) + '<br/>'
-      }
-    }
-    if (this.options.y.includeInTooltip) {
-      if (d[yKey][0] != d[yKey][1]) {
-        html += yKey + ': ' + d[yKey][0].toFixed(2) + '-' + d[yKey][1].toFixed(2)
-      }
-    }
-    return html
-  }
-
-  defaultToolTipFormatterPolar(d) {
-    const tKey = this.dataKeys.angular
-    const rKey = this.dataKeys.radial
-    let html = ''
-    if (this.options.angular.includeInTooltip) {
-      if (d[tKey][0] != d[tKey][1]) {
-        html += tKey + ': ' + d[tKey][0].toFixed(0) + '-' + d[tKey][1].toFixed(0) + '<br/>'
-      }
-    }
-    if (this.options.radial.includeInTooltip) {
-      if (d[rKey][0] != d[rKey][1]) {
-        html += rKey + ': ' + d[rKey][0].toFixed(0) + '-' + d[rKey][1].toFixed(0)
-      }
-    }
-    return html
-  }
-
   plotterCartesian(axis: CartesianAxes, dataKeys: any) {
     throw new Error("Not implemented");
   }
