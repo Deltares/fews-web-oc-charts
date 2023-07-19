@@ -59,6 +59,7 @@ export class ChartArrow extends Chart {
     const tKey = this.dataKeys.angular
     const arrowHeadSize = this.options.symbol.size
 
+    // Define functions that draw the arrow initially, and that translate the arrow to the correct position.
     function arrowGenerator (d: chartArrowData) {
       const radius1: number = axis.radialScale(d[rKey][0])
       const radius2: number = axis.radialScale(d[rKey][1])
@@ -69,7 +70,8 @@ export class ChartArrow extends Chart {
       let l = Math.sqrt(arrowHeadSize * aspectRatio);
       const w = l / aspectRatio
       l = l / 3
-      // Draw arrow, pointing upwards, starting from 0,0. Translate to correct position later
+      // Draw arrow, pointing upwards, starting from 0,0.
+      // Translate to correct position based on data values, using the arcTransform function.
       return `M0,0
         L${0},${-(tailLength - 2 * l)}
         L${w},${-(tailLength - 3 * l)}
@@ -88,6 +90,7 @@ export class ChartArrow extends Chart {
           }
         }
         const old = p[i]
+        // ensure angles stay in range -180 to 180
         if (mean(old[tKey][0]) - mean(d[i][tKey][0]) > 180) {
           old[tKey][0] = old[tKey][0] - 360
         } else if (mean(old[tKey][0]) - mean(d[i][tKey][0]) < -180) {
@@ -113,6 +116,7 @@ export class ChartArrow extends Chart {
       }
     }
 
+    // Add the data to the element group
     this.group = this.selectGroup(axis, 'chart-arrow')
     if (this.group.select('path').size() === 0) {
       this.group.append('path')
@@ -124,10 +128,12 @@ export class ChartArrow extends Chart {
       .duration(this.options.transitionTime)
       .ease(d3.easeLinear)
 
+    // Draw the arrow and translate it to the correct position.
     arrow.transition(t).attr('d', (d,i) => {return arrowGenerator(this.data[i])})
     arrow.transition(t).attrTween('transform', arcTransform(this.previousData))
     arrow.join('path').datum(this.data)
 
+    // Add tooltip to the arrow
     if (this.options.tooltip !== undefined) {
       arrow
       .on('pointerover', (e: any, d: chartArrowData[]) => {
@@ -145,6 +151,7 @@ export class ChartArrow extends Chart {
         })
       }
 
+    // Save the data for the next update
     this.previousData = this.data
   }
 
