@@ -130,6 +130,9 @@ export class DataField implements Visitor {
       return units.scale(value)
     }
     if (Array.isArray(value)) {
+      if (value.every(value => value === null)) {
+        return '-' + symbol;
+      }
       const min = Math.min(...value)
       const max = Math.max(...value)
       if (min === max) {
