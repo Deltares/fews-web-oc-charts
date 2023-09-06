@@ -32,6 +32,9 @@ export class MouseOver implements Visitor {
 
   create(axes: CartesianAxes): void {
     this.mouseGroup = axes.canvas.select('.mouse')
+    // Make sure the <g> mouse group picks up pointer events.
+    this.mouseGroup.attr('pointer-events', 'all')
+
     this.group = axes.canvas.insert('g', '.mouse')
       .attr('class', 'mouse-over')
       .attr('font-family', 'sans-serif')
