@@ -14,7 +14,8 @@ enum SelectionMode {
  export enum WheelMode {
   X = 0,
   XY = 1,
-  Y = 2
+  Y = 2,
+  NONE = 3
 }
 
 export class ZoomHandler implements Visitor {
@@ -28,7 +29,7 @@ export class ZoomHandler implements Visitor {
   private lastPoint: [number, number]
 
   constructor(wheelMode?: WheelMode) {
-    this.wheelMode = wheelMode ?? WheelMode.XY
+    this.wheelMode = wheelMode ?? WheelMode.NONE
   }
   visit(axis: Axes): void {
     this.axis = axis as CartesianAxes
@@ -124,6 +125,8 @@ export class ZoomHandler implements Visitor {
       case WheelMode.XY:
         this.updateAxisScales(this.axis.xScales, point[0], factor)
         this.updateAxisScales(this.axis.yScales, point[1], factor)
+        break
+      case WheelMode.NONE:
         break
       }
     this.axis.update()
