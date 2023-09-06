@@ -25,7 +25,6 @@
       text-align: center;
     }
   </style>
-  </script>
   <script src="https://d3js.org/d3.v7.js"></script>
   <link rel="stylesheet" href="../dist/wb-charts-dark.css">
 </head>
@@ -41,12 +40,16 @@
     <div id="chart-container-zoom-y" class="chart-container">
       <div class="chart-title">Zoom Y</div>
     </div>
+    <div id="chart-container-no-zoom" class="chart-container">
+      <div class="chart-title">No zoom</div>
+    </div>
   </div>
   <script src="../dist/wb-charts.umd.js"></script>
   <script type="text/javascript">
     var containerZoomXY = document.getElementById("chart-container-zoom-xy");
     var containerZoomX = document.getElementById("chart-container-zoom-x");
     var containerZoomY = document.getElementById("chart-container-zoom-y");
+    var containerNoZoom = document.getElementById("chart-container-no-zoom");
 
     var axisOptions = {
       x: [
@@ -80,6 +83,7 @@
     var axisZoomXY = new wbCharts.CartesianAxes(containerZoomXY, null, null, axisOptions)
     var axisZoomX = new wbCharts.CartesianAxes(containerZoomX, null, null, axisOptions)
     var axisZoomY = new wbCharts.CartesianAxes(containerZoomY, null, null, axisOptions)
+    var axisNoZoom = new wbCharts.CartesianAxes(containerNoZoom, null, null, axisOptions)
 
     // Generate time series with a sine function at every day; generate dates
     // in UTC.
@@ -107,6 +111,9 @@
     var plot1ZoomY = new wbCharts.ChartLine(data, {});
     var plot2ZoomY = new wbCharts.ChartLine(data, {});
 
+    var plot1NoZoom = new wbCharts.ChartLine(data, {});
+    var plot2NoZoom = new wbCharts.ChartLine(data, {});
+
     var style1 = {
       'fill': 'none',
       'stroke': 'skyblue'
@@ -126,6 +133,9 @@
     plot1ZoomY.addTo(axisZoomY, { x: { key: "x", axisIndex: 0 }, y: { key: "y", axisIndex: 0 }}, 'local', style1);
     plot2ZoomY.addTo(axisZoomY, { x: { key: "x", axisIndex: 1 }, y: { key: "y", axisIndex: 0 }}, 'mexico', style2);
 
+    plot1NoZoom.addTo(axisNoZoom, { x: { key: "x", axisIndex: 0 }, y: { key: "y", axisIndex: 0 }}, 'local', style1);
+    plot2NoZoom.addTo(axisNoZoom, { x: { key: "x", axisIndex: 1 }, y: { key: "y", axisIndex: 0 }}, 'mexico', style2);
+
     var mouseOver = new wbCharts.MouseOver(['local', 'mexico']);
 
     const zoomHandlerXY = new wbCharts.ZoomHandler(wheelMode = wbCharts.WheelMode.XY);
@@ -142,6 +152,11 @@
     axisZoomY.redraw({x:{ autoScale: true}, y: {autoScale: true} });
     axisZoomY.accept(zoomHandlerY);
     axisZoomY.accept(mouseOver);
+
+    const zoomHandlerNoWheel = new wbCharts.ZoomHandler();
+    axisNoZoom.redraw({x:{ autoScale: true}, y: {autoScale: true} });
+    axisNoZoom.accept(zoomHandlerNoWheel);
+    axisNoZoom.accept(mouseOver);
   </script>
 
 </body>
