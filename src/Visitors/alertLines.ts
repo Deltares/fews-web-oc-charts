@@ -2,13 +2,26 @@ import { Axes } from '../Axes/axes.js'
 import { CartesianAxes } from '../index.js';
 import { Visitor } from './visitor.js'
 
+export interface AlertLineOptions {
+  x1: number | Date
+  x2: number | Date
+  value: number
+  description: string
+  yAxisIndex: number
+  color: string
+}
+
 export class AlertLines implements Visitor {
-  public options: any[]
-  private group: any
+  public options: AlertLineOptions[]
+  private group: d3.Selection<SVGGElement, unknown, null, unknown>
   private axis: CartesianAxes
 
-  constructor(options) {
-    this.options = options
+  constructor(options?: AlertLineOptions[]) {
+    if (options) {
+      this.options = options
+    } else {
+      this.options = []
+    }
   }
 
   visit(axis: Axes): void {
@@ -26,7 +39,7 @@ export class AlertLines implements Visitor {
 
   redraw(): void {
     this.group.selectAll('g').remove()
-    if (this.options === undefined || this.options.length === 0) {
+    if (this.options.length === 0) {
       return
     }
     const xScale = this.axis.xScales[0]
@@ -37,20 +50,20 @@ export class AlertLines implements Visitor {
       .append('g')
 
     enter.append('line')
-      .style("stroke", (d: any) => d.color)
+      .style("stroke", (d: AlertLineOptions) => d.color)
       .style("stroke-dasharray", "40 2")
       .style("stroke-width", "40 2")
       .attr("x1", (d: any) => {
         return Math.max(xScale(d.x1), 0)
       })
-      .attr("y1", (d: any) => {
+      .attr("y1", (d: AlertLineOptions) => {
         const yScale = this.axis.yScales[d.yAxisIndex];
         return yScale(d.value)
       })
-      .attr("x2", (d: any) => {
+      .attr("x2", (d: AlertLineOptions) => {
         return Math.min(this.axis.width, xScale(d.x2))
       })
-      .attr("y2", (d: any) => {
+      .attr("y2", (d: AlertLineOptions) => {
         const yScale = this.axis.yScales[d.yAxisIndex]
         return yScale(d.value)
       })
@@ -59,17 +72,17 @@ export class AlertLines implements Visitor {
         return xScale(d.x1) < (this.axis.width - 10)
       })
       .attr('text-anchor', 'end')
-      .attr("x", (d: any) => {
+      .attr("x", (d: AlertLineOptions) => {
         const x = xScale(d.x2);
         return Math.min(x, this.axis.width);
       })
-      .attr("y", (d: any) => {
+      .attr("y", (d: AlertLineOptions) => {
         const yScale = this.axis.yScales[d.yAxisIndex];
         return yScale(d.value)
       })
       .attr("dx", "-10px")
       .attr("dy", "-.35em")
-      .style("fill", (d: any) => d.color)
-      .text((d: any) => d.description)
+      .style("fill", (d: AlertLineOptions) => d.color)
+      .text((d: AlertLineOptions) => d.description)
   }
 }
