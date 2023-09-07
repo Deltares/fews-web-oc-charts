@@ -42,7 +42,8 @@
     "lint": "eslint src/**.ts",
     "lint:fix": "eslint src/**.ts --fix",
     "test": "jest",
-    "sonar": "sonar-scanner -Dsonar.host.url=$SONAR_URL -Dsonar.login=$SONAR_TOKEN -Dsonar.projectKey=$SONAR_KEY -Dsonar.projectName='Delft-FEWS Web OC Charts'"
+    "sonar": "sonar-scanner -Dsonar.host.url=$SONAR_URL -Dsonar.login=$SONAR_TOKEN -Dsonar.projectKey=$SONAR_KEY -Dsonar.projectName='Delft-FEWS Web OC Charts'",
+    "serve": "http-server -c-1 . -a 127.0.0.1 -p 8080" 
   },
   "prettier": {
     "semi": false,
