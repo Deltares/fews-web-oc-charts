@@ -1,6 +1,6 @@
 {
   "name": "@deltares/fews-web-oc-charts",
-  "version": "3.0.0-alpha.11",
+  "version": "3.0.0-alpha.12.0",
   "description": "FEWS Chart Library",
   "author": {
     "name": "Werner Kramer",
@@ -43,7 +43,7 @@
     "lint:fix": "eslint src/**.ts --fix",
     "test": "jest",
     "sonar": "sonar-scanner -Dsonar.host.url=$SONAR_URL -Dsonar.login=$SONAR_TOKEN -Dsonar.projectKey=$SONAR_KEY -Dsonar.projectName='Delft-FEWS Web OC Charts'",
-    "serve": "http-server -c-1 . -a 127.0.0.1 -p 8080" 
+    "serve": "http-server -c-1 . -a 127.0.0.1 -p 8080"
   },
   "prettier": {
     "semi": false,
