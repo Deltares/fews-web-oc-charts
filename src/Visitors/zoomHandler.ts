@@ -95,6 +95,7 @@ export class ZoomHandler implements Visitor {
       })
 
       mouseRect.on('wheel', (event) => {
+        if (this.wheelMode === WheelMode.NONE) return
         event.preventDefault() // prevent page scrolling
         const delta = event.deltaY 
         const factor = delta > 0 ? 1.1 : 0.9
