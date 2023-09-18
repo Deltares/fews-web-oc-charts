@@ -94,18 +94,19 @@ export class ZoomHandler implements Visitor {
         this.mouseGroup.dispatch('pointerover')
       })
 
-      mouseRect.on('wheel', (event) => {
-        if (this.wheelMode === WheelMode.NONE) return
-        event.preventDefault() // prevent page scrolling
-        const delta = event.deltaY
-        const factor = delta > 0 ? 1.1 : 0.9
-        this.zoom(factor, d3.pointer(event))
+      if (this.wheelMode !== WheelMode.NONE) {
+        mouseRect.on('wheel', (event: WheelEvent) => {
+          event.preventDefault() // prevent page scrolling
+          const delta = event.deltaY
+          const factor = delta > 0 ? 1.1 : 0.9
+          this.zoom(factor, d3.pointer(event))
 
-        zoomEmitter.emit('zoom', {
-          'xScalesDomains': this.axis.xScalesDomains,
-          'yScalesDomains': this.axis.yScalesDomains
-        });
-      })
+          zoomEmitter.emit('zoom', {
+            'xScalesDomains': this.axis.xScalesDomains,
+            'yScalesDomains': this.axis.yScalesDomains
+          });
+        })
+      }
   }
 
   private updateAxisScales(scales: Array<any> , coord: number, factor: number): void {
