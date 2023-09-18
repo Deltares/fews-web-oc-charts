@@ -84,10 +84,10 @@ export class ZoomHandler implements Visitor {
         document.removeEventListener('mouseup', documentMouseUp)
         this.endSelection(d3.pointer(event))
         this.mouseGroup.dispatch('pointerover')
-        zoomEmitter.emit('zoom', { 
-          'xScalesDomains': this.axis.xScalesDomains, 
-          'yScalesDomains': this.axis.yScalesDomains 
-        }); 
+        zoomEmitter.emit('zoom', {
+          'xScalesDomains': this.axis.xScalesDomains,
+          'yScalesDomains': this.axis.yScalesDomains
+        });
       })
       .on('dblclick', () => {
         this.resetZoom()
@@ -97,25 +97,25 @@ export class ZoomHandler implements Visitor {
       mouseRect.on('wheel', (event) => {
         if (this.wheelMode === WheelMode.NONE) return
         event.preventDefault() // prevent page scrolling
-        const delta = event.deltaY 
+        const delta = event.deltaY
         const factor = delta > 0 ? 1.1 : 0.9
-        this.zoom(factor, d3.pointer(event)) 
-        
-        zoomEmitter.emit('zoom', { 
-          'xScalesDomains': this.axis.xScalesDomains, 
-          'yScalesDomains': this.axis.yScalesDomains 
-        });       
-      })
-  }  
+        this.zoom(factor, d3.pointer(event))
 
-  private updateAxisScales(scales: Array<any> , coord: number, factor: number): void { 
+        zoomEmitter.emit('zoom', {
+          'xScalesDomains': this.axis.xScalesDomains,
+          'yScalesDomains': this.axis.yScalesDomains
+        });
+      })
+  }
+
+  private updateAxisScales(scales: Array<any> , coord: number, factor: number): void {
     for (const scale of scales) {
       const x = scale.invert(coord)
       scale.domain([x - (x - scale.domain()[0]) * factor, x - (x - scale.domain()[1]) * factor])
     }
   }
-  
-  zoom(factor: number, point: [number, number]): void {  
+
+  zoom(factor: number, point: [number, number]): void {
     switch (this.wheelMode) {
       case WheelMode.X:
         this.updateAxisScales(this.axis.xScales, point[0], factor)
@@ -131,9 +131,9 @@ export class ZoomHandler implements Visitor {
         break
       }
     this.axis.update()
-    this.axis.zoom() 
+    this.axis.zoom()
   }
-  
+
   initSelection(point: [number, number]): void {
     this.brushStartPoint = point
     this.lastPoint = null
