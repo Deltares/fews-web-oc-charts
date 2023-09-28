@@ -66,13 +66,13 @@ export class ColourBar {
    * @param options colour bar options
    */
   constructor(
-    group: GroupSelection,
+    group: GroupSelection | SVGGElement,
     colourMap: ColourMap,
     width: number,
     height: number,
     options: ColourBarOptions
   ) {
-    this.group = group
+    this.group = group instanceof SVGGElement ? d3.select(group) : group
     this.colourMap = colourMap
     this.width = width
     this.height = height

@@ -226,8 +226,10 @@ const colorMapBft = [{ "lowerValue": 0,
       .attr('width', 500)
       .attr('height', 70)
       .append('g')
-        .attr('transform', 'translate(50, 30)')
-    new wbCharts.ColourBar(svg1, nonLinearColorMap, 400, 20,
+      .attr('transform', 'translate(50, 30)')
+    // Create ColourBar from SVGGElement directly from the DOM.
+    const group = document.querySelector('#chart-container-1 svg g')
+    new wbCharts.ColourBar(group, nonLinearColorMap, 400, 20,
       {
         position: 'bottom', useGradients: true, title: 'Title [unit]', type: 'nonlinear', ticks: 6
       }
