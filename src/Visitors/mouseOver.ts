@@ -1,6 +1,6 @@
 import * as d3 from 'd3'
 import { Axes } from '../Axes/axes.js'
-import { CartesianAxes } from '../index.js';
+import { AxisType, CartesianAxes } from '../index.js';
 import { Visitor } from './visitor.js'
 import { TooltipPosition } from '../Tooltip/tooltip.js'
 import { dateFormatter } from '../Utils/date.js'
@@ -303,7 +303,7 @@ export class MouseOver implements Visitor {
   private xText(axes: CartesianAxes, xPos: any): string {
     let text = ''
     switch (axes.options.x[0].type) {
-      case 'time':
+      case AxisType.time:
         text = dateFormatter(axes.xScales[0].invert(xPos), 'yyyy-MM-dd HH:mm ZZZZ', { timeZone: axes.options.x[0].timeZone, locale: axes.options.x[0].locale });
         break
       default:
