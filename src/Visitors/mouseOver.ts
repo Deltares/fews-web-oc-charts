@@ -297,7 +297,25 @@ export class MouseOver implements Visitor {
       .select('.mouse-x')
       .attr('transform', 'translate(' + (xPos + 2) + ',' + (axes.height - 5) + ')')
       .select('text')
-      .text(dateFormatter(axes.xScales[0].invert(xPos), 'yyyy-MM-dd HH:mm ZZZZ', { timeZone: axes.options.x[0].timeZone, locale: axes.options.x[0].locale }))
+      .text(this.xText(axes, xPos))
+  }
+
+  private xText(axes: CartesianAxes, xPos: any): string {
+    let text = ''
+    switch (axes.options.x[0].type) {
+      case 'time':
+        text = dateFormatter(axes.xScales[0].invert(xPos), 'yyyy-MM-dd HH:mm ZZZZ', { timeZone: axes.options.x[0].timeZone, locale: axes.options.x[0].locale });
+        break
+      default:
+        text = `${this.roundToDecimal(axes.xScales[0].invert(xPos), 8)}`
+        break
+    }
+    return text
+  }
+
+  private roundToDecimal(x: number, precision: number): number {
+    const factor = Math.pow(10, precision);
+    return Math.round(x * factor) / factor;
   }
 
   updateTooltip(pointData, mouse) {
