@@ -315,11 +315,6 @@ export class MouseOver implements Visitor {
     return text
   }
 
-  private roundToDecimal(x: number, precision: number): number {
-    const factor = Math.pow(10, precision);
-    return Math.round(x * factor) / factor;
-  }
-
   updateTooltip(pointData, mouse) {
     const axes = this.axes
     if (Object.keys(pointData).length === 0) {
