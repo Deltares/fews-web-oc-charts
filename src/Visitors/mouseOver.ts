@@ -307,7 +307,9 @@ export class MouseOver implements Visitor {
         text = dateFormatter(axes.xScales[0].invert(xPos), 'yyyy-MM-dd HH:mm ZZZZ', { timeZone: axes.options.x[0].timeZone, locale: axes.options.x[0].locale });
         break
       default:
-        text = `${this.roundToDecimal(axes.xScales[0].invert(xPos), 8)}`
+        const s = d3.formatSpecifier("f")
+        s.precision = d3.precisionFixed(axes.xScales[0].domain()[1] / 100)
+        text = d3.format(s.toString())(axes.xScales[0].invert(xPos))
         break
     }
     return text
