@@ -38,7 +38,7 @@ export interface TextOptions {
 export interface TooltipOptions {
   position?: TooltipPosition
   anchor?: TooltipAnchor
-  toolTipFormatter?: (d: any) => string;
+  toolTipFormatter?: (d: any) => HTMLElement;
 }
 
 enum CurveType {
@@ -186,20 +186,24 @@ export abstract class Chart {
     }
   }
 
-  protected defaultToolTipFormatterCartesian(d) {
+  protected defaultToolTipFormatterCartesian(d): HTMLElement {
     const xKey = this.dataKeys.x
     const yKey = this.dataKeys.y
-    let html = ''
+    const html = document.createElement('div')
     if (this.options.x.includeInTooltip) {
-      html += this.defaultToolTipText(d[xKey], xKey, 2) + '<br/>'
+      const spanElement = document.createElement('span')
+      spanElement.innerText = this.defaultToolTipText(d[xKey], xKey, 2)
+      html.appendChild(spanElement)
     }
     if (this.options.y.includeInTooltip) {
-      html += this.defaultToolTipText(d[yKey], yKey, 2)
+      const spanElement = document.createElement('span')
+      spanElement.innerText = this.defaultToolTipText(d[yKey], yKey, 2)
+      html.appendChild(spanElement)
     }
     return html
   }
 
-  protected toolTipFormatterCartesian(d) {
+  protected toolTipFormatterCartesian(d): HTMLElement {
     if (this.options.tooltip === undefined) { return }
     else if (this.options.tooltip.toolTipFormatter === undefined) {
       return this.defaultToolTipFormatterCartesian(d)
@@ -208,7 +212,7 @@ export abstract class Chart {
     }
   }
 
-  protected toolTipFormatterPolar(d) {
+  protected toolTipFormatterPolar(d): HTMLElement {
     if (this.options.tooltip === undefined) { return }
     else if (this.options.tooltip.toolTipFormatter === undefined) {
       return this.defaultToolTipFormatterPolar(d)
@@ -217,15 +221,19 @@ export abstract class Chart {
     }
   }
 
-  protected defaultToolTipFormatterPolar(d) {
+  protected defaultToolTipFormatterPolar(d): HTMLElement {
     const tKey = this.dataKeys.angular
     const rKey = this.dataKeys.radial
-    let html = ''
+    const html = document.createElement('div')
     if (this.options.angular.includeInTooltip) {
-      html += this.defaultToolTipText(d[tKey], tKey, 0) + '<br/>'
+      const spanElement = document.createElement('span')
+      spanElement.innerText = this.defaultToolTipText(d[tKey], tKey, 0)
+      html.appendChild(spanElement)
     }
     if (this.options.radial.includeInTooltip) {
-      html += this.defaultToolTipText(d[rKey], rKey, 0)
+      const spanElement = document.createElement('span')
+      spanElement.innerText = this.defaultToolTipText(d[rKey], rKey, 0)
+      html.appendChild(spanElement)
     }
     return html
   }

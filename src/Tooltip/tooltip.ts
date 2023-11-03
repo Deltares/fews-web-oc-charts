@@ -46,13 +46,13 @@ export class Tooltip {
       .style('opacity', 1)
   }
 
-  update(html: string, position: TooltipPosition, x: number, y: number) {
+  update(htmlElement: HTMLElement, position: TooltipPosition, x: number, y: number) {
     this.tooltip
       .style('left', x + 'px')
       .style('top', y + 'px')
     this.tooltipText
       .attr('class', `tooltiptext ${position}`)
-      .html(html)
+      .node().replaceChildren(htmlElement)
   }
 
   hide() {

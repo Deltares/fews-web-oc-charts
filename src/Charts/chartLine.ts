@@ -1,32 +1,39 @@
-import { SvgPropertiesHyphen } from 'csstype'
 import * as d3 from 'd3'
 import { CartesianAxes, PolarAxes } from '../index.js';
 import { Chart } from './chart.js'
 import { TooltipPosition } from '../Tooltip/tooltip.js'
 
 export class ChartLine extends Chart {
-  defaultToolTipFormatterCartesian(d) {
+  defaultToolTipFormatterCartesian(d): HTMLElement {
     const xKey = this.dataKeys.x
     const yKey = this.dataKeys.y
-    let html = ''
+    const html = document.createElement('div')
     if (this.options.x.includeInTooltip) {
-      html += this.defaultToolTipText([d[0][xKey], d[1][xKey]], xKey, 2) + '<br/>'
+      const spanElement = document.createElement('span')
+      spanElement.innerText = this.defaultToolTipText([d[0][xKey], d[1][xKey]], xKey, 2)
+      html.appendChild(spanElement)
     }
     if (this.options.y.includeInTooltip) {
-      html += this.defaultToolTipText([d[0][yKey], d[1][yKey]], yKey, 2)
+      const spanElement = document.createElement('span')
+      spanElement.innerText = this.defaultToolTipText([d[0][yKey], d[1][yKey]], yKey, 2)
+      html.appendChild(spanElement)
     }
     return html
   }
 
-  defaultToolTipFormatterPolar(d) {
+  defaultToolTipFormatterPolar(d): HTMLElement {
     const tKey = this.dataKeys.angular
     const rKey = this.dataKeys.radial
-    let html = ''
+    const html = document.createElement('div')
     if (this.options.angular.includeInTooltip) {
-      html += this.defaultToolTipText([d[0][tKey], d[1][tKey]], tKey, 0) + '<br/>'
+      const spanElement = document.createElement('span')
+      spanElement.innerText = this.defaultToolTipText([d[0][tKey], d[1][tKey]], tKey, 0)
+      html.appendChild(spanElement)
     }
     if (this.options.radial.includeInTooltip) {
-      html += this.defaultToolTipText([d[0][rKey], d[1][rKey]], rKey, 0)
+      const spanElement = document.createElement('span')
+      spanElement.innerText = this.defaultToolTipText([d[0][rKey], d[1][rKey]], rKey, 0)
+      html.appendChild(spanElement)
     }
     return html
   }
