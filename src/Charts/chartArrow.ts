@@ -31,20 +31,23 @@ export class ChartArrow extends Chart {
     this.options = defaultsDeep(this.options, this.options, { symbol: DefaultSymbolOptions })
   }
 
-  defaultToolTipFormatterCartesian(d) {
+  defaultToolTipFormatterCartesian(d): HTMLElement {
     throw new Error('defaultToolTipFormatterCartesian is not implemented for ChartArrow')
-    return ''
   }
 
-  defaultToolTipFormatterPolar(d: chartArrowData[]) {
+  defaultToolTipFormatterPolar(d: chartArrowData[]): HTMLElement {
     const tKey = this.dataKeys.angular
     const rKey = this.dataKeys.radial
-    let html = ''
+    const html = document.createElement('div')
     if (this.options.angular.includeInTooltip) {
-      html += this.defaultToolTipText([d[0][tKey][0], d[0][tKey][1]], tKey, 0) + '<br/>'
+      const spanElement = document.createElement('span')
+      spanElement.innerText = this.defaultToolTipText([d[0][tKey][0], d[0][tKey][1]], tKey, 0)
+      html.appendChild(spanElement)
     }
     if (this.options.radial.includeInTooltip) {
-      html += this.defaultToolTipText([d[0][rKey][0], d[0][rKey][1]], rKey, 0)
+      const spanElement = document.createElement('span')
+      spanElement.innerText = this.defaultToolTipText([d[0][rKey][0], d[0][rKey][1]], rKey, 0)
+      html.appendChild(spanElement)
     }
     return html
   }

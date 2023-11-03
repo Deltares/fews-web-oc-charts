@@ -326,11 +326,15 @@ export class MouseOver implements Visitor {
     if (Object.keys(pointData).length === 0) {
       axes.tooltip.hide()
     } else {
-      let htmlContent = ''
+      const htmlContent = document.createElement('div')
       for (const label in pointData) {
         const v = pointData[label]
         if (v.y !== undefined) {
-          htmlContent += `<span style="color: ${v.color}"> ${v.y} </span><br/>`
+          const spanElement = document.createElement('span')
+          spanElement.style.color = v.color
+          spanElement.innerText = v.y
+          htmlContent.appendChild(spanElement)
+          htmlContent.appendChild(document.createElement('br'))
         }
       }
       axes.tooltip.update(htmlContent, TooltipPosition.Right, mouse[0] + axes.margin.left, mouse[1] + axes.margin.top)
