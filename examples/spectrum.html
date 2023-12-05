@@ -5,54 +5,27 @@
   <meta charset="UTF-8" />
   <title>Wave Spectrum Tech Demo</title>
   <style>
-    body {
-      background-color: rgb(44, 44, 44);
-    }
-
-    title {
-      stroke: black;
-    }
-
     #chart-container-1 {
       position: relative;
-      display: inline-block;
+      display: block;
       width: 400px;
       height: 400px;
     }
 
     #chart-container-2 {
       position: relative;
-      display: inline-block;
+      display: block;
       width: 400px;
       height: 400px;
     }
-
-    #polar-dot {
-      fill: #999999;
-      stroke: white;
-    }
-
-    #polar-line {
-      fill: none;
-      stroke: white;
-    }
-
-    #cartesian-dot {
-      fill: #999999;
-      stroke: white;
-    }
-
-    #cartesian-line {
-      fill: none;
-      stroke: white;
-    }
   </style>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/6.3.0/d3.js"></script>
-  <link rel="stylesheet" href="../dist/wb-charts-dark.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.js"></script>
+  <link rel="stylesheet" href="../lib/css/wb-charts.css">
+<link rel="stylesheet" href="shared.css">
 </head>
 
 <body>
-
+  <button type="button" data-id="theme" onclick="document.documentElement.classList.toggle('dark')">Theme</button>
   <div id="chart-container-1"></div>
   <div id="chart-container-2"></div>
   <div>

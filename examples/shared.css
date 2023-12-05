@@ -1,0 +1,6 @@
+body {
+  background-color: var(--foreground-color-complement);
+  font: 14px sans-serif;
+  margin: 20px;
+  color:  var(--text-color);
+}

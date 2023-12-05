@@ -5,27 +5,6 @@
   <title>Wind Direction Tech Demo</title>
   <style>
 
-
-    .wbcharts svg {
-      overflow: visible;
-    }
-
-    body {
-      background-color : rgb(44,44,44);
-    }
-
-    text {
-      fill: white;
-    }
-
-    title {
-      stroke: black;
-    }
-
-    .axis-canvas {
-      fill:rgb(89, 89, 89);
-    }
-
     .r-axis{
       display: none;
     }
@@ -33,6 +12,7 @@
     .r-grid{
       display: none;
     }
+
     #wind-gauges {
       font-family: sans-serif;
       font-size: 12px;
@@ -49,7 +29,6 @@
     #wind-gauges .x-grid-0{
       color: black;
     }
-
 
     /* All the same stuff for IE */
     input[type=range]::-ms-thumb {
@@ -201,14 +180,6 @@
       margin-right: 40px;
     }
 
-    .legend {
-      font: 10px sans-serif;
-    }
-
-    /* div.tooltip { position: absolute; text-align: center; min-width: 10px; height: 28px; padding: 2px;
-      font: 12px sans-serif; background:
-      lightgray; border: 0px; border-radius: 8px; pointer-events: none; } */
-
     </style>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.js"> </script>
@@ -223,9 +194,11 @@
     <script src="https://d3js.org/d3.v6.js"></script>
     <script src="https://d3js.org/d3-selection-multi.v1.min.js"></script>
     <!-- <script src="https://unpkg.com/date-time-format-timezone@latest/build/browserified/date-time-format-timezone-complete-min.js"></script> -->
-    <link rel="stylesheet" href="../dist/wb-charts-dark.css">
+    <link rel="stylesheet" href="../lib/css/wb-charts.css">
+    <link rel="stylesheet" href="shared.css">
   </head>
   <body>
+  <button type="button" data-id="theme" onclick="document.documentElement.classList.toggle('dark')">Theme</button>
     <div class="chart-wind-time">
       <div id="chart-wind-rose"></div>
       <div id="wind-gauges">

@@ -1,0 +1,320 @@
+:root {
+  --background-color: rgb(223, 223, 223);
+  --foreground-color: #000;
+  --foreground-color-complement: white;
+  --primary-color: red;
+  --secondary-color: orange;
+  --text-color: #000;
+  --text-color-complement: white;
+}
+
+.dark {
+  --background-color: rgb(54, 54, 54);
+  --foreground-color: #fff;
+  --foreground-color-complement: #000;
+  --text-color: #fff;
+  --text-color-complement: #000;
+}
+
+svg.wb-charts  {
+  color: var(--foreground-color);
+}
+
+.axis {
+  font-size: 1em;
+
+  path {
+    stroke-width: 1px;
+    stroke: var(--foreground-color);
+  }
+
+  .tick {
+    line {
+      stroke-width: 1px;
+      stroke: var(--foreground-color);
+    }
+
+    text {
+      stroke-width: 1px;
+      fill: var(--text-color);
+    }
+  }
+}
+
+.front {
+  font-size: 1em;
+}
+
+.mouse-over {
+  font-size: 1em;
+}
+
+.canvas rect {
+  fill: var(--background-color);
+}
+
+.canvas path {
+  fill: var(--background-color);
+}
+
+.title {
+  fill: var(--text-color);
+}
+
+.legend {
+  font-size: 1em;
+}
+
+.axis {
+  path {
+    stroke-width: 1px;
+    stroke: var(--foreground-color);
+  }
+
+  &.r-axis path {
+    stroke: none;
+  }
+
+  .tick {
+    line {
+      stroke-width: 1px;
+      stroke: var(--foreground-color);
+    }
+
+    text {
+      stroke-width: 1px;
+      fill: var(--text-color);
+    }
+  }
+}
+.grid {
+  fill: none;
+  stroke-width: 1px;
+  stroke: var(--foreground-color-complement);
+  stroke-dasharray: 2px;
+
+  text {
+    display: none;
+  }
+
+  .tick {
+    line {
+      stroke: var(--foreground-color-complement);
+    }
+
+    &.zero-crossing line {
+      stroke-dasharray: none;
+      stroke: var(--foreground-color);
+    }
+  }
+}
+
+.view {
+  fill: none;
+}
+
+.level-select {
+  stroke: red;
+
+  > text {
+    stroke: none;
+    fill: red;
+  }
+
+  &-handle {
+    stroke: red;
+    fill: red;
+    cursor: pointer;
+  }
+}
+
+.cross-section-select {
+  font-size: 1em;
+
+  line {
+    stroke: var(--foreground-color);
+    stroke-dasharray: 2 2;
+  }
+
+  .back {
+    fill: var(--foreground-color-complement);
+  }
+
+  text.date-label {
+    stroke: none;
+    fill: var(--text-color);
+  }
+
+  .data-point-per-line {
+    stroke: none;
+  }
+}
+
+.cross-section-select-handle {
+  stroke: var(--foreground-color);
+  fill: var(--foreground-color);
+  cursor: pointer;
+}
+
+.current-time {
+  stroke: var(--primary-color);
+}
+
+.current-time-indicator {
+  fill: var(--primary-color);
+}
+
+.current-time-indicator:hover>text {
+  visibility: visible;
+}
+
+.current-time-indicator > text {
+  visibility: hidden;
+  stroke:none;
+  fill: var(--text-color-complement);
+}
+
+.dst-indicator {
+  fill: var(--secondary-color);
+
+  &:hover > text {
+    visibility: visible;
+  }
+
+  > text {
+    visibility: hidden;
+    stroke: none;
+    fill: var(--text-color);
+  }
+}
+
+.labels {
+  > text {
+    stroke: none;
+    fill: var(--text-color);
+  }
+}
+
+.legend {
+  text {
+    stroke: none;
+    fill: var(--text-color);
+  }
+}
+
+.mouse {
+  cursor: crosshair;
+}
+
+.mouse-x > text {
+  -webkit-user-select:none;
+  user-select: none;
+  fill: var(--text-color);;
+}
+
+.mouse {
+  .overlay {
+    visibility: hidden;
+  }
+
+  &-over {
+    .mouse-line {
+      stroke: var(--foreground-color);
+      stroke-width: 1px;
+      stroke-dasharray: 5, 2, 2, 2;
+    }
+
+    .mouse-per-line {
+      fill: var(--foreground-color);;
+    }
+  }
+}
+
+
+.brush {
+  .handle {
+    fill: var(--foreground-color-complement);
+    stroke: var(--foreground-color);
+    stroke-width: .5px;
+  }
+
+  .select-rect {
+    fill: rgba(111, 111, 111, 0.5);
+    stroke: white;
+    stroke-width: 1px;
+    stroke-dasharray: 5, 2;
+  }
+}
+
+.tooltip {
+  position: absolute;
+  display: inline-block;
+  top: 0px;
+  left: 0px;
+  pointer-events: none;
+  white-space: nowrap;
+  font-size: 1em;
+
+  .tooltiptext {
+    background-color:  var(--foreground-color-complement);
+    color:  var(--foreground-text);
+    text-align: center;
+    border-radius: 6px;
+    padding: 5px 10px;
+    z-index: 1;
+
+    &:empty {
+      display: none;
+    }
+
+    &.top {
+      transform: translate(-50%, calc(-100% - 5px));
+    }
+    &.bottom {
+      transform: translate(-50%, 5px);
+    }
+    &.left {
+      transform: translate(calc(-100% - 5px), -50%);
+    }
+    &.right {
+      transform: translate(5px, -50%);
+    }
+
+    &::after {
+      content: "";
+      position: absolute;
+      border-width: 5px;
+      border-style: solid;
+    }
+    &.top::after {
+      top: 100%;
+      left: 50%;
+      margin-left: -5px;
+      border-color: var(--foreground-color-complement) transparent transparent transparent;
+    }
+    &.bottom::after {
+      top: -10px;
+      left: 50%;
+      margin-left: -5px;
+      border-color: transparent transparent var(--foreground-color-complement) transparent;
+    }
+    &.left::after {
+      top: 50%;
+      left: 100%;
+      margin-top: -5px;
+      border-color: transparent transparent transparent var(--foreground-color-complement);
+    }
+    &.right::after {
+      top: 50%;
+      left: -10px;
+      margin-top: -5px;
+      border-color: transparent var(--foreground-color-complement) transparent transparent;
+    }
+  }
+}
+
+.data-field{
+  font-family: sans-serif;
+  font-size: 1em;
+  fill: var(--text-color);
+}

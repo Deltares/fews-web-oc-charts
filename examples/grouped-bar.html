@@ -5,12 +5,6 @@
   <meta charset="UTF-8" />
   <title>Matrix Tech Demo</title>
   <style>
-    body {
-      background-color: rgb(44, 44, 44);
-      color: white;
-    }
-
-
     #chart-container-1 {
       position: relative;
       display: block;
@@ -26,12 +20,13 @@
     }
 
   </style>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/6.3.0/d3.js"></script>
-  <link rel="stylesheet" href="../dist/wb-charts-dark.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.js"></script>
+  <link rel="stylesheet" href="../lib/css/wb-charts.css">
+  <link rel="stylesheet" href="shared.css">
 </head>
 
 <body>
-
+  <button type="button" data-id="theme" onclick="document.documentElement.classList.toggle('dark')">Theme</button>
   <span>
     <label for="cars">x-key:</label>
     <select name="x" id="x" onchange="changed(this)">

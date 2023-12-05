@@ -41,6 +41,7 @@ export abstract class Axes {
 
   tooltip: Tooltip
   observer: ResizeObserver
+  private themeObserver: MutationObserver
 
   width: number
   height: number
@@ -63,6 +64,16 @@ export abstract class Axes {
       if (entries[0].contentBoxSize) this.resize()
     })
     this.observer.observe(container)
+
+    this.themeObserver = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.attributeName === 'class') {
+          this.redraw(this.options)
+        }
+      })
+    })
+    this.themeObserver.observe(container, { attributes: true })
+    this.themeObserver.observe(document.documentElement, { attributes: true })
 
     // Using the d3.formatLocale is not easy for generic plotting
     d3.formatDefaultLocale({
@@ -125,7 +136,7 @@ export abstract class Axes {
     this.redraw()
   }
 
-  abstract redraw(): void
+  abstract redraw(options?: any): void
 
   resetZoom(): void {
     this.redraw()

@@ -13,25 +13,6 @@
       font-family: sans-serif;
     }
 
-    .wbcharts svg {
-      overflow: visible;
-    }
-
-    body {
-      background-color : rgb(44,44,44);
-    }
-
-    text {
-      fill: white;
-    }
-
-    title {
-      stroke: black;
-    }
-
-    .axis-canvas {
-      fill:rgb(89, 89, 89);
-    }
 
     .r-axis{
       display: none;
@@ -67,9 +48,11 @@
   </script>
   <script src="https://d3js.org/d3.v7.js"></script>
   <script src="https://d3js.org/d3-selection-multi.v1.min.js"></script>
-  <link rel="stylesheet" href="../dist/wb-charts-dark.css">
+  <link rel="stylesheet" href="../lib/css/wb-charts.css">
+  <link rel="stylesheet" href="shared.css">
 </head>
 <body>
+  <button type="button" data-id="theme" onclick="document.documentElement.classList.toggle('dark')">Theme</button>
   <div class="chart-row">
     <div id="chart-wind-rose1" class="chart-rose"></div>
     <div id="chart-current-rose1" class="chart-rose"></div>

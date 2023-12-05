@@ -13,31 +13,12 @@
       font-family: sans-serif;
     }
 
-    .wbcharts svg {
-      overflow: visible;
-    }
-
-    body {
-      background-color: rgb(44, 44, 44);
-      font: 14px sans-serif;
-      margin: 20px;
-    }
-
-    text {
-      fill: white;
-    }
-
-    title {
-      stroke: black;
-    }
-
     .chart-container {
       position: relative;
       display: block;
       width: 100%;
       height: 100vh;
       max-height: 400px;
-      fill: white;
     }
 
     .level-lines {
@@ -50,10 +31,12 @@
   </style>
   <script src="https://d3js.org/d3.v7.js"></script>
   <script src="https://d3js.org/d3-selection-multi.v1.min.js"></script>
-  <link rel="stylesheet" href="../dist/wb-charts-dark.css">
+  <link rel="stylesheet" href="../lib/css/wb-charts.css">
+  <link rel="stylesheet" href="shared.css">
 </head>
 
 <body>
+  <button type="button" data-id="theme" onclick="document.documentElement.classList.toggle('dark')">Theme</button>
   <div>
     <div id="chart-1" class="chart-container"></div>
   </div>
