@@ -53,7 +53,6 @@ export class CrossSectionSelect implements Visitor {
     this.group = axis.canvas.insert('g', '.mouse')
       .attr('class', 'cross-section-select')
       .attr('font-family', 'sans-serif')
-      .attr('fill', 'currentColor')
 
     this.backGroup = this.group.append('g')
     this.frontGroup = this.group.append('g')

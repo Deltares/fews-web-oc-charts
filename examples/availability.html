@@ -5,21 +5,12 @@
   <meta charset="UTF-8" />
   <title>Status Time Line</title>
   <style>
-    body {
-      background-color: rgb(44, 44, 44);
-    }
-
-    h1,
-    h2 {
-      color: white;
-    }
 
     #chart-container-1 {
       position: relative;
       display: block;
       height: 40px;
       width: 100%;
-      background-color: rgba(0, 0, 0, 0.2);
     }
 
     #chart-container-2 {
@@ -27,12 +18,15 @@
       display: block;
       height: 50px;
       width: 100%;
-      background-color: rgba(0, 0, 0, 0.2);
     }
 
     .container {
       width: 85%;
       margin: 0 auto;
+    }
+
+    .axis {
+      display: none;
     }
 
     .legend {
@@ -65,17 +59,15 @@
       opacity: 0.8
     }
 
-    .axis {
-      display: none;
-    }
-
   </style>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/6.3.0/d3.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.js"></script>
   <script src="../dist/wb-charts.umd.js"></script>
-  <link rel="stylesheet" href="../dist/wb-charts-dark.css">
+  <link rel="stylesheet" href="../lib/css/wb-charts.css">
+  <link rel="stylesheet" href="shared.css">
 </head>
 
 <body>
+  <button type="button" data-id="theme" onclick="document.documentElement.classList.toggle('dark')">Theme</button>
   <div class="container">
     <h1>Beschikbaarheid gevalideerde metingen Kalman stations</h1>
     <h2>Aberdeen - Waterlevel</h2>

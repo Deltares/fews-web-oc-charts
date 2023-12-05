@@ -5,27 +5,22 @@
   <meta charset="UTF-8" />
   <title>Time axes demo</title>
   <style>
-    body {
-      background-color: rgb(44, 44, 44);
-      font: 14px sans-serif;
-      margin: 20px;
-    }
-
     #chart-container-1 {
       display: block;
       position: relative;
       width: 100%;
       height: 100vh;
       max-height: 414px;
-      fill: white;
     }
   </style>
   </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/6.7.0/d3.js"></script>
-  <link rel="stylesheet" href="../dist/wb-charts-dark.css">
+  <link rel="stylesheet" href="../lib/css/wb-charts.css">
+<link rel="stylesheet" href="shared.css">
 </head>
 
 <body>
+  <button type="button" data-id="theme" onclick="document.documentElement.classList.toggle('dark')">Theme</button>
   <div>
     <div id="chart-container-1"></div>
   </div>

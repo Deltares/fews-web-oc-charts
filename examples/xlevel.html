@@ -5,34 +5,14 @@
   <meta charset="UTF-8" />
   <title>Crossection Demo</title>
   <style>
-    body {
-      background-color: rgb(44, 44, 44);
-      font: 14px sans-serif;
-      margin: 20px;
-    }
-
-    .dst-indicator {
-      fill: yellow
-    }
-
     #chart-container-1 {
       position: relative;
       display: block;
       width: 100%;
       height: 100vh;
       max-height: 414px;
-      fill: white;
     }
 
-    #polar-dot {
-      fill: #999999;
-      stroke: white;
-    }
-
-    #chart-legend-1 {
-      display: block;
-      fill: white;
-    }
 
     /* .chart-line { fill: none; stroke: skyblue; } */
     #control-line {
@@ -44,19 +24,20 @@
 
     #median-line {
       fill: none;
-      stroke: white;
+      stroke: currentColor;
       stroke-width: 2px;
     }
-
   </style>
   </script>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/6.3.0/d3.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.js"></script>
   <script src="https://d3js.org/d3-selection-multi.v1.min.js"></script>
-  <link rel="stylesheet" href="../dist/wb-charts-dark.css">
+  <link rel="stylesheet" href="../lib/css/wb-charts.css">
+  <link rel="stylesheet" href="shared.css">
 </head>
 
 <body>
+  <button type="button" data-id="theme" onclick="document.documentElement.classList.toggle('dark')">Theme</button>
   <div>
     <div id="chart-container-1"></div>
     <div id="chart-legend-1"></div>
@@ -171,7 +152,7 @@
     // var refDate = new Date(2019,02,31);
     var refDate = getRoundedDate( 10, new Date());
     var refYear = refDate.getFullYear()
-    var mouseOver = new wbCharts.MouseOver(['control', 'median', 'percent90']);
+    var mouseOver = new wbCharts.MouseOver(['control', 'median']);
     var escalationLevels = [{
         id: 'laag',
         events: [
@@ -187,6 +168,7 @@
           { date: new Date(refYear, 9, 1), value: -90 },
           { date: new Date(refYear, 10, 1), value: -90 },
           { date: new Date(refYear, 11, 1), value: -90 },
+          { date: new Date(refYear +1, 0, 1), value: -90 },
         ],
         color: 'rgba(205, 133, 63,.5)',
         c: '<'
@@ -206,6 +188,7 @@
           { date: new Date(refYear, 9, 1), value: 110 },
           { date: new Date(refYear, 10, 1), value: 110 },
           { date: new Date(refYear, 11, 1), value: 110 },
+          { date: new Date(refYear +1, 0, 1), value: 110 },
         ],
         color: 'rgba(255, 215, 0,.5)',
         c: '>'
@@ -225,6 +208,7 @@
           { date: new Date(refYear, 9, 1), value: 120 },
           { date: new Date(refYear, 10, 1), value: 120 },
           { date: new Date(refYear, 11, 1), value: 120 },
+          { date: new Date(refYear +1, 0, 1), value: 120 },
         ],
         color: 'rgba(255, 150, 0,.5)',
         c: '>'
@@ -244,6 +228,7 @@
           { date: new Date(refYear, 9, 1), value: 160 },
           { date: new Date(refYear, 10, 1), value: 160 },
           { date: new Date(refYear, 11, 1), value: 160 },
+          { date: new Date(refYear +1, 0, 1), value: 160 },
         ],
         color: 'rgba(255, 0, 0,.5)',
         c: '>'

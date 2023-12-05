@@ -5,42 +5,22 @@
   <meta charset="UTF-8" />
   <title>Model status Demo</title>
   <style>
-    body {
-      background-color: rgb(44, 44, 44);
-    }
-
-    title {
-      stroke: black;
-    }
-
     .chart-container {
       display: inline-block;
       width: 840px;
       height: 800px;
     }
-
-    div.tooltip {
-      position: absolute;
-      text-align: center;
-      width: 60px;
-      height: 28px;
-      padding: 2px;
-      font: 12px sans-serif;
-      color: #fff;
-      background: black;
-      border: 0px;
-      border-radius: 8px;
-      pointer-events: none;
-    }
-
   </style>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/6.3.0/d3.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.2/FileSaver.min.js"></script>
   <link rel="stylesheet" href="../dist/wb-charts-print.css">
-  <link rel="stylesheet" media="screen" href="../dist/wb-charts-dark.css">
+  <link rel="stylesheet" media="screen" href="../lib/css/wb-charts.css">
+  <link rel="stylesheet" href="shared.css">
+
 </head>
 
 <body>
+  <button type="button" data-id="theme" onclick="document.documentElement.classList.toggle('dark')">Theme</button>
   <div style="display: flex;">
     <div class="chart-container" id="1"></div>
   </div>

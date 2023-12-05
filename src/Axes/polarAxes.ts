@@ -153,7 +153,7 @@ export class PolarAxes extends Axes {
 
     if (this.options.radial.type !== AxisType.band) {
       const radialTicks = this.radialScale.ticks(5).map(this.radialScale)
-      const drawRadial = this.radialAxis
+      const drawRadial = this.radialGrid
         .selectAll<SVGPathElement, unknown>('path')
         .data(radialTicks)
       drawRadial.exit().remove()
@@ -310,13 +310,11 @@ export class PolarAxes extends Axes {
       .append('g')
       .attr('class', 'axis r-axis')
       .attr('font-family', 'sans-serif')
-      .attr('fill', 'currentColor')
     this.angularAxis = this.canvas
       .append('g')
       .attr('class', 'axis t-axis')
       .attr('transform', 'rotate(' + -this.intercept * 180 / Math.PI + ')')
       .attr('font-family', 'sans-serif')
-      .attr('fill', 'currentColor')
     this.update()
   }
 }

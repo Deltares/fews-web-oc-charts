@@ -5,17 +5,6 @@
         <title>Ensemble Tech Demo</title>
         <style>
 
-
-            body {
-                background-color : rgb(44,44,44);
-                font: 14px sans-serif;
-                margin: 20px;
-            }
-
-            .dst-indicator {
-              fill: yellow
-            }
-
             #chart-container-1 {
                 position: relative;
                 display: block;
@@ -25,22 +14,18 @@
                 fill: white;
             }
 
-            #polar-dot {
-                fill: #999999;
-                stroke: white;
-            }
-
             /* .chart-line { fill: none; stroke: skyblue; } */
             #control-line { fill: none; stroke: red; stroke-dasharray : 4,2; stroke-width: 2px; }
 
             #median-line { fill: none; stroke: white; stroke-width: 2px; }
         </style>
 </script>
-
         <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.0.0/d3.js"></script>
-        <link rel="stylesheet" href="/dist/wb-charts-dark.css">
+        <link rel="stylesheet" href="../lib/css/wb-charts.css">
+        <link rel="stylesheet" href="shared.css">
     </head>
     <body>
+      <button type="button" data-id="theme" onclick="document.documentElement.classList.toggle('dark')">Theme</button>
         <div>
             <div id="chart-container-1"></div>
             <div id="chart-legend-1"></div>

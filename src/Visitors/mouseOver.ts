@@ -38,7 +38,6 @@ export class MouseOver implements Visitor {
     this.group = axes.canvas.insert('g', '.mouse')
       .attr('class', 'mouse-over')
       .attr('font-family', 'sans-serif')
-      .attr('fill', 'currentColor')
 
     this.group
       .append('path')

@@ -4,16 +4,6 @@
         <meta charset="UTF-8" />
         <title>Ensemble Tech Demo</title>
         <style>
-
-
-            body {
-                background-color :white;
-            }
-
-            .axis-canvas {
-                fill:rgb(218, 218, 218);
-            }
-
             #chart-container-1 {
                 display: block;
                 width: 100%;
@@ -36,10 +26,11 @@
         </style>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/6.7.0/d3.js"></script>
         <script src="https://d3js.org/d3-selection-multi.v1.min.js"></script>
-        <link rel="stylesheet" href="../dist/wb-charts-light.css">
+        <link rel="stylesheet" href="../lib/css/wb-charts.css">
+        <link rel="stylesheet" href="shared.css">
     </head>
     <body>
-
+        <button type="button" data-id="theme" onclick="document.documentElement.classList.toggle('dark')">Theme</button>
         <div id="chart-container-1"></div>
 
         <div id="chart-container-2"></div>
