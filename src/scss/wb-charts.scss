@@ -8,12 +8,32 @@
   --text-color-complement: white;
 }
 
-.dark {
-  --background-color: rgb(54, 54, 54);
-  --foreground-color: #fff;
-  --foreground-color-complement: #000;
-  --text-color: #fff;
-  --text-color-complement: #000;
+@media screen {
+  .dark {
+    --background-color: rgb(54, 54, 54);
+    --foreground-color: #fff;
+    --foreground-color-complement: #000;
+    --text-color: #fff;
+    --text-color-complement: #000;
+  }
+
+  .canvas rect {
+    fill: var(--background-color);
+  }
+  
+  .canvas path {
+    fill: var(--background-color);
+  }
+}
+
+@media only print {
+  .canvas rect {
+    fill: none;
+  }
+  
+  .canvas path {
+    fill: none;
+  }
 }
 
 svg.wb-charts  {
@@ -47,14 +67,6 @@ svg.wb-charts  {
 
 .mouse-over {
   font-size: 1em;
-}
-
-.canvas rect {
-  fill: var(--background-color);
-}
-
-.canvas path {
-  fill: var(--background-color);
 }
 
 .title {
