@@ -1,0 +1,32 @@
+html,
+body {
+  height: 100%;
+  margin: 0px;
+  font-size: 16px;
+  font-family: sans-serif;
+}
+
+.r-axis {
+  display: none;
+}
+
+.r-grid {
+  display: none;
+}
+
+.chart-row {
+  height: 49%;
+  position: relative;
+  display: block;
+}
+
+.chart-rose {
+  position: relative;
+  display: inline-block;
+  width: 33%;
+  height: 100%;
+}
+
+.chart-rose .data-field {
+  text-anchor: middle;
+}

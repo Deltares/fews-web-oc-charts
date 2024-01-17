@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="nl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Wind Rose Tech Demo</title>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/locale/nl.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment-timezone/0.5.23/moment-timezone-with-data.js"></script>
+    <script src="https://d3js.org/d3.v7.js"></script>
+    <script src="https://d3js.org/d3-selection-multi.v1.min.js"></script>
+    <link rel="stylesheet" href="/lib/css/wb-charts.css" />
+    <link rel="stylesheet" href="../shared.css" />
+    <script type="text/javascript" src="../shared.js"></script>
+    <link rel="stylesheet" href="windrose-wbviewer.css" />
+    <script type="text/javascript" src="windrose-wbviewer.js"></script>
+    <script src="/dist/wb-charts.umd.js"></script>
+  </head>
+  <body>
+    <button class="theme-button" type="button" data-id="theme">Theme</button>
+    <div class="chart-wind-time">
+      <div id="wind-rose">
+        <div id="legend-wind-rose"></div>
+        <br />
+        <div id="chart-wind-rose"></div>
+      </div>
+      <div id="wind-gauges">
+        <span id="slider-datetime"> -</span>
+        <input id="slider" type="range" name="points" min="0" max="10" title="time selection" />
+        <div id="slider-reset">
+          <input
+            id="slider-reset-button"
+            type="button"
+            value="actueel"
+          />
+          <input id="slider-reset-checkbox" type="checkbox" />
+          Volg actuele tijd
+        </div>
+        <div id="chart-wind-stoot"></div>
+        <div id="chart-wind-speed"></div>
+      </div>
+    </div>
+    <div class="chart-wind-time">
+      <div class="chart-container">
+        <div id="legend-wind-direction-time"></div>
+        <br />
+        <div id="chart-wind-direction-time"></div>
+      </div>
+      <div class="chart-container">
+        <div id="legend-wind-speed-time"></div>
+        <br />
+        <div id="chart-wind-speed-time"></div>
+      </div>
+    </div>
+  </body>
+</html>

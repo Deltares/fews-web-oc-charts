@@ -1,0 +1,36 @@
+#chart-container-1 {
+  display: block;
+  width: 100%;
+  height: 100vh;
+  max-height: 400px;
+}
+
+#chart-container-2 {
+  display: block;
+  width: 100%;
+  height: 100vh;
+}
+
+.chart-line {
+  fill: none;
+  stroke: skyblue;
+}
+#control-line {
+  fill: none;
+  stroke: red;
+  stroke-dasharray: 4, 2;
+  stroke-width: 2px;
+}
+#median-line {
+  fill: none;
+  stroke: black;
+  stroke-width: 2px;
+}
+#percent90 {
+  fill: skyblue;
+  stroke: skyblue;
+}
+#percent50 {
+  fill: deepskyblue;
+  stroke: deepskyblue;
+}

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Matrix Tech Demo</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.js"></script>
+    <link rel="stylesheet" href="/lib/css/wb-charts.css" />
+    <link rel="stylesheet" href="../shared.css" />
+    <link rel="stylesheet" href="grouped-bar.css" />
+    <script src="/dist/wb-charts.umd.js"></script>
+    <script type="text/javascript" src="../shared.js"></script>
+    <script type="text/javascript" src="grouped-bar.js"></script>
+  </head>
+
+  <body>
+    <button class="theme-button" type="button" data-id="theme">Theme</button>
+    <span>
+      <label for="cars">x-key:</label>
+      <select name="x" id="x">
+        <option selected value="Uitgifte">Uitgifte</option>
+        <option value="leadtime">leadtime</option>
+        <option value="Model">Model</option>
+      </select>
+    </span>
+
+    <span>
+      <label for="cars">x1-key:</label>
+      <select name="x1" id="x1">
+        <option value="Uitgifte">Uitgifte</option>
+        <option value="leadtime">leadtime</option>
+        <option selected value="Model">Model</option>
+      </select>
+    </span>
+
+    <div id="chart-container-1"></div>
+    <div id="chart-matrix"></div>
+  </body>
+</html>
