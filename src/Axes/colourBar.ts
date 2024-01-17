@@ -303,9 +303,11 @@ export class ColourBar {
     // Since the SVG y-axis inverted, for vertical colour bars the gradient should also be inverted.
     gradient.append('stop')
       .attr('offset', '0%')
-      .attr('style', `stop-color:${this.isHorizontal ? colorStart : colorEnd};stop-opacity:1`)
+      .style('stop-color', this.isHorizontal ? colorStart : colorEnd)
+      .style('stop-opacity', 1)
     gradient.append('stop')
       .attr('offset', '100%')
-      .attr('style', `stop-color:${this.isHorizontal ? colorEnd : colorStart};stop-opacity:1`)
+      .style('stop-color', this.isHorizontal ? colorEnd : colorStart)
+      .style('stop-opacity', 1)
   }
 }
