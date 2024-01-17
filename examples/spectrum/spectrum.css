@@ -1,0 +1,13 @@
+#chart-container-1 {
+  position: relative;
+  display: block;
+  width: 400px;
+  height: 400px;
+}
+
+#chart-container-2 {
+  position: relative;
+  display: block;
+  width: 400px;
+  height: 400px;
+}
