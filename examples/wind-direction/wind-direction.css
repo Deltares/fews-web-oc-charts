@@ -1,0 +1,220 @@
+.r-axis {
+  display: none;
+}
+
+.r-grid {
+  display: none;
+}
+
+.chart-containerr {
+  display: inline-block;
+  height: 100%;
+  width: 49%;
+}
+
+#wind-gauges {
+  font-family: sans-serif;
+  font-size: 12px;
+  color: white;
+}
+
+#wind-gauges .y-axis-0 {
+  display: none;
+}
+#wind-gauges .y-grid-0 {
+  display: none;
+}
+
+#wind-gauges .x-grid-0 {
+  color: black;
+}
+
+/* All the same stuff for IE */
+input[type='range']::-ms-thumb {
+  border: black;
+  background: gray;
+}
+
+@keyframes christmasLights {
+  0% {
+    fill: red;
+  }
+  25% {
+    fill: green;
+  }
+  50% {
+    fill: blue;
+  }
+  75% {
+    fill: yellow;
+  }
+  100% {
+    fill: red;
+  }
+}
+
+.data-field {
+  font-family: sans-serif;
+  font-size: 12px;
+}
+
+#chart-wind-rose {
+  display: inline-block;
+  width: 400px;
+  height: 400px;
+}
+
+#chart-wind-rose .data-field {
+  text-anchor: middle;
+}
+
+#chart-wind-rose .data-field-value {
+  font-family: sans-serif;
+  font-size: 16px;
+}
+
+#wind-gauges {
+  display: inline-block;
+}
+
+.chart-wind-time {
+  height: 49%;
+  position: relative;
+  display: block;
+}
+
+#chart-wind-stoot {
+  display: block;
+  width: 400px;
+  height: 140px;
+}
+#chart-wind-speed {
+  display: block;
+  width: 400px;
+  height: 140px;
+}
+
+#chart-wind-speed-time {
+  position: relative;
+  display: block;
+  width: 800px;
+  height: 600px;
+}
+
+#polar-dot {
+  fill: greenyellow;
+  stroke: white;
+}
+
+#polar-range {
+  fill: rgba(0, 128, 255, 0.5);
+  stroke: none;
+}
+
+#cartesian-range {
+  fill: rgba(53, 180, 41, 0.5);
+  stroke: none;
+}
+
+#polar-line {
+  fill: rgb(0, 128, 255);
+  stroke: rgb(0, 128, 255);
+  stroke-width: 3px;
+}
+#polar-line-forecast {
+  fill: rgb(255, 128, 255);
+  stroke: rgb(255, 128, 255);
+  stroke-width: 3px;
+}
+#forecast {
+  fill: none;
+  stroke: rgb(255, 128, 255);
+  stroke-width: 3px;
+}
+
+#cartesian-dot {
+  fill: #999999;
+  stroke: white;
+}
+
+#wind-line {
+  fill: none;
+  stroke: rgb(53, 180, 41);
+  stroke-width: 3px;
+}
+#wind-line-time {
+  fill: none;
+  stroke: rgb(53, 180, 41);
+  stroke-width: 1px;
+}
+#windstoot-line-time {
+  fill: none;
+  stroke: rgb(170, 30, 30);
+  stroke-width: 1px;
+}
+#forecast-time {
+  fill: none;
+  stroke: rgb(255, 128, 255);
+  stroke-width: 1px;
+}
+
+#wind-line-time {
+  fill: none;
+  stroke: rgb(0, 128, 255);
+  stroke-width: 1px;
+}
+#winddirection-line-time > path {
+  stroke: white;
+  stroke-width: 1px;
+  animation: christmasLights 4s step-start infinite;
+  /* animation-timing-function: steps(5); */
+}
+#directionforecast-time {
+  stroke: rgb(255, 128, 255);
+  stroke-width: 1px;
+}
+
+#winddirection-line-time > path:nth-child(4n) {
+  animation-delay: 0s;
+}
+#winddirection-line-time > path:nth-child(4n + 1) {
+  animation-delay: 1s;
+}
+
+#winddirection-line-time > path:nth-child(4n + 2) {
+  animation-delay: 2s;
+}
+#winddirection-line-time > path:nth-child(4n + 3) {
+  animation-delay: 3s;
+}
+
+#stoot-line {
+  fill: none;
+  stroke: rgb(170, 30, 30);
+  stroke-width: 3px;
+}
+
+#slider-datetime {
+  display: block;
+  margin-left: 40px;
+}
+
+#slider-reset-button {
+  display: inline-block;
+}
+
+#slider {
+  width: 320px;
+  margin-left: 40px;
+  margin-right: 40px;
+}
+
+#slider-reset-checkbox {
+  display: inline-block;
+}
+
+#slider-reset {
+  display: block;
+  margin-left: 40px;
+  margin-right: 40px;
+}
