@@ -1,0 +1,52 @@
+#chart-container-1 {
+  position: relative;
+  display: block;
+  height: 40px;
+  width: 100%;
+}
+
+#chart-container-2 {
+  position: relative;
+  display: block;
+  height: 50px;
+  width: 100%;
+}
+
+.container {
+  width: 85%;
+  margin: 0 auto;
+}
+
+.axis {
+  display: none;
+}
+
+.legend {
+  display: flex;
+  display: -ms-flexbox;
+  flex-direction: row;
+  justify-content: space-between;
+  position: relative;
+  margin-top: 5px;
+}
+
+.legend .spacer {
+  flex: 1;
+  margin: 0.5rem 1rem 0 1rem;
+  height: 1px;
+  background: #aaa;
+  opacity: 0.3;
+}
+
+.legend .legend-item.light {
+  color: #aaa;
+  opacity: 0.5;
+}
+
+.legend .legend-item {
+  flex: 0 0 auto;
+  font-size: 0.875rem;
+  position: relative;
+  color: #aaa;
+  opacity: 0.8;
+}

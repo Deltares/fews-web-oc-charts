@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Status Time Line</title>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.js"></script>
+    <script src="/dist/wb-charts.umd.js"></script>
+    <link rel="stylesheet" href="/lib/css/wb-charts.css" />
+    <link rel="stylesheet" href="../shared.css" />
+    <link rel="stylesheet" href="availability.css" />
+    <script type="text/javascript" src="availability.js"></script>
+    <script type="text/javascript" src="../shared.js"></script>
+  </head>
+  <body>
+    <button class="theme-button" type="button" data-id="theme">Theme</button>
+    <div class="container">
+      <h1>Beschikbaarheid gevalideerde metingen Kalman stations</h1>
+      <h2>Aberdeen - Waterlevel</h2>
+      <div id="chart-container-2"></div>
+      <div class="legend">
+        <div class="legend-item light legend-item-date-range">
+          <span class="availability-time-line-legend-day-count">24</span> uur geleden
+        </div>
+        <div class="spacer"></div>
+        <div class="legend-item legend-item-uptime-value legend-item-qsvz65tgphcn">
+          <span id="uptime-percent-qsvz65tgphcn">85</span> % beschikbaar
+        </div>
+        <div class="spacer"></div>
+        <div class="legend-item light legend-item-date-range">Nu</div>
+      </div>
+      <h2>Dover - Waterlevel</h2>
+      <div id="chart-container-1"></div>
+      <div class="legend">
+        <div class="legend-item light legend-item-date-range">
+          <span class="availability-time-line-legend-day-count">24</span> uur geleden
+        </div>
+        <div class="spacer"></div>
+        <div class="legend-item legend-item-uptime-value legend-item-qsvz65tgphcn">
+          <span id="uptime-percent-qsvz65tgphcn">85</span> % beschikbaar
+        </div>
+        <div class="spacer"></div>
+        <div class="legend-item light legend-item-date-range">Nu</div>
+      </div>
+      <h2>Last update: 27 aug 15:00</h2>
+    </div>
+  </body>
+</html>

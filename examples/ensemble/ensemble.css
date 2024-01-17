@@ -1,0 +1,48 @@
+#chart-container-1 {
+  position: relative;
+  display: block;
+  height: 400px;
+  width: 100%;
+  overflow: visible;
+}
+
+#chart-container-2 {
+  position: relative;
+  display: block;
+  height: 400px;
+  width: 100%;
+  overflow: visible;
+}
+
+.chart-line {
+  fill: none;
+  stroke: skyblue;
+}
+
+#control-line {
+  fill: none;
+  stroke: red;
+  stroke-dasharray: 4, 2;
+  stroke-width: 2px;
+}
+
+#median-line {
+  fill: none;
+  stroke: white;
+  stroke-width: 2px;
+}
+
+#cartesian-line {
+  fill: none;
+  stroke: white;
+}
+
+#percent90 {
+  fill: skyblue;
+  stroke: skyblue;
+}
+
+#percent50 {
+  fill: deepskyblue;
+  stroke: deepskyblue;
+}

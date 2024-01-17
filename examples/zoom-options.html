@@ -295,7 +295,7 @@
         const offset = plot.positiveData ? 150 : 0;
 
         for (s = 0; s < nEnsemble; s++) {
-          members[s] = Array();
+          members[s] = [];
         }
         var medianTime = (data.times[0] + data.times[data.times.length - 1]) / 2;
         plot.escalations.forEach( function (el, i) {

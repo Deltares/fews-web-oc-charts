@@ -1,0 +1,201 @@
+html,
+body {
+  height: 100%;
+  margin: 0px;
+  font-size: 16px;
+  font-family: sans-serif;
+}
+.r-axis {
+  display: none;
+}
+
+.r-grid {
+  display: none;
+}
+#wind-gauges {
+  color: white;
+}
+
+#wind-gauges .y-axis-0 {
+  display: none;
+}
+#wind-gauges .y-grid-0 {
+  display: none;
+}
+
+#wind-gauges .x-grid-0 {
+  color: black;
+}
+
+/* All the same stuff for IE */
+input[type='range']::-ms-thumb {
+  border: black;
+  background: gray;
+}
+
+#wind-rose {
+  display: inline-block;
+  height: calc(100% - 60px);
+  width: 49%;
+}
+
+.chart-container {
+  display: inline-block;
+  height: 100%;
+  width: 49%;
+}
+
+#chart-wind-rose {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+  height: 100%;
+}
+
+#chart-wind-rose .data-field {
+  text-anchor: middle;
+}
+/*
+    #chart-wind-rose .data-field-value{
+      font-family: sans-serif;
+      font-size: 16px;
+    } */
+
+#wind-gauges {
+  width: 49%;
+  height: 49%;
+  position: relative;
+  display: inline-block;
+}
+
+.chart-wind-time {
+  height: 49%;
+  position: relative;
+  display: block;
+}
+
+#chart-wind-stoot {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 140px;
+}
+#chart-wind-speed {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 140px;
+}
+
+#chart-wind-speed-time {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: calc(100% - 60px);
+}
+
+#chart-wind-direction-time {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: calc(100% - 60px);
+}
+
+#polar-dot {
+  fill: greenyellow;
+  stroke: white;
+}
+
+#polar-range {
+  fill: rgba(79, 193, 255, 0.5);
+  stroke: none;
+}
+
+#cartesian-range {
+  fill: rgba(79, 193, 255, 0.5);
+  stroke: none;
+}
+
+#polar-line {
+  fill: rgb(79, 193, 255);
+  stroke: rgb(79, 193, 255);
+  stroke-width: 3px;
+}
+#polar-line-forecast {
+  fill: rgb(214, 39, 40);
+  stroke: rgb(214, 39, 40);
+  stroke-width: 3px;
+}
+
+#cartesian-dot {
+  fill: #999999;
+  stroke: white;
+}
+
+#wind-line {
+  fill: none;
+  stroke: rgb(79, 193, 255);
+  stroke-width: 3px;
+}
+#wind-line-time {
+  fill: none;
+  stroke: rgb(79, 193, 255);
+  stroke-width: 1.5px;
+}
+#windstoot-line-time {
+  fill: none;
+  stroke: rgb(156, 220, 254);
+  stroke-width: 1.5px;
+}
+
+#wind-forecast-line {
+  fill: none;
+  stroke: rgb(214, 39, 40);
+  stroke-width: 3px;
+}
+#wind-forecast-line-time {
+  fill: none;
+  stroke: rgb(214, 39, 40);
+  stroke-width: 1.5px;
+}
+
+#winddirection-line-time {
+  fill: none;
+  stroke: rgb(79, 193, 255);
+  stroke-width: 1.5px;
+}
+#winddirection-forecast-line-time {
+  fill: none;
+  stroke: rgb(214, 39, 40);
+  stroke-width: 1.5px;
+}
+
+#stoot-line {
+  fill: none;
+  stroke: rgb(156, 220, 254);
+  stroke-width: 3px;
+}
+#slider-datetime {
+  display: block;
+  margin-left: 60px;
+}
+
+#slider-reset-button {
+  display: inline-block;
+}
+
+#slider {
+  width: calc(100% - 120px);
+  margin-left: 60px;
+  margin-right: 60px;
+}
+
+#slider-reset-checkbox {
+  display: inline-block;
+}
+
+#slider-reset {
+  display: block;
+  margin-left: 60px;
+  margin-right: 60px;
+}
