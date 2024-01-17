@@ -1,5 +1,4 @@
 import * as path from "path"
-import CopyPlugin from "copy-webpack-plugin"
 import TerserPlugin from "terser-webpack-plugin"
 import { fileURLToPath } from "url"
 
@@ -27,13 +26,6 @@ const webpackConfig = {
       }),
     ],
   },
-  plugins: [
-    new CopyPlugin({
-      patterns: [
-        { from: 'src/*.css', to: "[name][ext]", },
-      ],
-    }),
-  ],
   devtool: 'source-map',
   externals: ['d3']
 }
