@@ -10,7 +10,7 @@ function distanceSquared(y0, y1) {
   return (y0 - y1) ** 2
 }
 
-export class MouseOver implements Visitor {
+export class VerticalMouseOver implements Visitor {
   private trace: string[]
   private group: d3.Selection<SVGElement, unknown, SVGElement, unknown>
   private axes: CartesianAxes
