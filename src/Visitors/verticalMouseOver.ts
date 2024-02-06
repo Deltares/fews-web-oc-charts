@@ -6,8 +6,8 @@ import { TooltipPosition } from '../Tooltip/tooltip.js'
 import { dateFormatter } from '../Utils/date.js'
 import { isNull } from 'lodash-es'
 
-function distanceSquared(x0, x1) {
-  return (x0 - x1) ** 2
+function distanceSquared(y0, y1) {
+  return (y0 - y1) ** 2
 }
 
 export class MouseOver implements Visitor {
@@ -44,15 +44,14 @@ export class MouseOver implements Visitor {
       .attr('class', 'mouse-line')
       .style('opacity', '0')
       .attr('d', function () {
-        let d = 'M' + 0 + ',' + axes.height
+        let d = 'M' + axes.width + ',' + 0
         d += ' ' + 0 + ',' + 0
         return d
       })
 
     this.group
       .append('g')
-      .attr('class', 'mouse-x')
-      .attr('transform', 'translate(' + 0 + ',' + axes.height + ')')
+      .attr('class', 'mouse-y')
       .append('text')
       .text('')
 
@@ -65,8 +64,8 @@ export class MouseOver implements Visitor {
         // mouse moving over canvas
         const mouse = d3.pointer(event)
         // determine closest point over all lines
-        const xPos = this.xPosForCharts(mouse)
-        this.update(mouse, xPos)
+        const yPos = this.yPosForCharts(mouse)
+        this.update(mouse, yPos)
       })
   }
 
@@ -75,7 +74,7 @@ export class MouseOver implements Visitor {
     // on mouse out hide line, circles and text
     this.group.select('.mouse-line').style('opacity', '0')
     this.group.selectAll('.mouse-per-line circle').style('opacity', '0')
-    this.group.selectAll('.mouse-x text').style('fill-opacity', '0')
+    this.group.selectAll('.mouse-y text').style('fill-opacity', '0')
     this.axes.tooltip.hide()
   }
 
@@ -95,13 +94,13 @@ export class MouseOver implements Visitor {
           .getComputedStyle(element.node() as Element)
           .getPropertyValue('stroke')
       })
-    this.group.select('.mouse-x text').style('fill-opacity', '1')
+    this.group.select('.mouse-y text').style('fill-opacity', '1')
   }
 
-  xPosForCharts(mouse) {
+  yPosForCharts(mouse) {
     const axes = this.axes
     let rMin = Infinity
-    let xPos = mouse[0]
+    let yPos = mouse[1]
     this.mousePerLine
       .each(d => {
         const selector = `[data-chart-id="${d}"]`
@@ -113,11 +112,11 @@ export class MouseOver implements Visitor {
             //skip
           } else {
             const datum = element.datum();
-            [xPos, rMin] = this.closestPointForChart(d, datum, mouse[0], xPos, rMin)
+            [yPos, rMin] = this.closestPointForChart(d, datum, mouse[1], yPos, rMin)
           }
         }
       })
-    return xPos
+    return yPos
   }
 
   isHidden(element) {
@@ -126,44 +125,44 @@ export class MouseOver implements Visitor {
   }
 
 
-  closestPointForChart(id: string, datum: any[], x: number, xPos: number, rMin: number) {
+  closestPointForChart(id: string, datum: any[], y: number, yPos: number, rMin: number) {
     const axis = this.axes
     const chart = axis.charts.find(c => c.id === id)
-    const xIndex = chart.axisIndex.x.axisIndex
-    const xScale = axis.xScales[xIndex]
-    const mouseValue = xScale.invert(x)
+    const yIndex = chart.axisIndex.y.axisIndex
+    const yScale = axis.yScales[yIndex]
+    const mouseValue = yScale.invert(y)
     const xKey = chart.dataKeys.x
     const yKey = chart.dataKeys.y
-    let yIsNull = (d) => isNull(d[yKey])
-    if (Array.isArray(datum[0][yKey])) {
-      yIsNull = (d) => {
-        return isNull(d[yKey][0])
+    let xIsNull = (d) => isNull(d[xKey])
+    if (Array.isArray(datum[0][xKey])) {
+      xIsNull = (d) => {
+        return isNull(d[xKey][0])
       }
     }
     const bisect = d3.bisector((data) => {
-      return data[xKey]
+      return data[yKey]
     }).right
     const idx = bisect(datum, mouseValue)
-    if (idx - 1 >= 0 && !yIsNull(datum[idx - 1])[yKey]) {
-      const x0 = xScale(datum[idx - 1][xKey])
-      const r0 =  distanceSquared(x0, x)
+    if (idx - 1 >= 0 && !xIsNull(datum[idx - 1])[xKey]) {
+      const y0 = yScale(datum[idx - 1][yKey])
+      const r0 =  distanceSquared(y0, y)
       if (r0 < rMin) {
         rMin = r0
-        xPos = x0
+        yPos = y0
       }
     }
-    if (idx < datum.length && !yIsNull(datum[idx])[yKey]) {
-      const x1 = xScale(datum[idx][xKey])
-      const r1 = distanceSquared(x1, x)
+    if (idx < datum.length && !xIsNull(datum[idx])[xKey]) {
+      const y1 = yScale(datum[idx][yKey])
+      const r1 = distanceSquared(y1, y)
       if (r1 < rMin) {
         rMin = r1
-        xPos = x1
+        yPos = y1
       }
     }
-    return [xPos, rMin]
+    return [yPos, rMin]
   }
 
-  update(mouse, xPos) {
+  update(mouse, yPos) {
     const axis = this.axes
     const pointData = {}
 
@@ -186,92 +185,92 @@ export class MouseOver implements Visitor {
       if (datum === null || Array.isArray(datum) && datum.length === 0) {
         return
       }
-      const xValue = xScale.invert(mouse[0])
-      let idx = this.findIndex(datum, xKey, yKey, xValue)
+      const yValue = yScale.invert(mouse[1])
+      let idx = this.findIndex(datum, xKey, yKey, yValue)
       if (idx === undefined) {
         return
       }
       // find closest point
-      let x0: number = xScale(datum[idx][xKey])
+      let y0: number = yScale(datum[idx][yKey])
       if (idx - 1 >= 0) {
-        const x1 = xScale(datum[idx - 1][xKey])
-        const x2 = xScale(datum[idx][xKey])
-        const [closestX, offset] = this.findClosestPoint(xPos, x1, x2)
-        x0 = closestX
+        const y1 = yScale(datum[idx - 1][yKey])
+        const y2 = yScale(datum[idx][yKey])
+        const [closestY, offset] = this.findClosestPoint(yPos, y1, y2)
+        y0 = closestY
         idx = idx - 1 + offset
       }
-      const yValue = datum[idx][yKey]
-      const posy = yScale(yValue)
+      const xValue = datum[idx][xKey]
+      const posx = xScale(xValue)
       // labels
-      const yExtent = this.axes.chartsExtent('y', yIndex, {})
-      const yLabel = this.determineLabel(yExtent, yValue)
+      const xExtent = this.axes.chartsExtent('x', xIndex, {})
+      const xLabel = this.determineLabel(xExtent, xValue)
       // outside range
-      if (posy < yScale.range()[1] || posy > yScale.range()[0]) {
-        pointData[d] = { x0, y0: -window.innerHeight, x: xScale.invert(x0), color: stroke }
+      if (posx > xScale.range()[1] || posx < xScale.range()[0]) {
+        pointData[d] = { x0: -window.innerWidth, y0, y: yScale.invert(y0), color: stroke }
       } else {
-        pointData[d] = { x0, y0: posy, x: xScale.invert(x0), y: yLabel, color: stroke }
+        pointData[d] = { x0: posx, y0, y: yScale.invert(y0), x: xLabel, color: stroke }
       }
     })
 
     this.updatePoints(pointData)
 
     if (Object.keys(pointData).length === 0) {
-      xPos = mouse[0]
+      yPos = mouse[1]
     }
     // update line
-    this.updateXLine(xPos)
-    this.updateXValue(xPos)
+    this.updateYLine(yPos)
+    this.updateYValue(yPos)
     this.updateTooltip(pointData, mouse)
   }
 
-  findClosestPoint(x, x1, x2) {
-    if ((x - x1) > (x2 - x)) {
-      return [x2, 1]
+  findClosestPoint(y, y1, y2) {
+    if ((y - y1) < (y2 - y)) {
+      return [y2, 1]
     } else {
-      return [x1, 0]
+      return [y1, 0]
     }
   }
 
-  findIndex(datum, xKey, yKey, xValue) {
+  findIndex(datum, xKey, yKey, yValue) {
     const bisect = d3.bisector((data) => {
-      return data[xKey]
+      return data[yKey]
     }).left
 
-    let yIsNull = (d) => isNull(d[yKey])
-    if (Array.isArray(datum[0][yKey])) {
-      yIsNull = (d) => {
-        return isNull(d[yKey][0])
+    let xIsNull = (d) => isNull(d[xKey])
+    if (Array.isArray(datum[0][xKey])) {
+      xIsNull = (d) => {
+        return isNull(d[xKey][0])
       }
     }
-    const idx = bisect(datum, xValue)
+    const idx = bisect(datum, yValue)
     // before first point
-    if (idx === 0 && datum[idx][xKey] > xValue) {
+    if (idx === 0 && datum[idx][yKey] > yValue) {
       return
     }
     // after last point
-    if (idx === datum.length - 1 && datum[idx][xKey] < xValue) {
+    if (idx === datum.length - 1 && datum[idx][yKey] < yValue) {
       return
     }
-    if (!datum[idx] || yIsNull(datum[idx])) {
+    if (!datum[idx] || xIsNull(datum[idx])) {
       return
     }
     return idx
   }
 
-  determineLabel(yExtent: any[], yValue: any[] | any) {
+  determineLabel(xExtent: any[], xValue: any[] | any) {
     const s = d3.formatSpecifier("f")
-    s.precision = d3.precisionFixed((yExtent[1] - yExtent[0]) / 100)
-    let yLabel
-    if (Array.isArray(yValue)) {
+    s.precision = d3.precisionFixed((xExtent[1] - xExtent[0]) / 100)
+    let xLabel
+    if (Array.isArray(xValue)) {
       const labels: string[] = []
-      for (let j = 0; j < yValue.length; j++) {
-        labels[j] = d3.format(s.toString())(yValue[j])
+      for (let j = 0; j < xValue.length; j++) {
+        labels[j] = d3.format(s.toString())(xValue[j])
       }
-      yLabel = labels.join('–')
+      xLabel = labels.join('–')
     } else {
-      yLabel = d3.format(s.toString())(yValue)
+      xLabel = d3.format(s.toString())(xValue)
     }
-    return yLabel
+    return xLabel
   }
 
   updatePoints(pointData) {
@@ -292,29 +291,29 @@ export class MouseOver implements Visitor {
       })
   }
 
-  updateXLine(xPos: number) {
-    this.group.select('.mouse-line').attr('transform', 'translate(' + xPos + ',' + 0 + ')')
+  updateYLine(yPos: number) {
+    this.group.select('.mouse-line').attr('transform', 'translate(' + 0 + ',' + yPos + ')')
   }
 
-  updateXValue(xPos) {
+  updateYValue(yPos) {
     const axes = this.axes
     this.group
-      .select('.mouse-x')
-      .attr('transform', 'translate(' + (xPos + 2) + ',' + (axes.height - 5) + ')')
+      .select('.mouse-y')
+      .attr('transform', 'translate(' + 2 + ',' + (yPos - 2) + ')')
       .select('text')
-      .text(this.xText(axes, xPos))
+      .text(this.yText(axes, yPos))
   }
 
-  private xText(axes: CartesianAxes, xPos: any): string {
+  private yText(axes: CartesianAxes, yPos: any): string {
     let text = ''
-    switch (axes.options.x[0].type) {
+    switch (axes.options.y[0].type) {
       case AxisType.time:
-        text = dateFormatter(axes.xScales[0].invert(xPos), 'yyyy-MM-dd HH:mm ZZZZ', { timeZone: axes.options.x[0].timeZone, locale: axes.options.x[0].locale });
+        text = dateFormatter(axes.yScales[0].invert(yPos), 'yyyy-MM-dd HH:mm ZZZZ', { timeZone: axes.options.y[0].timeZone, locale: axes.options.y[0].locale });
         break
       default:
         const s = d3.formatSpecifier("f")
-        s.precision = d3.precisionFixed(axes.xScales[0].domain()[1] / 100)
-        text = d3.format(s.toString())(axes.xScales[0].invert(xPos))
+        s.precision = d3.precisionFixed(axes.yScales[0].domain()[1] / 100)
+        text = d3.format(s.toString())(axes.yScales[0].invert(yPos))
         break
     }
     return text
@@ -328,10 +327,10 @@ export class MouseOver implements Visitor {
       const htmlContent = document.createElement('div')
       for (const label in pointData) {
         const v = pointData[label]
-        if (v.y !== undefined) {
+        if (v.x !== undefined) {
           const spanElement = document.createElement('span')
           spanElement.style.color = v.color
-          spanElement.innerText = v.y
+          spanElement.innerText = v.x
           htmlContent.appendChild(spanElement)
           htmlContent.appendChild(document.createElement('br'))
         }
@@ -373,7 +372,7 @@ export class MouseOver implements Visitor {
   redraw(): void {
     this.updateLineIndicators()
     this.group.select('.mouse-line').attr('d', () => {
-      let d = 'M' + 0 + ',' + this.axes.height
+      let d = 'M' + this.axes.width + ',' + 0
       d += ' ' + 0 + ',' + 0
       return d
     })
