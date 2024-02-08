@@ -231,7 +231,9 @@ export class VerticalMouseOver implements Visitor {
     }
   }
 
-  findIndex(datum, xKey, yKey, yValue) {
+  findIndex(inputDatum, xKey, yKey, yValue) {
+    const isDescending = inputDatum[inputDatum.length - 1][yKey] < inputDatum[0][yKey]
+    const datum = isDescending ? inputDatum.reverse() : inputDatum
     const bisect = d3.bisector((data) => {
       return data[yKey]
     }).left
@@ -254,7 +256,7 @@ export class VerticalMouseOver implements Visitor {
     if (!datum[idx] || xIsNull(datum[idx])) {
       return
     }
-    return idx
+    return isDescending ? inputDatum.length - 1 - idx : idx
   }
 
   determineLabel(xExtent: any[], xValue: any[] | any) {
