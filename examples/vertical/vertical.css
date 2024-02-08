@@ -9,7 +9,7 @@
 #chart-container-2 {
   display: block;
   position: relative;
-  width: 100%;
+  width: 400px;
   height: 100vh;
   max-height: 414px;
 }
