@@ -1,4 +1,4 @@
-function onLoad() {
+function setupVerticalDateTimeMouseover() {
   var container = document.getElementById('chart-container-1')
   var axisOptions = {
     x: [
@@ -79,6 +79,81 @@ function onLoad() {
   axis.redraw({ x: { autoScale: true }, y: { autoScale: true } })
   axis.accept(zoomHandler)
   axis.accept(mouseOver)
+}
+
+function setupVerticalProfileMouseover() {
+  var container = document.getElementById('chart-container-2')
+  var axisOptions = {
+    x: [
+      {
+        label: 'Sine',
+        position: wbCharts.AxisPosition.Bottom,
+        unit: '-',
+        showGrid: true,
+      },
+    ],
+    y: [
+      {
+        position: wbCharts.AxisPosition.Left,
+        showGrid: true,
+        domain: [-1000, 0],
+      },
+      {
+        position: wbCharts.AxisPosition.Left,
+        showGrid: true,
+        domain: [-1000, 0],
+      },
+    ],
+    margin: {
+      left: 50,
+      right: 50,
+    },
+  }
+  var axis = new wbCharts.CartesianAxes(container, null, null, axisOptions)
+
+  var data = []
+  var yValues = [];
+  var numSteps = 11;
+  var startValue = 0;
+  var endValue = -1000;
+  var stepSize = (endValue - startValue) / (numSteps - 1);
+  for (var i = 0; i < numSteps; i++) {
+    yValues.push(startValue + i * stepSize);
+  }
+
+  for (const y of yValues) {
+    data.push({
+      x: Math.log( - y + 1),
+      y,
+    })
+  }
+
+  var plot1 = new wbCharts.ChartLine(data, {})
+
+  var style1 = {
+    fill: 'none',
+    stroke: 'skyblue',
+  }
+
+
+  plot1.addTo(
+    axis,
+    { x: { key: 'x', axisIndex: 0 }, y: { key: 'y', axisIndex: 0 } },
+    'vertical-profile',
+    style1
+  )
+
+  var mouseOver = new wbCharts.VerticalMouseOver(['vertical-profile'])
+  var zoomHandler = new wbCharts.ZoomHandler()
+
+  axis.redraw({ x: { autoScale: true }, y: { autoScale: true } })
+  axis.accept(zoomHandler)
+  axis.accept(mouseOver)
+}
+
+function onLoad() {
+  setupVerticalDateTimeMouseover()
+  setupVerticalProfileMouseover()
 }
 
 window.addEventListener('load', onLoad)
