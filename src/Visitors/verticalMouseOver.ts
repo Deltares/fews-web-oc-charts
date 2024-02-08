@@ -337,7 +337,7 @@ export class VerticalMouseOver implements Visitor {
           htmlContent.appendChild(document.createElement('br'))
         }
       }
-      axes.tooltip.update(htmlContent, TooltipPosition.Right, mouse[0] + axes.margin.left, mouse[1] + axes.margin.top)
+      axes.tooltip.update(htmlContent, TooltipPosition.Top, mouse[0] + axes.margin.left, mouse[1] + axes.margin.top)
       if (axes.tooltip.isHidden) { axes.tooltip.show() }
     }
   }
