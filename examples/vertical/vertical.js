@@ -86,9 +86,9 @@ function setupVerticalProfileMouseover() {
   var axisOptions = {
     x: [
       {
-        label: 'Sine',
+        label: 'Velocity',
         position: wbCharts.AxisPosition.Bottom,
-        unit: '-',
+        unit: 'm/s',
         showGrid: true,
       },
     ],
