@@ -193,7 +193,7 @@ function onLoad() {
     polarText1 = new wbCharts.DataField(polarAxis.canvas, {
       selector: ['wind-forecast', 'wind'],
       labelField: { text: 'windsnelheid' },
-      valueField: { hyphen: '/', units: unitsSpeed },
+      valueField: { hyphen: ' / ', units: unitsSpeed },
     })
 
     polarText2 = new wbCharts.DataField(polarAxis.canvas, {
@@ -286,8 +286,7 @@ function onLoad() {
       windSpeedAxis.canvas,
       {
         selector: 'wind',
-        labelField: { text: 'windsnelheid', dy: '80px' },
-        valueField: { dx: '100px', dy: '80px' },
+        labelField: { text: 'windsnelheid' },
       },
       speedDataFormatter
     )
@@ -326,8 +325,7 @@ function onLoad() {
       windStootAxis.canvas,
       {
         selector: 'stoot',
-        labelField: { text: 'windstoot', dy: '80px' },
-        valueField: { dx: '100px', dy: '80px' },
+        labelField: { text: 'windstoot' },
       },
       speedDataFormatter
     )

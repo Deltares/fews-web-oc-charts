@@ -12,9 +12,6 @@ export interface UnitOptions {
 }
 
 export interface ValueFieldOptions {
-  dx?: string | number
-  dy?: string | number
-  margin?: string | number
   units?: UnitOptions[]
   hyphen?: string
   precision?: string
@@ -23,11 +20,9 @@ export interface ValueFieldOptions {
 export interface DataFieldOptions {
   selector?: string | string[]
   labelField?: {
-    dx?: string | number
-    dy?: string | number
     text?: string
   },
-  valueField?: ValueFieldOptions | ValueFieldOptions[]
+  valueField?: ValueFieldOptions
 }
 
 export class DataField implements Visitor {
@@ -37,7 +32,7 @@ export class DataField implements Visitor {
   private axis: Axes
   private text: any
   private value: any
-  private values: any[] = []
+  private selectors: string[]
   private units: UnitOptions[] = []
   private formatter: any
   private clickCount = 0
@@ -65,15 +60,9 @@ export class DataField implements Visitor {
         .append('text')
         .attr('class', 'data-field-value')
 
-      const valueField = this.options.valueField
-      const valueFields = valueField instanceof Array ? valueField : [valueField]
 
-      for (const valueField of valueFields) {
-        this.values.push(this.value.append('tspan'))
-        if (valueField.units !== undefined && valueField.units.length > 1) {
-          this.units = valueField.units
-        }
-      }
+      this.selectors = this.options.selector instanceof Array ? this.options.selector : [this.options.selector]
+      this.units = this.options.valueField?.units ?? []
 
       if (this.units.length > 1) {
         this.value.on('click', () => { this.onClick() })
@@ -98,18 +87,20 @@ export class DataField implements Visitor {
   }
 
   redraw() {
-    for (let i = 0; i < this.values.length; i++) {
-      const selector = this.getSelector(i)
-      const element = d3.select(`[data-chart-id="${selector}"]`).select('path')
-      if (element.node() !== null) {
-        const data = element.datum()
-        const style = window.getComputedStyle(element.node() as Element)
-        this.values[i].text(this.formatter(data, i))
-        this.values[i].style('fill', style.getPropertyValue('stroke'))
-      } else {
-        this.values[i].text('')
-      }
-    }
+    this.value.html(null)
+
+    const elements = this.selectors.map((selector) => {
+      return d3.select(`[data-chart-id="${selector}"]`).select('path')
+    }).filter(element => element.node() !== null)
+
+    elements.forEach((element, i) => {
+      const isLast = i === elements.length - 1
+      const data = element.datum()
+      const style = window.getComputedStyle(element.node() as Element)
+      this.value.append('tspan')
+        .text(this.formatter(data, i, isLast))
+        .style('fill', style.getPropertyValue('stroke'))
+    })
   }
 
   onClick() {
@@ -117,14 +108,15 @@ export class DataField implements Visitor {
     this.redraw()
   }
 
-  valueFormatter(d, i) {
+  valueFormatter(d: unknown, i: number, isLast?: boolean) {
     const value = this.getValue(d)
     const units = this.getUnit()
-    const symbol = this.getSymbol(units, i)
+    const seperator = this.options.valueField.hyphen ?? ''
+    const symbol = isLast ? units.unit : seperator
     if (value === null) {
       return '-' + symbol;
     }
-    const format  = (value): string => {
+    const format = (value: any): string => {
       if (value === null) return '-'
       if (units.factor !== undefined) {
         const d3Format = units.precision !== undefined ? d3.format(units.precision) : d3.format(".1f");
@@ -149,15 +141,6 @@ export class DataField implements Visitor {
     return valueString + symbol;
   }
 
-  getSymbol(units, i) {
-    if (this.options.valueField instanceof Array) {
-      if (this.options.valueField[i].hasOwnProperty('hyphen')) {
-        return this.options.valueField[i].hyphen
-      }
-    }
-    return units.unit
-  }
-
   getUnit() {
     const idx = this.clickCount % this.units.length
     return this.units[idx]
@@ -166,13 +149,4 @@ export class DataField implements Visitor {
   getValue(d) {
     return d[0] !== undefined ? d[0].y : null
   }
-
-  getSelector(i) {
-    if (this.options.selector instanceof Array) {
-      return this.options.selector[i]
-    } else {
-      return this.options.selector
-    }
-  }
-
 }
