@@ -1,15 +1,8 @@
 import * as d3 from 'd3'
 import { isNull } from 'lodash-es'
-import { CartesianAxes, PolarAxes } from '../index.js';
+import { CartesianAxes, PolarAxes } from '../index.js'
 import { AxisIndex } from '../Axes/axes.js'
 import { Chart, AUTO_SCALE } from './chart.js'
-
-function mean(x: number[] | number) {
-  if (x instanceof Array) {
-    return d3.mean(x)
-  }
-  return x
-}
 
 export class ChartArea extends Chart {
 
@@ -29,9 +22,7 @@ export class ChartArea extends Chart {
   }
 
   dataExtentFor(key, path) {
-    if (key === 'x') {
-      return d3.extent(this._data, (d) => d[path])
-    } else if (key === 'y') {
+    if (key === 'y' && Array.isArray(this._data[0])) {
       const min = d3.min(this._data, function (d: any) {
         if (d[path] === null) return undefined
         return d3.min(d[path])
@@ -41,6 +32,8 @@ export class ChartArea extends Chart {
         return d3.max(d[path])
       })
       return [min, max]
+    } else {
+      return d3.extent(this._data, (d) => d[path])
     }
   }
 
@@ -75,22 +68,25 @@ export class ChartArea extends Chart {
       this.group.append('path')
     }
 
+    const isArray = Array.isArray(this.data[0][yKey])
+
     const areaGenerator = d3
       .area()
-      .defined((d) => !isNull(d[yKey][0]) && !isNull(d[yKey][1]))
+      .defined((d) => isArray ? !isNull(d[yKey][0]) && !isNull(d[yKey][1]) : !isNull(d[yKey]) )
       .x(function (d: any) {
         return xScale(d[xKey])
       })
       .y0(function (d: any) {
-        return yScale(d[yKey][0])
+        if (isArray) return yScale(d[yKey][0]) 
+        return yScale(0)
       })
       .y1(function (d: any) {
-        return yScale(d[yKey][1])
+        if (isArray) return yScale(d[yKey][1])
+        return yScale(d[yKey])
       })
     const curve = this.curveGenerator
     if (curve !== undefined) {
-      areaGenerator
-        .curve(curve)
+      areaGenerator.curve(curve)
     }
 
     const area = this.group.select('path')
