@@ -18,7 +18,9 @@ export class ChartHistogram extends Chart {
       })
     )
     x1.range(xScale.range())
-    x1.padding(0.05)
+
+    this.setPadding(x1, this.options.x)
+
 
     const colorScale = d3.scaleLinear().domain([0, 1])
     if (this.options.colorScale === AUTO_SCALE) {
@@ -131,5 +133,14 @@ export class ChartHistogram extends Chart {
     this.applyStyle(source, element, props)
     if (asSvgElement) return element.node()
     return svg.node()
+  }
+
+  setPadding(scale: any, options) {
+    if (options?.paddingOuter) {
+      scale.paddingOuter(options.paddingOuter)
+    }
+    if (options?.paddingInner) {
+      scale.paddingInner(options.paddingInner)
+    }
   }
 }
