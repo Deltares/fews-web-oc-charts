@@ -68,22 +68,32 @@ export class ChartArea extends Chart {
       this.group.append('path')
     }
 
-    const isArray = Array.isArray(this.data[0][yKey])
-
     const areaGenerator = d3
       .area()
-      .defined((d) => isArray ? !isNull(d[yKey][0]) && !isNull(d[yKey][1]) : !isNull(d[yKey]) )
       .x(function (d: any) {
         return xScale(d[xKey])
       })
+
+    if (Array.isArray(this.data[0][yKey])) {
+      areaGenerator
+      .defined((d) => !isNull(d[yKey][0]) && !isNull(d[yKey][1]))
       .y0(function (d: any) {
-        if (isArray) return yScale(d[yKey][0]) 
+        return yScale(d[yKey][0])
+      })
+      .y1(function (d: any) {
+        return yScale(d[yKey][1])
+      })
+    } else {
+      areaGenerator
+      .defined((d) => !isNull(d[yKey]) )
+      .y0(function (d: any) {
         return yScale(0)
       })
       .y1(function (d: any) {
-        if (isArray) return yScale(d[yKey][1])
         return yScale(d[yKey])
       })
+    }
+
     const curve = this.curveGenerator
     if (curve !== undefined) {
       areaGenerator.curve(curve)
