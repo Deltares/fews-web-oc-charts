@@ -74,7 +74,7 @@ export class ChartArea extends Chart {
         return xScale(d[xKey])
       })
 
-    if (Array.isArray(this.data[0][yKey])) {
+    if (this.data !== undefined && this.data.length > 0 && Array.isArray(this.data[0][yKey])) {
       areaGenerator
       .defined((d) => !isNull(d[yKey][0]) && !isNull(d[yKey][1]))
       .y0(function (d: any) {
