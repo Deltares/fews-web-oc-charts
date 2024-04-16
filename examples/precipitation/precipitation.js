@@ -15,7 +15,6 @@ function onLoad() {
 
   function dataload() {
     d3.json('./open-meteo.json').then(function (data) {
-      console.log(data)
       const precipitation = []
       const precipitationProbability = []
       const precipitationProbabilityArea = []
@@ -27,15 +26,8 @@ function onLoad() {
         precipitationProbabilityArea.push({ x: dateTime, y: [0, data.hourly.precipitation_probability[i]] })
       })
 
-      // console.log(precipitation)
-      console.log(precipitationProbabilityArea)
-
-      var plotPrecipitationHist = new wbCharts.ChartHistogram(precipitation, { x: {
-        paddingOuter: 0,
-        paddingInner: 0.4,
-      }, })
       var plotPrecipitation = new wbCharts.ChartArea(precipitation, { curve: 'stepAfter'})
-      var plotPrecipitationContour = new wbCharts.ChartMarker(precipitation, { curve: 'stepBefore'}) 
+      var plotPrecipitationContour = new wbCharts.ChartMarker(precipitation, { curve: 'stepBefore'})
       var plotPrecipitationProbability = new wbCharts.ChartMarker(precipitationProbability, { curve: 'step'})
       var plotPrecipitationProbabilityArea = new wbCharts.ChartArea(precipitationProbability, { curve: 'stepAfter'})
       plotPrecipitationProbabilityArea.addTo(
@@ -59,22 +51,12 @@ function onLoad() {
         { fill: 'rgb(84, 79, 197)', stroke: 'rgb(84, 79, 197)' }
       )
 
-      // plotPrecipitationHist.addTo(
-      //   axis,
-      //   { x: { key: 'x', axisIndex: 0 }, y: { key: 'y', axisIndex: 0 } },
-      //   'precipitation',
-      //   { fill: 'rgba(255,255,255, 0.5)', stroke: 'none' }
-      // )
-
       plotPrecipitationContour.addTo(
         axis,
         { x: { key: 'x', axisIndex: 0 }, y: { key: 'y', axisIndex: 0 } },
         'precipitationContour',
         { fill: 'none', stroke: 'currentColor' }
       )
-
-
-
 
       axis.accept(currentTime)
       axis.redraw({ x: { autoScale: true }, y: { autoScale: true } })
