@@ -26,10 +26,10 @@ function onLoad() {
         precipitationProbabilityArea.push({ x: dateTime, y: [0, data.hourly.precipitation_probability[i]] })
       })
 
-      var plotPrecipitation = new wbCharts.ChartArea(precipitation, { curve: 'stepAfter'})
-      var plotPrecipitationContour = new wbCharts.ChartMarker(precipitation, { curve: 'stepBefore'})
-      var plotPrecipitationProbability = new wbCharts.ChartMarker(precipitationProbability, { curve: 'step'})
-      var plotPrecipitationProbabilityArea = new wbCharts.ChartArea(precipitationProbability, { curve: 'stepAfter'})
+      var plotPrecipitation = new wbCharts.ChartArea(precipitation, { curve: 'stepBefore'})
+      var plotPrecipitationContour = new wbCharts.ChartMarker(precipitation, {})
+      var plotPrecipitationProbability = new wbCharts.ChartMarker(precipitationProbability, {})
+      var plotPrecipitationProbabilityArea = new wbCharts.ChartArea(precipitationProbability, { curve: 'stepBefore'})
       plotPrecipitationProbabilityArea.addTo(
         axis,
         { x: { key: 'x', axisIndex: 0 }, y: { key: 'y', axisIndex: 1 } },
