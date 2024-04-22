@@ -16,18 +16,19 @@ export class ChartBar extends Chart {
     const xScale = axis.xScales[axisIndex.x.axisIndex]
     const yScale = axis.yScales[axisIndex.y.axisIndex]
 
-    const filterKeys: string[] = Array.from(new Set(data.map((item) => { return item[x1Key] })))
-    this.legend = filterKeys
+    // const filterKeys: string[] = Array.from(new Set(data.map((item) => { return item[x1Key] })))
+    // this.legend = filterKeys
 
+    const mappedData = this.mapDataCartesian(xScale.domain())
     const x0 = xScale.copy()
-    x0.domain(data.map(d => d[xKey]))
+    // x0.domain(data.map(d => d[xKey]))
 
-    const x1 = d3.scaleBand()
-      .domain(filterKeys)
-      .range([0, x0.bandwidth()])
+    // const x1 = d3.scaleBand()
+    //   .domain(filterKeys)
+    //   .range([0, x0.bandwidth()])
 
-    this.setPadding(x0, this.options.x)
-    this.setPadding(x1, this.options.x1)
+    // this.setPadding(x0, this.options.x)
+    // this.setPadding(x1, this.options.x1)
 
     const colorScale = d3.scaleLinear().domain([0, 1])
     if (this.options.colorScale === AUTO_SCALE) {
@@ -41,20 +42,41 @@ export class ChartBar extends Chart {
     const colorMap = this.getColorMap(colorScale)
     this.group = this.selectGroup(axis, ChartBar.GROUP_CLASS)
 
+    let xRect = (d: unknown, i: number) => { 
+      return i === 0 ? 0 : xScale(data[i-1][xKey])
+    }
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    let widthRect = (d: unknown, i: number) => { 
+      return i === 0 ? 0 : xScale(data[i][xKey]) -  xScale(data[i-1][xKey])
+    }
+
+
+    if (x1Key) {
+      const filterKeys: string[] = Array.from(new Set(data.map((item) => { return item[x1Key] })))
+      this.legend = filterKeys
+      const x1 = d3.scaleBand()
+      .domain(filterKeys)
+      .range([0, x0.bandwidth()])
+      this.setPadding(x1, this.options.x1)
+      xRect = (d) => x0(d[xKey]) + x1(d[x1Key])
+      widthRect = () => x1.bandwidth()
+    }
+    
     const bar = this.group
       .selectAll("rect")
-      .data(data)
+      .data(mappedData)
       .join("rect")
       .attr("data-legend-id", (d) => this.legendId(d[x1Key]))
-      .attr("x", (d) => { return x0(d[xKey]) + x1(d[x1Key]) })
+      .attr("x", xRect)
       .attr('y', (d: any) => {
         return d[yKey] === null ? yScale(0) : Math.min(yScale(d[yKey]), yScale(0))
       })
-      .attr("width", x1.bandwidth())
+      .attr("width", widthRect)
       .attr('height', function (d: any) {
         return d[yKey] === null ? 0 : Math.abs(yScale(0) - yScale(d[yKey]))
       })
       .attr("fill", d => d[colorKey] !== null ? colorMap(d[colorKey]) : 'none')
+
     if (this.options.tooltip !== undefined) {
       bar
         .on('pointerover', (_e: any, d) => {
@@ -65,7 +87,7 @@ export class ChartBar extends Chart {
           axis.tooltip.update(
             this.toolTipFormatterCartesian(d),
             this.options.tooltip.position !== undefined ? this.options.tooltip.position : TooltipPosition.Top,
-            axis.margin.left + x0(d[xKey]) + x1(d[x1Key]) + x1.bandwidth() / 2,
+            axis.margin.left + xRect(d[xKey], 1),
             axis.margin.top + Math.min(yScale(d[yKey]), yScale(0))
           )
         })
@@ -74,18 +96,18 @@ export class ChartBar extends Chart {
         })
     }
 
-    bar.data(data)
+    bar.data(mappedData)
       .order()
-      .attr("x", d => x0(d[xKey]) + x1(d[x1Key]));
+      .attr("x", xRect)
 
     if (this.options.text !== undefined) {
       const textSelection = this.group
         .selectAll("text")
-        .data(data)
+        .data(mappedData)
         .join("text")
 
       textSelection
-        .attr("x", d => x0(d[xKey]) + x1(d[x1Key]) + x1.bandwidth() / 2)
+        .attr("x", (d, i) => xRect(d, i) + widthRect(d, i)/ 2)
         .attr("y", d => Math.min(yScale(d[yKey]), yScale(0)))
         .attr("dx", this.options.text.dx)
         .attr("dy", this.options.text.dy)
