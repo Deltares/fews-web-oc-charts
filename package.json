@@ -1,6 +1,6 @@
 {
   "name": "@deltares/fews-web-oc-charts",
-  "version": "3.0.2",
+  "version": "3.0.2-beta.0",
   "description": "FEWS Chart Library",
   "author": {
     "name": "Werner Kramer",
