@@ -5,16 +5,3 @@
   height: 100vh;
   max-height: 414px;
 }
-
-#control-line {
-  fill: none;
-  stroke: red;
-  stroke-dasharray: 4, 2;
-  stroke-width: 2px;
-}
-
-#median-line {
-  fill: none;
-  stroke: white;
-  stroke-width: 2px;
-}
