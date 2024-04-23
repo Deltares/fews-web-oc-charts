@@ -12,7 +12,6 @@ export class ChartBar extends Chart {
     const yKey = this.dataKeys.y
     const x1Key = this.dataKeys.x1
     const colorKey = this.dataKeys.color
-    const data = this.data
     const xScale = axis.xScales[axisIndex.x.axisIndex]
     const yScale = axis.yScales[axisIndex.y.axisIndex]
 
@@ -34,21 +33,21 @@ export class ChartBar extends Chart {
     this.group = this.selectGroup(axis, ChartBar.GROUP_CLASS)
 
     let xRect = (_d: unknown, i: number) => {
-      return i === 0 ? 0 : xScale(data[i - 1][xKey])
+      return i === 0 ? 0 : xScale(mappedData[i - 1][xKey])
     }
     let widthRect = (_d: unknown, i: number) => {
-      return i === 0 ? xScale(data[i][xKey]) : xScale(data[i][xKey]) - xScale(data[i - 1][xKey])
+      return i === 0 ? xScale(mappedData[i][xKey]) : xScale(mappedData[i][xKey]) - xScale(mappedData[i - 1][xKey])
     }
 
     if (x1Key) {
-      const filterKeys: string[] = Array.from(new Set(data.map((item) => item[x1Key])))
+      const filterKeys: string[] = Array.from(new Set(this.data.map((item) => item[x1Key])))
       this.legend = filterKeys
-      x0.domain(data.map((d) => d[xKey]))
+      x0.domain(this.data.map((d) => d[xKey]))
       const x1 = d3.scaleBand().domain(filterKeys).range([0, x0.bandwidth()])
       this.setPadding(x1, this.options.x1)
       xRect = (d) => x0(d[xKey]) + x1(d[x1Key])
       widthRect = () => x1.bandwidth()
-      mappedData = data
+      mappedData = this.data
     }
 
     const bar = this.group
