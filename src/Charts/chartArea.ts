@@ -74,6 +74,7 @@ export class ChartArea extends Chart {
         return xScale(d[xKey])
       })
 
+    // If y value is an array then use it as y0 and y1, toherwise use y as y1 and 0 as y0
     if (this.data !== undefined && this.data.length > 0 && Array.isArray(this.data[0][yKey])) {
       areaGenerator
       .defined((d) => !isNull(d[yKey][0]) && !isNull(d[yKey][1]))
