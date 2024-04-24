@@ -31,7 +31,6 @@ export class ChartMarker extends Chart {
     const yScale = axis.yScales[axisIndex.y.axisIndex]
 
     this.highlight = this.selectHighlight(axis, 'circle')
-
     this.highlight.select('circle').attr('r', 3).style('opacity', 0).style('stroke-width', '1px')
 
     const skip = this.options.symbol.skip
@@ -204,6 +203,9 @@ export class ChartMarker extends Chart {
   public onPointerMove(x: number | Date, xScale, yScale) {
     const index = this.findXIndex(x)
     const point = this.datum[index]
+    if (point === undefined) {
+      return
+    }
     this.highlight.select('circle').attr('transform', () => {
       return `translate(${xScale(point.x)}, ${yScale(point.y)})`
     })
