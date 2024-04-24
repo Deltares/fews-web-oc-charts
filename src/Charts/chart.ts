@@ -326,10 +326,11 @@ export abstract class Chart {
     return this.group
   }
 
-  protected selectHighlight(axis: CartesianAxes | PolarAxes, SVGElementName: string) {
+  protected selectHighlight(axis: CartesianAxes, SVGElementName: string) {
     if (this.highlight === undefined) {
       const front = axis.canvas.select<SVGGElement>('.front')
       this.highlight = front.append('g')
+        .attr('clip-path', 'url(#' + axis.clipPathId + ')')
       this.highlight.attr('data-chart-id', this.id)
       this.highlight.append(SVGElementName)
     }
