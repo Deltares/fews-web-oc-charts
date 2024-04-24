@@ -46,6 +46,11 @@ export class ChartLine extends Chart {
     const yScale = axis.yScales[axisIndex.y.axisIndex]
 
     const mappedData = this.mapDataCartesian(xScale.domain())
+    this.datum = mappedData
+
+    this.highlight = this.selectHighlight(axis, 'circle')
+    this.highlight.select('circle').attr('r', 3).style('opacity', 0).style('stroke-width', '1px')
+
     const lineGenerator = d3
       .line()
       .x(function (d: any) {
@@ -153,5 +158,32 @@ export class ChartLine extends Chart {
     this.applyStyle(source, element, props)
     if (asSvgElement) return element.node()
     return svg.node()
+  }
+
+  public onPointerOver() {
+    this.highlight
+      .select('circle')
+      .style('opacity', 1)
+      .style('fill', () => {
+        const element = this.group.select('path')
+        if (element.node() === null) return
+        return window.getComputedStyle(element.node() as Element).getPropertyValue('stroke')
+      })
+      .attr('transform', null)
+  }
+
+  public onPointerOut() {
+    this.highlight.select('circle').style('opacity', 0)
+  }
+
+  public onPointerMove(x: number | Date, xScale, yScale) {
+    const index = this.findXIndex(x)
+    const point = this.datum[index]
+    if (point === undefined) {
+      return
+    }
+    this.highlight.select('circle').attr('transform', () => {
+      return `translate(${xScale(point.x)}, ${yScale(point.y)})`
+    })
   }
 }

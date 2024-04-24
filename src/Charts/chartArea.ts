@@ -5,6 +5,7 @@ import { AxisIndex } from '../Axes/axes.js'
 import { Chart, AUTO_SCALE } from './chart.js'
 
 export class ChartArea extends Chart {
+  private _areaGenerator: any
 
   set extent(extent: any[]) {
     this._extent = extent
@@ -44,8 +45,8 @@ export class ChartArea extends Chart {
     const xScale = axis.xScales[axisIndex.x.axisIndex]
     const yScale = axis.yScales[axisIndex.y.axisIndex]
 
-    this.highlight = this.selectHighlight(axis, 'line')
-    this.highlight.select('line').style('opacity', 0).style('stroke-width', 3)
+    this.highlight = this.selectHighlight(axis, 'path')
+    this.highlight.select('path').style('opacity', 0).style('stroke-width', 1)
 
     const colorScale = d3.scaleLinear().domain([0, 1])
     if (this.options.colorScale === AUTO_SCALE) {
@@ -73,31 +74,29 @@ export class ChartArea extends Chart {
       this.group.append('path')
     }
 
-    const areaGenerator = d3
-      .area()
-      .x(function (d: any) {
-        return xScale(d[xKey])
-      })
+    const areaGenerator = d3.area().x(function (d: any) {
+      return xScale(d[xKey])
+    })
 
     // If y value is an array then use it as y0 and y1, toherwise use y as y1 and 0 as y0
     if (this.data !== undefined && this.data.length > 0 && Array.isArray(this.data[0][yKey])) {
       areaGenerator
-      .defined((d) => !isNull(d[yKey][0]) && !isNull(d[yKey][1]))
-      .y0(function (d: any) {
-        return yScale(d[yKey][0])
-      })
-      .y1(function (d: any) {
-        return yScale(d[yKey][1])
-      })
+        .defined((d) => !isNull(d[yKey][0]) && !isNull(d[yKey][1]))
+        .y0(function (d: any) {
+          return yScale(d[yKey][0])
+        })
+        .y1(function (d: any) {
+          return yScale(d[yKey][1])
+        })
     } else {
       areaGenerator
-      .defined((d) => !isNull(d[yKey]) )
-      .y0(function (d: any) {
-        return yScale(0)
-      })
-      .y1(function (d: any) {
-        return yScale(d[yKey])
-      })
+        .defined((d) => !isNull(d[yKey]))
+        .y0(function (d: any) {
+          return yScale(0)
+        })
+        .y1(function (d: any) {
+          return yScale(d[yKey])
+        })
     }
 
     const curve = this.curveGenerator
@@ -105,7 +104,10 @@ export class ChartArea extends Chart {
       areaGenerator.curve(curve)
     }
 
-    const area = this.group.select('path')
+    this._areaGenerator = areaGenerator
+
+    const area = this.group
+      .select('path')
       .datum(this.data.slice(i0, i1))
       .join('path')
       .attr('d', areaGenerator)
@@ -118,16 +120,11 @@ export class ChartArea extends Chart {
 
   drawLegendSymbol(legendId?: string, asSvgElement?: boolean) {
     const props = ['fill']
-    const source = this.group
-      .select('path')
-      .node() as Element
-    const svg = d3.create('svg')
-      .attr('width', 20)
-      .attr('height', 20)
-    const group = svg
-      .append('g')
-      .attr('transform', 'translate(0, 10)')
-    const element = group.append('rect')
+    const source = this.group.select('path').node() as Element
+    const svg = d3.create('svg').attr('width', 20).attr('height', 20)
+    const group = svg.append('g').attr('transform', 'translate(0, 10)')
+    const element = group
+      .append('rect')
       .attr('x', 0)
       .attr('y', -5)
       .attr('width', 20)
@@ -138,31 +135,39 @@ export class ChartArea extends Chart {
   }
 
   public onPointerOver() {
+
+    const element = this.group.select('path')
+    if (element.node() === null) return
+    const color =  window.getComputedStyle(element.node() as Element).getPropertyValue('fill')
     this.highlight
-      .select('line')
+      .select('path')
       .style('opacity', 1)
-      .style('stroke', () => {
-        const element = this.group.select('path')
-        if (element.node() === null) return
-        return window.getComputedStyle(element.node() as Element).getPropertyValue('fill')
-      })
+      .style('stroke', 'currentColor')
+      .style('fill', color)
       .attr('transform', null)
   }
 
   public onPointerOut() {
-    this.highlight.select('line').style('opacity', 0)
+    this.highlight.select('path').style('opacity', 0)
   }
 
-  public onPointerMove(x: number | Date, xScale, yScale) {
+  public onPointerMove(x: number | Date, _xScale, _yScale) {
     const index = this.findXIndex(x)
-    const point = this.datum[index]
-    if (point === undefined) {
+    const p1 = this.datum[index - 1]
+    const p2 = this.datum[index]
+    if (p1 === undefined) {
       return
     }
-    this.highlight.select('line')
-      .attr('x1', xScale(point.x))
-      .attr('x2', xScale(point.x))
-      .attr('y1', yScale(0))
-      .attr('y2', yScale(point.y))
+    const datum = [
+      {
+        x: p1[this.dataKeys.x],
+        y: p2[this.dataKeys.y],
+      },
+      {
+        x: p2[this.dataKeys.x],
+        y: p2[this.dataKeys.y],
+      },
+    ]
+    this.highlight.select('path').datum(datum).join('path').attr('d', this._areaGenerator)
   }
 }
