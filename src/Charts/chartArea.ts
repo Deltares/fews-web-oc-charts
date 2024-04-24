@@ -44,6 +44,9 @@ export class ChartArea extends Chart {
     const xScale = axis.xScales[axisIndex.x.axisIndex]
     const yScale = axis.yScales[axisIndex.y.axisIndex]
 
+    this.highlight = this.selectHighlight(axis, 'line')
+    this.highlight.select('line').style('opacity', 0).style('stroke-width', 3)
+
     const colorScale = d3.scaleLinear().domain([0, 1])
     if (this.options.colorScale === AUTO_SCALE) {
       colorScale.domain(
@@ -62,6 +65,8 @@ export class ChartArea extends Chart {
     let i1 = bisectX.left(this.data, xScale.domain()[1])
     i0 = i0 > 0 ? i0 - 1 : 0
     i1 = i1 < this.data.length - 1 ? i1 + 1 : this.data.length
+
+    this.datum = this.data
 
     this.group = this.selectGroup(axis, 'chart-area')
     if (this.group.select('path').size() === 0) {
@@ -130,5 +135,34 @@ export class ChartArea extends Chart {
     this.applyStyle(source, element, props)
     if (asSvgElement) return element.node()
     return svg.node()
+  }
+
+  public onPointerOver() {
+    this.highlight
+      .select('line')
+      .style('opacity', 1)
+      .style('stroke', () => {
+        const element = this.group.select('path')
+        if (element.node() === null) return
+        return window.getComputedStyle(element.node() as Element).getPropertyValue('fill')
+      })
+      .attr('transform', null)
+  }
+
+  public onPointerOut() {
+    this.highlight.select('line').style('opacity', 0)
+  }
+
+  public onPointerMove(x: number | Date, xScale, yScale) {
+    const index = this.findXIndex(x)
+    const point = this.datum[index]
+    if (point === undefined) {
+      return
+    }
+    this.highlight.select('line')
+      .attr('x1', xScale(point.x))
+      .attr('x2', xScale(point.x))
+      .attr('y1', yScale(0))
+      .attr('y2', yScale(point.y))
   }
 }

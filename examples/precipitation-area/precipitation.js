@@ -9,7 +9,7 @@ function onLoad() {
     margin: { left: 50, right: 50 },
   })
 
-  var mouseOver = new wbCharts.MouseOver(['precipitationContour', 'precipitationProbability'])
+  var mouseOver = new wbCharts.MouseOver(['precipitationContour', 'precipitationProbability', 'precipitationProbabilityArea'])
   var zoom = new wbCharts.ZoomHandler()
   var currentTime = new wbCharts.CurrentTime({ x: { axisIndex: 0 } })
 
