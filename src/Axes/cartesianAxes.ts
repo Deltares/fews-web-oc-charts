@@ -11,6 +11,7 @@ import { XAxis } from '../Axis/xAxis.js'
 import { YAxis } from '../Axis/yAxis.js'
 import { createLayers } from '../Layers/layers.js'
 
+export type CartesianAxesIndex = { x: { axisIndex: number }, y: { axisIndex: number } }
 
 export interface CartesianAxesOptions extends AxesOptions {
   x: CartesianAxisOptions[];

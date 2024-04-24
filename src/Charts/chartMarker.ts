@@ -1,6 +1,6 @@
 import * as d3 from 'd3'
 import { defaultsDeep } from 'lodash-es'
-import { CartesianAxes, PolarAxes } from '../index.js';
+import { CartesianAxes, CartesianAxesIndex, PolarAxes } from '../index.js'
 import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js'
 import { Chart, SymbolOptions } from './chart.js'
 
@@ -24,19 +24,25 @@ export class ChartMarker extends Chart {
     this.options = defaultsDeep(this.options, this.options, { symbol: DefaultSymbolOptions })
   }
 
-  plotterCartesian(axis: CartesianAxes, axisIndex: any) {
+  plotterCartesian(axis: CartesianAxes, axisIndex: CartesianAxesIndex) {
     const xKey = this.dataKeys.x
     const yKey = this.dataKeys.y
     const xScale = axis.xScales[axisIndex.x.axisIndex]
     const yScale = axis.yScales[axisIndex.y.axisIndex]
 
-    const skip = this.options.symbol.skip
-    const mappedData = this.mapDataCartesian(xScale.domain())
-      .filter((d, i) => { return i % skip === 0 && d[yKey] !== null })
+    this.highlight = this.selectHighlight(axis, 'circle')
 
-    this.group = this.selectGroup(axis, 'chart-marker')
-      .datum(mappedData)
-    const elements = this.group.selectAll<SVGPathElement, any>('path').data(d => d)
+    this.highlight.select('circle').attr('r', 3).style('opacity', 0).style('stroke-width', '1px')
+
+    const skip = this.options.symbol.skip
+    const mappedData = this.mapDataCartesian(xScale.domain()).filter((d, i) => {
+      return i % skip === 0 && d[yKey] !== null
+    })
+
+    this.datum = mappedData
+
+    this.group = this.selectGroup(axis, 'chart-marker').datum(mappedData)
+    const elements = this.group.selectAll<SVGPathElement, any>('path').data((d) => d)
 
     // exit selection
     elements.exit().remove()
@@ -53,14 +59,25 @@ export class ChartMarker extends Chart {
     if (this.options.tooltip !== undefined) {
       elements
         .on('pointerover', (e: any, d) => {
-          if (this.options.tooltip.anchor !== undefined && this.options.tooltip.anchor !== TooltipAnchor.Pointer) {
-            console.error('Tooltip not implemented for anchor ', this.options.tooltip.anchor, ', using ', TooltipAnchor.Pointer, ' instead.')
+          if (
+            this.options.tooltip.anchor !== undefined &&
+            this.options.tooltip.anchor !== TooltipAnchor.Pointer
+          ) {
+            console.error(
+              'Tooltip not implemented for anchor ',
+              this.options.tooltip.anchor,
+              ', using ',
+              TooltipAnchor.Pointer,
+              ' instead.'
+            )
           }
           axis.tooltip.show()
           const pointer = d3.pointer(e, axis.container)
           axis.tooltip.update(
             this.toolTipFormatterPolar(d),
-            this.options.tooltip.position !== undefined ? this.options.tooltip.position : TooltipPosition.Top,
+            this.options.tooltip.position !== undefined
+              ? this.options.tooltip.position
+              : TooltipPosition.Top,
             pointer[0],
             pointer[1]
           )
@@ -115,8 +132,17 @@ export class ChartMarker extends Chart {
     if (this.options.tooltip !== undefined) {
       elements
         .on('pointerover', (e: any, d) => {
-          if (this.options.tooltip.anchor !== undefined && this.options.tooltip.anchor !== TooltipAnchor.Pointer) {
-            console.error('Tooltip not implemented for anchor ', this.options.tooltip.anchor, ', using ', TooltipAnchor.Pointer, ' instead.')
+          if (
+            this.options.tooltip.anchor !== undefined &&
+            this.options.tooltip.anchor !== TooltipAnchor.Pointer
+          ) {
+            console.error(
+              'Tooltip not implemented for anchor ',
+              this.options.tooltip.anchor,
+              ', using ',
+              TooltipAnchor.Pointer,
+              ' instead.'
+            )
           }
           const pointer = d3.pointer(e, axis.container)
           const x = pointer[0]
@@ -124,7 +150,9 @@ export class ChartMarker extends Chart {
           axis.tooltip.show()
           axis.tooltip.update(
             this.toolTipFormatterPolar(d),
-            this.options.tooltip.position !== undefined ? this.options.tooltip.position : TooltipPosition.Top,
+            this.options.tooltip.position !== undefined
+              ? this.options.tooltip.position
+              : TooltipPosition.Top,
             x,
             y
           )
@@ -134,38 +162,50 @@ export class ChartMarker extends Chart {
         })
     }
 
-    const transition = d3
-      .transition()
-      .duration(this.options.transitionTime)
-      .ease(d3.easeLinear)
+    const transition = d3.transition().duration(this.options.transitionTime).ease(d3.easeLinear)
 
     elements.transition(transition).attrTween('transform', arcTranslation(this.previousData))
 
     this.previousData = this.data
   }
 
-  drawLegendSymbol(legendId?: string, asSvgElement?: boolean) {
+  drawLegendSymbol(_legendId?: string, asSvgElement?: boolean) {
     const props = ['fill', 'stroke']
-    const source = this.group
-      .select('path')
-      .node() as Element
-    const svg = d3.create('svg')
-      .append('svg')
-      .attr('width', 20)
-      .attr('height', 20)
-    const outerGroup = svg
-      .append('g')
-      .attr('transform', 'translate(0, 10)')
+    const source = this.group.select('path').node() as Element
+    const svg = d3.create('svg').append('svg').attr('width', 20).attr('height', 20)
+    const outerGroup = svg.append('g').attr('transform', 'translate(0, 10)')
     // Make sure the marker is aligned horizontally even when returning the
     // "bare" SVG element.
-    const innerGroup = outerGroup
-      .append('g')
-      .attr('transform', 'translate(10, 0)')
-    innerGroup.append('path')
+    const innerGroup = outerGroup.append('g').attr('transform', 'translate(10, 0)')
+    innerGroup
+      .append('path')
       .attr('d', d3.symbol(d3.symbols[this.options.symbol.id], this.options.symbol.size))
     this.applyStyle(source, innerGroup, props)
     if (asSvgElement) return innerGroup.node()
     return svg.node()
   }
 
+  public onPointerOver() {
+    this.highlight
+      .select('circle')
+      .style('opacity', 1)
+      .style('fill', () => {
+        const element = this.group.select('path')
+        if (element.node() === null) return
+        return window.getComputedStyle(element.node() as Element).getPropertyValue('stroke')
+      })
+      .attr('transform', null)
+  }
+
+  public onPointerOut() {
+    this.highlight.select('circle').style('opacity', 0)
+  }
+
+  public onPointerMove(x: number | Date, xScale, yScale) {
+    const index = this.findXIndex(x)
+    const point = this.datum[index]
+    this.highlight.select('circle').attr('transform', () => {
+      return `translate(${xScale(point.x)}, ${yScale(point.y)})`
+    })
+  }
 }

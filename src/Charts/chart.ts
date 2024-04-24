@@ -2,7 +2,7 @@ import * as d3 from 'd3'
 import { SvgPropertiesHyphen } from 'csstype';
 import { Axes, AxisIndex } from '../Axes/axes.js'
 import { CartesianAxes, PolarAxes } from '../index.js';
-import { defaultsDeep, merge } from 'lodash-es'
+import { defaultsDeep, isNull, merge } from 'lodash-es'
 import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js';
 
 export const AUTO_SCALE = 1
@@ -76,8 +76,10 @@ export interface DataKeys {
 
 export abstract class Chart {
   protected _data: any
+  protected datum: any
   protected _extent: any
   protected _isVisible: boolean = true
+  protected highlight: d3.Selection<SVGGElement, unknown, SVGGElement, unknown> 
   group: d3.Selection<SVGElement, any, SVGElement, any>
   colorMap: any
   id: string
@@ -261,8 +263,49 @@ export abstract class Chart {
 
   abstract drawLegendSymbol(legendId?: string, asSvgElement?: boolean)
 
+  public onPointerOver() {}
+
+  public onPointerMove(_x: number | Date, _xScale, _yScale) {}
+
+  public onPointerOut() {}
+
+  protected findXIndex(xValue) {
+
+    const xKey = this.dataKeys.x
+    const yKey = this.dataKeys.y
+
+    const datum = this.datum
+
+    console.log(xKey, yKey)
+
+    const bisect = d3.bisector((data) => {
+      return data[xKey]
+    }).left
+
+    let yIsNull = (d) => isNull(d[yKey])
+    if (Array.isArray(datum[0][yKey])) {
+      yIsNull = (d) => {
+        return isNull(d[yKey][0])
+      }
+    }
+
+    const idx = bisect(datum, xValue)
+    // before first point
+    if (idx === 0 && datum[idx][xKey] > xValue) {
+      return
+    }
+    // after last point
+    if (idx === datum.length - 1 && datum[idx][xKey] < xValue) {
+      return
+    }
+    if (!datum[idx] || yIsNull(datum[idx])) {
+      return
+    }
+    return idx
+  }
+
   protected selectGroup(axis: CartesianAxes | PolarAxes, cssClass: string) {
-    if (this.group == null) {
+    if (this.group === undefined) {
       this.group = axis.chartGroup.append('g')
       if (axis instanceof PolarAxes) {
         const direction = -axis.direction
@@ -283,6 +326,16 @@ export abstract class Chart {
       }
     }
     return this.group
+  }
+
+  protected selectHighlight(axis: CartesianAxes | PolarAxes, SVGElementName: string) {
+    if (this.highlight === undefined) {
+      const front = axis.canvas.select<SVGGElement>('.front')
+      this.highlight = front.append('g')
+      this.highlight.attr('data-chart-id', this.id)
+      this.highlight.append(SVGElementName)
+    }
+    return this.highlight
   }
 
   get dataKeys() {
