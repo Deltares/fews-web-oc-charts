@@ -6,6 +6,8 @@ import { Chart, AUTO_SCALE } from './chart.js'
 
 export class ChartBar extends Chart {
   static readonly GROUP_CLASS: 'chart-bar'
+  private _xRect 
+  private _widthRect 
 
   plotterCartesian(axis: CartesianAxes, axisIndex: AxisIndex) {
     const xKey = this.dataKeys.x
@@ -15,10 +17,15 @@ export class ChartBar extends Chart {
     const xScale = axis.xScales[axisIndex.x.axisIndex]
     const yScale = axis.yScales[axisIndex.y.axisIndex]
 
+
     let mappedData = this.mapDataCartesian(xScale.domain())
+
     const x0 = xScale.copy()
 
     this.setPadding(x0, this.options.x)
+
+    this.highlight = this.selectHighlight(axis, 'rect')
+    this.highlight.select('rect').style('opacity', 0).style('stroke-width', '1px')
 
     const colorScale = d3.scaleLinear().domain([0, 1])
     if (this.options.colorScale === AUTO_SCALE) {
@@ -49,6 +56,9 @@ export class ChartBar extends Chart {
       widthRect = () => x1.bandwidth()
       mappedData = this.data
     }
+    this.datum = mappedData
+    this._xRect = xRect
+    this._widthRect = widthRect
 
     const bar = this.group
       .selectAll('rect')
@@ -150,4 +160,37 @@ export class ChartBar extends Chart {
       scale.paddingInner(options.paddingInner)
     }
   }
+
+  public onPointerOver() {
+    this.highlight
+      .select('rect')
+      .style('opacity', 1)
+      .style('fill', () => {
+        const element = this.group.select('rect')
+        if (element.node() === null) return
+        return window.getComputedStyle(element.node() as Element).getPropertyValue('fill')
+      })
+      .style('stroke', 'currentColor')
+  }
+
+  public onPointerOut() {
+    this.highlight.select('rect').style('opacity', 0)
+  }
+
+  public onPointerMove(x: number | Date, xScale, yScale) {
+    const index = this.findXIndex(x)
+    const point = this.datum[index]
+    if (point === undefined) {
+      return
+    }
+
+    console.log('indicate rect', index)
+    this.highlight.select('rect')
+      .attr('y',yScale(point.y))
+      .attr('height', yScale(0) - yScale(point.y))
+      .attr('x', (d) => this._xRect(d, index))
+      .attr('width',  (d) => this._widthRect(d, index))
+
+  }
+
 }

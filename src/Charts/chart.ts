@@ -276,8 +276,6 @@ export abstract class Chart {
 
     const datum = this.datum
 
-    console.log(xKey, yKey)
-
     const bisect = d3.bisector((data) => {
       return data[xKey]
     }).left

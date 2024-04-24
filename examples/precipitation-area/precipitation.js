@@ -9,7 +9,7 @@ function onLoad() {
     margin: { left: 50, right: 50 },
   })
 
-  var mouseOver = new wbCharts.MouseOver(['precipitationContour', 'precipitationProbability', 'precipitationProbabilityArea'])
+  var mouseOver = new wbCharts.MouseOver(['precipitationContour', 'precipitationProbability', 'precipitation'])
   var zoom = new wbCharts.ZoomHandler()
   var currentTime = new wbCharts.CurrentTime({ x: { axisIndex: 0 } })
 
@@ -28,14 +28,14 @@ function onLoad() {
 
       var plotPrecipitation = new wbCharts.ChartArea(precipitation, { curve: 'stepBefore'})
       var plotPrecipitationContour = new wbCharts.ChartMarker(precipitation, {})
-      var plotPrecipitationProbability = new wbCharts.ChartMarker(precipitationProbability, {})
-      var plotPrecipitationProbabilityArea = new wbCharts.ChartArea(precipitationProbability, { curve: 'stepBefore'})
-      plotPrecipitationProbabilityArea.addTo(
-        axis,
-        { x: { key: 'x', axisIndex: 0 }, y: { key: 'y', axisIndex: 1 } },
-        'precipitationProbabilityArea',
-        { fill: 'rgba(44, 175, 254, .5)', stroke: 'none' }
-      )
+      var plotPrecipitationProbability = new wbCharts.ChartLine(precipitationProbability, {})
+      // var plotPrecipitationProbabilityArea = new wbCharts.ChartLine(precipitationProbability, { curve: 'stepBefore'})
+      // plotPrecipitationProbabilityArea.addTo(
+      //   axis,
+      //   { x: { key: 'x', axisIndex: 0 }, y: { key: 'y', axisIndex: 1 } },
+      //   'precipitationProbabilityArea',
+      //   { fill: 'rgba(44, 175, 254, .5)', stroke: 'none' }
+      // )
 
       plotPrecipitationProbability.addTo(
         axis,
@@ -48,7 +48,7 @@ function onLoad() {
         axis,
         { x: { key: 'x', axisIndex: 0 }, y: { key: 'y', axisIndex: 0 } },
         'precipitation',
-        { fill: 'rgb(84, 79, 197)', stroke: 'rgb(84, 79, 197)' }
+        { fill: 'rgba(84, 79, 197, .2)', stroke: 'none' }
       )
 
       plotPrecipitationContour.addTo(
