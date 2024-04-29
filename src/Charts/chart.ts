@@ -43,12 +43,12 @@ export interface TooltipOptions {
   toolTipFormatter?: (d: any) => HTMLElement;
 }
 
-enum CurveType {
+export enum CurveType {
   Linear = 'linear',
   Basis = 'basis',
   Step = 'step',
   StepAfter = 'stepAfter',
-  StepBefore = 'stepBefore'
+  StepBefore = 'stepBefore',
 }
 
 export interface ChartOptions {
