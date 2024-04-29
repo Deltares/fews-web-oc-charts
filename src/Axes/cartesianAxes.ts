@@ -204,8 +204,8 @@ export class CartesianAxes extends Axes {
   }
 
   redraw(options?): void {
-    this.updateAxisScales(options.x ?? {}, 'x')
-    this.updateAxisScales(options.y ?? {}, 'y')
+    this.updateAxisScales(options?.x ?? {}, 'x')
+    this.updateAxisScales(options?.y ?? {}, 'y')
     for (const chart of this.charts) {
       chart.plotter(this, chart.axisIndex)
     }
