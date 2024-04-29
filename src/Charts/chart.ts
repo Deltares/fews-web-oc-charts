@@ -7,7 +7,8 @@ import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js';
 
 export const AUTO_SCALE = 1
 
-export type PointBisectMethod = 'left' | 'right' | 'nearest'
+export type PointBisectMethod = 'left' | 'right' | 'center'
+
 
 interface ChartOptionItem {
   includeInTooltip?: boolean;
