@@ -2,7 +2,7 @@ import * as d3 from 'd3'
 import { isNull } from 'lodash-es'
 import { CartesianAxes, PolarAxes } from '../index.js'
 import { AxisIndex } from '../Axes/axes.js'
-import { Chart, AUTO_SCALE } from './chart.js'
+import { Chart, AUTO_SCALE, CurveType, PointBisectMethod } from './chart.js'
 
 export class ChartArea extends Chart {
   private _areaGenerator: any
@@ -152,7 +152,13 @@ export class ChartArea extends Chart {
   }
 
   public onPointerMove(x: number | Date, _xScale, _yScale) {
-    const index = this.findXIndex(x)
+
+    let method: PointBisectMethod = 'center'
+    if (this.options.curve === CurveType.StepBefore || this.options.curve === CurveType.StepAfter) {
+      method = 'right'
+    }
+
+    const index = this.findXIndex(x, method)
     const p1 = this.datum[index - 1]
     const p2 = this.datum[index]
     if (p1 === undefined) {
@@ -168,6 +174,16 @@ export class ChartArea extends Chart {
         y: p2[this.dataKeys.y],
       },
     ]
+
+    switch (this.options.curve) {
+      case CurveType.StepAfter:
+        break
+      case CurveType.StepBefore:
+        break
+      default:
+        datum.shift()
+    }
+
     this.highlight.select('path').datum(datum).join('path').attr('d', this._areaGenerator)
   }
 }

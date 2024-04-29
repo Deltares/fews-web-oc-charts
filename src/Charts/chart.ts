@@ -7,6 +7,7 @@ import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js';
 
 export const AUTO_SCALE = 1
 
+export type PointBisectMethod = 'left' | 'right' | 'nearest'
 
 interface ChartOptionItem {
   includeInTooltip?: boolean;
@@ -271,16 +272,11 @@ export abstract class Chart {
 
   public onPointerOut() {}
 
-  protected findXIndex(xValue) {
-
+  protected findXIndex(xValue, method?: PointBisectMethod) {
     const xKey = this.dataKeys.x
     const yKey = this.dataKeys.y
 
     const datum = this.datum
-
-    const bisect = d3.bisector((data) => {
-      return data[xKey]
-    }).left
 
     let yIsNull = (d) => isNull(d[yKey])
     if (Array.isArray(datum[0][yKey])) {
@@ -289,7 +285,11 @@ export abstract class Chart {
       }
     }
 
+    const bisect = d3.bisector((data) => {
+      return data[xKey]
+    })[method ?? 'left']
     const idx = bisect(datum, xValue)
+
     // before first point
     if (idx === 0 && datum[idx][xKey] > xValue) {
       return
@@ -301,6 +301,7 @@ export abstract class Chart {
     if (!datum[idx] || yIsNull(datum[idx])) {
       return
     }
+
     return idx
   }
 
