@@ -138,8 +138,10 @@ export abstract class Chart {
   set visible(value: boolean) {
     if (value) {
       this.group.style('visibility', 'visible')
+      this.highlight.style('visibility', 'visible')
     } else {
       this.group.style('visibility', 'hidden')
+      this.highlight.style('visibility', 'hidden')
     }
     this._isVisible = value
   }
