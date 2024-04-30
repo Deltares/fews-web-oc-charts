@@ -82,8 +82,6 @@ export class ChartArea extends Chart {
       )
     }
 
-    const colorMap = this.colorMap
-
     const bisectX = d3.bisector(function (d) {
       return d[xKey]
     })
@@ -160,10 +158,9 @@ export class ChartArea extends Chart {
   }
 
   public onPointerOver() {
-
     const element = this.group.select('path')
     if (element.node() === null) return
-    const color =  window.getComputedStyle(element.node() as Element).getPropertyValue('fill')
+    const color = window.getComputedStyle(element.node() as Element).getPropertyValue('fill')
     this.highlight
       .select('path')
       .style('opacity', 1)
@@ -199,7 +196,7 @@ export class ChartArea extends Chart {
       },
     ]
 
-    const point = this.options.curve ===  CurveType.StepBefore ? datum[1] : datum[0]
+    const point = this.options.curve === CurveType.StepBefore ? datum[1] : datum[0]
 
     switch (this.options.curve) {
       case CurveType.StepAfter:

@@ -1,9 +1,9 @@
 import * as d3 from 'd3'
-import { SvgPropertiesHyphen } from 'csstype';
+import { SvgPropertiesHyphen } from 'csstype'
 import { Axes, AxisIndex } from '../Axes/axes.js'
-import { CartesianAxes, PolarAxes } from '../index.js';
+import { CartesianAxes, PolarAxes } from '../index.js'
 import { defaultsDeep, isNull, merge } from 'lodash-es'
-import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js';
+import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js'
 
 export const AUTO_SCALE = 1
 
@@ -15,17 +15,17 @@ export type DataPoint = {
 }
 
 interface ChartOptionItem {
-  includeInTooltip?: boolean;
-  includeInAutoScale?: boolean;
-  format?: (value: number | Date) => string;
-  paddingInner?: number;
-  paddingOuter?: number;
+  includeInTooltip?: boolean
+  includeInAutoScale?: boolean
+  format?: (value: number | Date) => string
+  paddingInner?: number
+  paddingOuter?: number
 }
 
 interface ColorOptionItem {
-  scale?: any;
-  range?: any;
-  map?: any;
+  scale?: any
+  range?: any
+  map?: any
 }
 
 export interface SymbolOptions {
@@ -37,14 +37,14 @@ export interface SymbolOptions {
 export interface TextOptions {
   dx?: number
   dy?: number
-  attributes: SvgPropertiesHyphen;
-  formatter?: (d: unknown) => string;
+  attributes: SvgPropertiesHyphen
+  formatter?: (d: unknown) => string
 }
 
 export interface TooltipOptions {
   position?: TooltipPosition
   anchor?: TooltipAnchor
-  toolTipFormatter?: (d: any) => HTMLElement;
+  toolTipFormatter?: (d: any) => HTMLElement
 }
 
 export enum CurveType {
@@ -56,28 +56,28 @@ export enum CurveType {
 }
 
 export interface ChartOptions {
-  x?: ChartOptionItem;
-  x1?: ChartOptionItem;
-  y?: ChartOptionItem;
-  radial?: ChartOptionItem;
-  angular?: ChartOptionItem;
-  color?: ColorOptionItem;
-  transitionTime?: number;
-  colorScale?: any;
-  symbol?: SymbolOptions;
-  curve?: string;
-  text?: TextOptions;
-  tooltip?: TooltipOptions;
+  x?: ChartOptionItem
+  x1?: ChartOptionItem
+  y?: ChartOptionItem
+  radial?: ChartOptionItem
+  angular?: ChartOptionItem
+  color?: ColorOptionItem
+  transitionTime?: number
+  colorScale?: any
+  symbol?: SymbolOptions
+  curve?: string
+  text?: TextOptions
+  tooltip?: TooltipOptions
 }
 
 export interface DataKeys {
-  x?: string;
-  x1?: string;
-  y?: string;
-  radial?: string;
-  angular?: string;
-  color?: string;
-  value?: string;
+  x?: string
+  x1?: string
+  y?: string
+  radial?: string
+  angular?: string
+  color?: string
+  value?: string
 }
 
 export abstract class Chart {
@@ -85,8 +85,8 @@ export abstract class Chart {
   protected datum: any
   protected _extent: any
   protected _isVisible: boolean = true
-  protected highlight: d3.Selection<SVGGElement, unknown, SVGGElement, unknown> 
-  group: d3.Selection<SVGElement, any, SVGElement, any>
+  protected highlight: d3.Selection<SVGGElement, any, SVGGElement, any>
+  group: d3.Selection<SVGGElement, any, SVGGElement, any>
   colorMap: any
   id: string
   options: ChartOptions
@@ -97,16 +97,13 @@ export abstract class Chart {
 
   constructor(data: any, options: ChartOptions) {
     this.data = data
-    this.options = defaultsDeep({},
-      options,
-      {
-        radial: { includeInTooltip: true, includeInAutoScale: true },
-        angular: { includeInTooltip: true, includeInAutoScale: true },
-        x: { includeInTooltip: true, includeInAutoScale: true },
-        y: { includeInTooltip: true, includeInAutoScale: true },
-        transitionTime: 100,
-      }
-    )
+    this.options = defaultsDeep({}, options, {
+      radial: { includeInTooltip: true, includeInAutoScale: true },
+      angular: { includeInTooltip: true, includeInAutoScale: true },
+      x: { includeInTooltip: true, includeInAutoScale: true },
+      y: { includeInTooltip: true, includeInAutoScale: true },
+      transitionTime: 100,
+    })
     // https://github.com/d3/d3-scale-chromatic
     this.colorMap = d3.scaleSequential(d3.interpolateWarm)
   }
@@ -177,15 +174,11 @@ export abstract class Chart {
   }
 
   setOptions(options: ChartOptions) {
-    merge(this.options,
-      options
-    )
+    merge(this.options, options)
   }
 
   setAxisIndex(axisIndex: AxisIndex) {
-    merge(this.axisIndex,
-      axisIndex
-    )
+    merge(this.axisIndex, axisIndex)
   }
 
   plotter(axis: Axes, axisIndex: AxisIndex) {
@@ -214,8 +207,9 @@ export abstract class Chart {
   }
 
   protected toolTipFormatterCartesian(d): HTMLElement {
-    if (this.options.tooltip === undefined) { return }
-    else if (this.options.tooltip.toolTipFormatter === undefined) {
+    if (this.options.tooltip === undefined) {
+      return
+    } else if (this.options.tooltip.toolTipFormatter === undefined) {
       return this.defaultToolTipFormatterCartesian(d)
     } else {
       return this.options.tooltip.toolTipFormatter(d)
@@ -223,8 +217,9 @@ export abstract class Chart {
   }
 
   protected toolTipFormatterPolar(d): HTMLElement {
-    if (this.options.tooltip === undefined) { return }
-    else if (this.options.tooltip.toolTipFormatter === undefined) {
+    if (this.options.tooltip === undefined) {
+      return
+    } else if (this.options.tooltip.toolTipFormatter === undefined) {
       return this.defaultToolTipFormatterPolar(d)
     } else {
       return this.options.tooltip.toolTipFormatter(d)
@@ -248,9 +243,13 @@ export abstract class Chart {
     return html
   }
 
-  protected defaultToolTipText(data: number | number[] | any, key: string, decimals: number): string {
+  protected defaultToolTipText(
+    data: number | number[] | any,
+    key: string,
+    decimals: number
+  ): string {
     if (data instanceof Array) {
-      if (data[0] != data[1]){
+      if (data[0] != data[1]) {
         return key + ': ' + data[0].toFixed(decimals) + ' - ' + data[1].toFixed(decimals)
       } else {
         return key + ': ' + data[0].toFixed(decimals)
@@ -320,20 +319,20 @@ export abstract class Chart {
       this.group = axis.chartGroup.append('g')
       if (axis instanceof PolarAxes) {
         const direction = -axis.direction
-        const intercept = 90 - 180 * axis.intercept / Math.PI
+        const intercept = 90 - (180 * axis.intercept) / Math.PI
         this.group.attr('transform', 'rotate(' + intercept + ')scale(' + direction + ' ,1)')
       }
       this.group.attr('data-chart-id', this.id)
       if (this.cssSelector) {
-        if (this.cssSelector.lastIndexOf('#', 0) === 0) this.group.attr('id', this.cssSelector.substring(1))
+        if (this.cssSelector.lastIndexOf('#', 0) === 0)
+          this.group.attr('id', this.cssSelector.substring(1))
         if (this.cssSelector.lastIndexOf('.', 0) === 0) {
           this.group.attr('class', cssClass + ' ' + this.cssSelector.substring(1))
         } else {
           this.group.attr('class', cssClass)
         }
       } else if (this.style) {
-        Object.entries(this.style).forEach(
-          ([prop, val]) => this.group.style(prop, val))
+        Object.entries(this.style).forEach(([prop, val]) => this.group.style(prop, val))
       }
     }
     return this.group
@@ -342,8 +341,7 @@ export abstract class Chart {
   protected selectHighlight(axis: CartesianAxes, SVGElementName: string) {
     if (this.highlight === undefined) {
       const front = axis.canvas.select<SVGGElement>('.front')
-      this.highlight = front.append('g')
-        .attr('clip-path', 'url(#' + axis.clipPathId + ')')
+      this.highlight = front.append('g').attr('clip-path', 'url(#' + axis.clipPathId + ')')
       this.highlight.attr('data-chart-id', this.id)
       this.highlight.append(SVGElementName)
     }
@@ -381,7 +379,6 @@ export abstract class Chart {
   }
 
   protected mapDataCartesian(domain: any) {
-
     const xKey = this.dataKeys.x
 
     const bisectData = d3.bisector(function (d) {
@@ -394,7 +391,11 @@ export abstract class Chart {
     return this.data.slice(i0, i1)
   }
 
-  protected applyStyle(source: Element, element: d3.Selection<SVGElement, unknown, SVGElement, unknown>, props: string[]) {
+  protected applyStyle(
+    source: Element,
+    element: d3.Selection<SVGElement, unknown, SVGElement, unknown>,
+    props: string[]
+  ) {
     if (this.style === undefined) {
       const s = window.getComputedStyle(source)
       for (const key of props) {

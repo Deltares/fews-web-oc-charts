@@ -6,8 +6,8 @@ import { Chart, AUTO_SCALE } from './chart.js'
 
 export class ChartBar extends Chart {
   static readonly GROUP_CLASS: 'chart-bar'
-  private _xRect 
-  private _widthRect 
+  private _xRect
+  private _widthRect
 
   plotterCartesian(axis: CartesianAxes, axisIndex: AxisIndex) {
     const xKey = this.dataKeys.x
@@ -16,7 +16,6 @@ export class ChartBar extends Chart {
     const colorKey = this.dataKeys.color
     const xScale = axis.xScales[axisIndex.x.axisIndex]
     const yScale = axis.yScales[axisIndex.y.axisIndex]
-
 
     let mappedData = this.mapDataCartesian(xScale.domain())
 
@@ -43,7 +42,9 @@ export class ChartBar extends Chart {
       return i === 0 ? 0 : xScale(mappedData[i - 1][xKey])
     }
     let widthRect = (_d: unknown, i: number) => {
-      return i === 0 ? xScale(mappedData[i][xKey]) : xScale(mappedData[i][xKey]) - xScale(mappedData[i - 1][xKey])
+      return i === 0
+        ? xScale(mappedData[i][xKey])
+        : xScale(mappedData[i][xKey]) - xScale(mappedData[i - 1][xKey])
     }
 
     if (x1Key) {
