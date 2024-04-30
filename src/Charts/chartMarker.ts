@@ -2,7 +2,7 @@ import * as d3 from 'd3'
 import { defaultsDeep } from 'lodash-es'
 import { CartesianAxes, CartesianAxesIndex, PolarAxes } from '../index.js'
 import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js'
-import { Chart, CurveType, PointBisectMethod, SymbolOptions } from './chart.js'
+import { Chart, SymbolOptions } from './chart.js'
 
 function mean(x: number[] | number) {
   if (x instanceof Array) {
@@ -201,13 +201,7 @@ export class ChartMarker extends Chart {
   }
 
   public onPointerMove(x: number | Date, xScale, yScale) {
-    let method: PointBisectMethod = 'center'
-    if (this.options.curve === CurveType.StepBefore) {
-      method = 'right'
-    } else if (this.options.curve === CurveType.StepAfter) {
-      method = 'left'
-    }
-    const index = this.findXIndex(x, method)
+    const index = this.findXIndex(x, this.options.tooltip?.alignment ?? 'middle')
     const point = this.datum[index]
     if (point === undefined) {
       return

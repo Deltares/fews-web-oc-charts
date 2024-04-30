@@ -27,7 +27,7 @@ function onLoad() {
       })
 
       var plotPrecipitation = new wbCharts.ChartBar(precipitation, {})
-      var plotPrecipitationContour = new wbCharts.ChartMarker(precipitation, {})
+      var plotPrecipitationContour = new wbCharts.ChartMarker(precipitation, { tooltip: { alignment: 'right' } })
       var plotPrecipitationProbability = new wbCharts.ChartLine(precipitationProbability, {})
       // var plotPrecipitationProbabilityArea = new wbCharts.ChartArea(precipitationProbability, { curve: 'stepBefore'})
       // plotPrecipitationProbabilityArea.addTo(

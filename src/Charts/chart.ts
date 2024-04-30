@@ -7,7 +7,7 @@ import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js'
 
 export const AUTO_SCALE = 1
 
-export type PointBisectMethod = 'left' | 'right' | 'center'
+export type PointAlignment = 'right' | 'middle' | 'left'
 
 export type DataPoint = {
   x: Date | number | number[]
@@ -44,7 +44,8 @@ export interface TextOptions {
 export interface TooltipOptions {
   position?: TooltipPosition
   anchor?: TooltipAnchor
-  toolTipFormatter?: (d: any) => HTMLElement
+  alignment?: PointAlignment
+  toolTipFormatter?: (d: DataPoint) => HTMLElement
 }
 
 export enum CurveType {
@@ -280,7 +281,7 @@ export abstract class Chart {
 
   public onPointerOut() {}
 
-  protected findXIndex(xValue, method?: PointBisectMethod) {
+  protected findXIndex(xValue, method?: PointAlignment) {
     const xKey = this.dataKeys.x
     const yKey = this.dataKeys.y
 
@@ -295,7 +296,7 @@ export abstract class Chart {
 
     const bisect = d3.bisector((data) => {
       return data[xKey]
-    })[method === 'center' ? 'center' : 'left']
+    })[method === 'middle' ? 'center' : 'left']
     let idx = bisect(datum, xValue)
     if (method === 'left') idx = idx - 1
 

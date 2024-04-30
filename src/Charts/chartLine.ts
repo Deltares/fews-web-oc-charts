@@ -1,6 +1,6 @@
 import * as d3 from 'd3'
 import { CartesianAxes, PolarAxes } from '../index.js'
-import { Chart, CurveType, PointBisectMethod } from './chart.js'
+import { Chart, CurveType, type PointAlignment } from './chart.js'
 import { TooltipPosition } from '../Tooltip/tooltip.js'
 
 export class ChartLine extends Chart {
@@ -160,13 +160,7 @@ export class ChartLine extends Chart {
   }
 
   public onPointerMove(x: number | Date, xScale, yScale) {
-    let method: PointBisectMethod = 'center'
-    if (this.options.curve === CurveType.StepBefore) {
-      method = 'right'
-    } else if (this.options.curve === CurveType.StepAfter) {
-      method = 'left'
-    }
-    const index = this.findXIndex(x, method)
+    const index = this.findXIndex(x, this.options.tooltip?.alignment ?? 'middle')
     const point = this.datum[index]
     if (point === undefined) {
       return
