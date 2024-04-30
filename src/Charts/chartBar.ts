@@ -190,6 +190,13 @@ export class ChartBar extends Chart {
       .attr('height', yScale(0) - yScale(point.y))
       .attr('x', (d) => this._xRect(d, index))
       .attr('width', (d) => this._widthRect(d, index))
+
+    const element = this.group.select('rect')
+    if (element.node() === null) {
       return { point, style: {} }
+    } else {
+      const color = window.getComputedStyle(element.node() as Element).getPropertyValue('fill')
+      return { point, style: { color } }
     }
+  }
 }
