@@ -29,13 +29,6 @@ function onLoad() {
       var plotPrecipitation = new wbCharts.ChartBar(precipitation, {})
       var plotPrecipitationContour = new wbCharts.ChartMarker(precipitation, { tooltip: { alignment: 'right' } })
       var plotPrecipitationProbability = new wbCharts.ChartLine(precipitationProbability, {})
-      // var plotPrecipitationProbabilityArea = new wbCharts.ChartArea(precipitationProbability, { curve: 'stepBefore'})
-      // plotPrecipitationProbabilityArea.addTo(
-      //   axis,
-      //   { x: { key: 'x', axisIndex: 0 }, y: { key: 'y', axisIndex: 1 } },
-      //   'precipitationProbabilityArea',
-      //   { fill: 'rgba(44, 175, 254, .5)', stroke: 'none' }
-      // )
 
       plotPrecipitationProbability.addTo(
         axis,
