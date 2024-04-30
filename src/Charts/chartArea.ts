@@ -185,27 +185,37 @@ export class ChartArea extends Chart {
     if (p1 === undefined) {
       return
     }
-    const datum = [
-      {
-        x: p1[this.dataKeys.x],
-        y: p1[this.dataKeys.y],
-      },
-      {
-        x: p2[this.dataKeys.x],
-        y: p2[this.dataKeys.y],
-      },
-    ]
-
-    const point = this.options.curve === CurveType.StepBefore ? datum[1] : datum[0]
+    const datum = []
 
     switch (this.options.curve) {
       case CurveType.StepAfter:
+        datum.push({
+          x: p1[this.dataKeys.x],
+          y: p1[this.dataKeys.y],
+        })
+        datum.push({
+          x: p2[this.dataKeys.x],
+          y: p1[this.dataKeys.y],
+        })
         break
       case CurveType.StepBefore:
+        datum.push({
+          x: p1[this.dataKeys.x],
+          y: p2[this.dataKeys.y],
+        })
+        datum.push({
+          x: p2[this.dataKeys.x],
+          y: p2[this.dataKeys.y],
+        })
         break
       default:
-        datum.shift()
+        datum.push({
+          x: p2[this.dataKeys.x],
+          y: p2[this.dataKeys.y],
+        })
     }
+
+    const point = this.options.curve === CurveType.StepBefore ? datum[1] : datum[0]
 
     this.highlight.select('path').datum(datum).join('path').attr('d', this._areaGenerator)
     const element = this.group.select('path')
