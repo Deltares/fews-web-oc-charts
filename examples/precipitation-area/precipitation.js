@@ -27,7 +27,7 @@ function onLoad() {
       })
 
       var plotPrecipitation = new wbCharts.ChartArea(precipitation, { curve: 'stepBefore'})
-      var plotPrecipitationContour = new wbCharts.ChartMarker(precipitation, {})
+      var plotPrecipitationContour = new wbCharts.ChartMarker(precipitation, { curve: 'stepBefore'})
       var plotPrecipitationProbability = new wbCharts.ChartLine(precipitationProbability, {})
       // var plotPrecipitationProbabilityArea = new wbCharts.ChartLine(precipitationProbability, { curve: 'stepBefore'})
       // plotPrecipitationProbabilityArea.addTo(
