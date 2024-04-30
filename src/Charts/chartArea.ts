@@ -46,7 +46,32 @@ export class ChartArea extends Chart {
     const yScale = axis.yScales[axisIndex.y.axisIndex]
 
     this.highlight = this.selectHighlight(axis, 'path')
-    this.highlight.select('path').style('opacity', 0).style('stroke-width', 1)
+    const selection = this.highlight.select('path').style('opacity', 0).style('stroke-width', 1)
+    this.highlight
+      .append('marker')
+      .attr('id', 'marker-' + this.id)
+      .attr('viewBox', '-3 -3 6 6')
+      .attr('markerWidth', 6)
+      .attr('markerHeight', 6)
+      .attr('stroke', 'currentColor')
+      .attr('orient', 90)
+      .append('path')
+      .attr('d', 'M0,-3v6')
+
+    let markerType: string | undefined
+    switch (this.options.curve) {
+      case CurveType.StepAfter:
+        break
+      case CurveType.StepBefore:
+        break
+      default:
+        markerType = 'tick'
+    }
+
+    if (markerType) {
+      selection.attr('marker-start', 'url(#marker-' + this.id + ')')
+      selection.attr('marker-mid', 'url(#marker-' + this.id + ')')
+    }
 
     const colorScale = d3.scaleLinear().domain([0, 1])
     if (this.options.colorScale === AUTO_SCALE) {
