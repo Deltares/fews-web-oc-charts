@@ -1,9 +1,10 @@
 import * as d3 from 'd3'
 import { Axes } from '../Axes/axes.js'
-import { AxisType, CartesianAxes, TooltipPosition } from '../index.js'
+import { AxisType, CartesianAxes, DataPoint, TooltipPosition } from '../index.js'
 import { Visitor } from './visitor.js'
 import { dateFormatter } from '../Utils/date.js'
 import { setAlphaForColor } from '../Utils/setAlphaForColor.js'
+import { SvgPropertiesHyphen } from 'csstype'
 
 export class MouseOver implements Visitor {
   private trace: string[]
@@ -100,7 +101,7 @@ export class MouseOver implements Visitor {
             return chart.id
           })
 
-    const points: any[] = []
+    const points: { point: DataPoint; style: SvgPropertiesHyphen }[] = []
     for (const chart of this.axes.charts) {
       if (traces.includes(chart.id)) {
         const xIndex = chart.axisIndex.x.axisIndex
@@ -140,7 +141,10 @@ export class MouseOver implements Visitor {
       .text(this.xText(axes, xPos))
   }
 
-  updateTooltip(pointData, mouse) {
+  updateTooltip(
+    pointData: { point: DataPoint; style: SvgPropertiesHyphen }[],
+    mouse: [number, number]
+  ) {
     const axes = this.axes
     if (Object.keys(pointData).length === 0) {
       axes.tooltip.hide()
@@ -155,7 +159,7 @@ export class MouseOver implements Visitor {
         if (value.y !== undefined) {
           const spanElement = document.createElement('span')
           spanElement.style.color = color
-          spanElement.innerText = value.y
+          spanElement.innerText = value.y.toString()
           htmlContent.appendChild(spanElement)
           htmlContent.appendChild(document.createElement('br'))
         }
@@ -172,7 +176,7 @@ export class MouseOver implements Visitor {
     }
   }
 
-  private xText(axes: CartesianAxes, xPos: any): string {
+  private xText(axes: CartesianAxes, xPos: number): string {
     let text = ''
     switch (axes.options.x[0].type) {
       case AxisType.time:
