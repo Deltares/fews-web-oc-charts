@@ -5,7 +5,7 @@
  * @param alpha - The alpha value to set (between 0 and 1).
  * @returns The modified color with the specified alpha value.
  */
-export function setAlphaForColor(color, alpha) {
+export function setAlphaForColor(color: string, alpha: number) {
   if (color.startsWith('rgba') || color.startsWith('hsla')) {
     return color.replace(/[\d\.]+\)/, `${alpha})`)
   }
