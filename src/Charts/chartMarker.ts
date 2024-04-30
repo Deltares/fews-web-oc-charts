@@ -215,5 +215,12 @@ export class ChartMarker extends Chart {
     this.highlight.select('circle').attr('transform', () => {
       return `translate(${xScale(point.x)}, ${yScale(point.y)})`
     })
+    const element = this.group.select('path')
+    if (element.node() === null) {
+      return { point, style: {} }
+    } else {
+      const color = window.getComputedStyle(element.node() as Element).getPropertyValue('stroke')
+      return { point, style: { color } }
+    }
   }
 }

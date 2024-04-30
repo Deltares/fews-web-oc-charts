@@ -9,6 +9,10 @@ export const AUTO_SCALE = 1
 
 export type PointBisectMethod = 'left' | 'right' | 'center'
 
+export type DataPoint = {
+  x: Date | number | number[]
+  y: Date | number | number[]
+}
 
 interface ChartOptionItem {
   includeInTooltip?: boolean;
@@ -269,7 +273,11 @@ export abstract class Chart {
 
   public onPointerOver() {}
 
-  public onPointerMove(_x: number | Date, _xScale, _yScale) {}
+  public onPointerMove(
+    _x: number | Date,
+    _xScale,
+    _yScale
+  ): void | { point: DataPoint; style: SvgPropertiesHyphen } {}
 
   public onPointerOut() {}
 
@@ -288,8 +296,9 @@ export abstract class Chart {
 
     const bisect = d3.bisector((data) => {
       return data[xKey]
-    })[method ?? 'left']
-    const idx = bisect(datum, xValue)
+    })[method === 'center' ? 'center' : 'left']
+    let idx = bisect(datum, xValue)
+    if (method === 'left') idx = idx - 1
 
     // before first point
     if (idx === 0 && datum[idx][xKey] > xValue) {

@@ -152,7 +152,6 @@ export class ChartArea extends Chart {
   }
 
   public onPointerMove(x: number | Date, _xScale, _yScale) {
-
     let method: PointBisectMethod = 'center'
     if (this.options.curve === CurveType.StepBefore || this.options.curve === CurveType.StepAfter) {
       method = 'right'
@@ -167,13 +166,15 @@ export class ChartArea extends Chart {
     const datum = [
       {
         x: p1[this.dataKeys.x],
-        y: p2[this.dataKeys.y],
+        y: p1[this.dataKeys.y],
       },
       {
         x: p2[this.dataKeys.x],
         y: p2[this.dataKeys.y],
       },
     ]
+
+    const point = this.options.curve ===  CurveType.StepBefore ? datum[1] : datum[0]
 
     switch (this.options.curve) {
       case CurveType.StepAfter:
@@ -185,5 +186,12 @@ export class ChartArea extends Chart {
     }
 
     this.highlight.select('path').datum(datum).join('path').attr('d', this._areaGenerator)
+    const element = this.group.select('path')
+    if (element.node() === null) {
+      return { point, style: {} }
+    } else {
+      const color = window.getComputedStyle(element.node() as Element).getPropertyValue('fill')
+      return { point, style: { color } }
+    }
   }
 }

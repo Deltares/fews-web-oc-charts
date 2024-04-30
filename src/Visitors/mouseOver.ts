@@ -1,8 +1,9 @@
 import * as d3 from 'd3'
 import { Axes } from '../Axes/axes.js'
-import { AxisType, CartesianAxes } from '../index.js'
+import { AxisType, CartesianAxes, TooltipPosition } from '../index.js'
 import { Visitor } from './visitor.js'
 import { dateFormatter } from '../Utils/date.js'
+import { setAlphaForColor } from '../Utils/setAlphaForColor.js'
 
 export class MouseOver implements Visitor {
   private trace: string[]
@@ -98,15 +99,21 @@ export class MouseOver implements Visitor {
         : this.axes.charts.map((chart) => {
             return chart.id
           })
+
+    const points: any[] = []
     for (const chart of this.axes.charts) {
       if (traces.includes(chart.id)) {
         const xIndex = chart.axisIndex.x.axisIndex
         const xScale = this.axes.xScales[xIndex]
         const yIndex = chart.axisIndex.y.axisIndex
         const yScale = this.axes.yScales[yIndex]
-        chart.onPointerMove(xScale.invert(mouse[0]), xScale, yScale)
+        const point = chart.onPointerMove(xScale.invert(mouse[0]), xScale, yScale)
+        if (point) {
+          points.push(point)
+        }
       }
     }
+    this.updateTooltip(points, mouse)
   }
 
   isHidden(element) {
@@ -131,6 +138,38 @@ export class MouseOver implements Visitor {
       .attr('transform', 'translate(' + (xPos + 2) + ',' + (axes.height - 5) + ')')
       .select('text')
       .text(this.xText(axes, xPos))
+  }
+
+  updateTooltip(pointData, mouse) {
+    const axes = this.axes
+    if (Object.keys(pointData).length === 0) {
+      axes.tooltip.hide()
+    } else {
+      const htmlContent = document.createElement('div')
+      for (const item of pointData) {
+        let color = item.style?.color
+        if (color) {
+          color = setAlphaForColor(color, 1)
+        }
+        const value = item.point
+        if (value.y !== undefined) {
+          const spanElement = document.createElement('span')
+          spanElement.style.color = color
+          spanElement.innerText = value.y
+          htmlContent.appendChild(spanElement)
+          htmlContent.appendChild(document.createElement('br'))
+        }
+      }
+      axes.tooltip.update(
+        htmlContent,
+        TooltipPosition.Right,
+        mouse[0] + axes.margin.left,
+        mouse[1] + axes.margin.top
+      )
+      if (axes.tooltip.isHidden) {
+        axes.tooltip.show()
+      }
+    }
   }
 
   private xText(axes: CartesianAxes, xPos: any): string {

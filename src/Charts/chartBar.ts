@@ -177,20 +177,19 @@ export class ChartBar extends Chart {
     this.highlight.select('rect').style('opacity', 0)
   }
 
-  public onPointerMove(x: number | Date, xScale, yScale) {
+  public onPointerMove(x: number | Date, _xScale, yScale) {
     const index = this.findXIndex(x)
     const point = this.datum[index]
     if (point === undefined) {
       return
     }
 
-    console.log('indicate rect', index)
-    this.highlight.select('rect')
-      .attr('y',yScale(point.y))
+    this.highlight
+      .select('rect')
+      .attr('y', yScale(point.y))
       .attr('height', yScale(0) - yScale(point.y))
       .attr('x', (d) => this._xRect(d, index))
-      .attr('width',  (d) => this._widthRect(d, index))
-
-  }
-
+      .attr('width', (d) => this._widthRect(d, index))
+      return { point, style: {} }
+    }
 }
