@@ -39,7 +39,6 @@ export class ChartLine extends Chart {
   }
 
   plotterCartesian(axis: CartesianAxes, axisIndex: any) {
-
     const xKey = this.dataKeys.x
     const yKey = this.dataKeys.y
     const xScale = axis.xScales[axisIndex.x.axisIndex]
@@ -64,19 +63,14 @@ export class ChartLine extends Chart {
       })
     const curve = this.curveGenerator
     if (curve !== undefined) {
-      lineGenerator
-        .curve(curve)
+      lineGenerator.curve(curve)
     }
 
     this.group = this.selectGroup(axis, 'chart-line')
     if (this.group.select('path').size() === 0) {
       this.group.append('path')
     }
-    const update = this.group
-      .select('path')
-      .datum(mappedData)
-      .join('path')
-      .attr('d', lineGenerator)
+    const update = this.group.select('path').datum(mappedData).join('path').attr('d', lineGenerator)
 
     if (this.options.tooltip !== undefined) {
       update
@@ -114,10 +108,7 @@ export class ChartLine extends Chart {
     }
     const line = this.group.select('path')
 
-    const t = d3
-      .transition()
-      .duration(this.options.transitionTime)
-      .ease(d3.easeLinear)
+    const t = d3.transition().duration(this.options.transitionTime).ease(d3.easeLinear)
 
     line.transition(t).attr('d', lineGenerator(this.data))
     line.join('path').datum(this.data)
@@ -128,7 +119,9 @@ export class ChartLine extends Chart {
           const pointer = d3.pointer(e, axis.container)
           axis.tooltip.update(
             this.toolTipFormatterPolar(d),
-            this.options.tooltip.position !== undefined ? this.options.tooltip.position : TooltipPosition.Top,
+            this.options.tooltip.position !== undefined
+              ? this.options.tooltip.position
+              : TooltipPosition.Top,
             pointer[0],
             pointer[1]
           )
@@ -139,22 +132,12 @@ export class ChartLine extends Chart {
     }
   }
 
-  drawLegendSymbol(legendId?: string, asSvgElement?: boolean) {
+  drawLegendSymbol(_legendId?: string, asSvgElement?: boolean) {
     const props = ['stroke', 'stroke-width', 'stroke-dasharray']
-    const source = this.group
-      .select('path')
-      .node() as Element
-    const svg = d3.create('svg')
-      .attr('width', 20)
-      .attr('height', 20)
-    const group = svg
-      .append('g')
-      .attr('transform', 'translate(0, 10)')
-    const element = group.append('line')
-      .attr('x1', 0)
-      .attr('x2', 20)
-      .attr('y1', 0)
-      .attr('y2', 0)
+    const source = this.group.select('path').node() as Element
+    const svg = d3.create('svg').attr('width', 20).attr('height', 20)
+    const group = svg.append('g').attr('transform', 'translate(0, 10)')
+    const element = group.append('line').attr('x1', 0).attr('x2', 20).attr('y1', 0).attr('y2', 0)
     this.applyStyle(source, element, props)
     if (asSvgElement) return element.node()
     return svg.node()
