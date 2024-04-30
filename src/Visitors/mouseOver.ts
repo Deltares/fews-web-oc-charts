@@ -101,7 +101,7 @@ export class MouseOver implements Visitor {
             return chart.id
           })
 
-    const points: { point: DataPoint; style: SvgPropertiesHyphen }[] = []
+    const points: { point: DataPoint; style: SvgPropertiesHyphen, axisIndex: number }[] = []
     for (const chart of this.axes.charts) {
       if (traces.includes(chart.id)) {
         const xIndex = chart.axisIndex.x.axisIndex
@@ -110,7 +110,7 @@ export class MouseOver implements Visitor {
         const yScale = this.axes.yScales[yIndex]
         const point = chart.onPointerMove(xScale.invert(mouse[0]), xScale, yScale)
         if (point) {
-          points.push(point)
+          points.push({...point, axisIndex: yIndex})
         }
       }
     }
@@ -121,6 +121,7 @@ export class MouseOver implements Visitor {
     const style = window.getComputedStyle(element.node() as Element)
     return style === null || style.getPropertyValue('visibility') === 'hidden'
   }
+
   update(mouse: [number, number]) {
     // update line
     this.updateXLine(mouse[0])
@@ -142,7 +143,7 @@ export class MouseOver implements Visitor {
   }
 
   updateTooltip(
-    pointData: { point: DataPoint; style: SvgPropertiesHyphen }[],
+    pointData: { point: DataPoint; style: SvgPropertiesHyphen, axisIndex: number }[],
     mouse: [number, number]
   ) {
     const axes = this.axes
@@ -157,9 +158,19 @@ export class MouseOver implements Visitor {
         }
         const value = item.point
         if (value.y !== undefined) {
+          const extent = this.axes.chartsExtent('y', item.axisIndex, {})
+          let label = ''
+          if (value.y instanceof Date) {
+            label = dateFormatter(value.y, 'yyyy-MM-dd HH:mm ZZZZ', {
+              timeZone: axes.options.x[0].timeZone,
+              locale: axes.options.x[0].locale,
+            })
+          } else {
+            label = this.valueLabel(extent, value.y)
+          }
           const spanElement = document.createElement('span')
           spanElement.style.color = color
-          spanElement.innerText = value.y.toString()
+          spanElement.innerText = label
           htmlContent.appendChild(spanElement)
           htmlContent.appendChild(document.createElement('br'))
         }
@@ -173,6 +184,17 @@ export class MouseOver implements Visitor {
       if (axes.tooltip.isHidden) {
         axes.tooltip.show()
       }
+    }
+  }
+
+  private valueLabel(extent: number[], value: number | number[]) {
+    const s = d3.formatSpecifier('f')
+    s.precision = d3.precisionFixed((extent[1] - extent[0]) / 100)
+    if (Array.isArray(value)) {
+      const labels: string[] = value.map((v) => d3.format(s.toString())(v))
+      return labels.join('–')
+    } else {
+      return d3.format(s.toString())(value)
     }
   }
 
