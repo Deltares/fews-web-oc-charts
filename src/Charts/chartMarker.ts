@@ -204,11 +204,15 @@ export class ChartMarker extends Chart {
     const index = this.findXIndex(x, this.options.tooltip?.alignment ?? 'middle')
     const point = this.datum[index]
     if (point === undefined) {
+      this.highlight.select('rect').style('opacity', 0)
       return
     }
-    this.highlight.select('circle').attr('transform', () => {
-      return `translate(${xScale(point.x)}, ${yScale(point.y)})`
-    })
+    this.highlight
+      .select('circle')
+      .attr('transform', () => {
+        return `translate(${xScale(point.x)}, ${yScale(point.y)})`
+      })
+      .style('opacity', 1)
     const element = this.group.select('path')
     if (element.node() === null) {
       return { point, style: {} }
