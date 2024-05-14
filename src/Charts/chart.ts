@@ -277,10 +277,11 @@ export abstract class Chart {
   public onPointerOut() {}
 
   protected findXIndex(xValue, method?: PointAlignment) {
+    const datum = this.datum
+    if (datum.length === 0) return
+
     const xKey = this.dataKeys.x
     const yKey = this.dataKeys.y
-
-    const datum = this.datum
 
     let yIsNull = (d) => isNull(d[yKey])
     if (Array.isArray(datum[0][yKey])) {
@@ -304,6 +305,13 @@ export abstract class Chart {
       return
     }
     if (!datum[idx] || yIsNull(datum[idx])) {
+      return
+    }
+    // check if point before or after is null
+    if (
+      (xValue < datum[idx][xKey] && yIsNull(datum[idx - 1])) ||
+      (xValue > datum[idx][xKey] && yIsNull(datum[idx + 1]))
+    ) {
       return
     }
 
