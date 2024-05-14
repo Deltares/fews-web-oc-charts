@@ -112,7 +112,7 @@ export class MouseOver implements Visitor {
         const yScale = this.axes.yScales[yIndex]
         const point = chart.onPointerMove(xScale.invert(mouse[0]), xScale, yScale)
         if (point) {
-          points.push({...point, axisIndex: yIndex})
+          points.push({ ...point, axisIndex: yIndex })
         }
       }
       seen.add(chart.id)
@@ -190,7 +190,9 @@ export class MouseOver implements Visitor {
     const s = d3.formatSpecifier('f')
     s.precision = d3.precisionFixed((extent[1] - extent[0]) / 100)
     if (Array.isArray(value)) {
-      const labels: string[] = value.map((v) => d3.format(s.toString())(v))
+      const labels: string[] = [...value]
+        .sort((a, b) => a - b)
+        .map((v) => d3.format(s.toString())(v))
       return labels.join('–')
     } else {
       return d3.format(s.toString())(value)
