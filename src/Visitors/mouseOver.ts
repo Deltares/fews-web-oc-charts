@@ -1,10 +1,11 @@
 import * as d3 from 'd3'
 import { Axes } from '../Axes/axes.js'
-import { AxisType, CartesianAxes, XyDataPoint, TooltipPosition } from '../index.js'
+import { AxisType, CartesianAxes, TooltipPosition } from '../index.js'
 import { Visitor } from './visitor.js'
 import { dateFormatter } from '../Utils/date.js'
 import { setAlphaForColor } from '../Utils/setAlphaForColor.js'
 import { SvgPropertiesHyphen } from 'csstype'
+import type { DataPointXY } from '../Data/types'
 
 export class MouseOver implements Visitor {
   private trace: string[]
@@ -101,7 +102,7 @@ export class MouseOver implements Visitor {
             return chart.id
           })
 
-    const points: { point: XyDataPoint; style: SvgPropertiesHyphen, axisIndex: number }[] = []
+    const points: { point: DataPointXY; style: SvgPropertiesHyphen, axisIndex: number }[] = []
     for (const chart of this.axes.charts) {
       if (traces.includes(chart.id)) {
         const xIndex = chart.axisIndex.x.axisIndex
@@ -138,7 +139,7 @@ export class MouseOver implements Visitor {
   }
 
   updateTooltip(
-    pointData: { point: XyDataPoint; style: SvgPropertiesHyphen, axisIndex: number }[],
+    pointData: { point: DataPointXY; style: SvgPropertiesHyphen, axisIndex: number }[],
     mouse: [number, number]
   ) {
     const axes = this.axes

@@ -4,16 +4,12 @@ import { Axes, AxisIndex } from '../Axes/axes.js'
 import { CartesianAxes, PolarAxes } from '../index.js'
 import { defaultsDeep, isNull, merge } from 'lodash-es'
 import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js'
+import type { DataPoint, DataPointXY } from '../Data/types.js'
+import { dataExtentFor } from '../Data/dataExtentFor.js'
 
 export const AUTO_SCALE = 1
 
 export type PointAlignment = 'right' | 'middle' | 'left'
-
-export type DataPoint = {
-  [key: string]: number | Date | number[] | null | null[]
-}
-
-export type XyDataPoint = Pick<DataPoint, 'x' | 'y'>
 
 interface ChartOptionItem {
   includeInTooltip?: boolean
@@ -46,7 +42,7 @@ export interface TooltipOptions {
   position?: TooltipPosition
   anchor?: TooltipAnchor
   alignment?: PointAlignment
-  toolTipFormatter?: (d: XyDataPoint) => HTMLElement
+  toolTipFormatter?: (d: DataPointXY) => HTMLElement
 }
 
 export enum CurveType {
@@ -128,27 +124,10 @@ export abstract class Chart {
       this._extent = []
       for (const key in this.dataKeys) {
         const path = this.dataKeys[key]
-        this._extent[path] = this.dataExtentFor(this._data, path)
+        this._extent[path] = dataExtentFor(this._data, path)
       }
     }
     return this._extent
-  }
-
-  dataExtentFor(data, path) {
-    if (data.length === 0) return [undefined, undefined]
-    if (Array.isArray(data[0][path])) {
-      const min = d3.min(data, function (d: any) {
-        if (d[path] === null) return undefined
-        return d3.min(d[path])
-      })
-      const max = d3.max(data, function (d: any) {
-        if (d[path] === null) return undefined
-        return d3.max(d[path])
-      })
-      return [min, max]
-    } else {
-      return d3.extent(data, (d) => d[path])
-    }
   }
 
   get visible(): boolean {
@@ -293,7 +272,7 @@ export abstract class Chart {
     _x: number | Date,
     _xScale,
     _yScale
-  ): void | { point: XyDataPoint; style: SvgPropertiesHyphen } {}
+  ): void | { point: DataPointXY; style: SvgPropertiesHyphen } {}
 
   public onPointerOut() {}
 
