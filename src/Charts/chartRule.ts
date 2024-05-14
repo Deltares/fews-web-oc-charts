@@ -6,36 +6,6 @@ import { PolarAxes } from '../Axes/polarAxes.js'
 import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js'
 
 export class ChartRule extends Chart {
-  set extent(extent: any[]) {
-    this._extent = extent
-  }
-
-  get extent(): any[] {
-    if (!this._extent) {
-      this._extent = []
-      for (const key in this.dataKeys) {
-        const path = this.dataKeys[key]
-        this._extent[path] = this.dataExtentFor(key, path)
-      }
-    }
-    return this._extent
-  }
-
-  dataExtentFor(key, path) {
-    if (key === 'y' && Array.isArray(this._data[0])) {
-      const min = d3.min(this._data, function (d: any) {
-        if (d[path] === null) return undefined
-        return d3.min(d[path])
-      })
-      const max = d3.max(this._data, function (d: any) {
-        if (d[path] === null) return undefined
-        return d3.max(d[path])
-      })
-      return [min, max]
-    } else {
-      return d3.extent(this._data, (d) => d[path])
-    }
-  }
 
   plotterCartesian(axis: CartesianAxes, axisIndex: AxisIndex) {
     const xKey = this.dataKeys.x

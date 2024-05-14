@@ -7,38 +7,6 @@ import { Chart, AUTO_SCALE, CurveType, PointAlignment } from './chart.js'
 export class ChartArea extends Chart {
   private _areaGenerator: any
 
-  set extent(extent: any[]) {
-    this._extent = extent
-  }
-
-  get extent(): any[] {
-    if (!this._extent) {
-      this._extent = []
-      for (const key in this.dataKeys) {
-        const path = this.dataKeys[key]
-        this._extent[path] = this.dataExtentFor(this._data, path)
-      }
-    }
-    return this._extent
-  }
-
-  dataExtentFor(data, path) {
-    if (data.length === 0) return [undefined, undefined]
-    if (Array.isArray(data[0][path])) {
-      const min = d3.min(data, function (d: any) {
-        if (d[path] === null) return undefined
-        return d3.min(d[path])
-      })
-      const max = d3.max(data, function (d: any) {
-        if (d[path] === null) return undefined
-        return d3.max(d[path])
-      })
-      return [min, max]
-    } else {
-      return d3.extent(data, (d) => d[path])
-    }
-  }
-
   plotterCartesian(axis: CartesianAxes, axisIndex: AxisIndex) {
     const xKey = this.dataKeys.x
     const yKey = this.dataKeys.y

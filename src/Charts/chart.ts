@@ -10,9 +10,10 @@ export const AUTO_SCALE = 1
 export type PointAlignment = 'right' | 'middle' | 'left'
 
 export type DataPoint = {
-  x: Date | number | number[]
-  y: Date | number | number[]
+  [key: string]: number | Date | number[] | null | null[]
 }
+
+export type XyDataPoint = Pick<DataPoint, 'x' | 'y'>
 
 interface ChartOptionItem {
   includeInTooltip?: boolean
@@ -45,7 +46,7 @@ export interface TooltipOptions {
   position?: TooltipPosition
   anchor?: TooltipAnchor
   alignment?: PointAlignment
-  toolTipFormatter?: (d: DataPoint) => HTMLElement
+  toolTipFormatter?: (d: XyDataPoint) => HTMLElement
 }
 
 export enum CurveType {
@@ -82,7 +83,7 @@ export interface DataKeys {
 }
 
 export abstract class Chart {
-  protected _data: any
+  protected _data: DataPoint[]
   protected datum: any
   protected _extent: any
   protected _isVisible: boolean = true
@@ -118,21 +119,36 @@ export abstract class Chart {
     return this._data
   }
 
-  set extent(extent: any) {
+  set extent(extent: Record<string, number[] | Date[] | null[]>) {
     this._extent = extent
   }
 
-  get extent(): any {
+  get extent(): Record<string, number[] | Date[] | null[]> {
     if (!this._extent) {
       this._extent = []
-      for (const axisKey in this.axisIndex) {
-        const path = this.axisIndex[axisKey].key
-        this._extent[path] = d3.extent(this._data, function (d) {
-          return d[path]
-        })
+      for (const key in this.dataKeys) {
+        const path = this.dataKeys[key]
+        this._extent[path] = this.dataExtentFor(this._data, path)
       }
     }
     return this._extent
+  }
+
+  dataExtentFor(data, path) {
+    if (data.length === 0) return [undefined, undefined]
+    if (Array.isArray(data[0][path])) {
+      const min = d3.min(data, function (d: any) {
+        if (d[path] === null) return undefined
+        return d3.min(d[path])
+      })
+      const max = d3.max(data, function (d: any) {
+        if (d[path] === null) return undefined
+        return d3.max(d[path])
+      })
+      return [min, max]
+    } else {
+      return d3.extent(data, (d) => d[path])
+    }
   }
 
   get visible(): boolean {
@@ -277,7 +293,7 @@ export abstract class Chart {
     _x: number | Date,
     _xScale,
     _yScale
-  ): void | { point: DataPoint; style: SvgPropertiesHyphen } {}
+  ): void | { point: XyDataPoint; style: SvgPropertiesHyphen } {}
 
   public onPointerOut() {}
 
