@@ -19,18 +19,17 @@ export class ChartArea extends Chart {
     this.highlight
       .append('marker')
       .attr('id', 'marker-' + this.id)
-      .attr('viewBox', '-3 -3 6 6')
-      .attr('markerWidth', 6)
-      .attr('markerHeight', 6)
+      .attr('viewBox', '-5 -5 10 10')
+      .attr('markerWidth', 10)
+      .attr('markerHeight', 10)
       .attr('stroke', 'currentColor')
       .attr('orient', 90)
       .append('path')
-      .attr('d', 'M0,-3v6')
+      .attr('d', 'M0,-5v10')
 
-    let markerType: string | undefined
+    let markerType
     switch (this.options.curve) {
       case CurveType.StepAfter:
-        break
       case CurveType.StepBefore:
         break
       default:
@@ -40,6 +39,9 @@ export class ChartArea extends Chart {
     if (markerType) {
       selection.attr('marker-start', 'url(#marker-' + this.id + ')')
       selection.attr('marker-mid', 'url(#marker-' + this.id + ')')
+      selection.style('stroke', 'none')
+    } else {
+      selection.style('fill', 'currentColor')
     }
 
     const colorScale = d3.scaleLinear().domain([0, 1])
@@ -133,7 +135,6 @@ export class ChartArea extends Chart {
     this.highlight
       .select('path')
       .style('opacity', 1)
-      .style('stroke', 'currentColor')
       .style('fill', color)
       .attr('transform', null)
   }
@@ -149,6 +150,9 @@ export class ChartArea extends Chart {
     }
 
     const index = this.findXIndex(x, alignment)
+    if (index === undefined) {
+      this.highlight.select('path').style('opacity', 0)
+    }
 
     const p1 = this.datum[index - 1]
     const p2 = this.datum[index]
@@ -187,7 +191,12 @@ export class ChartArea extends Chart {
 
     const point = this.options.curve === CurveType.StepBefore ? datum[1] : datum[0]
 
-    this.highlight.select('path').datum(datum).join('path').attr('d', this._areaGenerator)
+    this.highlight.select('path')
+      .datum(datum)
+      .join('path')
+      .attr('d', this._areaGenerator)
+      .style('opacity', 1)
+
     const element = this.group.select('path')
     if (element.node() === null) {
       return { point, style: {} }

@@ -182,11 +182,13 @@ export class ChartBar extends Chart {
     const index = this.findXIndex(x)
     const point = this.datum[index]
     if (point === undefined) {
+      this.highlight.select('rect').style('opacity', 0)
       return
     }
 
     this.highlight
       .select('rect')
+      .style('opacity', 1)
       .attr('y', yScale(point.y))
       .attr('height', yScale(0) - yScale(point.y))
       .attr('x', (d) => this._xRect(d, index))
