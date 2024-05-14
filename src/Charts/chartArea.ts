@@ -16,25 +16,26 @@ export class ChartArea extends Chart {
       this._extent = []
       for (const key in this.dataKeys) {
         const path = this.dataKeys[key]
-        this._extent[path] = this.dataExtentFor(key, path)
+        this._extent[path] = this.dataExtentFor(this._data, path)
       }
     }
     return this._extent
   }
 
-  dataExtentFor(key, path) {
-    if (key === 'y' && Array.isArray(this._data[0])) {
-      const min = d3.min(this._data, function (d: any) {
+  dataExtentFor(data, path) {
+    if (data.length === 0) return [undefined, undefined]
+    if (Array.isArray(data[0][path])) {
+      const min = d3.min(data, function (d: any) {
         if (d[path] === null) return undefined
         return d3.min(d[path])
       })
-      const max = d3.max(this._data, function (d: any) {
+      const max = d3.max(data, function (d: any) {
         if (d[path] === null) return undefined
         return d3.max(d[path])
       })
       return [min, max]
     } else {
-      return d3.extent(this._data, (d) => d[path])
+      return d3.extent(data, (d) => d[path])
     }
   }
 
@@ -180,6 +181,7 @@ export class ChartArea extends Chart {
     }
 
     const index = this.findXIndex(x, alignment)
+
     const p1 = this.datum[index - 1]
     const p2 = this.datum[index]
     if (p1 === undefined) {
