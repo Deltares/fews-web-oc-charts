@@ -13,37 +13,6 @@ function mean(x: number[] | number) {
 export class ChartProgress extends Chart {
   private previousData: any[] = []
 
-  set extent(extent: any[]) {
-    this._extent = extent
-  }
-
-  get extent(): any[] {
-    if (!this._extent) {
-      this._extent = []
-      for (const key in this.dataKeys) {
-        const path = this.dataKeys[key]
-        this._extent[path] = this.dataExtentFor(key, path)
-      }
-    }
-    return this._extent
-  }
-
-  dataExtentFor(key, path) {
-    if (key === 'radial') {
-      return this._data.map((d) => { return d[path] })
-    } else {
-      const min = d3.min(this._data, function (d: any) {
-        if (d[path] === null) return undefined
-        return d3.min(d[path])
-      })
-      const max = d3.max(this._data, function (d: any) {
-        if (d[path] === null) return undefined
-        return d3.max(d[path])
-      })
-      return [min, max]
-    }
-  }
-
   plotterCartesian(axis: CartesianAxes, dataKeys: any) {
     throw new Error("Not implemented");
   }

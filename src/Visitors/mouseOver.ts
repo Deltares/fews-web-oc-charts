@@ -1,6 +1,6 @@
 import * as d3 from 'd3'
 import { Axes } from '../Axes/axes.js'
-import { AxisType, CartesianAxes, DataPoint, TooltipPosition } from '../index.js'
+import { AxisType, CartesianAxes, XyDataPoint, TooltipPosition } from '../index.js'
 import { Visitor } from './visitor.js'
 import { dateFormatter } from '../Utils/date.js'
 import { setAlphaForColor } from '../Utils/setAlphaForColor.js'
@@ -101,7 +101,7 @@ export class MouseOver implements Visitor {
             return chart.id
           })
 
-    const points: { point: DataPoint; style: SvgPropertiesHyphen, axisIndex: number }[] = []
+    const points: { point: XyDataPoint; style: SvgPropertiesHyphen, axisIndex: number }[] = []
     for (const chart of this.axes.charts) {
       if (traces.includes(chart.id)) {
         const xIndex = chart.axisIndex.x.axisIndex
@@ -115,11 +115,6 @@ export class MouseOver implements Visitor {
       }
     }
     this.updateTooltip(points, mouse)
-  }
-
-  isHidden(element) {
-    const style = window.getComputedStyle(element.node() as Element)
-    return style === null || style.getPropertyValue('visibility') === 'hidden'
   }
 
   update(mouse: [number, number]) {
@@ -143,7 +138,7 @@ export class MouseOver implements Visitor {
   }
 
   updateTooltip(
-    pointData: { point: DataPoint; style: SvgPropertiesHyphen, axisIndex: number }[],
+    pointData: { point: XyDataPoint; style: SvgPropertiesHyphen, axisIndex: number }[],
     mouse: [number, number]
   ) {
     const axes = this.axes
@@ -160,13 +155,14 @@ export class MouseOver implements Visitor {
         if (value.y !== undefined) {
           const extent = this.axes.chartsExtent('y', item.axisIndex, {})
           let label = ''
-          if (value.y instanceof Date) {
-            label = dateFormatter(value.y, 'yyyy-MM-dd HH:mm ZZZZ', {
+          const yValue = value.y
+          if (yValue instanceof Date) {
+            label = dateFormatter(yValue, 'yyyy-MM-dd HH:mm ZZZZ', {
               timeZone: axes.options.x[0].timeZone,
               locale: axes.options.x[0].locale,
             })
           } else {
-            label = this.valueLabel(extent, value.y)
+            label = this.valueLabel(extent, yValue)
           }
           const spanElement = document.createElement('span')
           spanElement.style.color = color
