@@ -189,8 +189,8 @@ export class ChartBar extends Chart {
     this.highlight
       .select('rect')
       .style('opacity', 1)
-      .attr('y', yScale(point.y))
-      .attr('height', yScale(0) - yScale(point.y))
+      .attr('y', Math.min(yScale(point.y), yScale(0)))
+      .attr('height', Math.abs(yScale(0) - yScale(point.y)))
       .attr('x', (d) => this._xRect(d, index))
       .attr('width', (d) => this._widthRect(d, index))
 
