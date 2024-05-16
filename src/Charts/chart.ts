@@ -308,11 +308,13 @@ export abstract class Chart {
       return
     }
     // check if point before or after is null
-    if (
-      (xValue < datum[idx][xKey] && yIsNull(datum[idx - 1])) ||
-      (xValue > datum[idx][xKey] && yIsNull(datum[idx + 1]))
-    ) {
-      return
+    if (method === 'middle') {
+      if (
+        (xValue < datum[idx][xKey] && yIsNull(datum[idx - 1])) ||
+        (xValue > datum[idx][xKey] && yIsNull(datum[idx + 1]))
+      ) {
+        return
+      }
     }
 
     return idx
