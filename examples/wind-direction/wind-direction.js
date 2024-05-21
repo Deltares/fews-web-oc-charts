@@ -212,20 +212,20 @@ function onLoad() {
 
     polarText = new wbCharts.DataField(polarAxis.canvas, {
       selector: 'direction-measured',
-      labelField: { text: 'richting', dy: '-45px' },
-      valueField: { dy: '-25px', units: degree },
+      labelField: { text: 'richting' },
+      valueField: { units: degree },
     })
 
     polarText1 = new wbCharts.DataField(polarAxis.canvas, {
       selector: 'wind',
-      labelField: { text: 'windsnelheid', dy: '-10px' },
-      valueField: { dy: '10px', units: unitsSpeed },
+      labelField: { text: 'windsnelheid' },
+      valueField: { units: unitsSpeed },
     })
 
     polarText2 = new wbCharts.DataField(polarAxis.canvas, {
       selector: 'stoot',
-      labelField: { text: 'windstoot', dy: '25px' },
-      valueField: { dy: '45px', units: unitsStoot },
+      labelField: { text: 'windstoot' },
+      valueField: { units: unitsStoot },
     })
 
     // Wind speed chart
@@ -286,8 +286,7 @@ function onLoad() {
       windSpeedAxis.canvas,
       {
         selector: 'wind',
-        labelField: { text: 'windsnelheid', dy: '80px' },
-        valueField: { dx: '100px', dy: '80px' },
+        labelField: { text: 'windsnelheid' },
       },
       speedDataFormatter
     )
@@ -320,8 +319,7 @@ function onLoad() {
       windStootAxis.canvas,
       {
         selector: 'stoot',
-        labelField: { text: 'windstoot', dy: '80px' },
-        valueField: { dx: '100px', dy: '80px' },
+        labelField: { text: 'windstoot' },
       },
       speedDataFormatter
     )

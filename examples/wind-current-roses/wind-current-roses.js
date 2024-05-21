@@ -199,20 +199,20 @@ function onLoad() {
           `current-direction-measurement-arrow-${index}`,
           `current-direction-forecast-arrow-${index}`,
         ],
-        labelField: { text: 'richting', dy: '-50px' },
-        valueField: [{ dy: '-30px', hyphen: ' / ' }, { units: unitsDegreeCurrent }],
+        labelField: { text: 'richting' },
+        valueField: { hyphen: ' / ', units: unitsDegreeCurrent },
       })
 
       datafieldCurrentSpeed = new wbCharts.DataField(polarAxisCurrent.canvas, {
         selector: [`current-measured-${index}`, `current-forecast-${index}`],
-        labelField: { text: 'stroomsnelheid', dy: '-10px' },
-        valueField: [{ dy: '10px', hyphen: ' / ' }, { units: unitsSpeedCurrent }],
+        labelField: { text: 'stroomsnelheid' },
+        valueField: { hyphen: ' / ', units: unitsSpeedCurrent },
       })
 
       datafieldCrossCurrentSpeed = new wbCharts.DataField(polarAxisCurrent.canvas, {
         selector: [`cross-current-measured-${index}`, `cross-current-forecast-${index}`],
-        labelField: { text: 'dwarsstroomsnelheid', dy: '30px' },
-        valueField: [{ dy: '50px', hyphen: ' / ' }, { units: unitsSpeedCurrent }],
+        labelField: { text: 'dwarsstroomsnelheid' },
+        valueField: { hyphen: ' / ', units: unitsSpeedCurrent },
       })
 
       // Draw
@@ -322,20 +322,20 @@ function onLoad() {
 
       datafieldWindDirection = new wbCharts.DataField(polarAxisWind.canvas, {
         selector: ['wind-direction-measurement-arrow', 'wind-direction-forecast-arrow'],
-        labelField: { text: 'richting', dy: '-50px' },
-        valueField: [{ dy: '-30px', hyphen: ' / ' }, { units: unitsDegreeWind }],
+        labelField: { text: 'richting' },
+        valueField: { hyphen: ' / ' , units: unitsDegreeWind },
       })
 
       datafieldWindSpeed = new wbCharts.DataField(polarAxisWind.canvas, {
         selector: ['wind-measured', 'wind-forecast'],
-        labelField: { text: 'windsnelheid', dy: '-10px' },
-        valueField: [{ dy: '10px', hyphen: ' / ' }, { units: unitsSpeedWind }],
+        labelField: { text: 'windsnelheid' },
+        valueField: { hyphen: ' / ' , units: unitsSpeedWind },
       })
 
       datafieldWindStoot = new wbCharts.DataField(polarAxisWind.canvas, {
         selector: 'windstoot',
-        labelField: { text: 'windstoot', dy: '30px' },
-        valueField: { dy: '50px', units: unitsStoot },
+        labelField: { text: 'windstoot' },
+        valueField: { units: unitsStoot },
       })
 
       // Draw
