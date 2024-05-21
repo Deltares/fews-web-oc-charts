@@ -111,8 +111,8 @@ export class DataField implements Visitor {
   valueFormatter(d: unknown, i: number, isLast?: boolean) {
     const value = this.getValue(d)
     const units = this.getUnit()
-    const seperator = this.options.valueField.hyphen ?? ''
-    const symbol = isLast ? units.unit : seperator
+    const separator = this.options.valueField.hyphen ?? ''
+    const symbol = isLast ? units.unit : separator
     if (value === null) {
       return '-' + symbol;
     }
