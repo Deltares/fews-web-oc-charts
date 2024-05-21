@@ -5,9 +5,9 @@ import { defaultsDeep } from 'lodash-es'
 import { D3Selection } from '../index.js'
 
 export interface UnitOptions {
-  unit: string;
-  factor: number;
-  precision: string;
+  unit?: string;
+  factor?: number;
+  precision?: string;
   scale?: (x: number) => string;
 }
 
@@ -112,17 +112,20 @@ export class DataField implements Visitor {
     const value = this.getValue(d)
     const units = this.getUnit()
     const separator = this.options.valueField.hyphen ?? ''
-    const symbol = isLast ? units.unit : separator
+    const symbol = isLast ? units?.unit ?? '' : separator
     if (value === null) {
       return '-' + symbol;
     }
     const format = (value: any): string => {
       if (value === null) return '-'
-      if (units.factor !== undefined) {
-        const d3Format = units.precision !== undefined ? d3.format(units.precision) : d3.format(".1f");
+      if (units?.factor !== undefined) {
+        const d3Format = units?.precision !== undefined ? d3.format(units.precision) : d3.format(".1f");
         return d3Format(value * units.factor)
       }
-      return units.scale(value)
+      if (units?.scale !== undefined) {
+        return units.scale(value)
+      }
+      return value
     }
     if (Array.isArray(value)) {
       if (value.every(value => value === null)) {
