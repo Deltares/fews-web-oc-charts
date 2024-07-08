@@ -35,6 +35,7 @@ export interface TextOptions {
   dx?: number
   dy?: number
   attributes: SvgPropertiesHyphen
+  angle?: number
   formatter?: (d: unknown) => string
 }
 

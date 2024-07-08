@@ -3,7 +3,6 @@ import { CartesianAxes, PolarAxes } from '../index.js';
 import { Chart, SymbolOptions } from './chart.js'
 
 export class ChartText extends Chart {
-  private previousData: any[] = []
   symbol!: SymbolOptions
 
   constructor(data: any, options: any) {
@@ -12,30 +11,26 @@ export class ChartText extends Chart {
 
   plotterCartesian(axis: CartesianAxes, axisIndex: any) {
     const xKey = this.dataKeys.x
-    const yKey = this.dataKeys.y
+    const valueKey = this.dataKeys.value
     const xScale = axis.xScales[axisIndex.x.axisIndex]
-    const yScale = axis.yScales[axisIndex.y.axisIndex]
 
     const mappedData = this.mapDataCartesian(xScale.domain())
 
-    this.group = this.selectGroup(axis, 'chart-marker')
-      .datum(mappedData)
-    const elements = this.group.selectAll('path').data(d => d)
+    const rotation = this.options?.text?.angle ? ` rotate(${this.options.text.angle})` : ''
 
-    // exit selection
-    elements.exit().remove()
+    this.group = this.selectGroup(axis, 'chart-marker').datum(mappedData)
+    this.group.attr('transform', `translate(0, ${axis.height})`)
+    const elements = this.group.selectAll('text').data(this.data)
+      .join('text')
+      .attr('dominant-baseline', 'middle')
+      .attr('transform', (d) => `translate(${xScale(d[xKey])}, 0)${rotation}`)
+      .text((d) => d[valueKey])
 
-    // enter + update selection
-    const text = elements
-      .enter()
-      .append('text')
-      .attr('text-anchor', 'middle')
-      .attr('dominant-baseline', 'central')
-    text
-      .merge(text)
-      .attr('x', (d) => xScale(d[xKey]))
-      .attr('x', (d) => yScale(d[yKey]))
-      .text((d) => d[yKey])
+      if (this.options?.text?.attributes) {
+        for (const [key, value] of Object.entries(this.options.text.attributes)) {
+          elements.attr(key, value)
+        }
+      }
   }
 
   // eslint-disable-next-line @typescript-eslint/no-empty-function
