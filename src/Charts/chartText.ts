@@ -1,5 +1,5 @@
 import * as d3 from 'd3'
-import { CartesianAxes, PolarAxes } from '../index.js';
+import { CartesianAxes, PolarAxes } from '../index.js'
 import { Chart, SymbolOptions } from './chart.js'
 
 export class ChartText extends Chart {
@@ -11,26 +11,39 @@ export class ChartText extends Chart {
 
   plotterCartesian(axis: CartesianAxes, axisIndex: any) {
     const xKey = this.dataKeys.x
+    const yKey = this.dataKeys.y
     const valueKey = this.dataKeys.value
     const xScale = axis.xScales[axisIndex.x.axisIndex]
+    const yScale = axisIndex.y ? axis.yScales[axisIndex.y.axisIndex] : () => undefined
 
     const mappedData = this.mapDataCartesian(xScale.domain())
 
-    const rotation = this.options?.text?.angle ? ` rotate(${this.options.text.angle})` : ''
 
     this.group = this.selectGroup(axis, 'chart-marker').datum(mappedData)
-    this.group.attr('transform', `translate(0, ${axis.height})`)
-    const elements = this.group.selectAll('text').data(this.data)
+
+    switch (this.options?.text?.position) {
+      case 'bottom':
+        this.group.attr('transform', `translate(0, ${axis.height})`)
+        break
+      default:
+        break
+    }
+
+    const rotation = this.options?.text?.angle ? ` rotate(${this.options.text.angle})` : ''
+
+    const elements = this.group
+      .selectAll('text')
+      .data(this.data)
       .join('text')
       .attr('dominant-baseline', 'middle')
-      .attr('transform', (d) => `translate(${xScale(d[xKey])}, 0)${rotation}`)
+      .attr('transform', (d) => `translate(${xScale(d[xKey])}, ${yScale(d[yKey]) ?? 0})${rotation}`)
       .text((d) => d[valueKey])
 
-      if (this.options?.text?.attributes) {
-        for (const [key, value] of Object.entries(this.options.text.attributes)) {
-          elements.attr(key, value)
-        }
+    if (this.options?.text?.attributes) {
+      for (const [key, value] of Object.entries(this.options.text.attributes)) {
+        elements.attr(key, value)
       }
+    }
   }
 
   // eslint-disable-next-line @typescript-eslint/no-empty-function

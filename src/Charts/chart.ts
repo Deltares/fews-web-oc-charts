@@ -36,7 +36,13 @@ export interface TextOptions {
   dy?: number
   attributes: SvgPropertiesHyphen
   angle?: number
+  position?: TextPosition
   formatter?: (d: unknown) => string
+}
+
+export enum TextPosition {
+  Top = 'top',
+  Bottom = 'bottom',
 }
 
 export interface TooltipOptions {
