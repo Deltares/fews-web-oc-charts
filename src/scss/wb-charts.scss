@@ -214,6 +214,13 @@ svg.wb-charts  {
   }
 }
 
+.chart-text {
+  > text {
+    stroke: none;
+    fill: var(--text-color);
+  }
+}
+
 .mouse {
   cursor: crosshair;
 }

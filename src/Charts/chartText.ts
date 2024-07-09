@@ -18,8 +18,9 @@ export class ChartText extends Chart {
 
     const mappedData = this.mapDataCartesian(xScale.domain())
 
-
-    this.group = this.selectGroup(axis, 'chart-marker').datum(mappedData)
+    this.group = this.selectGroup(axis, 'chart-marker')
+      .datum(mappedData)
+      .attr('class', 'chart-text')
 
     switch (this.options?.text?.position) {
       case TextPosition.Bottom:
