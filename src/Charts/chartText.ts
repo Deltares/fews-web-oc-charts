@@ -1,6 +1,6 @@
 import * as d3 from 'd3'
 import { CartesianAxes, PolarAxes } from '../index.js'
-import { Chart, SymbolOptions } from './chart.js'
+import { Chart, SymbolOptions, TextPosition } from './chart.js'
 
 export class ChartText extends Chart {
   symbol!: SymbolOptions
@@ -22,7 +22,7 @@ export class ChartText extends Chart {
     this.group = this.selectGroup(axis, 'chart-marker').datum(mappedData)
 
     switch (this.options?.text?.position) {
-      case 'bottom':
+      case TextPosition.Bottom:
         this.group.attr('transform', `translate(0, ${axis.height})`)
         break
       default:
