@@ -10,6 +10,7 @@ import { CartesianAxisOptions } from '../Axis/cartesianAxisOptions.js'
 import { XAxis } from '../Axis/xAxis.js'
 import { YAxis } from '../Axis/yAxis.js'
 import { createLayers } from '../Layers/layers.js'
+import { LabelOrientation } from '../Axis/labelOrientation.js'
 
 export type CartesianAxesIndex = { x: { axisIndex: number }, y: { axisIndex: number } }
 
@@ -269,17 +270,33 @@ export class CartesianAxes extends Axes {
     const g = this.canvas.select('g.labels')
     if (this.options.y) {
       if (this.options.y[0]?.label) {
-        g.select('.y0.label')
+        const label = g.select('.y0.label')
           .text(this.options.y[0].label)
+
+        if (this.options.y[0].labelOrientation === LabelOrientation.Vertical) {
+          const offset = this.options.y[0].labelOffset ?? 0
+          label
+            .attr('x', -this.height / 2)
+            .attr('y', -30 - offset)
+        }
       }
       if (this.options.y[0]?.unit) {
         g.select('.y0.unit')
           .text(this.options.y[0].unit)
       }
       if (this.options.y[1]?.label) {
-        g.select('.y1.label')
-          .attr('x', this.width)
+        const label = g.select('.y1.label')
           .text(this.options.y[1].label)
+
+        if (this.options.y[0].labelOrientation === LabelOrientation.Vertical) {
+          const offset = this.options.y[1].labelOffset ?? 0
+          label
+            .attr('x', -this.height / 2)
+            .attr('y', this.width + 39 + offset)
+        } else {
+          label
+            .attr('x', this.width)
+        }
       }
       if (this.options.y[1]?.unit) {
         g.select('.y1.unit')
@@ -288,9 +305,10 @@ export class CartesianAxes extends Axes {
       }
     }
     if (this.options.x[0]?.label) {
+      const offset = this.options.x[0].labelOffset ?? 0
       g.select('.x0.label')
         .attr('x', this.width / 2)
-        .attr('y', this.height + 30)
+        .attr('y', this.height + 30 + offset)
         .text(this.options.x[0].label)
     }
     if (this.options.x[0]?.unit) {
@@ -402,12 +420,23 @@ export class CartesianAxes extends Axes {
 
     if (this.options.y) {
       if (this.options.y[0]?.label) {
-        labelGroup.append('text')
+        const label = labelGroup.append('text')
           .attr('class', 'y0 label')
-          .attr('x', 0)
-          .attr('y', -9)
-          .attr('text-anchor', 'start')
           .text(this.options.y[0].label)
+
+        if (this.options.y[0].labelOrientation === LabelOrientation.Vertical) {
+          const offset = this.options.y[0].labelOffset ?? 0
+          label
+            .attr('transform', 'rotate(-90)')
+            .attr('x', -this.height / 2)
+            .attr('y', -30 - offset)
+            .attr('text-anchor', 'middle')
+        } else {
+          label
+            .attr('x', 0)
+            .attr('y', -9)
+            .attr('text-anchor', 'start')
+        }
       }
       if (this.options.y[0]?.unit) {
         labelGroup.append('text')
@@ -418,12 +447,23 @@ export class CartesianAxes extends Axes {
           .text(this.options.y[0].unit)
       }
       if (this.options.y[1]?.label) {
-        labelGroup.append('text')
+        const label = labelGroup.append('text')
           .attr('class', 'y1 label')
-          .attr('x', this.width)
-          .attr('y', -9)
-          .attr('text-anchor', 'end')
           .text(this.options.y[1].label)
+
+        if (this.options.y[1].labelOrientation === LabelOrientation.Vertical) {
+          const offset = this.options.y[1].labelOffset ?? 0
+          label
+            .attr('transform', 'rotate(-90)')
+            .attr('x', -this.height / 2)
+            .attr('y', this.width + 39 + offset)
+            .attr('text-anchor', 'middle')
+        } else {
+          label
+            .attr('x', this.width)
+            .attr('y', -9)
+            .attr('text-anchor', 'end')
+        }
       }
       if (this.options.y[1]?.unit) {
         labelGroup.append('text')
@@ -435,10 +475,11 @@ export class CartesianAxes extends Axes {
       }
     }
     if (this.options.x[0]?.label) {
+      const offset = this.options.x[0].labelOffset ?? 0
       labelGroup.append('text')
         .attr('class', 'x0 label')
         .attr('x', this.width / 2)
-        .attr('y', this.height + 30)
+        .attr('y', this.height + 30 + offset)
         .attr('text-anchor', 'middle')
         .text(this.options.x[0].label)
     }
