@@ -87,6 +87,7 @@ function setupVerticalProfileMouseover() {
     x: [
       {
         label: 'Velocity',
+        labelOffset: 10,
         position: wbCharts.AxisPosition.Bottom,
         unit: 'm/s',
         showGrid: true,
@@ -94,12 +95,18 @@ function setupVerticalProfileMouseover() {
     ],
     y: [
       {
+        label: 'Height',
+        labelOrientation: wbCharts.LabelOrientation.Vertical,
+        labelOffset: 20,
         position: wbCharts.AxisPosition.Left,
         showGrid: true,
         domain: [-1000, 0],
       },
       {
-        position: wbCharts.AxisPosition.Left,
+        label: 'Depth',
+        labelOrientation: wbCharts.LabelOrientation.Vertical,
+        labelOffset: 20,
+        position: wbCharts.AxisPosition.Right,
         showGrid: true,
         domain: [-1000, 0],
       },
