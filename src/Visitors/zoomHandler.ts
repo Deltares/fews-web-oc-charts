@@ -3,18 +3,35 @@ import type { Axes } from '../Axes/axes.js'
 import type { CartesianAxes, D3Selection } from '../index.js';
 import type { Visitor } from './visitor.js'
 
-enum SelectionMode {
-  CANCEL = 0,
-  X = 1,
-  XY = 2,
-  Y = 3
+const SelectionMode = {
+  CANCEL: "CANCEL",
+  X: "X",
+  XY: "XY",
+  Y: "Y"
 }
+type SelectionMode = typeof SelectionMode[keyof typeof SelectionMode]
 
- export enum WheelMode {
+export const ZoomMode = {
+  X: "X",
+  XY: "XY",
+  Y: "Y"
+}
+export type ZoomMode = typeof ZoomMode[keyof typeof ZoomMode]
+
+export enum WheelMode {
   X = 0,
   XY = 1,
   Y = 2,
   NONE = 3
+}
+
+export interface ZoomHandlerOptions {
+  wheelMode: WheelMode
+  sharedZoomMode: ZoomMode
+}
+
+function isWheelMode(arg: any): arg is WheelMode {
+  return arg in WheelMode
 }
 
 type BrushGroup = D3Selection<SVGElement, null>
@@ -23,12 +40,24 @@ export class ZoomHandler implements Visitor {
   private brushStartPoint: [number, number]
   private axes: CartesianAxes[]
   private mode: SelectionMode
-  private wheelMode: WheelMode
+  private options: ZoomHandlerOptions
   private readonly MINMOVE = 15
   private lastPoint: [number, number]
 
-  constructor(wheelMode?: WheelMode) {
-    this.wheelMode = wheelMode ?? WheelMode.NONE
+  constructor(wheelMode?: WheelMode);
+  constructor(options?: Partial<ZoomHandlerOptions>);
+  constructor(param?: WheelMode | Partial<ZoomHandlerOptions>) {
+    this.options = {
+      wheelMode: WheelMode.NONE,
+      sharedZoomMode: ZoomMode.XY
+    }
+
+    if (isWheelMode(param)) {
+      this.options.wheelMode = param ?? WheelMode.NONE
+    } else {
+      this.options = { ...this.options, ...param }
+    }
+
     this.axes = []
   }
   visit(axis: Axes): void {
@@ -81,8 +110,8 @@ export class ZoomHandler implements Visitor {
       })
       .on('mouseup', (event: MouseEvent) => {
         document.removeEventListener('mouseup', documentMouseUp)
+        this.endSelection(axis, mouseGroup, brushGroup, d3.pointer(event))
         this.axes.forEach((axis) => {
-          this.endSelection(axis, mouseGroup, brushGroup, d3.pointer(event))
           this.dispatchZoomEvent(axis)
         })
         mouseGroup.dispatch('pointerover')
@@ -92,7 +121,7 @@ export class ZoomHandler implements Visitor {
         mouseGroup.dispatch('pointerover')
       })
 
-      if (this.wheelMode !== WheelMode.NONE) {
+      if (this.options.wheelMode !== WheelMode.NONE) {
         mouseRect.on('wheel', (event: WheelEvent) => {
           event.preventDefault() // prevent page scrolling
           const delta = event.deltaY
@@ -114,7 +143,7 @@ export class ZoomHandler implements Visitor {
     axis.container.dispatchEvent(zoomEvent)
   }
 
-  private updateAxisScales(scales: Array<any> , coord: number, factor: number): void {
+  private updateZoomAxisScales(scales: Array<any> , coord: number, factor: number): void {
     for (const scale of scales) {
       const x = scale.invert(coord)
       scale.domain([x - (x - scale.domain()[0]) * factor, x - (x - scale.domain()[1]) * factor])
@@ -122,16 +151,16 @@ export class ZoomHandler implements Visitor {
   }
 
   zoom(axis: CartesianAxes, factor: number, point: [number, number]): void {
-    switch (this.wheelMode) {
+    switch (this.options.wheelMode) {
       case WheelMode.X:
-        this.updateAxisScales(axis.xScales, point[0], factor)
+        this.updateZoomAxisScales(axis.xScales, point[0], factor)
         break
       case WheelMode.Y:
-        this.updateAxisScales(axis.yScales, point[1], factor)
+        this.updateZoomAxisScales(axis.yScales, point[1], factor)
         break
       case WheelMode.XY:
-        this.updateAxisScales(axis.xScales, point[0], factor)
-        this.updateAxisScales(axis.yScales, point[1], factor)
+        this.updateZoomAxisScales(axis.xScales, point[0], factor)
+        this.updateZoomAxisScales(axis.yScales, point[1], factor)
         break
       case WheelMode.NONE:
         break
@@ -227,40 +256,41 @@ export class ZoomHandler implements Visitor {
     }
   }
 
+  private updateAxisScales(scales: Array<any> , point: [number, number], index: number): void {
+    for (const scale of scales) {
+      const extent = d3.extent([point[index], this.brushStartPoint[index]].map(scale.invert))
+      scale.domain(extent)
+    }
+  }
+
   endSelection(axis: CartesianAxes, mouseGroup: any, brushGroup: BrushGroup, point: [number, number]): void {
     if (!this.brushStartPoint) return
     point = point !== null ? point : this.lastPoint
     const mouseRect = mouseGroup.select('rect')
     mouseRect.on('mousemove', null)
     brushGroup.select('.select-rect').attr('visibility', 'hidden')
+    const updateXScales = () => {
+      const axes = [ZoomMode.X, ZoomMode.XY].includes(this.options.sharedZoomMode) ?
+        this.axes : [axis]
+      axes.forEach((axis) => this.updateAxisScales(axis.xScales, point, 0))
+    }
+    const updateYScales = () => {
+      const axes = [ZoomMode.Y, ZoomMode.XY].includes(this.options.sharedZoomMode) ?
+        this.axes : [axis]
+      axes.forEach((axis) => this.updateAxisScales(axis.yScales, point, 1))
+    }
     switch (this.mode) {
       case SelectionMode.X: {
-        for (const key in axis.xScales) {
-          const scale = axis.xScales[key]
-          const extent = d3.extent([point[0], this.brushStartPoint[0]].map(scale.invert))
-          scale.domain(extent)
-        }
+        updateXScales()
         break
       }
       case SelectionMode.Y: {
-        for (const key in axis.yScales) {
-          const scale = axis.yScales[key]
-          const extent = d3.extent([point[1], this.brushStartPoint[1]].map(scale.invert))
-          scale.domain(extent)
-        }
+        updateYScales()
         break
       }
       case SelectionMode.XY: {
-        for (const key in axis.xScales) {
-          const scale = axis.xScales[key]
-          const extent = d3.extent([point[0], this.brushStartPoint[0]].map(scale.invert))
-          scale.domain(extent)
-        }
-        for (const key in axis.yScales) {
-          const scale = axis.yScales[key]
-          const extent = d3.extent([point[1], this.brushStartPoint[1]].map(scale.invert))
-          scale.domain(extent)
-        }
+        updateXScales()
+        updateYScales()
         break
       }
       case SelectionMode.CANCEL: {
@@ -273,7 +303,7 @@ export class ZoomHandler implements Visitor {
     }
     brushGroup.selectAll('*').attr('visibility', 'hidden')
     mouseGroup.dispatch('pointerover')
-    axis.zoom()
+    this.axes.forEach((axis) => axis.zoom())
   }
 
   resetZoom(axis: Axes): void {
