@@ -90,6 +90,7 @@ function onLoad() {
 
   const zoomHandlerX = new wbCharts.ZoomHandler({
     sharedZoomMode: wbCharts.ZoomMode.X,
+    wheelMode: wbCharts.WheelMode.Y,
   })
   axisZoom0.redraw({ x: { autoScale: true }, y: { autoScale: true } })
   axisZoom0.accept(zoomHandlerX)
@@ -101,6 +102,7 @@ function onLoad() {
 
   const zoomHandlerY = new wbCharts.ZoomHandler({
     sharedZoomMode: wbCharts.ZoomMode.Y,
+    wheelMode: wbCharts.WheelMode.Y,
   })
   axisZoom2.redraw({ x: { autoScale: true }, y: { autoScale: true } })
   axisZoom2.accept(zoomHandlerY)
@@ -110,7 +112,10 @@ function onLoad() {
   axisZoom3.accept(zoomHandlerY)
   axisZoom3.accept(new wbCharts.MouseOver(['local', 'mexico']))
 
-  const zoomHandlerXY = new wbCharts.ZoomHandler()
+  const zoomHandlerXY = new wbCharts.ZoomHandler({
+    sharedZoomMode: wbCharts.ZoomMode.XY,
+    wheelMode: wbCharts.WheelMode.XY,
+  })
   axisZoom4.redraw({ x: { autoScale: true }, y: { autoScale: true } })
   axisZoom4.accept(zoomHandlerXY)
   axisZoom4.accept(new wbCharts.MouseOver(['local', 'mexico']))
