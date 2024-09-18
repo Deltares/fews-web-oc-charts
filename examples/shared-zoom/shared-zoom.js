@@ -1,11 +1,10 @@
 function onLoad() {
   var containerZoom0 = document.getElementById('chart-container-0')
   var containerZoom1 = document.getElementById('chart-container-1')
-  var containerSeparate = document.getElementById('chart-container-separate')
-
-
-  console.log(document)
-  console.log(containerZoom0, containerZoom1, containerSeparate)
+  var containerZoom2 = document.getElementById('chart-container-2')
+  var containerZoom3 = document.getElementById('chart-container-3')
+  var containerZoom4 = document.getElementById('chart-container-4')
+  var containerZoom5 = document.getElementById('chart-container-5')
 
   var axisOptions = {
     x: [
@@ -36,9 +35,13 @@ function onLoad() {
       right: 50,
     },
   }
-  var axisZoomXY = new wbCharts.CartesianAxes(containerZoom0, null, null, axisOptions)
-  var axisZoomX = new wbCharts.CartesianAxes(containerZoom1, null, null, axisOptions)
-  var axisNoZoom = new wbCharts.CartesianAxes(containerSeparate, null, null, axisOptions)
+  var axisZoom0 = new wbCharts.CartesianAxes(containerZoom0, null, null, axisOptions)
+  var axisZoom1 = new wbCharts.CartesianAxes(containerZoom1, null, null, axisOptions)
+  var axisZoom2 = new wbCharts.CartesianAxes(containerZoom2, null, null, axisOptions)
+  var axisZoom3 = new wbCharts.CartesianAxes(containerZoom3, null, null, axisOptions)
+  var axisZoom4 = new wbCharts.CartesianAxes(containerZoom4, null, null, axisOptions)
+  var axisZoom5 = new wbCharts.CartesianAxes(containerZoom5, null, null, axisOptions)
+  const axes = [axisZoom0, axisZoom1, axisZoom2, axisZoom3, axisZoom4, axisZoom5]
 
   // Generate time series with a sine function at every day; generate dates
   // in UTC.
@@ -57,15 +60,6 @@ function onLoad() {
       y: Math.sin(2 * Math.PI * frequency * i * step),
     })
   }
-  var plot1ZoomXY = new wbCharts.ChartLine(data, {})
-  var plot2ZoomXY = new wbCharts.ChartLine(data, {})
-
-  var plot1ZoomX = new wbCharts.ChartLine(data, {})
-  var plot2ZoomX = new wbCharts.ChartLine(data, {})
-
-  var plot1NoZoom = new wbCharts.ChartLine(data, {})
-  var plot2NoZoom = new wbCharts.ChartLine(data, {})
-
   var style1 = {
     fill: 'none',
     stroke: 'skyblue',
@@ -76,58 +70,54 @@ function onLoad() {
     'stroke-dasharray': '5,5',
   }
 
-  plot1ZoomXY.addTo(
-    axisZoomXY,
-    { x: { key: 'x', axisIndex: 0 }, y: { key: 'y', axisIndex: 0 } },
-    'local',
-    style1
-  )
-  plot2ZoomXY.addTo(
-    axisZoomXY,
-    { x: { key: 'x', axisIndex: 1 }, y: { key: 'y', axisIndex: 0 } },
-    'mexico',
-    style2
-  )
+  axes.forEach((axis) => {
+    var plot1 = new wbCharts.ChartLine(data, {})
+    var plot2 = new wbCharts.ChartLine(data, {})
 
-  plot1ZoomX.addTo(
-    axisZoomX,
-    { x: { key: 'x', axisIndex: 0 }, y: { key: 'y', axisIndex: 0 } },
-    'local',
-    style1
-  )
-  plot2ZoomX.addTo(
-    axisZoomX,
-    { x: { key: 'x', axisIndex: 1 }, y: { key: 'y', axisIndex: 0 } },
-    'mexico',
-    style2
-  )
+    plot1.addTo(
+      axis,
+      { x: { key: 'x', axisIndex: 0 }, y: { key: 'y', axisIndex: 0 } },
+      'local',
+      style1
+    )
+    plot2.addTo(
+      axis,
+      { x: { key: 'x', axisIndex: 1 }, y: { key: 'y', axisIndex: 0 } },
+      'mexico',
+      style2
+    )
+  })
 
-  plot1NoZoom.addTo(
-    axisNoZoom,
-    { x: { key: 'x', axisIndex: 0 }, y: { key: 'y', axisIndex: 0 } },
-    'local',
-    style1
-  )
-  plot2NoZoom.addTo(
-    axisNoZoom,
-    { x: { key: 'x', axisIndex: 1 }, y: { key: 'y', axisIndex: 0 } },
-    'mexico',
-    style2
-  )
+  const zoomHandlerX = new wbCharts.ZoomHandler({
+    sharedZoomMode: wbCharts.ZoomMode.X,
+  })
+  axisZoom0.redraw({ x: { autoScale: true }, y: { autoScale: true } })
+  axisZoom0.accept(zoomHandlerX)
+  axisZoom0.accept(new wbCharts.MouseOver(['local', 'mexico']))
 
-  const zoomHandler = new wbCharts.ZoomHandler()
-  axisZoomXY.redraw({ x: { autoScale: true }, y: { autoScale: true } })
-  axisZoomXY.accept(zoomHandler)
-  axisZoomXY.accept(new wbCharts.MouseOver(['local', 'mexico']))
+  axisZoom1.redraw({ x: { autoScale: true }, y: { autoScale: true } })
+  axisZoom1.accept(zoomHandlerX)
+  axisZoom1.accept(new wbCharts.MouseOver(['local', 'mexico']))
 
-  axisZoomX.redraw({ x: { autoScale: true }, y: { autoScale: true } })
-  axisZoomX.accept(zoomHandler)
-  axisZoomX.accept(new wbCharts.MouseOver(['local', 'mexico']))
+  const zoomHandlerY = new wbCharts.ZoomHandler({
+    sharedZoomMode: wbCharts.ZoomMode.Y,
+  })
+  axisZoom2.redraw({ x: { autoScale: true }, y: { autoScale: true } })
+  axisZoom2.accept(zoomHandlerY)
+  axisZoom2.accept(new wbCharts.MouseOver(['local', 'mexico']))
 
-  const zoomHandlerSeparate = new wbCharts.ZoomHandler()
-  axisNoZoom.redraw({ x: { autoScale: true }, y: { autoScale: true } })
-  axisNoZoom.accept(zoomHandlerSeparate)
-  axisNoZoom.accept(new wbCharts.MouseOver(['local', 'mexico']))
+  axisZoom3.redraw({ x: { autoScale: true }, y: { autoScale: true } })
+  axisZoom3.accept(zoomHandlerY)
+  axisZoom3.accept(new wbCharts.MouseOver(['local', 'mexico']))
+
+  const zoomHandlerXY = new wbCharts.ZoomHandler()
+  axisZoom4.redraw({ x: { autoScale: true }, y: { autoScale: true } })
+  axisZoom4.accept(zoomHandlerXY)
+  axisZoom4.accept(new wbCharts.MouseOver(['local', 'mexico']))
+
+  axisZoom5.redraw({ x: { autoScale: true }, y: { autoScale: true } })
+  axisZoom5.accept(zoomHandlerXY)
+  axisZoom5.accept(new wbCharts.MouseOver(['local', 'mexico']))
 }
 
 window.addEventListener('load', onLoad)
