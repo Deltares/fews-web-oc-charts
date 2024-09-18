@@ -27,7 +27,7 @@ function onLoad() {
         position: wbCharts.AxisPosition.Left,
         unit: '-',
         showGrid: true,
-        domain: [-1.1, 1.1],
+        nice: true,
       },
     ],
     margin: {
@@ -74,7 +74,7 @@ function onLoad() {
     var curTime = startTime + i * step * 24 * 60 * 60 * 1000
     data2.push({
       x: new Date(curTime),
-      y: Math.sin(2 * Math.PI * frequency * i * step),
+      y: Math.E * Math.sin(2 * Math.PI * frequency * i * step),
     })
   }
   var style1 = {
@@ -107,7 +107,7 @@ function onLoad() {
 
   const zoomHandlerX = new wbCharts.ZoomHandler({
     sharedZoomMode: wbCharts.ZoomMode.X,
-    wheelMode: wbCharts.WheelMode.Y,
+    wheelMode: wbCharts.WheelMode.X,
   })
   axisZoom0.redraw({ x: { autoScale: true }, y: { autoScale: true } })
   axisZoom0.accept(zoomHandlerX)
