@@ -3,42 +3,65 @@ import { Axes } from '../Axes/axes.js'
 import { AxisType, CartesianAxes, TooltipPosition } from '../index.js'
 import { Visitor } from './visitor.js'
 import { dateFormatter } from '../Utils/date.js'
+import { setAlphaForColor } from '../Utils/setAlphaForColor.js'
+import { SvgPropertiesHyphen } from 'csstype'
+import type { DataPointXY } from '../Data/types'
+
+type Group = d3.Selection<SVGElement, unknown, SVGElement, unknown>
+
+interface AxesGroup {
+  axes: CartesianAxes
+  group: Group
+}
+
+type Trace = string[]
+
+export interface MouseOverOptions {
+  trace?: Trace
+  shared: boolean
+}
+
+function isTrace(param: unknown): param is Trace {
+  return Array.isArray(param) && param.every((item) => typeof item === 'string')
+}
 
 export class MouseOver implements Visitor {
-  private trace: string[]
-  private group: d3.Selection<SVGElement, unknown, SVGElement, unknown>
-  private axes: CartesianAxes
-  private mouseGroup: d3.Selection<SVGElement, unknown, SVGElement, unknown>
+  private options: MouseOverOptions
+  private axesGroups: AxesGroup[]
   private customNumberFormatter: ((value: number, extent?: [number, number]) => string) | null
 
-  constructor(
-    trace?: string[],
-    numberFormatter?: (value: number, extent?: [number, number]) => string,
-  ) {
-    this.setTrace(trace)
-    this.customNumberFormatter = numberFormatter ?? null
-  }
+  constructor(trace?: string[]);
+  constructor(options?: Partial<MouseOverOptions>);
+  constructor(param?: string[] | Partial<MouseOverOptions>) {
+    this.options = {
+      shared: false,
+    }
 
-  setTrace(trace: string[]) {
-    this.trace = trace
+    if (isTrace(param)) {
+      this.options.trace = param
+    } else {
+      this.options = { ...this.options, ...param }
+    }
+
+    this.axesGroups = []
   }
 
   visit(axes: Axes): void {
-    this.axes = axes as CartesianAxes
-    this.create(axes as CartesianAxes)
+    const cartesianAxes = axes as CartesianAxes
+    this.axesGroups.push(this.create(cartesianAxes))
   }
 
-  create(axes: CartesianAxes): void {
-    this.mouseGroup = axes.canvas.select('.mouse')
+  create(axes: CartesianAxes): AxesGroup {
+    const mouseGroup = axes.canvas.select('.mouse')
     // Make sure the <g> mouse group picks up pointer events.
-    this.mouseGroup.attr('pointer-events', 'all')
+    mouseGroup.attr('pointer-events', 'all')
 
-    this.group = axes.canvas
+    const group = axes.canvas
       .insert('g', '.mouse')
       .attr('class', 'mouse-over')
       .attr('font-family', 'sans-serif')
 
-    this.group
+    group
       .append('path')
       .attr('class', 'mouse-line')
       .style('opacity', '0')
@@ -48,115 +71,126 @@ export class MouseOver implements Visitor {
         return d
       })
 
-    this.group
+    group
       .append('g')
       .attr('class', 'mouse-x')
       .attr('transform', 'translate(' + 0 + ',' + axes.height + ')')
       .append('text')
       .text('')
 
-    this.mouseGroup
-      .on('pointerout', () => this.onPointerout())
-      .on('pointerover', () => this.onPointerover())
+    const axesGroup = { axes, group }
+    const axesGroups = this.options.shared ? this.axesGroups : [axesGroup]
+    mouseGroup
+      .on('pointerout', () => axesGroups.forEach((axesGroup) => this.onPointerout(axesGroup)))
+      .on('pointerover', () => axesGroups.forEach((axesGroup) => this.onPointerover(axesGroup)))
       .on('pointermove', (event) => {
         // mouse moving over canvas
         const mouse = d3.pointer(event)
-        this.update(mouse)
+        axesGroups.forEach((axesGroup) => this.update(axesGroup, mouse))
       })
+    return axesGroup
   }
 
   // pointer event handlers
-  onPointerout(): void {
+  onPointerout({ axes, group }: AxesGroup): void {
     // on mouse out hide line, circles and text
-    this.group.select('.mouse-line').style('opacity', '0')
-    this.group.selectAll('.mouse-x text').style('fill-opacity', '0')
-    for (const chart of this.axes.charts) {
+    group.select('.mouse-line').style('opacity', '0')
+    group.selectAll('.mouse-x text').style('fill-opacity', '0')
+    for (const chart of axes.charts) {
       chart.onPointerOut()
     }
-    this.axes.tooltip.hide()
+    axes.tooltip.hide()
   }
 
-  onPointerover(): void {
+  onPointerover({ axes, group }: AxesGroup): void {
     // on mouse in show line, circles and text
-    this.axes.tooltip.show()
-    this.group.select('.mouse-line').style('opacity', '1')
-    const traces =
-      this.trace !== undefined
-        ? this.trace
-        : this.axes.charts.map((chart) => {
-            return chart.id
-          })
-    for (const chart of this.axes.charts) {
+    axes.tooltip.show()
+    group.select('.mouse-line').style('opacity', '1')
+    const traces = this.options.trace ?? axes.charts.map((chart) => chart.id)
+    for (const chart of axes.charts) {
       if (traces.includes(chart.id)) {
         chart.onPointerOver()
       } else {
         chart.onPointerOut()
       }
     }
-    this.group.select('.mouse-x text').style('fill-opacity', '1')
+    group.select('.mouse-x text').style('fill-opacity', '1')
   }
 
-  updateChartIndicators(mouse: [number, number]): void {
-    const traces =
-      this.trace !== undefined
-        ? this.trace
-        : this.axes.charts.map((chart) => {
-            return chart.id
-          })
+  updateChartIndicators(axesGroup: AxesGroup, mouse: [number, number]): void {
+    const { axes } = axesGroup
+    const traces = this.options.trace ?? axes.charts.map((chart) => chart.id)
 
     const spanElements: HTMLSpanElement[] = []
     const seen = new Set()
-    for (const chart of this.axes.charts) {
+    for (const chart of axes.charts) {
       if (traces.includes(chart.id) && chart.visible && !seen.has(chart.id)) {
         const xIndex = chart.axisIndex.x.axisIndex
-        const xScale = this.axes.xScales[xIndex]
+        const xScale = axes.xScales[xIndex]
         const yIndex = chart.axisIndex.y.axisIndex
-        const yScale = this.axes.yScales[yIndex]
-        const extent = this.axes.chartsExtent('y', chart.axisIndex.y.axisIndex, {})
-        const precision = d3.precisionFixed((extent[1] - extent[0]) / 100)
-        const pointData = chart.onPointerMove(xScale.invert(mouse[0]), xScale, yScale)
-        const spanElement: HTMLSpanElement | undefined = chart.mouseOverFormatterCartesian(
-          pointData,
-          precision,
-        )
-        if (spanElement) {
-          spanElements.push(spanElement)
+        const yScale = axes.yScales[yIndex]
+        const point = chart.onPointerMove(xScale.invert(mouse[0]), xScale, yScale)
+        if (point) {
+          points.push({ ...point, axisIndex: yIndex })
         }
       }
       seen.add(chart.id)
     }
-    this.updateTooltip(spanElements, mouse)
+    this.updateTooltip(axesGroup, points, mouse)
   }
 
-  update(mouse: [number, number]) {
+  update(axesGroup: AxesGroup, mouse: [number, number]) {
     // update line
-    this.updateXLine(mouse[0])
-    this.updateXValue(mouse[0])
-    this.updateChartIndicators(mouse)
+    this.updateXLine(axesGroup, mouse[0])
+    this.updateXValue(axesGroup, mouse[0])
+    this.updateChartIndicators(axesGroup, mouse)
   }
 
-  updateXLine(xPos: number) {
-    this.group.select('.mouse-line').attr('transform', 'translate(' + xPos + ',' + 0 + ')')
+  updateXLine({ group }: AxesGroup, xPos: number) {
+    group.select('.mouse-line').attr('transform', 'translate(' + xPos + ',' + 0 + ')')
   }
 
-  updateXValue(xPos) {
-    const axes = this.axes
-    this.group
+  updateXValue({ axes, group }: AxesGroup, xPos: number) {
+    group
       .select('.mouse-x')
       .attr('transform', 'translate(' + (xPos + 2) + ',' + (axes.height - 5) + ')')
       .select('text')
       .text(this.xText(axes, xPos))
   }
 
-  updateTooltip(spanElements: HTMLSpanElement[], mouse: [number, number]) {
-    const axes = this.axes
-    if (spanElements.length === 0) {
+  updateTooltip(
+    { axes }: AxesGroup,
+    pointData: { point: DataPointXY; style: SvgPropertiesHyphen, axisIndex: number }[],
+    mouse: [number, number]
+  ) {
+    if (Object.keys(pointData).length === 0) {
       axes.tooltip.hide()
     } else {
       const htmlContent = document.createElement('div')
-      for (const span of spanElements) {
-        htmlContent.appendChild(span)
-        htmlContent.appendChild(document.createElement('br'))
+      for (const item of pointData) {
+        let color = item.style?.color
+        if (color) {
+          color = setAlphaForColor(color, 1)
+        }
+        const value = item.point
+        if (value.y !== undefined) {
+          const extent = axes.chartsExtent('y', item.axisIndex, {})
+          let label = ''
+          const yValue = value.y
+          if (yValue instanceof Date) {
+            label = dateFormatter(yValue, 'yyyy-MM-dd HH:mm ZZZZ', {
+              timeZone: axes.options.x[0].timeZone,
+              locale: axes.options.x[0].locale,
+            })
+          } else {
+            label = this.valueLabel(extent, yValue)
+          }
+          const spanElement = document.createElement('span')
+          spanElement.style.color = color
+          spanElement.innerText = label
+          htmlContent.appendChild(spanElement)
+          htmlContent.appendChild(document.createElement('br'))
+        }
       }
       axes.tooltip.update(
         htmlContent,
@@ -191,13 +225,15 @@ export class MouseOver implements Visitor {
   }
 
   redraw(): void {
-    this.group.select('.mouse-line').attr('d', () => {
-      let d = 'M' + 0 + ',' + this.axes.height
-      d += ' ' + 0 + ',' + 0
-      return d
+    this.axesGroups.forEach(({axes, group}) => {
+      group.select('.mouse-line').attr('d', () => {
+        let d = 'M' + 0 + ',' + axes.height
+        d += ' ' + 0 + ',' + 0
+        return d
+      })
+      for (const chart of axes.charts) {
+        chart.onPointerOut()
+      }
     })
-    for (const chart of this.axes.charts) {
-      chart.onPointerOut()
-    }
   }
 }
