@@ -126,8 +126,8 @@ export class ZoomHandler implements Visitor {
           event.preventDefault() // prevent page scrolling
           const delta = event.deltaY
           const factor = delta > 0 ? 1.1 : 0.9
+          this.zoom(axis, factor, d3.pointer(event))
           this.axes.forEach((axis) => {
-            this.zoom(axis, factor, d3.pointer(event))
             this.dispatchZoomEvent(axis)
           })
         })
@@ -151,22 +151,34 @@ export class ZoomHandler implements Visitor {
   }
 
   zoom(axis: CartesianAxes, factor: number, point: [number, number]): void {
+    const updateXScales = () => {
+      const axes = [ZoomMode.X, ZoomMode.XY].includes(this.options.sharedZoomMode) ?
+        this.axes : [axis]
+      axes.forEach((axis) => this.updateZoomAxisScales(axis.xScales, point[0], factor))
+    }
+    const updateYScales = () => {
+      const axes = [ZoomMode.Y, ZoomMode.XY].includes(this.options.sharedZoomMode) ?
+        this.axes : [axis]
+      axes.forEach((axis) => this.updateZoomAxisScales(axis.yScales, point[1], factor))
+    }
     switch (this.options.wheelMode) {
       case WheelMode.X:
-        this.updateZoomAxisScales(axis.xScales, point[0], factor)
+        updateXScales()
         break
       case WheelMode.Y:
-        this.updateZoomAxisScales(axis.yScales, point[1], factor)
+        updateYScales()
         break
       case WheelMode.XY:
-        this.updateZoomAxisScales(axis.xScales, point[0], factor)
-        this.updateZoomAxisScales(axis.yScales, point[1], factor)
+        updateXScales()
+        updateYScales()
         break
       case WheelMode.NONE:
         break
-      }
-    axis.update()
-    axis.zoom()
+    }
+    this.axes.forEach((axis) => {
+      axis.update()
+      axis.zoom()
+    })
   }
 
   initSelection(axis: Axes, mouseGroup: any, brushGroup: BrushGroup, point: [number, number]): void {
