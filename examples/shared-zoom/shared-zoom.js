@@ -60,6 +60,23 @@ function onLoad() {
       y: Math.sin(2 * Math.PI * frequency * i * step),
     })
   }
+
+  var startDate = new Date(2021, 8, 14)
+  var numDays = 3
+  var frequency = 3
+  var step = 0.01 // in days
+
+  var data2 = []
+  var startTime = startDate.getTime()
+
+  var numSteps = numDays / step
+  for (var i = 0; i < numSteps; i++) {
+    var curTime = startTime + i * step * 24 * 60 * 60 * 1000
+    data2.push({
+      x: new Date(curTime),
+      y: Math.sin(2 * Math.PI * frequency * i * step),
+    })
+  }
   var style1 = {
     fill: 'none',
     stroke: 'skyblue',
@@ -70,9 +87,9 @@ function onLoad() {
     'stroke-dasharray': '5,5',
   }
 
-  axes.forEach((axis) => {
-    var plot1 = new wbCharts.ChartLine(data, {})
-    var plot2 = new wbCharts.ChartLine(data, {})
+  axes.forEach((axis, i) => {
+    var plot1 = new wbCharts.ChartLine(i % 2 === 0 ? data : data2, {})
+    var plot2 = new wbCharts.ChartLine(i % 2 === 0 ? data : data2, {})
 
     plot1.addTo(
       axis,
