@@ -81,7 +81,7 @@ export class DataField implements Visitor {
       const children = d3.select(this).selectChildren()
       children.attr('dy', (_, j) => {
         const index = i * children.size() + j
-        return `${(index - offset) * lineHeight}rem`
+        return `${(index - offset) * lineHeight * 16}px`
       })
     })
   }
