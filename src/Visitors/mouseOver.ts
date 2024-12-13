@@ -7,36 +7,60 @@ import { setAlphaForColor } from '../Utils/setAlphaForColor.js'
 import { SvgPropertiesHyphen } from 'csstype'
 import type { DataPointXY } from '../Data/types'
 
+type Group = d3.Selection<SVGElement, unknown, SVGElement, unknown>
+
+interface AxesGroup {
+  axes: CartesianAxes
+  group: Group
+}
+
+type Trace = string[]
+
+export interface MouseOverOptions {
+  trace?: Trace
+  shared: boolean
+}
+
+function isTrace(param: unknown): param is Trace {
+  return Array.isArray(param) && param.every((item) => typeof item === 'string')
+}
+
 export class MouseOver implements Visitor {
-  private trace: string[]
-  private group: d3.Selection<SVGElement, unknown, SVGElement, unknown>
-  private axes: CartesianAxes
-  private mouseGroup: d3.Selection<SVGElement, unknown, SVGElement, unknown>
+  private options: MouseOverOptions
+  private axesGroups: AxesGroup[]
 
-  constructor(trace?: string[]) {
-    this.setTrace(trace)
-  }
+  constructor(trace?: string[]);
+  constructor(options?: Partial<MouseOverOptions>);
+  constructor(param?: string[] | Partial<MouseOverOptions>) {
+    this.options = {
+      shared: false,
+    }
 
-  setTrace(trace: string[]) {
-    this.trace = trace
+    if (isTrace(param)) {
+      this.options.trace = param
+    } else {
+      this.options = { ...this.options, ...param }
+    }
+
+    this.axesGroups = []
   }
 
   visit(axes: Axes): void {
-    this.axes = axes as CartesianAxes
-    this.create(axes as CartesianAxes)
+    const cartesianAxes = axes as CartesianAxes
+    this.axesGroups.push(this.create(cartesianAxes))
   }
 
-  create(axes: CartesianAxes): void {
-    this.mouseGroup = axes.canvas.select('.mouse')
+  create(axes: CartesianAxes): AxesGroup {
+    const mouseGroup = axes.canvas.select('.mouse')
     // Make sure the <g> mouse group picks up pointer events.
-    this.mouseGroup.attr('pointer-events', 'all')
+    mouseGroup.attr('pointer-events', 'all')
 
-    this.group = axes.canvas
+    const group = axes.canvas
       .insert('g', '.mouse')
       .attr('class', 'mouse-over')
       .attr('font-family', 'sans-serif')
 
-    this.group
+    group
       .append('path')
       .attr('class', 'mouse-line')
       .style('opacity', '0')
@@ -46,70 +70,64 @@ export class MouseOver implements Visitor {
         return d
       })
 
-    this.group
+    group
       .append('g')
       .attr('class', 'mouse-x')
       .attr('transform', 'translate(' + 0 + ',' + axes.height + ')')
       .append('text')
       .text('')
 
-    this.mouseGroup
-      .on('pointerout', () => this.onPointerout())
-      .on('pointerover', () => this.onPointerover())
+    const axesGroup = { axes, group }
+    const axesGroups = this.options.shared ? this.axesGroups : [axesGroup]
+    mouseGroup
+      .on('pointerout', () => axesGroups.forEach((axesGroup) => this.onPointerout(axesGroup)))
+      .on('pointerover', () => axesGroups.forEach((axesGroup) => this.onPointerover(axesGroup)))
       .on('pointermove', (event) => {
         // mouse moving over canvas
         const mouse = d3.pointer(event)
-        this.update(mouse)
+        axesGroups.forEach((axesGroup) => this.update(axesGroup, mouse))
       })
+    return axesGroup
   }
 
   // pointer event handlers
-  onPointerout(): void {
+  onPointerout({ axes, group }: AxesGroup): void {
     // on mouse out hide line, circles and text
-    this.group.select('.mouse-line').style('opacity', '0')
-    this.group.selectAll('.mouse-x text').style('fill-opacity', '0')
-    for (const chart of this.axes.charts) {
+    group.select('.mouse-line').style('opacity', '0')
+    group.selectAll('.mouse-x text').style('fill-opacity', '0')
+    for (const chart of axes.charts) {
       chart.onPointerOut()
     }
-    this.axes.tooltip.hide()
+    axes.tooltip.hide()
   }
 
-  onPointerover(): void {
+  onPointerover({ axes, group }: AxesGroup): void {
     // on mouse in show line, circles and text
-    this.axes.tooltip.show()
-    this.group.select('.mouse-line').style('opacity', '1')
-    const traces =
-      this.trace !== undefined
-        ? this.trace
-        : this.axes.charts.map((chart) => {
-            return chart.id
-          })
-    for (const chart of this.axes.charts) {
+    axes.tooltip.show()
+    group.select('.mouse-line').style('opacity', '1')
+    const traces = this.options.trace ?? axes.charts.map((chart) => chart.id)
+    for (const chart of axes.charts) {
       if (traces.includes(chart.id)) {
         chart.onPointerOver()
       } else {
         chart.onPointerOut()
       }
     }
-    this.group.select('.mouse-x text').style('fill-opacity', '1')
+    group.select('.mouse-x text').style('fill-opacity', '1')
   }
 
-  updateChartIndicators(mouse: [number, number]): void {
-    const traces =
-      this.trace !== undefined
-        ? this.trace
-        : this.axes.charts.map((chart) => {
-            return chart.id
-          })
+  updateChartIndicators(axesGroup: AxesGroup, mouse: [number, number]): void {
+    const { axes } = axesGroup
+    const traces = this.options.trace ?? axes.charts.map((chart) => chart.id)
 
     const points: { point: DataPointXY; style: SvgPropertiesHyphen, axisIndex: number }[] = []
     const seen = new Set()
-    for (const chart of this.axes.charts) {
+    for (const chart of axes.charts) {
       if (traces.includes(chart.id) && chart.visible && !seen.has(chart.id)) {
         const xIndex = chart.axisIndex.x.axisIndex
-        const xScale = this.axes.xScales[xIndex]
+        const xScale = axes.xScales[xIndex]
         const yIndex = chart.axisIndex.y.axisIndex
-        const yScale = this.axes.yScales[yIndex]
+        const yScale = axes.yScales[yIndex]
         const point = chart.onPointerMove(xScale.invert(mouse[0]), xScale, yScale)
         if (point) {
           points.push({ ...point, axisIndex: yIndex })
@@ -117,23 +135,22 @@ export class MouseOver implements Visitor {
       }
       seen.add(chart.id)
     }
-    this.updateTooltip(points, mouse)
+    this.updateTooltip(axesGroup, points, mouse)
   }
 
-  update(mouse: [number, number]) {
+  update(axesGroup: AxesGroup, mouse: [number, number]) {
     // update line
-    this.updateXLine(mouse[0])
-    this.updateXValue(mouse[0])
-    this.updateChartIndicators(mouse)
+    this.updateXLine(axesGroup, mouse[0])
+    this.updateXValue(axesGroup, mouse[0])
+    this.updateChartIndicators(axesGroup, mouse)
   }
 
-  updateXLine(xPos: number) {
-    this.group.select('.mouse-line').attr('transform', 'translate(' + xPos + ',' + 0 + ')')
+  updateXLine({ group }: AxesGroup, xPos: number) {
+    group.select('.mouse-line').attr('transform', 'translate(' + xPos + ',' + 0 + ')')
   }
 
-  updateXValue(xPos) {
-    const axes = this.axes
-    this.group
+  updateXValue({ axes, group }: AxesGroup, xPos: number) {
+    group
       .select('.mouse-x')
       .attr('transform', 'translate(' + (xPos + 2) + ',' + (axes.height - 5) + ')')
       .select('text')
@@ -141,10 +158,10 @@ export class MouseOver implements Visitor {
   }
 
   updateTooltip(
+    { axes }: AxesGroup,
     pointData: { point: DataPointXY; style: SvgPropertiesHyphen, axisIndex: number }[],
     mouse: [number, number]
   ) {
-    const axes = this.axes
     if (Object.keys(pointData).length === 0) {
       axes.tooltip.hide()
     } else {
@@ -156,7 +173,7 @@ export class MouseOver implements Visitor {
         }
         const value = item.point
         if (value.y !== undefined) {
-          const extent = this.axes.chartsExtent('y', item.axisIndex, {})
+          const extent = axes.chartsExtent('y', item.axisIndex, {})
           let label = ''
           const yValue = value.y
           if (yValue instanceof Date) {
@@ -218,13 +235,15 @@ export class MouseOver implements Visitor {
   }
 
   redraw(): void {
-    this.group.select('.mouse-line').attr('d', () => {
-      let d = 'M' + 0 + ',' + this.axes.height
-      d += ' ' + 0 + ',' + 0
-      return d
+    this.axesGroups.forEach(({axes, group}) => {
+      group.select('.mouse-line').attr('d', () => {
+        let d = 'M' + 0 + ',' + axes.height
+        d += ' ' + 0 + ',' + 0
+        return d
+      })
+      for (const chart of axes.charts) {
+        chart.onPointerOut()
+      }
     })
-    for (const chart of this.axes.charts) {
-      chart.onPointerOut()
-    }
   }
 }
