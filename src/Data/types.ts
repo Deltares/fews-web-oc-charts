@@ -1,11 +1,9 @@
 export type DataValue = number | Date | number[]
 
 export type DataPoint = {
-  [key: string]: DataValue
+  [key: string]: DataValue | null
 }
 
-export type DataPointArray = Array<{
-  [key: string]: DataValue
-}>
+export type DataPointArray = Array<DataPoint>
 
 export type DataPointXY = Pick<DataPoint, 'x' | 'y'>

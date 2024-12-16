@@ -1,5 +1,5 @@
 import { min, max, extent } from 'd3'
-import { DataPointArray } from './types'
+import type { DataPoint } from './types'
 
 /**
  * Calculates the data extent for a given path in the data array.
@@ -7,7 +7,7 @@ import { DataPointArray } from './types'
  * @param path - The path to the desired data.
  * @returns The data extent as an array containing the minimum and maximum values.
  */
-export function dataExtentFor(data: DataPointArray, path: string) {
+export function dataExtentFor<T extends DataPoint>(data: Array<T>, path: string, filter?: (d: T) => boolean): [number | Date | undefined, number | Date | undefined] {
   if (data.length === 0) return [undefined, undefined]
   if (Array.isArray(data[0][path])) {
     const minV = min(data, function (d) {
@@ -20,6 +20,9 @@ export function dataExtentFor(data: DataPointArray, path: string) {
     })
     return [minV, maxV]
   } else {
+    if (filter) {
+      return extent(data.filter(filter), (d) => d[path] as number | Date)
+    }
     return extent(data, (d) => d[path] as number | Date)
   }
 }
