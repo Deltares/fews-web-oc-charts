@@ -4,3 +4,11 @@ body {
   margin: 20px;
   color:  var(--text-color);
 }
+
+*[data-filter="true"]::after {
+  content: " On";
+}
+
+*[data-filter="false"]::after {
+  content: " Off";
+}

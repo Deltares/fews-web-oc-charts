@@ -14,6 +14,7 @@ export type PointAlignment = 'right' | 'middle' | 'left'
 interface ChartOptionItem {
   includeInTooltip?: boolean
   includeInAutoScale?: boolean
+  extentFilter?: (d: DataPoint) => boolean
   format?: (value: number | Date) => string
   paddingInner?: number
   paddingOuter?: number
@@ -60,14 +61,19 @@ export enum CurveType {
   StepBefore = 'stepBefore',
 }
 
-export interface ChartOptions {
+export interface ChartOptionsForKeys {
   x?: ChartOptionItem
   x1?: ChartOptionItem
   y?: ChartOptionItem
   radial?: ChartOptionItem
   angular?: ChartOptionItem
-  color?: ColorOptionItem
+}
+
+const chartKeys: (keyof ChartOptionsForKeys)[] = ['x', 'x1', 'y', 'radial', 'angular'];
+
+export interface ChartOptions extends ChartOptionsForKeys {
   transitionTime?: number
+  color?: ColorOptionItem
   colorScale?: any
   symbol?: SymbolOptions
   curve?: string
@@ -115,7 +121,7 @@ export abstract class Chart {
 
   set data(d: any) {
     this._data = d
-    this.extent = null
+    this.extent = undefined
   }
 
   get data() {
@@ -127,11 +133,11 @@ export abstract class Chart {
   }
 
   get extent(): Record<string, number[] | Date[] | null[]> {
-    if (!this._extent) {
-      this._extent = []
-      for (const key in this.dataKeys) {
-        const path = this.dataKeys[key]
-        this._extent[path] = dataExtentFor(this._data, path)
+    if (!this._extent) this._extent = {}
+    for (const key in this.dataKeys) {
+      const path = this.dataKeys[key]
+      if (path in this._extent || this._extent[path] === undefined) {
+        this._extent[path] = dataExtentFor(this._data, path, this.options[key]?.extentFilter)
       }
     }
     return this._extent
@@ -176,7 +182,12 @@ export abstract class Chart {
     return this
   }
 
-  setOptions(options: ChartOptions) {
+  setOptions(options: ChartOptions) {    
+    for (const key of chartKeys) {
+      if (key in options && options[key].extentFilter !== undefined) {
+        this._extent[key] = undefined
+      }
+    }
     merge(this.options, options)
   }
 
