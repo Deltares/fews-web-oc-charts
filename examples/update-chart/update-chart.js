@@ -67,12 +67,13 @@ function onLoad() {
   axis.accept(mouseOver)
   axis.accept(legendWindDirection)
 
-  function updateData() {
+  function updateData(windDirectionChart, windDirectionAxis) {
     var windDirectionData = createData()
-    console.log('new data: ', windDirectionData)
+    windDirectionChart.data = windDirectionData
+    windDirectionAxis.redraw({ x: { autoScale: true }, y: { autoScale: true } })
   }
 
-  addListenerById('update-data-button', 'click', () => updateData())
+  addListenerById('update-data-button', 'click', () => updateData(windDirectionModel, axis))
 }
 
 window.addEventListener('load', onLoad)
