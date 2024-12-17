@@ -1,0 +1,85 @@
+html,
+body {
+  height: 100%;
+  margin: 0px;
+  font-size: 16px;
+  font-family: sans-serif;
+}
+.r-axis {
+  display: none;
+}
+
+.r-grid {
+  display: none;
+}
+
+/* All the same stuff for IE */
+input[type='range']::-ms-thumb {
+  border: black;
+  background: gray;
+}
+
+#wind-rose {
+  display: inline-block;
+  height: calc(100% - 60px);
+  width: 49%;
+}
+
+.chart-container {
+  display: inline-block;
+  height: 100%;
+  width: 49%;
+}
+
+#chart-wind-rose {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+  height: 100%;
+}
+
+#chart-wind-rose .data-field {
+  text-anchor: middle;
+}
+
+.chart-wind-time {
+  height: 49%;
+  position: relative;
+  display: block;
+}
+
+
+#chart-wind-direction-time {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: calc(100% - 60px);
+}
+
+#polar-range {
+  fill: rgba(79, 193, 255, 0.5);
+  stroke: none;
+}
+
+#polar-line {
+  fill: rgb(79, 193, 255);
+  stroke: rgb(79, 193, 255);
+  stroke-width: 3px;
+}
+#polar-line-forecast {
+  fill: rgb(214, 39, 40);
+  stroke: rgb(214, 39, 40);
+  stroke-width: 3px;
+}
+
+
+#winddirection-line-time {
+  fill: none;
+  stroke: rgb(79, 193, 255);
+  stroke-width: 1.5px;
+}
+#winddirection-forecast-line-time {
+  fill: none;
+  stroke: rgb(214, 39, 40);
+  stroke-width: 1.5px;
+}
