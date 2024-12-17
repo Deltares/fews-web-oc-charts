@@ -10,6 +10,20 @@ function toggleChart(element) {
 }
 
 /**
+ * Toggles the extent filter of a chart based on the provided element's data-id attribute.
+ * @param {HTMLElement} element - The element that triggered the toggle action.
+ */
+function toggleFilter(element) {
+  if (element.dataset.filter === 'true') {
+    element.dataset.filter = 'false'
+  } else {
+    element.dataset.filter = 'true'
+  }
+  const ids = element.getAttribute('data-id').split(',')
+  toggleFilterByIds(ids, element.dataset.filter === 'true')
+}
+
+/**
  * Adds a click event listener to element with the specified id.
  * @param {string} id - The id of the element to add the listener to.
  * @param {string} eventType - The type of event to listen for (e.g., 'click', 'mouseover').
@@ -36,4 +50,5 @@ function addListenerByClassName(className, eventType, listenerFunction) {
 document.addEventListener('DOMContentLoaded', function () {
   addListenerByClassName('theme-button', 'click', () => document.documentElement.classList.toggle('dark'))
   addListenerByClassName('legend-button', 'click', (event) => toggleChart(event.target))
+  addListenerByClassName('extent-filter', 'click', (event) => toggleFilter(event.target))
 })
