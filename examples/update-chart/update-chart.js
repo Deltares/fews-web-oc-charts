@@ -21,7 +21,8 @@ function onLoad() {
   }
 
   // Create wind direction chart
-  var axisOptions = {
+  var chartContainer = document.getElementById('chart-wind-direction-time')
+  var windDirAxis = new wbCharts.CartesianAxes(chartContainer, null, null, {
     x: [
       {
         type: 'time',
@@ -43,23 +44,62 @@ function onLoad() {
       left: 50,
       right: 50,
     },
-  }
-  var chartContainer = document.getElementById('chart-wind-direction-time')
-  var axis = new wbCharts.CartesianAxes(chartContainer, null, null, axisOptions)
+  })
 
-  // Create data and add to chart
+  // Create wind rose
+  var containerWindrose = document.getElementById('chart-wind-rose')
+  windRoseAxis = new wbCharts.PolarAxes(containerWindrose, null, null, {
+    angular: {
+      direction: wbCharts.Direction.CLOCKWISE,
+      intercept: Math.PI / 2,
+      format: (value) => `${value}°`,
+    },
+    innerRadius: 0.5,
+  })
+
+  // Create data and add to chart and windrose
   var windDirObservedData = createData()
-  var windDirObsChart = new wbCharts.ChartLine(windDirObservedData, {})
-  windDirObsChart.addTo(axis, { x: { key: 't', axisIndex: 0 }, y: { key: 'y', axisIndex: 0 } },
+  var windDirObsChartLine = new wbCharts.ChartLine(windDirObservedData, {})
+  windDirObsChartLine.addTo(windDirAxis, { x: { key: 't', axisIndex: 0 }, y: { key: 'y', axisIndex: 0 } },
     'winddirection',
     '#winddirection-line-time'
   )
 
   var windDirModelData = createData()
   var windDirModelChart = new wbCharts.ChartLine(windDirModelData, {})
-  windDirModelChart.addTo(axis, { x: { key: 't', axisIndex: 0 }, y: { key: 'y', axisIndex: 0 } },
+  windDirModelChart.addTo(windDirAxis, { x: { key: 't', axisIndex: 0 }, y: { key: 'y', axisIndex: 0 } },
     'winddirection-forecast',
     '#winddirection-forecast-line-time'
+  )
+
+  windDirObsChartArrow = new wbCharts.ChartArrow([{
+      x: [1,0],
+      y: [windDirObservedData[1].y, windDirObservedData[1].y],
+    }], {
+    symbol: { size: 64 },
+    radial: { includeInTooltip: false },
+    tooltip: { anchor: 'pointer' },
+  })
+  windDirObsChartArrow.addTo(
+    windRoseAxis,
+    { radial: { key: 'x' }, angular: { key: 'y' } },
+    'direction-measured',
+    '#polar-line'
+  )
+
+  windDirModelChartArrow = new wbCharts.ChartArrow([{
+      x: [1,0],
+      y: [windDirModelData[1].y, windDirModelData[1].y],
+    }], {
+    symbol: { size: 64 },
+    radial: { includeInTooltip: false },
+    tooltip: { anchor: 'pointer' },
+  })
+  windDirModelChartArrow.addTo(
+    windRoseAxis,
+    { radial: { key: 'x' }, angular: { key: 'y' } },
+    'direction-forecast',
+    '#polar-line-forecast'
   )
 
   // Create legend and other visitors
@@ -70,17 +110,27 @@ function onLoad() {
     ],
     document.getElementById('legend-wind-direction-time')
   )
+  var legendWindRose = new wbCharts.Legend(
+    [
+      { selector: 'direction-measured', label: 'Windrichting meting' },
+      { selector: 'direction-forecast', label: 'Windrichting verwachting' },
+    ],
+    document.getElementById('legend-wind-rose')
+  )
 
   var mouseOver = new wbCharts.MouseOver(['winddirection', 'winddirection-forecast'])
 
   // Draw chart and add visitors
-  axis.redraw({ x: { autoScale: true }, y: { autoScale: true } })
-  axis.accept(mouseOver)
-  axis.accept(legendWindDirection)
+  windDirAxis.redraw({ x: { autoScale: true }, y: { autoScale: true } })
+  windDirAxis.accept(mouseOver)
+  windDirAxis.accept(legendWindDirection)
 
-  function updateData(windDirObsChart, windDirModelChart, windDirectionAxis) {
+  windRoseAxis.redraw()
+  windRoseAxis.accept(legendWindRose)
+
+  function updateData(windDirObsChartLine, windDirModelChart, windDirectionAxis) {
     var windDirObservedData = createData()
-    windDirObsChart.data = windDirObservedData
+    windDirObsChartLine.data = windDirObservedData
 
     var windDirModelData = createData()
     windDirModelChart.data = windDirModelData
@@ -88,7 +138,7 @@ function onLoad() {
     windDirectionAxis.redraw({ x: { autoScale: true }, y: { autoScale: true } })
   }
 
-  addListenerById('update-data-button', 'click', () => updateData(windDirObsChart, windDirModelChart, axis))
+  addListenerById('update-data-button', 'click', () => updateData(windDirObsChartLine, windDirModelChart, windDirAxis))
 }
 
 window.addEventListener('load', onLoad)
