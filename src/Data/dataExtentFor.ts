@@ -11,11 +11,11 @@ export function dataExtentFor<T extends DataPoint>(data: Array<T>, path: string,
   if (data.length === 0) return [undefined, undefined]
   if (Array.isArray(data[0][path])) {
     const minV = min(data, function (d) {
-      if (d[path] === null) return undefined
+      if (!filter(d) || d[path] === null) return undefined
       return min(d[path] as number[])
     })
     const maxV = max(data, function (d) {
-      if (d[path] === null) return undefined
+      if (!filter(d) || d[path] === null) return undefined
       return max(d[path] as number[])
     })
     return [minV, maxV]
