@@ -1,20 +1,26 @@
 function onLoad() {
-  var currentTime = new Date()
-  var timeStep = 5 * 60 * 60 * 1000 // 5 minutes
-  var windDirectionData = [
-    {
-      t: new Date(currentTime.getTime() - timeStep),
-      y: 140
-    },
-    {
-      t: currentTime,
-      y: 170
-    },
-    {
-      t: new Date(currentTime.getTime() + timeStep),
-      y: 150
-    },
-  ]
+
+  function createData() {
+    var currentTime = new Date()
+    var timeStep = 5 * 60 * 60 * 1000 // 5 minutes
+    var windDirectionData = [
+      {
+        t: new Date(currentTime.getTime() - timeStep),
+        y: 360*Math.random()
+      },
+      {
+        t: currentTime,
+        y: 360*Math.random()
+      },
+      {
+        t: new Date(currentTime.getTime() + timeStep),
+        y: 360*Math.random()
+      },
+    ]
+    return windDirectionData
+  }
+
+  var windDirectionData = createData()
 
   var axisOptions = {
     x: [
@@ -60,6 +66,13 @@ function onLoad() {
 
   axis.accept(mouseOver)
   axis.accept(legendWindDirection)
+
+  function updateData() {
+    var windDirectionData = createData()
+    console.log('new data: ', windDirectionData)
+  }
+
+  addListenerById('update-data-button', 'click', () => updateData())
 }
 
 window.addEventListener('load', onLoad)
