@@ -156,5 +156,66 @@ describe('dataExtentFor with filter', () => {
     const extent = dataExtentFor(data, 'x', filter)
     expect(extent).toStrictEqual([undefined, undefined])
   })
+
+  it('array valued single missinge value filter', () => {
+    const data = [
+      {
+        x: [0, 1],
+      },
+      {
+        x: [999, 999],
+      },
+      {
+        x: [0, 1],
+      },
+      {
+        x: [-1, 1],
+      },
+    ]
+    const filter = (d) => !d.x.includes(999)
+    const extent = dataExtentFor(data, 'x', filter)
+    expect(extent).toStrictEqual([-1, 1])
+  })
+
+  it('array valued single flagged data', () => {
+    const data = [
+      {
+        x: [0, 1], flag: 0
+      },
+      {
+        x: [-999, 999], flag: 4
+      },
+      {
+        x: [0, 1], flag: 0
+      },
+      {
+        x: [-1, 1], flag: 0
+      },
+    ]
+    const filter = (d) => d.flag !== 4
+    const extent = dataExtentFor(data, 'x', filter)
+    expect(extent).toStrictEqual([-1, 1])
+  })
+
+  it('array valued all flagged data', () => {
+    const data = [
+      {
+        x: [0, 1], flag: 4
+      },
+      {
+        x: [-1, 0], flag: 4
+      },
+      {
+        x: [0, 1], flag: 4
+      },
+      {
+        x: [0, 1], flag: 4
+      },
+    ]
+    const filter = (d) => d.flag !== 4
+    const extent = dataExtentFor(data, 'x', filter)
+    expect(extent).toStrictEqual([undefined, undefined])
+  })
+
 })
 
