@@ -8,9 +8,9 @@ import type { DataPoint } from './types'
  * @returns The data extent as an array containing the minimum and maximum values.
  */
 export function dataExtentFor<T extends DataPoint>(data: Array<T>, path: string, filter?: (d: T) => boolean): [number | Date | undefined, number | Date | undefined] {
-  if (data.length === 0) return [undefined, undefined]
-  if (Array.isArray(data[0][path])) {
-    const filteredData = filter ? data.filter(filter) : data
+  const filteredData = filter ? data.filter(filter) : data
+  if (filteredData.length === 0) return [undefined, undefined]
+  if (Array.isArray(filteredData[0][path])) {
     const minV = min(filteredData, function (d) {
       if (d[path] === null) return undefined
       return min(d[path] as number[])
@@ -21,9 +21,6 @@ export function dataExtentFor<T extends DataPoint>(data: Array<T>, path: string,
     })
     return [minV, maxV]
   } else {
-    if (filter) {
-      return extent(data.filter(filter), (d) => d[path] as number | Date)
-    }
-    return extent(data, (d) => d[path] as number | Date)
+    return extent(filteredData, (d) => d[path] as number | Date)
   }
 }
