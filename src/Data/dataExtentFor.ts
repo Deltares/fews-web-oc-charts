@@ -10,12 +10,13 @@ import type { DataPoint } from './types'
 export function dataExtentFor<T extends DataPoint>(data: Array<T>, path: string, filter?: (d: T) => boolean): [number | Date | undefined, number | Date | undefined] {
   if (data.length === 0) return [undefined, undefined]
   if (Array.isArray(data[0][path])) {
-    const minV = min(data, function (d) {
-      if (!filter(d) || d[path] === null) return undefined
+    const filteredData = filter ? data.filter(filter) : data
+    const minV = min(filteredData, function (d) {
+      if (d[path] === null) return undefined
       return min(d[path] as number[])
     })
-    const maxV = max(data, function (d) {
-      if (!filter(d) || d[path] === null) return undefined
+    const maxV = max(filteredData, function (d) {
+      if (d[path] === null) return undefined
       return max(d[path] as number[])
     })
     return [minV, maxV]
