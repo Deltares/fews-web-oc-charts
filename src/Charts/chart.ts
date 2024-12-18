@@ -136,7 +136,7 @@ export abstract class Chart {
     if (!this._extent) this._extent = {}
     for (const key in this.dataKeys) {
       const path = this.dataKeys[key]
-      if (path in this._extent || this._extent[path] === undefined) {
+      if (this._extent[path] === undefined) {
         this._extent[path] = dataExtentFor(this._data, path, this.options[key]?.extentFilter)
       }
     }
