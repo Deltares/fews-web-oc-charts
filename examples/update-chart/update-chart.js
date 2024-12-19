@@ -73,9 +73,10 @@ function onLoad() {
   )
 
   function cartesianDataToArrowData(data) {
+    var input = document.getElementById('slider')
     return [{
       x: [1,0],
-      y: [data[1].y, data[1].y]
+      y: [data[input.value].y, data[input.value].y]
     }]
   }
 
@@ -135,8 +136,8 @@ function onLoad() {
 
   function updateData(windDirObsChartLine, windDirModelChart, windDirectionAxis) {
     // New data
-    var windDirObservedData = createData()
-    var windDirModelData = createData()
+    windDirObservedData = createData()
+    windDirModelData = createData()
 
     // Update the line chart
     windDirObsChartLine.data = windDirObservedData
@@ -150,6 +151,12 @@ function onLoad() {
   }
 
   addListenerById('update-data-button', 'click', () => updateData(windDirObsChartLine, windDirModelChart, windDirAxis))
+  var input = document.getElementById('slider')
+  input.onchange = function () {
+    windDirObsChartArrow.data = cartesianDataToArrowData(windDirObservedData)
+    windDirModelChartArrow.data = cartesianDataToArrowData(windDirModelData)
+    windRoseAxis.redraw()
+  }
 }
 
 window.addEventListener('load', onLoad)
