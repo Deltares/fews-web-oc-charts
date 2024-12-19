@@ -72,10 +72,16 @@ function onLoad() {
     '#winddirection-forecast-line-time'
   )
 
-  windDirObsChartArrow = new wbCharts.ChartArrow([{
+  function cartesianDataToArrowData(data) {
+    return [{
       x: [1,0],
-      y: [windDirObservedData[1].y, windDirObservedData[1].y],
-    }], {
+      y: [data[1].y, data[1].y]
+    }]
+  }
+
+  windDirObsChartArrow = new wbCharts.ChartArrow(cartesianDataToArrowData(windDirObservedData),
+  {
+    transitionTime: null,
     symbol: { size: 64 },
     radial: { includeInTooltip: false },
     tooltip: { anchor: 'pointer' },
@@ -87,10 +93,9 @@ function onLoad() {
     '#polar-line'
   )
 
-  windDirModelChartArrow = new wbCharts.ChartArrow([{
-      x: [1,0],
-      y: [windDirModelData[1].y, windDirModelData[1].y],
-    }], {
+  windDirModelChartArrow = new wbCharts.ChartArrow(cartesianDataToArrowData(windDirModelData),
+  {
+    transitionTime: null,
     symbol: { size: 64 },
     radial: { includeInTooltip: false },
     tooltip: { anchor: 'pointer' },
@@ -129,13 +134,19 @@ function onLoad() {
   windRoseAxis.accept(legendWindRose)
 
   function updateData(windDirObsChartLine, windDirModelChart, windDirectionAxis) {
+    // New data
     var windDirObservedData = createData()
-    windDirObsChartLine.data = windDirObservedData
-
     var windDirModelData = createData()
-    windDirModelChart.data = windDirModelData
 
+    // Update the line chart
+    windDirObsChartLine.data = windDirObservedData
+    windDirModelChart.data = windDirModelData
     windDirectionAxis.redraw({ x: { autoScale: true }, y: { autoScale: true } })
+
+    // Update the windrose
+    windDirObsChartArrow.data = cartesianDataToArrowData(windDirObservedData)
+    windDirModelChartArrow.data = cartesianDataToArrowData(windDirModelData)
+    windRoseAxis.redraw()
   }
 
   addListenerById('update-data-button', 'click', () => updateData(windDirObsChartLine, windDirModelChart, windDirAxis))
