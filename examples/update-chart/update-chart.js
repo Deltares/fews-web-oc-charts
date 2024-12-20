@@ -146,7 +146,16 @@ function onLoad() {
     // Update the line chart
     windDirObsChartLine.data = windDirObservedData
     windDirModelChart.data = windDirModelData
-    windDirAxis.redraw({ x: { autoScale: true }, y: { autoScale: true } })
+    windDirAxis.redraw({
+      x: {
+        nice: false,
+        domain: undefined,
+      },
+      y: {
+        nice: false,
+        domain: undefined,
+      }
+    })
 
     // Update the windrose
     windDirObsChartArrow.data = cartesianDataToArrowData(windDirObservedData)
