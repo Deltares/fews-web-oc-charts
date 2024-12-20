@@ -21,6 +21,7 @@ function onLoad() {
   }
 
   // Create wind direction chart
+  defaultYDomain = [0, 360]
   var chartContainer = document.getElementById('chart-wind-direction-time')
   var windDirAxis = new wbCharts.CartesianAxes(chartContainer, null, null, {
     x: [
@@ -35,9 +36,11 @@ function onLoad() {
         label: 'windrichting',
         unit: '°',
         type: 'degrees',
-        domain: [0, 360],
+        domain: defaultYDomain,
+        defaultDomain: defaultYDomain,
         position: wbCharts.AxisPosition.Left,
         showGrid: true,
+        nice: true,
       },
     ],
     margin: {
@@ -124,9 +127,10 @@ function onLoad() {
     document.getElementById('legend-wind-rose')
   )
 
-  var mouseOver = new wbCharts.MouseOver(['winddirection', 'winddirection-forecast'])
-
+  mouseOver = new wbCharts.MouseOver(['winddirection', 'winddirection-forecast'])
+  zoom = new wbCharts.ZoomHandler()
   // Draw chart and add visitors
+  windDirAxis.accept(zoom)
   windDirAxis.redraw({ x: { autoScale: true }, y: { autoScale: true } })
   windDirAxis.accept(mouseOver)
   windDirAxis.accept(legendWindDirection)
@@ -157,6 +161,19 @@ function onLoad() {
     windDirModelChartArrow.data = cartesianDataToArrowData(windDirModelData)
     windRoseAxis.redraw()
   }
+
+  addListenerById('btn-zoom-reset', 'click', () => {
+    windDirAxis.redraw({ x: { autoScale: true }, y: { autoScale: true, nice: true } })
+  })
+  addListenerById('btn-zoom-full', 'click', () => {
+    windDirAxis.redraw({ x: { autoScale: true }, y: { fullExtent: true, nice: true } })
+  })
+  addListenerById('btn-zoom-y', 'click', () => {
+    windDirAxis.redraw({ x: { autoScale: true }, y: { domain: defaultYDomain, nice: true } })
+  })
+  addListenerById('btn-zoom-domain', 'click', () => {
+    windDirAxis.redraw({ x: { autoScale: true }, y: { domain: [-50, 180], nice: false } })
+  })
 }
 
 window.addEventListener('load', onLoad)
