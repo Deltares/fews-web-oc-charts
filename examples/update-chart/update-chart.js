@@ -134,7 +134,7 @@ function onLoad() {
   windRoseAxis.redraw()
   windRoseAxis.accept(legendWindRose)
 
-  function updateData(windDirObsChartLine, windDirModelChart, windDirectionAxis) {
+  function updateData() {
     // New data
     windDirObservedData = createData()
     windDirModelData = createData()
@@ -142,7 +142,7 @@ function onLoad() {
     // Update the line chart
     windDirObsChartLine.data = windDirObservedData
     windDirModelChart.data = windDirModelData
-    windDirectionAxis.redraw({ x: { autoScale: true }, y: { autoScale: true } })
+    windDirAxis.redraw({ x: { autoScale: true }, y: { autoScale: true } })
 
     // Update the windrose
     windDirObsChartArrow.data = cartesianDataToArrowData(windDirObservedData)
@@ -150,7 +150,7 @@ function onLoad() {
     windRoseAxis.redraw()
   }
 
-  addListenerById('update-data-button', 'click', () => updateData(windDirObsChartLine, windDirModelChart, windDirAxis))
+  addListenerById('update-data-button', 'click', () => updateData())
   var input = document.getElementById('slider')
   input.onchange = function () {
     windDirObsChartArrow.data = cartesianDataToArrowData(windDirObservedData)
