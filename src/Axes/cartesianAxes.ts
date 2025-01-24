@@ -11,6 +11,7 @@ import { XAxis } from '../Axis/xAxis.js'
 import { YAxis } from '../Axis/yAxis.js'
 import { createLayers } from '../Layers/layers.js'
 import { LabelOrientation } from '../Axis/labelOrientation.js'
+import { AxisPosition } from '../Axis/axisPosition.js'
 
 export type CartesianAxesIndex = { x: { axisIndex: number }, y: { axisIndex: number } }
 
@@ -207,10 +208,10 @@ export class CartesianAxes extends Axes {
   redraw(options?): void {
     this.updateAxisScales(options?.x ?? {}, 'x')
     this.updateAxisScales(options?.y ?? {}, 'y')
+    this.update()
     for (const chart of this.charts) {
       chart.plotter(this, chart.axisIndex)
     }
-    this.update()
     for (const visitor of this.visitors) {
       visitor.redraw()
     }
@@ -254,9 +255,37 @@ export class CartesianAxes extends Axes {
   }
 
   update(): void {
-    Object.values(this.axisHandles).forEach(
-      (axis) => axis.redraw()
-    )
+    let xRequiresRedraw = false
+    let yRequiresRedraw = false
+    Object.values(this.axisHandles).forEach((axis) => {
+      axis.redraw()
+      if (axis.position === AxisPosition.Left && axis.clientRect.width > this.margin.left) {
+        this.margin.left = axis.clientRect.width
+        xRequiresRedraw = true
+      }
+      if (axis.position === AxisPosition.Right && axis.clientRect.width > this.margin.right) {
+        this.margin.right = axis.clientRect.width
+        xRequiresRedraw = true
+      }
+      if (axis.position === AxisPosition.Bottom && axis.clientRect.height > this.margin.bottom) {
+        this.margin.bottom = axis.clientRect.height
+        yRequiresRedraw = true
+      }
+      if (axis.position === AxisPosition.Top && axis.clientRect.height > this.margin.top) {
+        this.margin.top = axis.clientRect.height
+        yRequiresRedraw = true
+      }
+    })
+
+    if (xRequiresRedraw || yRequiresRedraw) {
+      this.canvas.attr('transform', `translate(${this.margin.left}, ${this.margin.top})`)
+      this.setSize()
+      this.setRange()
+      Object.values(this.axisHandles).forEach((axis) => {
+        axis.redraw()
+      })
+    }
+
     this.setClipPath()
     this.updateCanvas()
     this.updateMouseLayer()
