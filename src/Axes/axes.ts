@@ -94,7 +94,7 @@ export abstract class Axes {
     this.defs = this.svg.append('defs')
     this.canvas = this.svg
       .append('g')
-      .attr('transform', 'translate(' + this.margin.left + ',' + this.margin.top + ')')
+      .attr('transform', `translate(${this.margin.left}, ${this.margin.top})`)
     this.tooltip = new Tooltip(container)
     this.charts = []
     this.visitors = []

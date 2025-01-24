@@ -25,6 +25,7 @@ export abstract class Axis {
   group: d3.Selection<SVGGElement, unknown, null, unknown>
   axis: d3.Axis<any>
   spanScale: any
+  clientRect: DOMRect
 
   constructor(group: d3.Selection<SVGGElement, unknown, null, unknown>, scale: any, spanScale: any, options: Partial<BaseAxisOptions>) {
     this.options = options as any
@@ -37,6 +38,7 @@ export abstract class Axis {
   get class(): string {
     return `${this.options.axisKey}-axis-${this.options.axisIndex}`
   }
+
   protected create(group, scale): void {
     this.group = group.append('g').attr('class', `axis ${this.class}`)
     this.axis = createAxis(this.orientation, scale)
@@ -55,6 +57,7 @@ export abstract class Axis {
     if (this.options.labelAngle !== undefined) {
       this.translateTickLabels(this.orientation, this.options.labelAngle)
     }
+    this.clientRect = this.group.node().getClientRects()[0]
   }
 
   abstract translateAxis(position: AxisPosition): string
