@@ -18,6 +18,7 @@ export default defineConfig({
         "intercept-tests": resolveRelativePath('examples/intercept-tests/index.html'),
         "mouseover": resolveRelativePath('examples/mouseover/index.html'),
         "precipitation-area": resolveRelativePath('examples/precipitation-area/index.html'),
+        "precipitation-bar": resolveRelativePath('examples/precipitation-bar/index.html'),
       }
     }
   },
