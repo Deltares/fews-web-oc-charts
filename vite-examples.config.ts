@@ -32,6 +32,7 @@ export default defineConfig({
         "wind-direction": resolveRelativePath('examples/wind-direction/index.html'),
         "windrose-wbviewer": resolveRelativePath('examples/windrose-wbviewer/index.html'),
         "xlevel": resolveRelativePath('examples/xlevel/index.html'),
+        "zoom-options": resolveRelativePath('examples/zoom-options/index.html'),
       }
     }
   },
