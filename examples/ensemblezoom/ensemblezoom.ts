@@ -4,7 +4,7 @@ import './ensemblezoom.css'
 
 import * as d3 from 'd3'
 import { AxisPosition, AxisType, CartesianAxes, ChartArea, ChartLine } from '../../src'
-import { addListenerByClassName } from '../shared'
+import { addListenerByClassName, percentile } from '../shared'
 
 const height = null
 const width = null
@@ -33,28 +33,6 @@ const axis = new CartesianAxes(container2, width, height, {
   ],
   y: []
 })
-
-function percentile(p, data) {
-  const points = data
-  points.sort(function (a, b) {
-    return a - b
-  })
-  if (Array.isArray(p)) {
-    const result = []
-    for (let i = 0; i < p.length; ++i) {
-      const x = p[i] * (points.length + 1)
-      const x1 = Math.floor(x)
-      const frac = x - x1
-      result.push(points[x1 - 1] + frac * (points[x1] - points[x1 - 1]))
-    }
-    return result
-  } else {
-    const x = p * (points.length + 1)
-    const x1 = Math.floor(x)
-    const frac = x - x1
-    return points[x1 - 1] + frac * (points[x1] - points[x1 - 1])
-  }
-}
 
 const refDate = new Date(2018, 10, 1)
 
