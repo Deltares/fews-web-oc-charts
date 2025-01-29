@@ -8,6 +8,7 @@ export default defineConfig({
       input: {
         "alertlines": resolveRelativePath('examples/alertLines/index.html'),
         "availability": resolveRelativePath('examples/availability/index.html'),
+        "chart-text": resolveRelativePath('examples/chart-text/index.html'),
       }
     }
   },
