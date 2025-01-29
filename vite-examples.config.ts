@@ -10,6 +10,7 @@ export default defineConfig({
         "availability": resolveRelativePath('examples/availability/index.html'),
         "chart-text": resolveRelativePath('examples/chart-text/index.html'),
         "colourbar": resolveRelativePath('examples/colourbar/index.html'),
+        "ensemble": resolveRelativePath('examples/ensemble/index.html'),
       }
     }
   },
