@@ -1,7 +1,8 @@
+import { describe, expect, test } from 'vitest'
 import { dataExtentFor } from '../../src/Data/dataExtentFor'
 
 describe('dataExtentFor', () => {
-  it('scalar x valued data', () => {
+  test('scalar x valued data', () => {
     const data = [
       {
         x: 0,
@@ -17,7 +18,7 @@ describe('dataExtentFor', () => {
     expect(extent).toStrictEqual([-1, 1])
   })
 
-  it('scalar x valued data with NaN', () => {
+  test('scalar x valued data with NaN', () => {
     const data = [
       {
         x: NaN,
@@ -33,7 +34,7 @@ describe('dataExtentFor', () => {
     expect(extent).toStrictEqual([-1, 1])
   })
 
-  it('array valued data', () => {
+  test('array valued data', () => {
     const data = [
       {
         x: [0, 1],
@@ -52,7 +53,7 @@ describe('dataExtentFor', () => {
     expect(extent).toStrictEqual([-1, 1])
   })
 
-  it('data with Date', () => {
+  test('data with Date', () => {
     const data = [
       {
         x: new Date('2024-02-01'),
@@ -71,7 +72,7 @@ describe('dataExtentFor', () => {
 })
 
 describe('dataExtentFor with filter', () => {
-  it('unfiltered x valued data', () => {
+  test('unfiltered x valued data', () => {
     const data = [
       {
         x: 999,
@@ -88,7 +89,7 @@ describe('dataExtentFor with filter', () => {
   })
 
 
-  it('fiterscalar x valued data', () => {
+  test('fiterscalar x valued data', () => {
     const data = [
       {
         x: 999,
@@ -106,7 +107,7 @@ describe('dataExtentFor with filter', () => {
   })
 
 
-  it('scalar x valued data', () => {
+  test('scalar x valued data', () => {
     const data = [
       {
         x: 999, flag: 4
@@ -123,7 +124,7 @@ describe('dataExtentFor with filter', () => {
     expect(extent).toStrictEqual([-1, 1])
   })
 
-  it('all data filtered', () => {
+  test('all data filtered', () => {
     const data = [
       {
         x: 999,
@@ -140,7 +141,7 @@ describe('dataExtentFor with filter', () => {
     expect(extent).toStrictEqual([undefined, undefined])
   })
 
-  it('all flagged data', () => {
+  test('all flagged data', () => {
     const data = [
       {
         x: 999, flag: 4
@@ -157,7 +158,7 @@ describe('dataExtentFor with filter', () => {
     expect(extent).toStrictEqual([undefined, undefined])
   })
 
-  it('array valued single missinge value filter', () => {
+  test('array valued single missinge value filter', () => {
     const data = [
       {
         x: [0, 1],
@@ -177,7 +178,7 @@ describe('dataExtentFor with filter', () => {
     expect(extent).toStrictEqual([-1, 1])
   })
 
-  it('array valued single flagged data', () => {
+  test('array valued single flagged data', () => {
     const data = [
       {
         x: [0, 1], flag: 0
@@ -197,7 +198,7 @@ describe('dataExtentFor with filter', () => {
     expect(extent).toStrictEqual([-1, 1])
   })
 
-  it('array valued all flagged data', () => {
+  test('array valued all flagged data', () => {
     const data = [
       {
         x: [0, 1], flag: 4
