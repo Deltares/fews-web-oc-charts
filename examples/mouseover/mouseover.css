@@ -1,9 +1,3 @@
-body {
-  background-color: rgb(44, 44, 44);
-  font: 10px sans-serif;
-  margin: 20px;
-}
-
 .dst-indicator {
   fill: yellow;
 }
