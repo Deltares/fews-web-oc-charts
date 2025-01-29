@@ -1,31 +1,25 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="UTF-8" />
-    <title>Crossection Demo</title>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.js"></script>
-    <script src="https://d3js.org/d3-selection-multi.v1.min.js"></script>
-    <link rel="stylesheet" href="/lib/css/wb-charts.css" />
-    <link rel="stylesheet" href="../shared.css" />
-    <script type="text/javascript" src="../shared.js"></script>
-    <script type="text/javascript" src="xlevel.js"></script>
-    <link rel="stylesheet" href="xlevel.css" />
-    <script src="/dist/wb-charts.umd.js"></script>
-  </head>
+<head>
+  <meta charset="UTF-8" />
+  <title>Crossection Demo</title>
+</head>
 
-  <body>
-    <button class="theme-button" type="button" data-id="theme">Theme</button>
-    <div>
-      <div id="chart-container-1"></div>
-      <div id="chart-legend-1"></div>
-    </div>
-    <button class="my-legend-button" type="button" data-id="median">median</button>
-    <button class="my-legend-button" type="button" data-id="control">control</button>
-    <button class="my-legend-button" type="button" data-id="percent50,percent90">percentile</button>
-    <button class="my-legend-button" type="button" data-id="ensemble">ensemble</button>
-    <div>Move cross-section line to:</div>
-    <button id="button-move-left" type="button">left</button>
-    <button id="button-move-right" type="button">right</button>
-  </body>
+<body>
+  <button class="theme-button" type="button" data-id="theme">Theme</button>
+  <div>
+    <div id="chart-container-1"></div>
+    <div id="chart-legend-1"></div>
+  </div>
+  <button class="legend-button" type="button" data-id="median">median</button>
+  <button class="legend-button" type="button" data-id="control">control</button>
+  <button class="legend-button" type="button" data-id="percent50,percent90">percentile</button>
+  <button class="legend-button" type="button" data-id="ensemble">ensemble</button>
+  <div>Move cross-section line to:</div>
+  <button id="button-move-left" type="button">left</button>
+  <button id="button-move-right" type="button">right</button>
+  <script type="module" src="/examples/xlevel/xlevel.ts"></script>
+</body>
+
 </html>

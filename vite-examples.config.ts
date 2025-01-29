@@ -31,6 +31,7 @@ export default defineConfig({
         "wind-current-roses": resolveRelativePath('examples/wind-current-roses/index.html'),
         "wind-direction": resolveRelativePath('examples/wind-direction/index.html'),
         "windrose-wbviewer": resolveRelativePath('examples/windrose-wbviewer/index.html'),
+        "xlevel": resolveRelativePath('examples/xlevel/index.html'),
       }
     }
   },
