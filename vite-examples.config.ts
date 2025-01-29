@@ -24,6 +24,7 @@ export default defineConfig({
         "secondary-axis": resolveRelativePath('examples/secondary-axis/index.html'),
         "shared-zoom": resolveRelativePath('examples/shared-zoom/index.html'),
         "spectrum": resolveRelativePath('examples/spectrum/index.html'),
+        "time-axes": resolveRelativePath('examples/time-axes/index.html'),
       }
     }
   },
