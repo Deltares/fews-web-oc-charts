@@ -11,6 +11,7 @@ export default defineConfig({
         "chart-text": resolveRelativePath('examples/chart-text/index.html'),
         "colourbar": resolveRelativePath('examples/colourbar/index.html'),
         "ensemble": resolveRelativePath('examples/ensemble/index.html'),
+        "ensemblezoom": resolveRelativePath('examples/ensemblezoom/index.html'),
       }
     }
   },
