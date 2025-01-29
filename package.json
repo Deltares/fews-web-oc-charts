@@ -34,6 +34,7 @@
   "scripts": {
     "dev": "vite --config vite-examples.config.ts",
     "build": "tsc && vite build --config vite-library.config.ts",
+    "build-examples": "vite build --config vite-examples.config.ts",
     "clean": "shx rm -rf dist",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",
