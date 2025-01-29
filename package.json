@@ -2,6 +2,8 @@
   "name": "@deltares/fews-web-oc-charts",
   "version": "3.1.0",
   "description": "FEWS Chart Library",
+  "license": "MIT",
+  "private": false,
   "author": {
     "name": "Werner Kramer",
     "email": "werner.kramer@deltares.nl"
@@ -10,21 +12,15 @@
     "FEWS",
     "Charts"
   ],
-  "license": "MIT",
   "type": "module",
-  "exports": {
-    "types": "./lib/types/index.d.ts",
-    "import": "./lib/esm/index.js",
-    "require": "./lib/cjs/index.js"
-  },
-  "main": "./lib/cjs/index.js",
-  "module": "./lib/esm/index.js",
-  "typings": "./lib/types/index.d.ts",
-  "private": false,
   "files": [
-    "dist/*",
-    "lib/*"
+    "dist"
   ],
+  "module": "./dist/fews-web-oc-charts.js",
+  "exports": {
+    "import": "./dist/fews-web-oc-charts.js",
+    "types": "./dist/index.d.ts"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Deltares/fews-web-oc-charts"
