@@ -7,6 +7,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         "alertlines": resolveRelativePath('examples/alertLines/index.html'),
+        "availability": resolveRelativePath('examples/availability/index.html'),
       }
     }
   },
