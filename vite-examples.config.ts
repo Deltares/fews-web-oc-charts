@@ -19,6 +19,7 @@ export default defineConfig({
         "mouseover": resolveRelativePath('examples/mouseover/index.html'),
         "precipitation-area": resolveRelativePath('examples/precipitation-area/index.html'),
         "precipitation-bar": resolveRelativePath('examples/precipitation-bar/index.html'),
+        "progress": resolveRelativePath('examples/progress/index.html'),
       }
     }
   },
