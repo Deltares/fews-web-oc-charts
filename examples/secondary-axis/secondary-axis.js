@@ -26,9 +26,10 @@ function onLoad() {
     x: [{ type: 'time', showGrid: true }],
     y: [
       { label: 'Waterstand', unit: 'cm', showGrid: true, domain: [-450, 150] },
-      { label: 'Wind richting', unit: 'deg', position: 'right', domain: [-150, 450] },
+      { label: 'Wind richting', unit: 'deg', position: 'right', type: 'degrees', domain: [-150, 450] },
     ],
-    margin: { left: 50, right: 50 },
+    margin: { left: 10, right: 10 },
+    automargin: true
   })
 
   var refDate = new Date()
