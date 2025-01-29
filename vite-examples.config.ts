@@ -17,6 +17,7 @@ export default defineConfig({
         "grouped-bar": resolveRelativePath('examples/grouped-bar/index.html'),
         "intercept-tests": resolveRelativePath('examples/intercept-tests/index.html'),
         "mouseover": resolveRelativePath('examples/mouseover/index.html'),
+        "precipitation-area": resolveRelativePath('examples/precipitation-area/index.html'),
       }
     }
   },
