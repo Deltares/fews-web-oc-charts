@@ -262,7 +262,7 @@ export class CartesianAxes extends Axes {
     let yRequiresRedraw = false
     Object.values(this.axisHandles).forEach((axis) => {
       axis.redraw()
-      if(this.options.automargin) {
+      if(this.options.automargin && axis.clientRect) {
         if (axis.position === AxisPosition.Left && axis.clientRect.width > this.margin.left) {
           this.margin.left = ceilByStep(axis.clientRect.width, 10)
           xRequiresRedraw = true
