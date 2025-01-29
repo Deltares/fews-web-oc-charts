@@ -37,7 +37,7 @@ export class CartesianAxes extends Axes {
   xInitialExtent: Array<any> = []
   yInitialExtent: Array<any> = []
   clipPathId: string
-  options: CartesianAxesOptions | null = null
+  declare options: CartesianAxesOptions
 
   constructor(
     container: HTMLElement,

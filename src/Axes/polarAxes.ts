@@ -44,7 +44,7 @@ const polarAxesDefaultOptions: PolarAxesOptions = {
 export class PolarAxes extends Axes {
   radialScale: any
   angularScale: any
-  options: PolarAxesOptions | null = null
+  declare options: PolarAxesOptions
 
   radialAxis: D3Selection<SVGGElement> | null = null
   angularAxis: D3Selection<SVGGElement> | null = null
