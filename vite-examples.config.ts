@@ -14,6 +14,7 @@ export default defineConfig({
         "ensemblezoom": resolveRelativePath('examples/ensemblezoom/index.html'),
         "escalation-levels": resolveRelativePath('examples/escalation-levels/index.html'),
         "extent-filter": resolveRelativePath('examples/extent-filter/index.html'),
+        "grouped-bar": resolveRelativePath('examples/grouped-bar/index.html'),
       }
     }
   },
