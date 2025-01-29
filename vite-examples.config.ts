@@ -13,6 +13,7 @@ export default defineConfig({
         "ensemble": resolveRelativePath('examples/ensemble/index.html'),
         "ensemblezoom": resolveRelativePath('examples/ensemblezoom/index.html'),
         "escalation-levels": resolveRelativePath('examples/escalation-levels/index.html'),
+        "extent-filter": resolveRelativePath('examples/extent-filter/index.html'),
       }
     }
   },
