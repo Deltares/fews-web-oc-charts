@@ -258,32 +258,8 @@ export class CartesianAxes extends Axes {
   }
 
   update(): void {
-    let xRequiresRedraw = false
-    let yRequiresRedraw = false
-    Object.values(this.axisHandles).forEach((axis) => {
-      axis.redraw()
-      if(this.options.automargin && axis.clientRect) {
-        if (axis.position === AxisPosition.Left && axis.clientRect.width > this.margin.left) {
-          this.margin.left = ceilByStep(axis.clientRect.width, 10)
-          xRequiresRedraw = true
-        }
-        if (axis.position === AxisPosition.Right && axis.clientRect.width > this.margin.right) {
-          this.margin.right = ceilByStep(axis.clientRect.width, 10)
-          xRequiresRedraw = true
-        }
-        if (axis.position === AxisPosition.Bottom && axis.clientRect.height > this.margin.bottom) {
-          this.margin.bottom = ceilByStep(axis.clientRect.height, 10)
-          yRequiresRedraw = true
-        }
-        if (axis.position === AxisPosition.Top && axis.clientRect.height > this.margin.top) {
-          this.margin.top = ceilByStep(axis.clientRect.height, 10)
-          yRequiresRedraw = true
-        }
-      }
-    })
-
-    // redraw if margins have changed
-    if (xRequiresRedraw || yRequiresRedraw) {
+    const marginRequiresUpdate = this.redrawAxes()
+    if (marginRequiresUpdate) {
       this.canvas.attr('transform', `translate(${this.margin.left}, ${this.margin.top})`)
       this.setSize()
       this.setRange()
@@ -299,6 +275,32 @@ export class CartesianAxes extends Axes {
     Object.values(this.gridHandles).forEach(
       (grid) => grid.redraw()
     )
+  }
+
+  redrawAxes(): boolean {
+    let requiresRedraw = false
+    Object.values(this.axisHandles).forEach((axis) => {
+      axis.redraw()
+      if(this.options.automargin && axis.clientRect) {
+        if (axis.position === AxisPosition.Left && axis.clientRect.width > this.margin.left) {
+          this.margin.left = ceilByStep(axis.clientRect.width, 10)
+          requiresRedraw = true
+        }
+        if (axis.position === AxisPosition.Right && axis.clientRect.width > this.margin.right) {
+          this.margin.right = ceilByStep(axis.clientRect.width, 10)
+          requiresRedraw = true
+        }
+        if (axis.position === AxisPosition.Bottom && axis.clientRect.height > this.margin.bottom) {
+          this.margin.bottom = ceilByStep(axis.clientRect.height, 10)
+          requiresRedraw = true
+        }
+        if (axis.position === AxisPosition.Top && axis.clientRect.height > this.margin.top) {
+          this.margin.top = ceilByStep(axis.clientRect.height, 10)
+          requiresRedraw = true
+        }
+      }
+    })
+    return requiresRedraw
   }
 
   updateLabels(): void {
