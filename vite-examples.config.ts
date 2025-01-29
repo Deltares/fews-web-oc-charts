@@ -30,6 +30,7 @@ export default defineConfig({
         "wheel-zoom": resolveRelativePath('examples/wheel-zoom/index.html'),
         "wind-current-roses": resolveRelativePath('examples/wind-current-roses/index.html'),
         "wind-direction": resolveRelativePath('examples/wind-direction/index.html'),
+        "windrose-wbviewer": resolveRelativePath('examples/windrose-wbviewer/index.html'),
       }
     }
   },
