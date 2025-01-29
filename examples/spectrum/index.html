@@ -1,22 +1,19 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="UTF-8" />
-    <title>Wave Spectrum Tech Demo</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.js"></script>
-    <link rel="stylesheet" href="/lib/css/wb-charts.css" />
-    <link rel="stylesheet" href="../shared.css" />
-    <script type="text/javascript" src="../shared.js"></script>
-    <script type="text/javascript" src="spectrum.js"></script>
-    <link rel="stylesheet" href="spectrum.css" />
-    <script src="/dist/wb-charts.umd.js"></script>
-  </head>
-  <body>
-    <button class="theme-button" type="button" data-id="theme">Theme</button>
-    <div id="chart-container-1"></div>
-    <div id="chart-container-2"></div>
-    <div>
-      <input id="slider" type="range" name="points" min="0" max="10" />
-    </div>
-  </body>
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Wave Spectrum Tech Demo</title>
+</head>
+
+<body>
+  <button class="theme-button" type="button" data-id="theme">Theme</button>
+  <div id="chart-container-1"></div>
+  <div id="chart-container-2"></div>
+  <div>
+    <input id="slider" type="range" name="points" min="0" max="10" />
+  </div>
+  <script type="module" src="/examples/spectrum/spectrum.ts"></script>
+</body>
+
 </html>
