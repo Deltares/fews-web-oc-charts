@@ -16,6 +16,7 @@ export interface Margin {
 export interface AxesOptions {
   transitionTime?: number;
   margin?: Margin;
+  automargin?: boolean 
 }
 
 interface AxisIndexItem {

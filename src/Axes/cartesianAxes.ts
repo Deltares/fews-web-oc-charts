@@ -21,6 +21,8 @@ export interface CartesianAxesOptions extends AxesOptions {
 }
 
 const defaultAxesOptions = {
+  margin: { top: 20, right: 50, bottom: 20, left: 50 },
+  automargin: false,
   x: [{ type: AxisType.value, labelAngle: 0 }],
   y: [{ type: AxisType.value, labelAngle: 0 }]
 } as const
@@ -259,24 +261,27 @@ export class CartesianAxes extends Axes {
     let yRequiresRedraw = false
     Object.values(this.axisHandles).forEach((axis) => {
       axis.redraw()
-      if (axis.position === AxisPosition.Left && axis.clientRect.width > this.margin.left) {
-        this.margin.left = axis.clientRect.width
-        xRequiresRedraw = true
-      }
-      if (axis.position === AxisPosition.Right && axis.clientRect.width > this.margin.right) {
-        this.margin.right = axis.clientRect.width
-        xRequiresRedraw = true
-      }
-      if (axis.position === AxisPosition.Bottom && axis.clientRect.height > this.margin.bottom) {
-        this.margin.bottom = axis.clientRect.height
-        yRequiresRedraw = true
-      }
-      if (axis.position === AxisPosition.Top && axis.clientRect.height > this.margin.top) {
-        this.margin.top = axis.clientRect.height
-        yRequiresRedraw = true
+      if(this.options.automargin) {
+        if (axis.position === AxisPosition.Left && axis.clientRect.width > this.margin.left) {
+          this.margin.left = axis.clientRect.width
+          xRequiresRedraw = true
+        }
+        if (axis.position === AxisPosition.Right && axis.clientRect.width > this.margin.right) {
+          this.margin.right = axis.clientRect.width
+          xRequiresRedraw = true
+        }
+        if (axis.position === AxisPosition.Bottom && axis.clientRect.height > this.margin.bottom) {
+          this.margin.bottom = axis.clientRect.height
+          yRequiresRedraw = true
+        }
+        if (axis.position === AxisPosition.Top && axis.clientRect.height > this.margin.top) {
+          this.margin.top = axis.clientRect.height
+          yRequiresRedraw = true
+        }
       }
     })
 
+    // redraw if margins have changed
     if (xRequiresRedraw || yRequiresRedraw) {
       this.canvas.attr('transform', `translate(${this.margin.left}, ${this.margin.top})`)
       this.setSize()
