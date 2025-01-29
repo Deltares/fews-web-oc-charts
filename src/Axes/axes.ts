@@ -90,12 +90,11 @@ export abstract class Axes {
       .append('svg')
       .attr('class', 'wb-charts')
       .attr('overflow', 'visible')
-    this.setSize(height, width)
-
     this.defs = this.svg.append('defs')
     this.canvas = this.svg
-      .append('g')
-      .attr('transform', `translate(${this.margin.left}, ${this.margin.top})`)
+        .append('g')
+
+    this.setSize(height, width)
     this.tooltip = new Tooltip(container)
     this.charts = []
     this.visitors = []
@@ -128,7 +127,7 @@ export abstract class Axes {
       .attr('width', containerWidth)
       .attr('height', containerHeight)
       .attr('viewBox', `0 0 ${containerWidth} ${containerHeight}`)
-
+    this.canvas.attr('transform', `translate(${this.margin.left}, ${this.margin.top})`)
   }
 
   resize(): void {
