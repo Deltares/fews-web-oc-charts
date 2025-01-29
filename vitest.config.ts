@@ -10,8 +10,10 @@ function getBrowserInstances(mode: string): BrowserInstanceConfig[] {
   }
   // Run test suite with all browsers in Playwright when running in "full-test"
   // mode, otherwise, only run in chromium.
+  // FIXME: currently, "webkit" requires many extra dependencies to be installed
+  //        in the runner for the CI, so only use chromium and firefox for now.
   const browsers =
-    mode === 'full-test' ? ['chromium', 'firefox', 'webkit'] : ['chromium']
+    mode === 'full-test' ? ['chromium', 'firefox'] : ['chromium']
   return browsers.map(browser => ({ browser }))
 }
 
