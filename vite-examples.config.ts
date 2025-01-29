@@ -26,6 +26,7 @@ export default defineConfig({
         "spectrum": resolveRelativePath('examples/spectrum/index.html'),
         "time-axes": resolveRelativePath('examples/time-axes/index.html'),
         "varying-warninglevels": resolveRelativePath('examples/varying-warninglevels/index.html'),
+        "vertical": resolveRelativePath('examples/vertical/index.html'),
       }
     }
   },
