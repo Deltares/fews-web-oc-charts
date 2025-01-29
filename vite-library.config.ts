@@ -9,8 +9,8 @@ export default defineConfig({
       entry: resolveRelativePath('src/index.ts'),
       // Only build ES module.
       formats: ['es'],
-      name: 'webgl-streamline-visualizer',
-      fileName: 'webgl-streamline-visualizer',
+      name: 'fews-web-oc-charts',
+      fileName: 'fews-web-oc-charts',
     },
     rollupOptions: {
       plugins: [

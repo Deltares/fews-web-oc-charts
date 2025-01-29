@@ -11,12 +11,9 @@
     "allowImportingTsExtensions": true,
     "isolatedModules": true,
     "moduleDetection": "force",
-    "noEmit": true
-    /*
-    "allowSyntheticDefaultImports": true,
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true
-    */
+    "noEmit": true,
+
+    "types": ["vite/client"]
   },
-  "include": ["src"]
+  "include": ["src", "vite-library.config.ts"]
 }
