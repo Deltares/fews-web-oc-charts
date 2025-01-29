@@ -16,6 +16,7 @@ export default defineConfig({
         "extent-filter": resolveRelativePath('examples/extent-filter/index.html'),
         "grouped-bar": resolveRelativePath('examples/grouped-bar/index.html'),
         "intercept-tests": resolveRelativePath('examples/intercept-tests/index.html'),
+        "mouseover": resolveRelativePath('examples/mouseover/index.html'),
       }
     }
   },
