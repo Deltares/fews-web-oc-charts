@@ -20,6 +20,7 @@ export default defineConfig({
         "precipitation-area": resolveRelativePath('examples/precipitation-area/index.html'),
         "precipitation-bar": resolveRelativePath('examples/precipitation-bar/index.html'),
         "progress": resolveRelativePath('examples/progress/index.html'),
+        "rule": resolveRelativePath('examples/rule/index.html'),
       }
     }
   },
