@@ -15,5 +15,5 @@
 
     "types": ["vite/client"]
   },
-  "include": ["src", "test", "*.config.ts"]
+  "include": ["src", "test", "examples", "*.config.ts"]
 }
