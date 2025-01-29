@@ -29,6 +29,7 @@ export default defineConfig({
         "vertical": resolveRelativePath('examples/vertical/index.html'),
         "wheel-zoom": resolveRelativePath('examples/wheel-zoom/index.html'),
         "wind-current-roses": resolveRelativePath('examples/wind-current-roses/index.html'),
+        "wind-direction": resolveRelativePath('examples/wind-direction/index.html'),
       }
     }
   },
