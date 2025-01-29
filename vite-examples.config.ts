@@ -21,6 +21,7 @@ export default defineConfig({
         "precipitation-bar": resolveRelativePath('examples/precipitation-bar/index.html'),
         "progress": resolveRelativePath('examples/progress/index.html'),
         "rule": resolveRelativePath('examples/rule/index.html'),
+        "secondary-axis": resolveRelativePath('examples/secondary-axis/index.html'),
       }
     }
   },
