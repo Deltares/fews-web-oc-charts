@@ -28,6 +28,7 @@ export default defineConfig({
         "varying-warninglevels": resolveRelativePath('examples/varying-warninglevels/index.html'),
         "vertical": resolveRelativePath('examples/vertical/index.html'),
         "wheel-zoom": resolveRelativePath('examples/wheel-zoom/index.html'),
+        "wind-current-roses": resolveRelativePath('examples/wind-current-roses/index.html'),
       }
     }
   },
