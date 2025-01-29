@@ -260,7 +260,6 @@ export class CartesianAxes extends Axes {
   update(): void {
     const marginRequiresUpdate = this.redrawAxes()
     if (marginRequiresUpdate) {
-      this.canvas.attr('transform', `translate(${this.margin.left}, ${this.margin.top})`)
       this.setSize()
       this.setRange()
       Object.values(this.axisHandles).forEach((axis) => {
