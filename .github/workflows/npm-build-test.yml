@@ -12,6 +12,6 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npx playwright install
+      - run: npx playwright install chromium firefox
       - run: npm run build
       - run: npm run full-test
