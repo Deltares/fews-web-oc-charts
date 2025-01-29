@@ -23,6 +23,7 @@ export default defineConfig({
         "rule": resolveRelativePath('examples/rule/index.html'),
         "secondary-axis": resolveRelativePath('examples/secondary-axis/index.html'),
         "shared-zoom": resolveRelativePath('examples/shared-zoom/index.html'),
+        "spectrum": resolveRelativePath('examples/spectrum/index.html'),
       }
     }
   },
