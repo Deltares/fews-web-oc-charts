@@ -1,10 +1,10 @@
-import '../../src/scss/wb-charts.scss'
-import '../shared/shared.css'
+import '@lib/scss/wb-charts.scss'
+import '@shared/shared.css'
 import './intercept-tests.css'
 
 import * as d3 from 'd3'
-import { AUTO_SCALE, ChartRange, Direction, PolarAxes, TooltipAnchor } from '../../src'
-import { addListenerByClassName } from '../shared'
+import { AUTO_SCALE, ChartRange, Direction, PolarAxes, TooltipAnchor } from '@lib'
+import { addListenerByClassName } from '@shared'
 
 const container1 = document.getElementById('1')
 const polarAxis1 = new PolarAxes(container1, null, null, {

@@ -1,11 +1,11 @@
-import '../../src/scss/wb-charts.scss'
-import '../shared/shared.css'
+import '@lib/scss/wb-charts.scss'
+import '@shared/shared.css'
 import './availability.css'
 
 import * as d3 from 'd3'
 
-import { AxisType, CartesianAxes, ChartMatrix, TooltipAnchor } from '../../src'
-import { addListenerByClassName } from '../shared'
+import { AxisType, CartesianAxes, ChartMatrix, TooltipAnchor } from '@lib'
+import { addListenerByClassName } from '@shared'
 
 const colorMap = function (value) {
   const colors = {

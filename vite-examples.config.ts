@@ -36,6 +36,12 @@ export default defineConfig({
       }
     }
   },
+  resolve: {
+    alias: {
+      '@lib': resolveRelativePath('./src'),
+      '@shared': resolveRelativePath('./examples/shared'),
+    }
+  }
 })
 
 function resolveRelativePath(relative: string): string {

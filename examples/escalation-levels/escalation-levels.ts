@@ -1,5 +1,5 @@
-import '../../src/scss/wb-charts.scss'
-import '../shared/shared.css'
+import '@lib/scss/wb-charts.scss'
+import '@shared/shared.css'
 import './escalation-levels.css'
 
 import * as d3 from 'd3'
@@ -13,8 +13,8 @@ import {
   MouseOver,
   WarningLevels,
   ZoomHandler,
-} from '../../src'
-import { addListenerByClassName, percentile } from '../shared'
+} from '@lib'
+import { addListenerByClassName, percentile } from '@shared'
 
 const axisOptions = {
   x: [

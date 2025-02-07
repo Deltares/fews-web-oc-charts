@@ -1,5 +1,5 @@
-import '../../src/scss/wb-charts.scss'
-import '../shared/shared.css'
+import '@lib/scss/wb-charts.scss'
+import '@shared/shared.css'
 import './vertical.css'
 
 import {
@@ -11,8 +11,8 @@ import {
   LabelOrientation,
   VerticalMouseOver,
   ZoomHandler,
-} from '../../src'
-import { addListenerByClassName } from '../shared'
+} from '@lib'
+import { addListenerByClassName } from '@shared'
 
 function setupVerticalDateTimeMouseover() {
   const container = document.getElementById('chart-container-1')

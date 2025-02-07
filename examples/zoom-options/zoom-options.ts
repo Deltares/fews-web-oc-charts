@@ -1,5 +1,5 @@
-import '../../src/scss/wb-charts.scss'
-import '../shared/shared.css'
+import '@lib/scss/wb-charts.scss'
+import '@shared/shared.css'
 import './zoom-options.css'
 
 import * as d3 from 'd3'
@@ -16,8 +16,8 @@ import {
   ResetZoom,
   WarningLevels,
   ZoomHandler,
-} from '../../src'
-import { addListenerByClassName, addListenerById, percentile } from '../shared'
+} from '@lib'
+import { addListenerByClassName, addListenerById, percentile } from '@shared'
 
 const defaultYDomain1: [number, number] = [-100, 100]
 const defaultYDomain2: [number, number] = [50, 150]

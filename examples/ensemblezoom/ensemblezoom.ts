@@ -1,10 +1,10 @@
-import '../../src/scss/wb-charts.scss'
-import '../shared/shared.css'
+import '@lib/scss/wb-charts.scss'
+import '@shared/shared.css'
 import './ensemblezoom.css'
 
 import * as d3 from 'd3'
-import { AxisPosition, AxisType, CartesianAxes, ChartArea, ChartLine } from '../../src'
-import { addListenerByClassName, percentile } from '../shared'
+import { AxisPosition, AxisType, CartesianAxes, ChartArea, ChartLine } from '@lib'
+import { addListenerByClassName, percentile } from '@shared'
 
 const height = null
 const width = null

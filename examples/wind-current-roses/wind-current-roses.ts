@@ -1,5 +1,5 @@
-import '../../src/scss/wb-charts.scss'
-import '../shared/shared.css'
+import '@lib/scss/wb-charts.scss'
+import '@shared/shared.css'
 import './wind-current-roses.css'
 
 import {
@@ -13,8 +13,8 @@ import {
   scaleCurrentCategories,
   scaleWindCategories,
   TooltipAnchor,
-} from '../../src'
-import { addListenerByClassName } from '../shared'
+} from '@lib'
+import { addListenerByClassName } from '@shared'
 
 const styleForecast = {
   fill: 'rgb(214, 39, 40)',

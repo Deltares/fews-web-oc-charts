@@ -1,10 +1,10 @@
-import '../../src/scss/wb-charts.scss'
-import '../shared/shared.css'
+import '@lib/scss/wb-charts.scss'
+import '@shared/shared.css'
 import './grouped-bar.css'
 
 import * as d3 from 'd3'
-import { AxisType, CartesianAxes, ChartBar, ChartMatrix, TooltipAnchor } from '../../src'
-import { addListenerByClassName, addListenerById } from '../shared'
+import { AxisType, CartesianAxes, ChartBar, ChartMatrix, TooltipAnchor } from '@lib'
+import { addListenerByClassName, addListenerById } from '@shared'
 
 const keys = {
   x: 'Uitgifte',

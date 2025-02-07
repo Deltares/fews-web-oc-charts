@@ -1,5 +1,5 @@
-import '../../src/scss/wb-charts.scss'
-import '../shared/shared.css'
+import '@lib/scss/wb-charts.scss'
+import '@shared/shared.css'
 import './spectrum.css'
 
 import * as d3 from 'd3'
@@ -12,8 +12,8 @@ import {
   Direction,
   PolarAxes,
   TooltipAnchor,
-} from '../../src'
-import { addListenerByClassName } from '../shared'
+} from '@lib'
+import { addListenerByClassName } from '@shared'
 
 function randomSpectrum(a) {
   const spectrum = []
