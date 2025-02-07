@@ -12,12 +12,11 @@ function getBrowserInstances(mode: string): BrowserInstanceConfig[] {
   // mode, otherwise, only run in chromium.
   // FIXME: currently, "webkit" requires many extra dependencies to be installed
   //        in the runner for the CI, so only use chromium and firefox for now.
-  const browsers =
-    mode === 'all-browsers' ? ['chromium', 'firefox'] : ['chromium']
-  return browsers.map(browser => ({ browser }))
+  const browsers = mode === 'all-browsers' ? ['chromium', 'firefox'] : ['chromium']
+  return browsers.map((browser) => ({ browser }))
 }
 
-export default defineConfig(configEnv => {
+export default defineConfig((configEnv) => {
   return {
     test: {
       browser: {
@@ -26,8 +25,8 @@ export default defineConfig(configEnv => {
         provider: 'playwright',
         headless: true,
         api: 5174,
-        instances: getBrowserInstances(configEnv.mode)
-      }
-    }
+        instances: getBrowserInstances(configEnv.mode),
+      },
+    },
   }
 })

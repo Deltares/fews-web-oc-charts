@@ -193,7 +193,7 @@ const x = d3
   .domain(
     d3.extent(levelsManual[0].events, function (d) {
       return d.date
-    })
+    }),
   )
   .range([0, width])
 svg1
@@ -331,5 +331,5 @@ svg2
   })
 
 addListenerByClassName('theme-button', 'click', () =>
-  document.documentElement.classList.toggle('dark')
+  document.documentElement.classList.toggle('dark'),
 )

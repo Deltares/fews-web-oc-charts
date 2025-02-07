@@ -31,7 +31,7 @@ export class ChartBar extends Chart {
       colorScale.domain(
         d3.extent(this.data, function (d: any): number {
           return d[colorKey]
-        })
+        }),
       )
     }
 
@@ -90,7 +90,7 @@ export class ChartBar extends Chart {
               this.options.tooltip.anchor,
               ', using ',
               TooltipAnchor.Bottom,
-              ' instead.'
+              ' instead.',
             )
           }
           axis.tooltip.update(
@@ -99,7 +99,7 @@ export class ChartBar extends Chart {
               ? this.options.tooltip.position
               : TooltipPosition.Top,
             axis.margin.left + +rect.getAttribute('x') + +rect.getAttribute('width') / 2,
-            axis.margin.top + +rect.getAttribute('y')
+            axis.margin.top + +rect.getAttribute('y'),
           )
         })
         .on('pointerout', () => {

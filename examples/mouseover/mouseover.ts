@@ -18,7 +18,7 @@ import {
   WarningLevels,
   ZoomHandler,
 } from '@lib'
-import { addListenerByClassName, toggleChart, percentile } from "@shared"
+import { addListenerByClassName, toggleChart, percentile } from '@shared'
 
 const container = document.getElementById('chart-container-1')
 const axis = new CartesianAxes(container, null, null, {
@@ -73,7 +73,7 @@ const legend = new Legend(
       label: 'Missing',
     },
   ],
-  document.getElementById('chart-legend-1')
+  document.getElementById('chart-legend-1'),
 )
 
 const currentTime = new CurrentTime({
@@ -239,7 +239,7 @@ function dataload() {
           },
         },
         'percent90',
-        style90
+        style90,
       )
       plotPercentile50.addTo(
         axis,
@@ -254,7 +254,7 @@ function dataload() {
           },
         },
         'percent50',
-        style50
+        style50,
       )
 
       for (let i = 1; i < nEnsemble; i++) {
@@ -279,7 +279,7 @@ function dataload() {
             },
           },
           'ensemble',
-          declaration
+          declaration,
         )
       }
 
@@ -296,7 +296,7 @@ function dataload() {
           },
         },
         'control',
-        '#control-line'
+        '#control-line',
       )
       plotMedian1.addTo(
         axis,
@@ -311,7 +311,7 @@ function dataload() {
           },
         },
         'median',
-        '#median-line'
+        '#median-line',
       )
       axis.redraw({
         x: {
@@ -334,6 +334,6 @@ function dataload() {
 window.setTimeout(dataload, 1000)
 
 addListenerByClassName('theme-button', 'click', () =>
- document.documentElement.classList.toggle('dark')
+  document.documentElement.classList.toggle('dark'),
 )
 addListenerByClassName('legend-button', 'click', (event) => toggleChart(event.target, axis))

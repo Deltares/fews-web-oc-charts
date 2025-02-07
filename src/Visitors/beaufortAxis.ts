@@ -1,17 +1,17 @@
 import * as d3 from 'd3'
 import { Axes } from '../Axes/axes.js'
-import { CartesianAxes } from '../index.js';
-import { scaleBeaufort } from '../Scale/index.js';
+import { CartesianAxes } from '../index.js'
+import { scaleBeaufort } from '../Scale/index.js'
 import { Visitor } from './visitor.js'
 import { Property } from 'csstype'
 
 export interface BeaufortAxisOptions {
   x?: {
-    axisIndex: number;
-  };
+    axisIndex: number
+  }
   y?: {
-    axisIndex: number;
-  };
+    axisIndex: number
+  }
   colors: Record<string, Property.Color>
 }
 
@@ -32,8 +32,7 @@ export class BeaufortAxis implements Visitor {
 
   create(axis: CartesianAxes): void {
     this.isVertical = this.options.x === undefined
-    this.group = axis.canvas
-      .insert('g', '.group')
+    this.group = axis.canvas.insert('g', '.group')
     if (this.isVertical) {
       this.group.attr('class', 'axis y2-axis')
     } else {
@@ -53,9 +52,13 @@ export class BeaufortAxis implements Visitor {
       return windSpeedDomain[0] <= x && windSpeedDomain[1] > x
     })
 
-    const limitsInPixels = limits.map((x) => { return sourceScale(x) })
-    const beaufortLimits = limits.map((x) => { return scaleBeaufort(x) })
-    const scale = d3.scaleLinear();
+    const limitsInPixels = limits.map((x) => {
+      return sourceScale(x)
+    })
+    const beaufortLimits = limits.map((x) => {
+      return scaleBeaufort(x)
+    })
+    const scale = d3.scaleLinear()
 
     scale.domain(beaufortLimits)
     scale.range(limitsInPixels)
@@ -63,7 +66,9 @@ export class BeaufortAxis implements Visitor {
     const beaufortAxis = this.isVertical ? d3.axisRight(scale) : d3.axisTop(scale)
 
     beaufortAxis.tickValues(beaufortLimits)
-    beaufortAxis.tickFormat((v) => { return v === 0 ? "" : d3.format(".0f")(v) })
+    beaufortAxis.tickFormat((v) => {
+      return v === 0 ? '' : d3.format('.0f')(v)
+    })
 
     const adjustTextLabels = (selection) => {
       const text = selection.selectAll('.tick text')
@@ -73,16 +78,16 @@ export class BeaufortAxis implements Visitor {
       } else {
         values.push(this.axis.width)
       }
-      const offset = (i) => { return (values[i + 1] - values[i]) / 2 }
-      text
-        .attr('transform', (d, i) => { return this.isVertical ? `translate(0,${offset(i)})` : `translate( ${offset(i)} ,0)` });
+      const offset = (i) => {
+        return (values[i + 1] - values[i]) / 2
+      }
+      text.attr('transform', (d, i) => {
+        return this.isVertical ? `translate(0,${offset(i)})` : `translate( ${offset(i)} ,0)`
+      })
     }
 
     const translate = this.isVertical ? `translate(${axis.width},0)` : 'translate(0,0)'
-    const ticks = this.group
-      .attr('transform', translate)
-      .call(beaufortAxis)
-      .call(adjustTextLabels)
+    const ticks = this.group.attr('transform', translate).call(beaufortAxis).call(adjustTextLabels)
 
     const isVertical = this.isVertical
     const colors = this.options.colors === undefined ? {} : this.options.colors
@@ -101,11 +106,11 @@ export class BeaufortAxis implements Visitor {
       const y = isVertical ? -height : 1
 
       sections
-        .attr("width", width)
-        .attr("x", x)
-        .attr("y", y)
-        .attr("height", height)
-        .style("fill", colors[d] ? colors[d] : 'none')
+        .attr('width', width)
+        .attr('x', x)
+        .attr('y', y)
+        .attr('height', height)
+        .style('fill', colors[d] ? colors[d] : 'none')
     })
   }
 }

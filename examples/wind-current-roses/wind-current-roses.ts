@@ -122,28 +122,28 @@ function setupCurrentRose() {
         { x: 0, y: currentSpeedMeasurement },
         { x: 0, y: currentSpeedMeasurement },
       ],
-      {}
+      {},
     )
     const CurrentSpeedForecast = new ChartLine(
       [
         { x: 0, y: currentSpeedForecast },
         { x: 0, y: currentSpeedForecast },
       ],
-      {}
+      {},
     )
     const CrossCurrentSpeedMeasurement = new ChartLine(
       [
         { x: 0, y: crossCurrentSpeedMeasurement },
         { x: 0, y: crossCurrentSpeedMeasurement },
       ],
-      {}
+      {},
     )
     const CrossCurrentSpeedForecast = new ChartLine(
       [
         { x: 0, y: crossCurrentSpeedForecast },
         { x: 0, y: crossCurrentSpeedForecast },
       ],
-      {}
+      {},
     )
 
     // Arrows
@@ -160,7 +160,7 @@ function setupCurrentRose() {
         symbol: { size: arrowSize },
         radial: { includeInTooltip: false },
         tooltip: { anchor: TooltipAnchor.Pointer },
-      }
+      },
     )
     const CurrentDirectionArrowForecast = new ChartArrow(
       [{ x: [0, 1], y: [currentDirectionForecast, currentDirectionForecast] }],
@@ -169,44 +169,44 @@ function setupCurrentRose() {
         symbol: { size: arrowSize },
         radial: { includeInTooltip: false },
         tooltip: { anchor: TooltipAnchor.Pointer },
-      }
+      },
     )
 
     CurrentSpeedMeasurement.addTo(
       polarAxisCurrent,
       { radial: { key: 'x' }, angular: { key: 'y' } },
       `current-measured-${index}`,
-      styleMeasurement
+      styleMeasurement,
     )
     CurrentSpeedForecast.addTo(
       polarAxisCurrent,
       { radial: { key: 'x' }, angular: { key: 'y' } },
       `current-forecast-${index}`,
-      styleForecast
+      styleForecast,
     )
     CrossCurrentSpeedMeasurement.addTo(
       polarAxisCurrent,
       { radial: { key: 'x' }, angular: { key: 'y' } },
       `cross-current-measured-${index}`,
-      styleMeasurement
+      styleMeasurement,
     )
     CrossCurrentSpeedForecast.addTo(
       polarAxisCurrent,
       { radial: { key: 'x' }, angular: { key: 'y' } },
       `cross-current-forecast-${index}`,
-      styleForecast
+      styleForecast,
     )
     CurrentDirectionArrowMeasurement.addTo(
       polarAxisCurrent,
       { radial: { key: 'x' }, angular: { key: 'y' } },
       `current-direction-measurement-arrow-${index}`,
-      styleMeasurement
+      styleMeasurement,
     )
     CurrentDirectionArrowForecast.addTo(
       polarAxisCurrent,
       { radial: { key: 'x' }, angular: { key: 'y' } },
       `current-direction-forecast-arrow-${index}`,
-      styleForecast
+      styleForecast,
     )
 
     const datafieldCurrentDirection = new DataField(polarAxisCurrent.canvas, {
@@ -246,7 +246,7 @@ function setupWindRose(
   windSnelheidMetingen,
   windSnelheidVerwachtingen,
   windStoot,
-  allWindSpreidingR
+  allWindSpreidingR,
 ) {
   // Wind rose charts
   // Create two charts, with different intersects and direction
@@ -300,37 +300,37 @@ function setupWindRose(
       polarAxisWind,
       { radial: { key: 'x' }, angular: { key: 'y' } },
       'wind-direction-range',
-      styleRange
+      styleRange,
     )
     windSpeedMeasurement.addTo(
       polarAxisWind,
       { radial: { key: 'x' }, angular: { key: 'y' } },
       'wind-measured',
-      styleMeasurement
+      styleMeasurement,
     )
     windSpeedForecast.addTo(
       polarAxisWind,
       { radial: { key: 'x' }, angular: { key: 'y' } },
       'wind-forecast',
-      styleForecast
+      styleForecast,
     )
     windSurge.addTo(
       polarAxisWind,
       { radial: { key: 'x' }, angular: { key: 'y' } },
       'windstoot',
-      styleSurge
+      styleSurge,
     )
     windDirectionArrowMeasurement.addTo(
       polarAxisWind,
       { radial: { key: 'x' }, angular: { key: 'y' } },
       'wind-direction-measurement-arrow',
-      styleMeasurement
+      styleMeasurement,
     )
     windDirectionArrowForecast.addTo(
       polarAxisWind,
       { radial: { key: 'x' }, angular: { key: 'y' } },
       'wind-direction-forecast-arrow',
-      styleForecast
+      styleForecast,
     )
 
     datafieldWindDirection = new DataField(polarAxisWind.canvas, {
@@ -478,7 +478,7 @@ function get_wind_data() {
         allWindSnelheidMetingen,
         allWindSnelheidVerwachtingen,
         allWindStoot,
-        allWindSpreidingR
+        allWindSpreidingR,
       )
     }
   }
@@ -492,5 +492,5 @@ get_wind_data()
 setupCurrentRose()
 
 addListenerByClassName('theme-button', 'click', () =>
-  document.documentElement.classList.toggle('dark')
+  document.documentElement.classList.toggle('dark'),
 )

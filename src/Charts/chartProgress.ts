@@ -1,5 +1,5 @@
 import * as d3 from 'd3'
-import { CartesianAxes, PolarAxes } from '../index.js';
+import { CartesianAxes, PolarAxes } from '../index.js'
 import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js'
 import { Chart } from './chart.js'
 
@@ -14,11 +14,10 @@ export class ChartProgress extends Chart {
   private previousData: any[] = []
 
   plotterCartesian(axis: CartesianAxes, dataKeys: any) {
-    throw new Error("Not implemented");
+    throw new Error('Not implemented')
   }
 
   plotterPolar(axis: PolarAxes, dataKeys: any) {
-
     const tKey = this.dataKeys.angular
     const rKey = this.dataKeys.radial
     const colorKey = this.dataKeys.color
@@ -28,10 +27,7 @@ export class ChartProgress extends Chart {
 
     const colorMap = d3.schemeTableau10
 
-    const t = d3
-      .transition()
-      .duration(this.options.transitionTime)
-      .ease(d3.easeLinear)
+    const t = d3.transition().duration(this.options.transitionTime).ease(d3.easeLinear)
 
     const arcGenerator = d3
       .arc()
@@ -49,7 +45,6 @@ export class ChartProgress extends Chart {
       })
       .cornerRadius(scale.bandwidth() / 8)
 
-
     this.group = this.selectGroup(axis, 'chart-range')
 
     const elements = this.group.selectAll('path').data(this.data)
@@ -60,12 +55,23 @@ export class ChartProgress extends Chart {
       .enter()
       .append('path')
       .attr('d', arcGenerator)
-      .attr('data-chart-element-id', (d) => { return d[rKey] })
+      .attr('data-chart-element-id', (d) => {
+        return d[rKey]
+      })
     if (this.options.tooltip !== undefined) {
       enter
         .on('pointerover', (e: any, d) => {
-          if (this.options.tooltip.anchor !== undefined && this.options.tooltip.anchor !== TooltipAnchor.Pointer) {
-            console.error('Tooltip not implemented for anchor ', this.options.tooltip.anchor, ', using ', TooltipAnchor.Pointer, ' instead.')
+          if (
+            this.options.tooltip.anchor !== undefined &&
+            this.options.tooltip.anchor !== TooltipAnchor.Pointer
+          ) {
+            console.error(
+              'Tooltip not implemented for anchor ',
+              this.options.tooltip.anchor,
+              ', using ',
+              TooltipAnchor.Pointer,
+              ' instead.',
+            )
           }
           const pointer = d3.pointer(e, axis.container)
           const x = pointer[0]
@@ -73,9 +79,11 @@ export class ChartProgress extends Chart {
           axis.tooltip.show()
           axis.tooltip.update(
             this.toolTipFormatterPolar(d),
-            this.options.tooltip.position !== undefined ? this.options.tooltip.position : TooltipPosition.Top,
+            this.options.tooltip.position !== undefined
+              ? this.options.tooltip.position
+              : TooltipPosition.Top,
             x,
-            y
+            y,
           )
         })
         .on('pointerout', () => {
@@ -133,16 +141,11 @@ export class ChartProgress extends Chart {
 
   drawLegendSymbol(legendId?: string, asSvgElement?: boolean) {
     const props = ['fill']
-    const source = this.group
-      .select('path')
-      .node() as Element
-    const svg = d3.create('svg')
-      .attr('width', 20)
-      .attr('height', 20)
-    const group = svg
-      .append('g')
-      .attr('transform', 'translate(10 0)')
-    const element = group.append('rect')
+    const source = this.group.select('path').node() as Element
+    const svg = d3.create('svg').attr('width', 20).attr('height', 20)
+    const group = svg.append('g').attr('transform', 'translate(10 0)')
+    const element = group
+      .append('rect')
       .attr('x', 0)
       .attr('y', -5)
       .attr('width', 20)

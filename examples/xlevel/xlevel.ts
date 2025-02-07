@@ -66,7 +66,7 @@ const legend = new Legend(
       label: '50% interval',
     },
   ],
-  document.getElementById('chart-legend-1')
+  document.getElementById('chart-legend-1'),
 )
 
 const currentTime = new CurrentTime({
@@ -92,7 +92,7 @@ const crossSectionSelect1 = new CrossSectionSelect(
     console.log('1:', x)
   },
   { draggable: true },
-  ['control', 'median']
+  ['control', 'median'],
 )
 const crossSectionSelect2 = new CrossSectionSelect(
   getRoundedDate(10, new Date(new Date().getTime() + 24 * 60 * 60 * 1000)),
@@ -100,7 +100,7 @@ const crossSectionSelect2 = new CrossSectionSelect(
     console.log('2:', x)
   },
   {},
-  ['control']
+  ['control'],
 )
 
 function formatTime(timestamp) {
@@ -263,7 +263,7 @@ function dataload() {
           },
         },
         'percent90',
-        style90
+        style90,
       )
       plotPercentile50.addTo(
         axis,
@@ -278,7 +278,7 @@ function dataload() {
           },
         },
         'percent50',
-        style50
+        style50,
       )
 
       plotControl.addTo(
@@ -294,7 +294,7 @@ function dataload() {
           },
         },
         'control',
-        '#control-line'
+        '#control-line',
       )
       plotMedian.addTo(
         axis,
@@ -309,7 +309,7 @@ function dataload() {
           },
         },
         'median',
-        '#median-line'
+        '#median-line',
       )
       axis.redraw({
         x: {
@@ -337,7 +337,7 @@ function dataload() {
             },
           },
           el.id,
-          { fill: 'none', stroke: el.color, 'stroke-width': '2px', 'stroke-dasharray': '4, 2' }
+          { fill: 'none', stroke: el.color, 'stroke-width': '2px', 'stroke-dasharray': '4, 2' },
         )
       })
       axis.zoom()
@@ -374,6 +374,6 @@ function moveLine(dx) {
 }
 
 addListenerByClassName('theme-button', 'click', () =>
-  document.documentElement.classList.toggle('dark')
+  document.documentElement.classList.toggle('dark'),
 )
 addListenerByClassName('legend-button', 'click', (event) => toggleChart(event.target))

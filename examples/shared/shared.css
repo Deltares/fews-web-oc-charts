@@ -2,13 +2,13 @@ body {
   background-color: var(--foreground-color-complement);
   font: 14px sans-serif;
   margin: 20px;
-  color:  var(--text-color);
+  color: var(--text-color);
 }
 
-*[data-filter="true"]::after {
-  content: " On";
+*[data-filter='true']::after {
+  content: ' On';
 }
 
-*[data-filter="false"]::after {
-  content: " Off";
+*[data-filter='false']::after {
+  content: ' Off';
 }

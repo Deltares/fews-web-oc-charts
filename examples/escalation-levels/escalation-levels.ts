@@ -337,5 +337,5 @@ for (const plot of [plot1, plot2, plot3]) {
 }
 
 addListenerByClassName('theme-button', 'click', () =>
-  document.documentElement.classList.toggle('dark')
+  document.documentElement.classList.toggle('dark'),
 )

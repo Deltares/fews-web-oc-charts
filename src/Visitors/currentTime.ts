@@ -1,6 +1,6 @@
 import * as d3 from 'd3'
 import { Axes } from '../Axes/axes.js'
-import { CartesianAxes } from '../index.js';
+import { CartesianAxes } from '../index.js'
 import { dateFormatter } from '../Utils/date.js'
 import { Visitor } from './visitor.js'
 
@@ -62,11 +62,7 @@ export class CurrentTime implements Visitor {
     }
     if (currentDate > domain[0] && currentDate < domain[1]) {
       this.group.attr('display', 'initial')
-      this.line
-        .attr('x1', x)
-        .attr('x2', x)
-        .attr('y1', this.axis.height)
-        .attr('y2', 0)
+      this.line.attr('x1', x).attr('x2', x).attr('y1', this.axis.height).attr('y2', 0)
       if (!this.indicator) {
         this.indicator = this.group.append('g').attr('class', 'current-time-indicator')
         this.indicator.append('polygon').attr('points', '0,0 5,5 -5,5')
@@ -78,7 +74,12 @@ export class CurrentTime implements Visitor {
         .select('text')
         .attr('x', 5)
         .attr('y', -5)
-        .text(dateFormatter(currentDate, 'yyyy-MM-dd HH:mm ZZZZ', { timeZone: this.axis.options.x[axisIndex].timeZone, locale: this.axis.options.x[axisIndex].locale }))
+        .text(
+          dateFormatter(currentDate, 'yyyy-MM-dd HH:mm ZZZZ', {
+            timeZone: this.axis.options.x[axisIndex].timeZone,
+            locale: this.axis.options.x[axisIndex].locale,
+          }),
+        )
     } else {
       this.group.attr('display', 'none')
     }

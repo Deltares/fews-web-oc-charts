@@ -309,5 +309,5 @@ function togglePrintSheet() {
 addListenerById('download-btn', 'click', download)
 addListenerById('toggle-print-sheet', 'click', togglePrintSheet)
 addListenerByClassName('theme-button', 'click', () =>
-  document.documentElement.classList.toggle('dark')
+  document.documentElement.classList.toggle('dark'),
 )

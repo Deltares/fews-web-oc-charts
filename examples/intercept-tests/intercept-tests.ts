@@ -204,5 +204,5 @@ plot9.addTo(polarAxis9, {
 polarAxis9.redraw()
 
 addListenerByClassName('theme-button', 'click', () =>
-  document.documentElement.classList.toggle('dark')
+  document.documentElement.classList.toggle('dark'),
 )

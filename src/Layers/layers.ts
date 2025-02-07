@@ -11,7 +11,7 @@ const Layers = {
 type LayerKeys = keyof typeof Layers
 
 export function createLayers(element, width, height) {
-  const result: Record<LayerKeys, any> = {...Layers}
+  const result: Record<LayerKeys, any> = { ...Layers }
   for (const key in Layers) {
     result[key] = element.append('g').attr('class', key)
   }

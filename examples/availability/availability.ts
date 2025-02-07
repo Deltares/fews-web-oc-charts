@@ -95,7 +95,7 @@ d3.json('available_aberdeen.json')
         },
       },
       'matrix',
-      {}
+      {},
     )
 
     axis1.redraw({})
@@ -136,7 +136,7 @@ d3.json('available_aberdeen.json')
         },
       },
       'matrix',
-      {}
+      {},
     )
 
     axis2.redraw({})
@@ -144,5 +144,5 @@ d3.json('available_aberdeen.json')
   .catch((error) => console.error(`Failed to create chart: ${error}`))
 
 addListenerByClassName('theme-button', 'click', () =>
-  document.documentElement.classList.toggle('dark')
+  document.documentElement.classList.toggle('dark'),
 )

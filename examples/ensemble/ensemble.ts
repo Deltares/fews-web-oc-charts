@@ -161,7 +161,7 @@ d3.json('../data/ensemble.json')
           },
         },
         'ensemble-line',
-        '.ensemble-line'
+        '.ensemble-line',
       )
     }
     const plotMedian = new ChartLine(percentiles[0], {})
@@ -179,7 +179,7 @@ d3.json('../data/ensemble.json')
         },
       },
       'control-line',
-      '#control-line'
+      '#control-line',
     )
     plotMedian.addTo(
       axis1,
@@ -194,7 +194,7 @@ d3.json('../data/ensemble.json')
         },
       },
       'median-line',
-      '#median-line'
+      '#median-line',
     )
     axis1.redraw({
       x: {
@@ -224,7 +224,7 @@ d3.json('../data/ensemble.json')
         },
       },
       'percent90',
-      '#percent90'
+      '#percent90',
     )
     plotPercentile50.addTo(
       axis,
@@ -239,7 +239,7 @@ d3.json('../data/ensemble.json')
         },
       },
       'percent50',
-      '#percent50'
+      '#percent50',
     )
     plotControl1.addTo(
       axis,
@@ -254,7 +254,7 @@ d3.json('../data/ensemble.json')
         },
       },
       'control-line',
-      '#control-line'
+      '#control-line',
     )
     plotMedian1.addTo(
       axis,
@@ -273,7 +273,7 @@ d3.json('../data/ensemble.json')
         fill: 'none',
         stroke: 'white',
         'stroke-width': '2px',
-      }
+      },
     )
     axis.redraw({
       x: {
@@ -288,5 +288,5 @@ d3.json('../data/ensemble.json')
   .catch((error) => console.error(`Failed to create chart: ${error}`))
 
 addListenerByClassName('theme-button', 'click', () =>
-  document.documentElement.classList.toggle('dark')
+  document.documentElement.classList.toggle('dark'),
 )

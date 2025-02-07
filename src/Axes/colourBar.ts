@@ -19,11 +19,11 @@ export type ColourMap = ColourMapValue[]
  */
 export interface ColourBarOptions {
   /** The lower value of this segment */
-  useGradients: boolean;
+  useGradients: boolean
   /** Colour associated with this segment */
-  position: AxisPosition;
-  title?: string;
-  type: string;
+  position: AxisPosition
+  title?: string
+  type: string
   ticks?: number
   tickValues?: [number] | [Date]
 }
@@ -37,13 +37,13 @@ type GroupSelection = d3.Selection<SVGElement, any, SVGElement, any>
  * @returns a random ID
  */
 function generateRandomId(length: number) {
-  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
-  const numCharacters = characters.length;
-  let id = '';
+  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+  const numCharacters = characters.length
+  let id = ''
   for (let i = 0; i < length; i++) {
-    id += characters.charAt(Math.floor(Math.random() * numCharacters));
+    id += characters.charAt(Math.floor(Math.random() * numCharacters))
   }
-  return id;
+  return id
 }
 
 /**
@@ -70,20 +70,17 @@ export class ColourBar {
     colourMap: ColourMap,
     width: number,
     height: number,
-    options: ColourBarOptions
+    options: ColourBarOptions,
   ) {
     this.group = group instanceof SVGGElement ? d3.select(group) : group
     this.colourMap = colourMap
     this.width = width
     this.height = height
-    this.options = defaultsDeep({},
-      options,
-      {
-        position: AxisPosition.Bottom,
-        useGradients: true,
-        type: 'normal'
-      }
-    )
+    this.options = defaultsDeep({}, options, {
+      position: AxisPosition.Bottom,
+      useGradients: true,
+      type: 'normal',
+    })
     this.createScale()
     const fills = this.createFills()
     this.createBarSegments(fills)
@@ -115,7 +112,9 @@ export class ColourBar {
   }
 
   get isHorizontal() {
-    return this.options.position === AxisPosition.Bottom || this.options.position === AxisPosition.Top
+    return (
+      this.options.position === AxisPosition.Bottom || this.options.position === AxisPosition.Top
+    )
   }
 
   /**
@@ -131,7 +130,9 @@ export class ColourBar {
       // Refer to their IDs for each rectangle's fill colour
       fills = ids.map((id: string) => `url(#${id})`)
     } else {
-      fills = this.colourMap.slice(0, this.colourMap.length - 1).map((val: ColourMapValue) => val.color)
+      fills = this.colourMap
+        .slice(0, this.colourMap.length - 1)
+        .map((val: ColourMapValue) => val.color)
     }
     return fills
   }
@@ -163,12 +164,10 @@ export class ColourBar {
     const scale = d3.scaleLinear()
     if (this.options.type === 'nonlinear') {
       let range = tickValues.map((_d, i) => {
-        return i * this.sizeAlongAxis / (tickValues.length - 1)
+        return (i * this.sizeAlongAxis) / (tickValues.length - 1)
       })
       if (!this.isHorizontal) range = range.reverse()
-      scale
-        .domain(tickValues)
-        .range(range)
+      scale.domain(tickValues).range(range)
     } else {
       scale
         .domain([this.minimum, this.maximum])
@@ -177,17 +176,17 @@ export class ColourBar {
     this.scale = scale
   }
 
-
   /**
    * Creates rectangles for each segment of the colour bar.
    * @param fills colour values (or e.g. gradient references) for each segment
    */
   private createBarSegments(fills: string[]) {
     // Bounds of the colour map should be monotonically increasing.
-    const startCoordinate =
-      this.isHorizontal ? (lowerValue: number, _upperValue: number) => this.scale(lowerValue)
-        : (_lowerValue: number, upperValue: number) => this.scale(upperValue)
-    const barSize = (lowerValue: number, upperValue: number) => Math.abs(this.scale(upperValue) - this.scale(lowerValue))
+    const startCoordinate = this.isHorizontal
+      ? (lowerValue: number, _upperValue: number) => this.scale(lowerValue)
+      : (_lowerValue: number, upperValue: number) => this.scale(upperValue)
+    const barSize = (lowerValue: number, upperValue: number) =>
+      Math.abs(this.scale(upperValue) - this.scale(lowerValue))
 
     // Add rectangles for each segment of the colour bar.
     const barGroup = this.group.append('g')
@@ -197,7 +196,8 @@ export class ColourBar {
 
       const posCur = startCoordinate(lowerValue, upperValue)
       const sizeCur = barSize(lowerValue, upperValue)
-      barGroup.append('rect')
+      barGroup
+        .append('rect')
         .attr('x', this.isHorizontal ? posCur : 0)
         .attr('y', this.isHorizontal ? 0 : posCur)
         .attr('width', this.isHorizontal ? sizeCur : this.sizeAcrossAxis)
@@ -222,11 +222,14 @@ export class ColourBar {
 
     if (this.options.tickValues) {
       axis.tickValues(this.options.tickValues)
-    }
-    else if (this.options.type === 'nonlinear') {
+    } else if (this.options.type === 'nonlinear') {
       const count = this.options.ticks ?? 5
       const stride = Math.round(tickValues.length / count)
-      axis.tickValues(tickValues.filter((v, i) => { return i % stride === 0 }))
+      axis.tickValues(
+        tickValues.filter((v, i) => {
+          return i % stride === 0
+        }),
+      )
       axis.tickFormat((d) => d.toString())
     } else if (this.options.ticks) {
       axis.ticks(this.options.ticks)
@@ -235,7 +238,8 @@ export class ColourBar {
       // axis.tickFormat((d) => d.toString())
     }
 
-    const axisGroup = this.group.append('g')
+    const axisGroup = this.group
+      .append('g')
       .attr('transform', axisTranslation)
       .attr('class', 'axis colourbar')
     axisGroup.call(axis)
@@ -244,7 +248,8 @@ export class ColourBar {
 
     // Add grid lines across the colour bar.
     const gridTranslation = `translate(${this.isHorizontal ? 0 : this.width}, ${this.isHorizontal ? this.height : 0})`
-    const gridGroup = this.group.append('g')
+    const gridGroup = this.group
+      .append('g')
       .attr('class', 'grid colourbar')
       .attr('transform', gridTranslation)
     const grid = this.isHorizontal ? d3.axisTop(scale) : d3.axisLeft(scale)
@@ -255,9 +260,7 @@ export class ColourBar {
     gridGroup.select('path').remove()
     gridGroup.selectAll('.tick').selectAll('text').remove()
 
-    const g = this.group.append('g')
-      .attr('class', 'title')
-      .attr('font-family', 'sans-serif')
+    const g = this.group.append('g').attr('class', 'title').attr('font-family', 'sans-serif')
 
     if (this.options.title) {
       g.append('text')
@@ -294,18 +297,21 @@ export class ColourBar {
    * @param colorEnd end colour of the gradient
    */
   private addGradient(defs: any, id: string, colorStart: Property.Color, colorEnd: Property.Color) {
-    const gradient = defs.append('linearGradient')
+    const gradient = defs
+      .append('linearGradient')
       .attr('id', id)
       .attr('x1', this.isHorizontal ? '0%' : '100%')
       .attr('y1', this.isHorizontal ? '100%' : '0%')
       .attr('x2', '100%')
       .attr('y2', '100%')
     // Since the SVG y-axis inverted, for vertical colour bars the gradient should also be inverted.
-    gradient.append('stop')
+    gradient
+      .append('stop')
       .attr('offset', '0%')
       .style('stop-color', this.isHorizontal ? colorStart : colorEnd)
       .style('stop-opacity', 1)
-    gradient.append('stop')
+    gradient
+      .append('stop')
       .attr('offset', '100%')
       .style('stop-color', this.isHorizontal ? colorEnd : colorStart)
       .style('stop-opacity', 1)

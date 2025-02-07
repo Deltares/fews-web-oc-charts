@@ -298,5 +298,5 @@ new ColourBar(svgRight, colorMap, 20, 400, {
 })
 
 addListenerByClassName('theme-button', 'click', () =>
-  document.documentElement.classList.toggle('dark')
+  document.documentElement.classList.toggle('dark'),
 )

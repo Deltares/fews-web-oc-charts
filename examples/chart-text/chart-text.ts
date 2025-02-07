@@ -2,7 +2,16 @@ import '@lib/scss/wb-charts.scss'
 import '@shared/shared.css'
 import './chart-text.css'
 
-import { AxisPosition, AxisType, CartesianAxes, CartesianAxesOptions, ChartLine, ChartText, MouseOver, ZoomHandler } from '@lib'
+import {
+  AxisPosition,
+  AxisType,
+  CartesianAxes,
+  CartesianAxesOptions,
+  ChartLine,
+  ChartText,
+  MouseOver,
+  ZoomHandler,
+} from '@lib'
 import { addListenerByClassName } from '@shared'
 
 const container = document.getElementById('chart-container-1')
@@ -97,7 +106,7 @@ plot2.addTo(
   axis,
   { x: { key: 'x', axisIndex: 1 }, y: { key: 'y', axisIndex: 0 } },
   'mexico',
-  style2
+  style2,
 )
 plot3.addTo(
   axis,
@@ -107,19 +116,19 @@ plot3.addTo(
     value: { key: 'value', axisIndex: 0 },
   },
   'text',
-  {}
+  {},
 )
 plot4.addTo(
   axis,
   { x: { key: 'x', axisIndex: 1 }, value: { key: 'value', axisIndex: 0 } },
   'text-bottom',
-  {}
+  {},
 )
 plot5.addTo(
   axis,
   { x: { key: 'x', axisIndex: 1 }, value: { key: 'value', axisIndex: 0 } },
   'text-top',
-  {}
+  {},
 )
 
 const mouseOver = new MouseOver(['local', 'mexico'])
@@ -130,5 +139,5 @@ axis.accept(zoomHandler)
 axis.accept(mouseOver)
 
 addListenerByClassName('theme-button', 'click', () =>
-  document.documentElement.classList.toggle('dark')
+  document.documentElement.classList.toggle('dark'),
 )

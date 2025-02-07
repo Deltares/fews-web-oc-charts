@@ -123,7 +123,7 @@ plotBars.addTo(
     },
   },
   'bars',
-  {}
+  {},
 )
 
 d3.json('../data/bar_data.json')
@@ -181,7 +181,7 @@ d3.json('../data/bar_data.json')
         },
       },
       'matrix',
-      {}
+      {},
     )
     axis3.redraw({})
   })
@@ -208,5 +208,5 @@ function update() {
 }
 
 addListenerByClassName('theme-button', 'click', () =>
-  document.documentElement.classList.toggle('dark')
+  document.documentElement.classList.toggle('dark'),
 )

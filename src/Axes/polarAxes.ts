@@ -10,14 +10,14 @@ import { D3Selection } from '../Utils/elementTypes.js'
 
 export enum Direction {
   CLOCKWISE = -1,
-  ANTICLOCKWISE = 1
+  ANTICLOCKWISE = 1,
 }
 
 export type RadialAxisOptions = AxisOptions
 
 export interface AngularAxisOptions extends AxisOptions {
   direction?: number
-  range?: number[];
+  range?: number[]
   intercept?: number
 }
 
@@ -27,18 +27,17 @@ export interface PolarAxesOptions extends AxesOptions {
   angular: AngularAxisOptions
 }
 
-
 const polarAxesDefaultOptions: PolarAxesOptions = {
   innerRadius: 0,
   angular: {
     direction: Direction.ANTICLOCKWISE,
     intercept: 0,
     range: [0, 2 * Math.PI],
-    domain: [0, 360]
+    domain: [0, 360],
   },
   radial: {
-    type: AxisType.value
-  }
+    type: AxisType.value,
+  },
 }
 
 export class PolarAxes extends Axes {
@@ -51,17 +50,18 @@ export class PolarAxes extends Axes {
   radialGrid: D3Selection<SVGGElement> | null = null
   angularGrid: D3Selection<SVGGElement> | null = null
 
-  constructor(container: HTMLElement, width: number | null, height: number | null, options: PolarAxesOptions) {
+  constructor(
+    container: HTMLElement,
+    width: number | null,
+    height: number | null,
+    options: PolarAxesOptions,
+  ) {
     super(container, width, height, options, polarAxesDefaultOptions)
-    this.canvas = this.canvas
-      .append('g')
+    this.canvas = this.canvas.append('g')
     this.setDefaultTimeOptions(this.options.angular)
     this.setDefaultTimeOptions(this.options.radial)
 
-    this.canvas
-      .append('g')
-      .attr('class', 'canvas')
-      .append('path')
+    this.canvas.append('g').attr('class', 'canvas').append('path')
     this.updateCanvas()
     this.setRange()
     this.initGrid()
@@ -69,17 +69,19 @@ export class PolarAxes extends Axes {
   }
 
   setOptions(options: Partial<PolarAxesOptions>): void {
-    merge(this.options,
-      options
-    )
+    merge(this.options, options)
   }
 
   get direction(): number {
-    return this.options.angular.direction ? this.options.angular.direction : polarAxesDefaultOptions.angular.direction
+    return this.options.angular.direction
+      ? this.options.angular.direction
+      : polarAxesDefaultOptions.angular.direction
   }
 
   get intercept(): number {
-    return this.options.angular.intercept ? this.options.angular.intercept : polarAxesDefaultOptions.angular.intercept
+    return this.options.angular.intercept
+      ? this.options.angular.intercept
+      : polarAxesDefaultOptions.angular.intercept
   }
 
   get innerRadiusFactor(): number {
@@ -112,7 +114,7 @@ export class PolarAxes extends Axes {
           .innerRadius(this.innerRadius)
           .outerRadius(this.outerRadius)
           .startAngle(startAngle)
-          .endAngle(endAngle)
+          .endAngle(endAngle),
       )
   }
 
@@ -147,8 +149,15 @@ export class PolarAxes extends Axes {
     this.radialAxis.call(rAxis)
 
     const draw = (context, radius) => {
-      context.arc(0, 0, radius, -this.direction * this.options.angular.range[0] - this.intercept, -this.direction * this.options.angular.range[1] - this.intercept, this.direction === Direction.ANTICLOCKWISE) // draw an arc, the turtle ends up at ⟨194.4,108.5⟩
-      return context;
+      context.arc(
+        0,
+        0,
+        radius,
+        -this.direction * this.options.angular.range[0] - this.intercept,
+        -this.direction * this.options.angular.range[1] - this.intercept,
+        this.direction === Direction.ANTICLOCKWISE,
+      ) // draw an arc, the turtle ends up at ⟨194.4,108.5⟩
+      return context
     }
 
     if (this.options.radial.type !== AxisType.band) {
@@ -161,7 +170,9 @@ export class PolarAxes extends Axes {
         .enter()
         .append('path')
         .merge(drawRadial)
-        .attr('d', (d) => { return draw(d3.path(), d) })
+        .attr('d', (d) => {
+          return draw(d3.path(), d)
+        })
     }
 
     let angularTicks
@@ -169,13 +180,13 @@ export class PolarAxes extends Axes {
       const scale = this.angularScale.copy()
       const offsetDomain = scale.domain().map((d) => {
         const m = DateTime.fromJSDate(d).setZone(this.options.angular.timeZone)
-        return new Date(d.getTime() + m.offset * 60000);
+        return new Date(d.getTime() + m.offset * 60000)
       })
       const offsetScale = d3.scaleUtc().domain(offsetDomain)
       const tickValues = offsetScale.ticks(10)
       const offsetValues = tickValues.map((d) => {
         const m = DateTime.fromJSDate(d).setZone(this.options.angular.timeZone)
-        return new Date(d.getTime() - m.offset * 60000);
+        return new Date(d.getTime() - m.offset * 60000)
       })
       angularTicks = offsetValues
     } else {
@@ -190,9 +201,10 @@ export class PolarAxes extends Axes {
     }
 
     if (
-      (Math.cos(this.options.angular.range[0]) - Math.cos(this.options.angular.range[1]) < 1e-6) &&
-      (Math.sin(this.options.angular.range[0]) - Math.sin(this.options.angular.range[1]) < 1e-6)
-    ) angularTicks.shift()
+      Math.cos(this.options.angular.range[0]) - Math.cos(this.options.angular.range[1]) < 1e-6 &&
+      Math.sin(this.options.angular.range[0]) - Math.sin(this.options.angular.range[1]) < 1e-6
+    )
+      angularTicks.shift()
 
     const ticksSelection = this.angularGrid
       .selectAll<SVGLineElement, unknown>('line')
@@ -209,15 +221,17 @@ export class PolarAxes extends Axes {
       .attr('x2', this.outerRadius)
       .attr('y2', 0)
       .attr('transform', (d: number) => {
-        return 'rotate(' + (this.radToDegrees(-this.intercept - this.direction * this.angularScale(d))) + ')'
+        return (
+          'rotate(' +
+          this.radToDegrees(-this.intercept - this.direction * this.angularScale(d)) +
+          ')'
+        )
       })
 
     const groupRotate = function (d: number) {
       return 'rotate(' + this.radToDegrees(-this.direction * this.angularScale(d)) + ')'
     }.bind(this)
-    const drawTicks = this.angularAxis
-      .selectAll('g')
-      .data(angularTicks)
+    const drawTicks = this.angularAxis.selectAll('g').data(angularTicks)
 
     const tickElements = drawTicks
       .enter()
@@ -248,7 +262,11 @@ export class PolarAxes extends Axes {
     }.bind(this)
 
     const anchor = function (d) {
-      const dNorthCW = ((this.radToDegrees(Math.PI / 2 - this.intercept - this.direction * this.angularScale(d)) % 360) + 360) % 360
+      const dNorthCW =
+        ((this.radToDegrees(Math.PI / 2 - this.intercept - this.direction * this.angularScale(d)) %
+          360) +
+          360) %
+        360
       if (dNorthCW > 0 && dNorthCW < 180) {
         return 'start'
       } else if (dNorthCW > 180 && dNorthCW < 360) {
@@ -258,7 +276,7 @@ export class PolarAxes extends Axes {
       }
     }.bind(this)
 
-    const labelFormat = this.options.angular.format ? this.options.angular.format : d => d
+    const labelFormat = this.options.angular.format ? this.options.angular.format : (d) => d
 
     this.angularAxis
       .selectAll('.tick')
@@ -299,12 +317,8 @@ export class PolarAxes extends Axes {
   }
 
   protected initGrid() {
-    this.radialGrid = this.canvas
-      .append('g')
-      .attr('class', 'grid r-grid')
-    this.angularGrid = this.canvas
-      .append('g')
-      .attr('class', 'grid t-grid')
+    this.radialGrid = this.canvas.append('g').attr('class', 'grid r-grid')
+    this.angularGrid = this.canvas.append('g').attr('class', 'grid t-grid')
 
     this.radialAxis = this.canvas
       .append('g')
@@ -313,7 +327,7 @@ export class PolarAxes extends Axes {
     this.angularAxis = this.canvas
       .append('g')
       .attr('class', 'axis t-axis')
-      .attr('transform', 'rotate(' + -this.intercept * 180 / Math.PI + ')')
+      .attr('transform', 'rotate(' + (-this.intercept * 180) / Math.PI + ')')
       .attr('font-family', 'sans-serif')
     this.update()
   }

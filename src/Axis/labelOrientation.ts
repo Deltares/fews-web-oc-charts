@@ -1,6 +1,6 @@
 export const LabelOrientation = {
   Vertical: 'vertical',
   Horizontal: 'horizontal',
-} as const;
+} as const
 
-export type LabelOrientation = (typeof LabelOrientation)[keyof typeof LabelOrientation];
+export type LabelOrientation = (typeof LabelOrientation)[keyof typeof LabelOrientation]

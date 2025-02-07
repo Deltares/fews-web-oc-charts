@@ -131,7 +131,7 @@ function updateBeaufortScale(target) {
   beaufortScale.range(
     limits.map(function (x) {
       return (x / target) * windSpeedAxis.width
-    })
+    }),
   )
   return beaufortScale
 }
@@ -171,7 +171,7 @@ function setupWindrose(
   allWindSpreidingR,
   allWindSpreidingV,
   allWindStoot,
-  times
+  times,
 ) {
   // Wind rose chart
   const containerWindrose = document.getElementById('chart-wind-rose')
@@ -199,19 +199,19 @@ function setupWindrose(
     polarAxis,
     { radial: { key: 'x' }, angular: { key: 'y' } },
     'direction-range',
-    '#polar-range'
+    '#polar-range',
   )
   windDirectionMeasurement.addTo(
     polarAxis,
     { radial: { key: 'x' }, angular: { key: 'y' } },
     'direction-measured',
-    '#polar-line'
+    '#polar-line',
   )
   windDirectionForecast.addTo(
     polarAxis,
     { radial: { key: 'x' }, angular: { key: 'y' } },
     'direction-forecast',
-    '#polar-line-forecast'
+    '#polar-line-forecast',
   )
 
   polarText = new DataField(polarAxis.canvas, {
@@ -271,19 +271,19 @@ function setupWindrose(
     windSpeedAxis,
     { x: { key: 'y', axisIndex: 0 }, y: { key: 'x', axisIndex: 0 } },
     'cartesian-range',
-    '#cartesian-range'
+    '#cartesian-range',
   )
   windSpeedMeasurement.addTo(
     windSpeedAxis,
     { x: { key: 'y', axisIndex: 0 }, y: { key: 'x', axisIndex: 0 } },
     'wind',
-    '#wind-line'
+    '#wind-line',
   )
   windSpeedForecast.addTo(
     windSpeedAxis,
     { x: { key: 'y', axisIndex: 0 }, y: { key: 'x', axisIndex: 0 } },
     'wind-forecast',
-    '#forecast'
+    '#forecast',
   )
 
   windAmplitudeText = new DataField(
@@ -292,7 +292,7 @@ function setupWindrose(
       selector: 'wind',
       labelField: { text: 'windsnelheid' },
     },
-    speedDataFormatter
+    speedDataFormatter,
   )
 
   // Wind stoot chart
@@ -317,7 +317,7 @@ function setupWindrose(
     windStootAxis,
     { x: { key: 'y', axisIndex: 0 }, y: { key: 'x', axisIndex: 0 } },
     'stoot',
-    '#stoot-line'
+    '#stoot-line',
   )
 
   windStootText = new DataField(
@@ -326,7 +326,7 @@ function setupWindrose(
       selector: 'stoot',
       labelField: { text: 'windstoot' },
     },
-    speedDataFormatter
+    speedDataFormatter,
   )
 
   // Time chart wind speed
@@ -349,66 +349,66 @@ function setupWindrose(
       { t: 0, y: 0 },
       { t: 1, y: 0 },
     ],
-    { transitionTime: transitionTime }
+    { transitionTime: transitionTime },
   )
   windSpeedTimeF = new ChartLine(
     [
       { t: 0, y: 0 },
       { t: 1, y: 0 },
     ],
-    { transitionTime: transitionTime }
+    { transitionTime: transitionTime },
   )
   windStootTimeM = new ChartLine(
     [
       { t: 0, y: 0 },
       { t: 1, y: 0 },
     ],
-    { transitionTime: transitionTime }
+    { transitionTime: transitionTime },
   )
   windDirectionTimeM = new ChartMarker(
     [
       { t: 0, y: 0, d: 0 },
       { t: 1, y: 0, d: 0 },
     ],
-    { transitionTime: transitionTime, symbol: { size: 32 }, skip: 1 }
+    { transitionTime: transitionTime, symbol: { size: 32 }, skip: 1 },
   )
   windDirectionTimeF = new ChartDirection(
     [
       { t: 0, y: 0, d: 0 },
       { t: 1, y: 0, d: 0 },
     ],
-    { transitionTime: transitionTime, symbol: { size: 64 } }
+    { transitionTime: transitionTime, symbol: { size: 64 } },
   )
 
   windSpeedTimeM.addTo(
     windTimeAxis,
     { x: { key: 't', axisIndex: 0 }, y: { key: 'y', axisIndex: 0 } },
     'wind',
-    '#wind-line-time'
+    '#wind-line-time',
   )
   windStootTimeM.addTo(
     windTimeAxis,
     { x: { key: 't', axisIndex: 0 }, y: { key: 'y', axisIndex: 0 } },
     'windstoot',
-    '#windstoot-line-time'
+    '#windstoot-line-time',
   )
   windSpeedTimeF.addTo(
     windTimeAxis,
     { x: { key: 't', axisIndex: 0 }, y: { key: 'y', axisIndex: 0 } },
     'wind-forecast',
-    '#forecast-time'
+    '#forecast-time',
   )
   windDirectionTimeM.addTo(
     windTimeAxis,
     { x: { key: 't', axisIndex: 0 }, y: { key: 'y', axisIndex: 0 }, value: { key: 'y' } },
     'wind',
-    '#winddirection-line-time'
+    '#winddirection-line-time',
   )
   windDirectionTimeF.addTo(
     windTimeAxis,
     { x: { key: 't', axisIndex: 0 }, y: { key: 'd', axisIndex: 0 }, value: { key: 'y' } },
     'winddirection-forecast',
-    '#directionforecast-time'
+    '#directionforecast-time',
   )
 
   const legendWindTime = new Legend(
@@ -418,7 +418,7 @@ function setupWindrose(
       { selector: 'wind-forecast', label: 'Windsnelheid verwachting' },
       { selector: 'winddirection-forecast', label: 'Windrichting verwachting' },
     ],
-    document.getElementById('legend-wind-speed-time')
+    document.getElementById('legend-wind-speed-time'),
   )
 
   windSpeedAxis.canvas.append('g').attr('class', 'axis x2-axis')
@@ -452,7 +452,7 @@ function updateChartWindTime(
   windSpeedTimeSeriesM,
   windSpeedTimeSeriesF,
   windStootTimeSeriesM,
-  windDirectionTimeSeriesF
+  windDirectionTimeSeriesF,
 ) {
   windSpeedTimeM.data = windSpeedTimeSeriesM
   windSpeedTimeF.data = windSpeedTimeSeriesF
@@ -480,7 +480,7 @@ function updateWindrose(
   windSpreidingR,
   windSpreidingV,
   windStoot,
-  times
+  times,
 ) {
   const updateCharts = function (event) {
     const position = event.target.value
@@ -636,13 +636,13 @@ function get_wind_data() {
         allWindSpreidingR,
         allWindSpreidingV,
         allWindStoot,
-        times
+        times,
       )
       updateChartWindTime(
         windSpeedTimeSeriesM,
         windSpeedTimeSeriesF,
         windStootTimeSeriesM,
-        windSpeedTimeSeriesM
+        windSpeedTimeSeriesM,
       )
 
       resetTimeSlider(timesdata, true)
@@ -667,5 +667,5 @@ function get_wind_data() {
 get_wind_data()
 
 addListenerByClassName('theme-button', 'click', () =>
-  document.documentElement.classList.toggle('dark')
+  document.documentElement.classList.toggle('dark'),
 )

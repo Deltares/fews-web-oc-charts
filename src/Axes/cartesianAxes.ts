@@ -14,23 +14,23 @@ import { LabelOrientation } from '../Axis/labelOrientation.js'
 import { AxisPosition } from '../Axis/axisPosition.js'
 import { ceilByStep } from '../Utils/roundNumber.js'
 
-export type CartesianAxesIndex = { x: { axisIndex: number }, y: { axisIndex: number } }
+export type CartesianAxesIndex = { x: { axisIndex: number }; y: { axisIndex: number } }
 
 export interface CartesianAxesOptions extends AxesOptions {
-  x: CartesianAxisOptions[];
-  y: CartesianAxisOptions[];
+  x: CartesianAxisOptions[]
+  y: CartesianAxisOptions[]
 }
 
 const defaultAxesOptions = {
   margin: { top: 20, right: 50, bottom: 20, left: 50 },
   automargin: false,
   x: [{ type: AxisType.value, labelAngle: 0 }],
-  y: [{ type: AxisType.value, labelAngle: 0 }]
+  y: [{ type: AxisType.value, labelAngle: 0 }],
 } as const
 
 export class CartesianAxes extends Axes {
   gridHandles: Record<string, Grid> = {}
-  axisHandles: Record<string, XAxis|YAxis> = {}
+  axisHandles: Record<string, XAxis | YAxis> = {}
   layers: any
   xScales: Array<any> = []
   yScales: Array<any> = []
@@ -43,7 +43,7 @@ export class CartesianAxes extends Axes {
     container: HTMLElement,
     width: number | null,
     height: number | null,
-    options: CartesianAxesOptions
+    options: CartesianAxesOptions,
   ) {
     super(container, width, height, options, defaultAxesOptions)
     // Set defaults for each x- and y-axis.
@@ -51,14 +51,12 @@ export class CartesianAxes extends Axes {
     this.setDefaultAxisOptions(this.options.y, defaultAxesOptions.y[0])
     this.setDefaultTimeOptions(this.options.x)
     this.setDefaultTimeOptions(this.options.y)
-    this.clipPathId ='id-' + Math.random().toString(36).substring(2, 18)
+    this.clipPathId = 'id-' + Math.random().toString(36).substring(2, 18)
     this.setClipPath()
 
     this.layers = createLayers(this.canvas, this.width, this.height)
 
-    this.chartGroup = this.layers.charts
-      .attr('clip-path', `url(#${this.clipPathId})`)
-      .append('g')
+    this.chartGroup = this.layers.charts.attr('clip-path', `url(#${this.clipPathId})`).append('g')
     this.createCanvas()
     this.createMouseLayer()
 
@@ -85,9 +83,7 @@ export class CartesianAxes extends Axes {
   }
 
   setOptions(options: Partial<CartesianAxesOptions>): void {
-    merge(this.options,
-      options
-    )
+    merge(this.options, options)
   }
 
   createCanvas(): void {
@@ -104,20 +100,14 @@ export class CartesianAxes extends Axes {
       .attr('width', this.width)
       .attr('height', this.height)
       .attr('fill', 'none')
-}
+  }
 
   updateCanvas(): void {
-    this.layers.canvas
-      .select('rect')
-      .attr('height', this.height)
-      .attr('width', this.width)
+    this.layers.canvas.select('rect').attr('height', this.height).attr('width', this.width)
   }
 
   updateMouseLayer(): void {
-    this.layers.mouse
-      .select('rect')
-      .attr('height', this.height)
-      .attr('width', this.width)
+    this.layers.mouse.select('rect').attr('height', this.height).attr('width', this.width)
   }
 
   setClipPath() {
@@ -130,10 +120,7 @@ export class CartesianAxes extends Axes {
         .attr('height', this.height)
         .attr('width', this.width)
     } else {
-      clipPath
-        .select('rect')
-        .attr('height', this.height)
-        .attr('width', this.width)
+      clipPath.select('rect').attr('height', this.height).attr('width', this.width)
     }
   }
 
@@ -156,7 +143,7 @@ export class CartesianAxes extends Axes {
         includeZero: axisOptions.includeZero,
         symmetric: axisOptions.symmetric,
       }
-      const zoomOptions = { ... { autoScale: false }, ...axisScaleOptions, ...options }
+      const zoomOptions = { ...{ autoScale: false }, ...axisScaleOptions, ...options }
       if (zoomOptions?.domain) {
         scale.domain(zoomOptions.domain)
         if (zoomOptions?.nice === true) scale.domain(niceDomain(scale.domain(), 16))
@@ -186,21 +173,29 @@ export class CartesianAxes extends Axes {
         let extent = new Array(0)
         for (const chart of this.charts) {
           if (chart.axisIndex[axisKey]?.axisIndex === +key) {
-            extent = chart.data.map(d => d[chart.dataKeys[axisKey]])
+            extent = chart.data.map((d) => d[chart.dataKeys[axisKey]])
             break
           }
         }
         scale.domain(extent)
       }
       const domain = scale.domain()
-      if (initialExtents[key] === undefined && !isNaN(domain[0]) && !isNaN(domain[1])) initialExtents[key] = domain
+      if (initialExtents[key] === undefined && !isNaN(domain[0]) && !isNaN(domain[1]))
+        initialExtents[key] = domain
     }
   }
 
-  chartsExtent(axisKey: keyof CartesianAxesOptions, axisIndex: number, options: ZoomOptions): any[] {
+  chartsExtent(
+    axisKey: keyof CartesianAxesOptions,
+    axisIndex: number,
+    options: ZoomOptions,
+  ): any[] {
     let extent = new Array(2)
     for (const chart of this.charts) {
-      if ((options.fullExtent || chart.options[axisKey].includeInAutoScale) && chart.axisIndex[axisKey]?.axisIndex === +axisIndex) {
+      if (
+        (options.fullExtent || chart.options[axisKey].includeInAutoScale) &&
+        chart.axisIndex[axisKey]?.axisIndex === +axisIndex
+      ) {
         const chartExtent = chart.extent[chart.dataKeys[axisKey]]
         extent = d3.extent(d3.merge([extent, [].concat(...chartExtent)]))
       }
@@ -227,18 +222,30 @@ export class CartesianAxes extends Axes {
 
   resetZoom(): void {
     const xOptions: ZoomOptions = { autoScale: true }
-    if (this.options['x'][0].resetZoom === ResetZoom.full || (this.options['x'][0].resetZoom === ResetZoom.toggle && this.atInitialExtent(this.xScales[0].domain(), this.xInitialExtent[0]))) {
+    if (
+      this.options['x'][0].resetZoom === ResetZoom.full ||
+      (this.options['x'][0].resetZoom === ResetZoom.toggle &&
+        this.atInitialExtent(this.xScales[0].domain(), this.xInitialExtent[0]))
+    ) {
       xOptions.fullExtent = true
     }
     const yOptions: ZoomOptions = { autoScale: true }
-    if (this.options['y'][0].resetZoom === ResetZoom.full || (this.options['y'][0].resetZoom === ResetZoom.toggle && this.atInitialExtent(this.yScales[0].domain(), this.yInitialExtent[0]))) {
+    if (
+      this.options['y'][0].resetZoom === ResetZoom.full ||
+      (this.options['y'][0].resetZoom === ResetZoom.toggle &&
+        this.atInitialExtent(this.yScales[0].domain(), this.yInitialExtent[0]))
+    ) {
       yOptions.fullExtent = true
     }
     this.redraw({ x: xOptions, y: yOptions })
   }
 
   atInitialExtent(domain: any, initialExtent: any): boolean {
-    return initialExtent !== undefined && domain[0] === initialExtent[0] && domain[1] === initialExtent[1]
+    return (
+      initialExtent !== undefined &&
+      domain[0] === initialExtent[0] &&
+      domain[1] === initialExtent[1]
+    )
   }
 
   resize(): void {
@@ -271,16 +278,14 @@ export class CartesianAxes extends Axes {
     this.updateCanvas()
     this.updateMouseLayer()
     this.updateLabels()
-    Object.values(this.gridHandles).forEach(
-      (grid) => grid.redraw()
-    )
+    Object.values(this.gridHandles).forEach((grid) => grid.redraw())
   }
 
   redrawAxes(): boolean {
     let requiresRedraw = false
     Object.values(this.axisHandles).forEach((axis) => {
       axis.redraw()
-      if(this.options.automargin && axis.clientRect) {
+      if (this.options.automargin && axis.clientRect) {
         if (axis.position === AxisPosition.Left && axis.clientRect.width > this.margin.left) {
           this.margin.left = ceilByStep(axis.clientRect.width, 10)
           requiresRedraw = true
@@ -306,32 +311,24 @@ export class CartesianAxes extends Axes {
     const g = this.canvas.select('g.labels')
     if (this.options.y) {
       if (this.options.y[0]?.label) {
-        const label = g.select('.y0.label')
-          .text(this.options.y[0].label)
+        const label = g.select('.y0.label').text(this.options.y[0].label)
 
         if (this.options.y[0].labelOrientation === LabelOrientation.Vertical) {
           const offset = this.options.y[0].labelOffset ?? 0
-          label
-            .attr('x', -this.height / 2)
-            .attr('y', -30 - offset)
+          label.attr('x', -this.height / 2).attr('y', -30 - offset)
         }
       }
       if (this.options.y[0]?.unit) {
-        g.select('.y0.unit')
-          .text(this.options.y[0].unit)
+        g.select('.y0.unit').text(this.options.y[0].unit)
       }
       if (this.options.y[1]?.label) {
-        const label = g.select('.y1.label')
-          .text(this.options.y[1].label)
+        const label = g.select('.y1.label').text(this.options.y[1].label)
 
         if (this.options.y[0].labelOrientation === LabelOrientation.Vertical) {
           const offset = this.options.y[1].labelOffset ?? 0
-          label
-            .attr('x', -this.height / 2)
-            .attr('y', this.width + 39 + offset)
+          label.attr('x', -this.height / 2).attr('y', this.width + 39 + offset)
         } else {
-          label
-            .attr('x', this.width)
+          label.attr('x', this.width)
         }
       }
       if (this.options.y[1]?.unit) {
@@ -426,37 +423,57 @@ export class CartesianAxes extends Axes {
 
   protected initAxisX(options: CartesianAxisOptions[]): void {
     for (const index in options) {
-      this.axisHandles[`x${index}`] = new XAxis(this.layers.axis, this.xScales[index], this.yScales[0], {
-        axisKey: 'x',
-        axisIndex: Number.parseInt(index),
-        ...options[index]
-      })
+      this.axisHandles[`x${index}`] = new XAxis(
+        this.layers.axis,
+        this.xScales[index],
+        this.yScales[0],
+        {
+          axisKey: 'x',
+          axisIndex: Number.parseInt(index),
+          ...options[index],
+        },
+      )
       if (options[index].showGrid) {
-        this.gridHandles[`x${index}`] = new Grid(this.layers.grid, this.axisHandles[`x${index}`].axis, this.yScales[0], {axisKey: 'x', axisIndex: Number.parseInt(index)})
+        this.gridHandles[`x${index}`] = new Grid(
+          this.layers.grid,
+          this.axisHandles[`x${index}`].axis,
+          this.yScales[0],
+          { axisKey: 'x', axisIndex: Number.parseInt(index) },
+        )
       }
     }
   }
 
   protected initAxisY(options: CartesianAxisOptions[]): void {
     for (const index in options) {
-      this.axisHandles[`y${index}`] = new YAxis(this.layers.axis, this.yScales[index], this.xScales[0], {
-        axisKey: 'y',
-        axisIndex: Number.parseInt(index),
-        ...options[index]
-      })
+      this.axisHandles[`y${index}`] = new YAxis(
+        this.layers.axis,
+        this.yScales[index],
+        this.xScales[0],
+        {
+          axisKey: 'y',
+          axisIndex: Number.parseInt(index),
+          ...options[index],
+        },
+      )
       if (options[index].showGrid) {
-        this.gridHandles[`y${index}`] = new Grid(this.layers.grid, this.axisHandles[`y${index}`].axis, this.xScales[0], {axisKey: 'y', axisIndex: Number.parseInt(index)})
+        this.gridHandles[`y${index}`] = new Grid(
+          this.layers.grid,
+          this.axisHandles[`y${index}`].axis,
+          this.xScales[0],
+          { axisKey: 'y', axisIndex: Number.parseInt(index) },
+        )
       }
     }
   }
 
   protected initLabels(): void {
-    const labelGroup = this.layers.labels
-      .attr('font-family', 'sans-serif')
+    const labelGroup = this.layers.labels.attr('font-family', 'sans-serif')
 
     if (this.options.y) {
       if (this.options.y[0]?.label) {
-        const label = labelGroup.append('text')
+        const label = labelGroup
+          .append('text')
           .attr('class', 'y0 label')
           .text(this.options.y[0].label)
 
@@ -468,14 +485,12 @@ export class CartesianAxes extends Axes {
             .attr('y', -30 - offset)
             .attr('text-anchor', 'middle')
         } else {
-          label
-            .attr('x', 0)
-            .attr('y', -9)
-            .attr('text-anchor', 'start')
+          label.attr('x', 0).attr('y', -9).attr('text-anchor', 'start')
         }
       }
       if (this.options.y[0]?.unit) {
-        labelGroup.append('text')
+        labelGroup
+          .append('text')
           .attr('class', 'y0 unit')
           .attr('x', -9)
           .attr('y', -9)
@@ -483,7 +498,8 @@ export class CartesianAxes extends Axes {
           .text(this.options.y[0].unit)
       }
       if (this.options.y[1]?.label) {
-        const label = labelGroup.append('text')
+        const label = labelGroup
+          .append('text')
           .attr('class', 'y1 label')
           .text(this.options.y[1].label)
 
@@ -495,14 +511,12 @@ export class CartesianAxes extends Axes {
             .attr('y', this.width + 39 + offset)
             .attr('text-anchor', 'middle')
         } else {
-          label
-            .attr('x', this.width)
-            .attr('y', -9)
-            .attr('text-anchor', 'end')
+          label.attr('x', this.width).attr('y', -9).attr('text-anchor', 'end')
         }
       }
       if (this.options.y[1]?.unit) {
-        labelGroup.append('text')
+        labelGroup
+          .append('text')
           .attr('class', 'y1 unit')
           .attr('x', this.width + 10)
           .attr('y', -9)
@@ -512,7 +526,8 @@ export class CartesianAxes extends Axes {
     }
     if (this.options.x[0]?.label) {
       const offset = this.options.x[0].labelOffset ?? 0
-      labelGroup.append('text')
+      labelGroup
+        .append('text')
         .attr('class', 'x0 label')
         .attr('x', this.width / 2)
         .attr('y', this.height + 30 + offset)
@@ -520,7 +535,8 @@ export class CartesianAxes extends Axes {
         .text(this.options.x[0].label)
     }
     if (this.options.x[0]?.unit) {
-      labelGroup.append('text')
+      labelGroup
+        .append('text')
         .attr('class', 'x0 unit')
         .attr('x', this.width + 10)
         .attr('y', this.height + 9)
@@ -530,7 +546,8 @@ export class CartesianAxes extends Axes {
     }
 
     if (this.options.x[1]?.unit) {
-      labelGroup.append('text')
+      labelGroup
+        .append('text')
         .attr('class', 'x1 unit')
         .attr('x', this.width + 10)
         .attr('y', -9)

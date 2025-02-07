@@ -3,6 +3,6 @@ export const AxisOrientation = {
   Bottom: 'bottom',
   Left: 'left',
   Right: 'right',
-} as const;
+} as const
 
-export type AxisOrientation = (typeof AxisOrientation)[keyof typeof AxisOrientation];
+export type AxisOrientation = (typeof AxisOrientation)[keyof typeof AxisOrientation]

@@ -7,30 +7,31 @@ import { AxisOptions } from '../Axis/axisOptions.js'
 import { D3Selection } from '../Utils'
 
 export interface Margin {
-  top?: number;
-  right?: number;
-  bottom?: number;
-  left?: number;
+  top?: number
+  right?: number
+  bottom?: number
+  left?: number
 }
 
 export interface AxesOptions {
-  transitionTime?: number;
-  margin?: Margin;
-  automargin?: boolean 
+  transitionTime?: number
+  margin?: Margin
+  automargin?: boolean
 }
 
 interface AxisIndexItem {
-  key: string; axisIndex: number;
+  key: string
+  axisIndex: number
 }
 
 export interface AxisIndex {
-  x?: AxisIndexItem;
-  x1?: { key: string };
-  y?: AxisIndexItem;
-  radial?: AxisIndexItem;
-  angular?: AxisIndexItem;
-  value?: { key: string };
-  color?: { key: string };
+  x?: AxisIndexItem
+  x1?: { key: string }
+  y?: AxisIndexItem
+  radial?: AxisIndexItem
+  angular?: AxisIndexItem
+  value?: { key: string }
+  color?: { key: string }
 }
 
 export abstract class Axes {
@@ -53,15 +54,17 @@ export abstract class Axes {
   charts: Chart[]
   visitors: Visitor[]
 
-  constructor(container: HTMLElement, width: number | null, height: number | null, options: AxesOptions, defaultOptions: any) {
+  constructor(
+    container: HTMLElement,
+    width: number | null,
+    height: number | null,
+    options: AxesOptions,
+    defaultOptions: any,
+  ) {
     this.container = container
-    this.options = defaultsDeep(
-      this.options,
-      options,
-      defaultOptions
-    )
+    this.options = defaultsDeep(this.options, options, defaultOptions)
 
-    this.observer = new ResizeObserver(entries => {
+    this.observer = new ResizeObserver((entries) => {
       if (entries[0].contentBoxSize) this.resize()
     })
     this.observer.observe(container)
@@ -81,7 +84,7 @@ export abstract class Axes {
       decimal: '.',
       thousands: '\u2009',
       grouping: [3],
-      currency: ['$', '']
+      currency: ['$', ''],
     })
 
     this.margin = { ...{ top: 40, right: 40, bottom: 40, left: 40 }, ...options.margin }
@@ -91,8 +94,7 @@ export abstract class Axes {
       .attr('class', 'wb-charts')
       .attr('overflow', 'visible')
     this.defs = this.svg.append('defs')
-    this.canvas = this.svg
-        .append('g')
+    this.canvas = this.svg.append('g')
 
     this.setSize(height, width)
     this.tooltip = new Tooltip(container)
@@ -109,9 +111,7 @@ export abstract class Axes {
   }
 
   setOptions(options: AxesOptions): void {
-    merge(this.options,
-      options
-    )
+    merge(this.options, options)
   }
 
   setSize(height?: number, width?: number): void {

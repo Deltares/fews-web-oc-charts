@@ -4,5 +4,5 @@
  * @returns The normalized angle.
  */
 export function normalizeAngle(angle) {
-  return angle - 360 * Math.floor((angle) / 360)
+  return angle - 360 * Math.floor(angle / 360)
 }

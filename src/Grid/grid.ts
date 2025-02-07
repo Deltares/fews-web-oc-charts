@@ -1,10 +1,9 @@
-import * as d3 from "d3";
+import * as d3 from 'd3'
 
 export interface GridOptions {
-  axisKey: 'x' | 'y';
-  axisIndex: number;
+  axisKey: 'x' | 'y'
+  axisIndex: number
 }
-
 
 export class Grid {
   public options: GridOptions
@@ -51,9 +50,10 @@ export class Grid {
   }
 
   updateTicks(selection, gridAxis: d3.Axis<d3.AxisDomain>) {
-    selection
-    .call(gridAxis)
-    .call(g => g.selectAll(".tick")
-      .attr("class", (d) => { return d === 0 ? 'tick zero-crossing' : 'tick' }))
+    selection.call(gridAxis).call((g) =>
+      g.selectAll('.tick').attr('class', (d) => {
+        return d === 0 ? 'tick zero-crossing' : 'tick'
+      }),
+    )
   }
 }
