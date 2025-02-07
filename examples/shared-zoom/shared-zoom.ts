@@ -1,8 +1,7 @@
 import '../../src/scss/wb-charts.scss'
-import '../shared.css'
+import '../shared/shared.css'
 import './shared-zoom.css'
 
-import { addListenerByClassName } from '../shared'
 import {
   AxisPosition,
   AxisType,
@@ -14,6 +13,7 @@ import {
   ZoomHandler,
   ZoomMode,
 } from '../../src'
+import { addListenerByClassName } from '../shared'
 
 const containerZoom0 = document.getElementById('chart-container-0')
 const containerZoom1 = document.getElementById('chart-container-1')

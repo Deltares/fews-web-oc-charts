@@ -1,5 +1,5 @@
 import '../../src/scss/wb-charts.scss'
-import '../shared.css'
+import '../shared/shared.css'
 import './chart-text.css'
 
 import { AxisPosition, AxisType, CartesianAxes, CartesianAxesOptions, ChartLine, ChartText, MouseOver, ZoomHandler } from '../../src'

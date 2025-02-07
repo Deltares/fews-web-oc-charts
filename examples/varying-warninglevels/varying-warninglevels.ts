@@ -1,9 +1,10 @@
 import '../../src/scss/wb-charts.scss'
-import { addListenerByClassName } from '../shared'
-import '../shared.css'
+import '../shared/shared.css'
 import './varying-warninglevels.css'
 
 import * as d3 from 'd3'
+
+import { addListenerByClassName } from '../shared'
 
 // set the dimensions and margins of the graph
 const margin = { top: 20, right: 55, bottom: 30, left: 55 }

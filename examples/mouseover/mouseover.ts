@@ -1,5 +1,5 @@
 import '../../src/scss/wb-charts.scss'
-import '../shared.css'
+import '../shared/shared.css'
 import './mouseover.css'
 
 import * as d3 from 'd3'
@@ -18,7 +18,7 @@ import {
   WarningLevels,
   ZoomHandler,
 } from '../../src'
-import { addListenerByClassName, percentile, toggleChart } from '../shared'
+import { addListenerByClassName, toggleChart, percentile } from "../shared"
 
 const container = document.getElementById('chart-container-1')
 const axis = new CartesianAxes(container, null, null, {

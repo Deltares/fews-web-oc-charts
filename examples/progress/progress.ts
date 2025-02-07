@@ -1,5 +1,5 @@
 import '../../src/scss/wb-charts.scss'
-import '../shared.css'
+import '../shared/shared.css'
 import './progress.css'
 
 import { AUTO_SCALE, AxisType, ChartProgress, PolarAxes } from '../../src'

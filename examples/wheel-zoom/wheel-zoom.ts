@@ -1,8 +1,7 @@
 import '../../src/scss/wb-charts.scss'
-import '../shared.css'
+import '../shared/shared.css'
 import './wheel-zoom.css'
 
-import { addListenerByClassName } from '../shared'
 import {
   AxisPosition,
   AxisType,
@@ -13,6 +12,7 @@ import {
   WheelMode,
   ZoomHandler,
 } from '../../src'
+import { addListenerByClassName } from '../shared'
 
 const containerZoomXY = document.getElementById('chart-container-zoom-xy')
 const containerZoomX = document.getElementById('chart-container-zoom-x')

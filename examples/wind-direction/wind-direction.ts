@@ -1,3 +1,7 @@
+import '../../src/scss/wb-charts.scss'
+import '../shared/shared.css'
+import './wind-direction.css'
+
 import {
   AxisType,
   CartesianAxes,
@@ -18,10 +22,7 @@ import {
   TooltipAnchor,
   ZoomHandler,
 } from '../../src'
-import '../../src/scss/wb-charts.scss'
 import { addListenerByClassName, addListenerById } from '../shared'
-import '../shared.css'
-import './wind-direction.css'
 
 import * as d3 from 'd3'
 
