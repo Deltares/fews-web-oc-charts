@@ -81,7 +81,7 @@ export class ChartLine extends Chart {
             this.toolTipFormatterCartesian(d),
             TooltipPosition.Top,
             pointer[0],
-            pointer[1]
+            pointer[1],
           )
         })
         .on('pointerout', () => {
@@ -123,7 +123,7 @@ export class ChartLine extends Chart {
               ? this.options.tooltip.position
               : TooltipPosition.Top,
             pointer[0],
-            pointer[1]
+            pointer[1],
           )
         })
         .on('pointerout', () => {

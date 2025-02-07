@@ -79,7 +79,7 @@ plot2.addTo(
   axis,
   { x: { key: 'x', axisIndex: 1 }, y: { key: 'y', axisIndex: 0 } },
   'mexico',
-  style2
+  style2,
 )
 
 const mouseOver = new MouseOver(['local', 'mexico'])
@@ -90,5 +90,5 @@ axis.accept(zoomHandler)
 axis.accept(mouseOver)
 
 addListenerByClassName('theme-button', 'click', () =>
-  document.documentElement.classList.toggle('dark')
+  document.documentElement.classList.toggle('dark'),
 )

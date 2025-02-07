@@ -1,5 +1,5 @@
-import { AxisOrientation } from "../Axis/axisOrientation.js"
-import { normalizeAngle } from "./normalizeAngle.js"
+import { AxisOrientation } from '../Axis/axisOrientation.js'
+import { normalizeAngle } from './normalizeAngle.js'
 
 export function textAnchorForAngle(angle, orientation) {
   let rotate

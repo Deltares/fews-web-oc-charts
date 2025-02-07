@@ -80,13 +80,13 @@ function setupVerticalDateTimeMouseover() {
     axis,
     { x: { key: 'x', axisIndex: 0 }, y: { key: 'y', axisIndex: 0 } },
     'local',
-    style1
+    style1,
   )
   plot2.addTo(
     axis,
     { x: { key: 'x', axisIndex: 0 }, y: { key: 'y', axisIndex: 1 } },
     'mexico',
-    style2
+    style2,
   )
 
   const mouseOver = new VerticalMouseOver(['local', 'mexico'])
@@ -162,7 +162,7 @@ function setupVerticalProfileMouseover() {
     axis,
     { x: { key: 'x', axisIndex: 0 }, y: { key: 'y', axisIndex: 0 } },
     'vertical-profile',
-    style1
+    style1,
   )
 
   const mouseOver = new VerticalMouseOver(['vertical-profile'])
@@ -177,5 +177,5 @@ setupVerticalDateTimeMouseover()
 setupVerticalProfileMouseover()
 
 addListenerByClassName('theme-button', 'click', () =>
-  document.documentElement.classList.toggle('dark')
+  document.documentElement.classList.toggle('dark'),
 )

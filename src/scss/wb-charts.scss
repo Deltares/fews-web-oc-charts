@@ -20,7 +20,7 @@
   .canvas rect {
     fill: var(--background-color);
   }
-  
+
   .canvas path {
     fill: var(--background-color);
   }
@@ -30,13 +30,13 @@
   .canvas rect {
     fill: none;
   }
-  
+
   .canvas path {
     fill: none;
   }
 }
 
-svg.wb-charts  {
+svg.wb-charts {
   color: var(--foreground-color);
 }
 
@@ -176,13 +176,13 @@ svg.wb-charts  {
   fill: var(--primary-color);
 }
 
-.current-time-indicator:hover>text {
+.current-time-indicator:hover > text {
   visibility: visible;
 }
 
 .current-time-indicator > text {
   visibility: hidden;
-  stroke:none;
+  stroke: none;
   fill: var(--text-color-complement);
 }
 
@@ -226,9 +226,9 @@ svg.wb-charts  {
 }
 
 .mouse-x > text {
-  -webkit-user-select:none;
+  -webkit-user-select: none;
   user-select: none;
-  fill: var(--text-color);;
+  fill: var(--text-color);
 }
 
 .mouse {
@@ -244,17 +244,16 @@ svg.wb-charts  {
     }
 
     .mouse-per-line {
-      fill: var(--foreground-color);;
+      fill: var(--foreground-color);
     }
   }
 }
-
 
 .brush {
   .handle {
     fill: var(--foreground-color-complement);
     stroke: var(--foreground-color);
-    stroke-width: .5px;
+    stroke-width: 0.5px;
   }
 
   .select-rect {
@@ -275,8 +274,8 @@ svg.wb-charts  {
   font-size: 1em;
 
   .tooltiptext {
-    background-color:  var(--foreground-color-complement);
-    color:  var(--foreground-text);
+    background-color: var(--foreground-color-complement);
+    color: var(--foreground-text);
     text-align: center;
     border-radius: 6px;
     padding: 5px 10px;
@@ -300,7 +299,7 @@ svg.wb-charts  {
     }
 
     &::after {
-      content: "";
+      content: '';
       position: absolute;
       border-width: 5px;
       border-style: solid;
@@ -332,7 +331,7 @@ svg.wb-charts  {
   }
 }
 
-.data-field{
+.data-field {
   font-family: sans-serif;
   font-size: 1em;
   fill: var(--text-color);

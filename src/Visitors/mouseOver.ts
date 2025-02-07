@@ -102,7 +102,7 @@ export class MouseOver implements Visitor {
             return chart.id
           })
 
-    const points: { point: DataPointXY; style: SvgPropertiesHyphen, axisIndex: number }[] = []
+    const points: { point: DataPointXY; style: SvgPropertiesHyphen; axisIndex: number }[] = []
     const seen = new Set()
     for (const chart of this.axes.charts) {
       if (traces.includes(chart.id) && chart.visible && !seen.has(chart.id)) {
@@ -141,8 +141,8 @@ export class MouseOver implements Visitor {
   }
 
   updateTooltip(
-    pointData: { point: DataPointXY; style: SvgPropertiesHyphen, axisIndex: number }[],
-    mouse: [number, number]
+    pointData: { point: DataPointXY; style: SvgPropertiesHyphen; axisIndex: number }[],
+    mouse: [number, number],
   ) {
     const axes = this.axes
     if (Object.keys(pointData).length === 0) {
@@ -178,7 +178,7 @@ export class MouseOver implements Visitor {
         htmlContent,
         TooltipPosition.Right,
         mouse[0] + axes.margin.left,
-        mouse[1] + axes.margin.top
+        mouse[1] + axes.margin.top,
       )
       if (axes.tooltip.isHidden) {
         axes.tooltip.show()

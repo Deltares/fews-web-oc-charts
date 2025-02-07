@@ -1,5 +1,5 @@
 import * as d3 from 'd3'
-import { CartesianAxes, PolarAxes } from '../index.js';
+import { CartesianAxes, PolarAxes } from '../index.js'
 import { Chart, AUTO_SCALE } from './chart.js'
 import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js'
 
@@ -25,40 +25,51 @@ export class ChartMatrix extends Chart {
       colorScale.domain(
         d3.extent(this.data, function (d: any): number {
           return d[colorKey]
-        })
+        }),
       )
     }
 
     const colorMap = this.getColorMap(colorScale)
     this.group = this.selectGroup(axis, ChartMatrix.GROUP_CLASS)
-    d3
-      .transition()
-      .duration(this.options.transitionTime)
+    d3.transition().duration(this.options.transitionTime)
 
     const elements = this.group
-      .selectAll("rect")
+      .selectAll('rect')
       .data(data)
-      .join("rect")
-      .attr('display', d => { return d[valueKey] === null ? 'none' : undefined })
-      .attr("x", d => x0(d[xKey]))
-      .attr("y", d => y0(d[yKey]))
-      .attr("width", x0.bandwidth())
-      .attr("height", y0.bandwidth())
-      .attr("stroke-width", 0)
-      .attr("shape-rendering", "auto")
-      .attr("fill", d => d[colorKey] !== null ? colorMap(d[colorKey]) : 'none')
+      .join('rect')
+      .attr('display', (d) => {
+        return d[valueKey] === null ? 'none' : undefined
+      })
+      .attr('x', (d) => x0(d[xKey]))
+      .attr('y', (d) => y0(d[yKey]))
+      .attr('width', x0.bandwidth())
+      .attr('height', y0.bandwidth())
+      .attr('stroke-width', 0)
+      .attr('shape-rendering', 'auto')
+      .attr('fill', (d) => (d[colorKey] !== null ? colorMap(d[colorKey]) : 'none'))
     if (this.options.tooltip !== undefined) {
       elements
         .on('pointerover', (_e: any, d: any) => {
-          if (this.options.tooltip.anchor !== undefined && this.options.tooltip.anchor !== TooltipAnchor.Top) {
-            console.error('Tooltip not implemented for anchor ', this.options.tooltip.anchor, ', using ', TooltipAnchor.Top, ' instead.')
+          if (
+            this.options.tooltip.anchor !== undefined &&
+            this.options.tooltip.anchor !== TooltipAnchor.Top
+          ) {
+            console.error(
+              'Tooltip not implemented for anchor ',
+              this.options.tooltip.anchor,
+              ', using ',
+              TooltipAnchor.Top,
+              ' instead.',
+            )
           }
           axis.tooltip.show()
           axis.tooltip.update(
             this.toolTipFormatterCartesian(d),
-            this.options.tooltip.position !== undefined ? this.options.tooltip.position : TooltipPosition.Top,
+            this.options.tooltip.position !== undefined
+              ? this.options.tooltip.position
+              : TooltipPosition.Top,
             axis.margin.left + x0(d[xKey]) + x0.bandwidth() / 2,
-            axis.margin.top + y0(d[yKey])
+            axis.margin.top + y0(d[yKey]),
           )
         })
         .on('pointerout', () => {
@@ -67,23 +78,19 @@ export class ChartMatrix extends Chart {
     }
 
     if (this.options.text !== undefined) {
-      const textSelection = this.group
-        .selectAll("text")
-        .data(data)
-        .join("text")
+      const textSelection = this.group.selectAll('text').data(data).join('text')
 
       textSelection
-        .attr("x", d => x0(d[xKey]) + x0.bandwidth() / 2)
-        .attr("y", d => y0(d[yKey]) + y0.bandwidth() / 2)
-        .attr("dx", this.options.text.dx)
-        .attr("dy", this.options.text.dy)
-        .text(d => {
+        .attr('x', (d) => x0(d[xKey]) + x0.bandwidth() / 2)
+        .attr('y', (d) => y0(d[yKey]) + y0.bandwidth() / 2)
+        .attr('dx', this.options.text.dx)
+        .attr('dy', this.options.text.dy)
+        .text((d) => {
           return this.options.text.formatter(d)
         })
 
       for (const [key, value] of Object.entries(this.options.text.attributes)) {
-        textSelection
-          .attr(key, value)
+        textSelection.attr(key, value)
       }
     }
   }
@@ -95,36 +102,15 @@ export class ChartMatrix extends Chart {
 
   drawLegendSymbol(legendId?: string, asSvgElement?: boolean) {
     const props = ['fill']
-    const source = this.group
-      .select('rect')
-      .node() as Element
-    const svg = d3.create('svg')
-      .attr('width', 20)
-      .attr('height', 20)
-    const group = svg
-      .append('g')
-      .attr('transform', 'translate(0, 10)')
+    const source = this.group.select('rect').node() as Element
+    const svg = d3.create('svg').attr('width', 20).attr('height', 20)
+    const group = svg.append('g').attr('transform', 'translate(0, 10)')
     const element = group.append('g')
-    element
-      .append('rect')
-      .attr('x', 0)
-      .attr('y', -8)
-      .attr('width', 5)
-      .attr('height', 18)
+    element.append('rect').attr('x', 0).attr('y', -8).attr('width', 5).attr('height', 18)
     this.applyStyle(source, element, props)
-    element
-      .append('rect')
-      .attr('x', 5)
-      .attr('y', -6)
-      .attr('width', 5)
-      .attr('height', 16)
+    element.append('rect').attr('x', 5).attr('y', -6).attr('width', 5).attr('height', 16)
     this.applyStyle(source, element, props)
-    element
-      .append('rect')
-      .attr('x', 10)
-      .attr('y', -5)
-      .attr('width', 5)
-      .attr('height', 15)
+    element.append('rect').attr('x', 10).attr('y', -5).attr('width', 5).attr('height', 15)
     this.applyStyle(source, element, props)
     if (asSvgElement) return element.node()
     return svg.node()
@@ -148,6 +134,4 @@ export class ChartMatrix extends Chart {
       scale.paddingInner(options.paddingInner)
     }
   }
-
 }
-

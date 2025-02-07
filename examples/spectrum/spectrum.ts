@@ -156,7 +156,7 @@ plot4.addTo(
     },
   },
   'histogram',
-  '#cartesian-histogram'
+  '#cartesian-histogram',
 )
 axis.redraw({
   x: {
@@ -186,5 +186,5 @@ input.onchange = function (event) {
 }
 
 addListenerByClassName('theme-button', 'click', () =>
-  document.documentElement.classList.toggle('dark')
+  document.documentElement.classList.toggle('dark'),
 )

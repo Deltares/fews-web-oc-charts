@@ -7,7 +7,11 @@ import type { DataPoint } from './types'
  * @param path - The path to the desired data.
  * @returns The data extent as an array containing the minimum and maximum values.
  */
-export function dataExtentFor<T extends DataPoint>(data: Array<T>, path: string, filter?: (d: T) => boolean): [number | Date | undefined, number | Date | undefined] {
+export function dataExtentFor<T extends DataPoint>(
+  data: Array<T>,
+  path: string,
+  filter?: (d: T) => boolean,
+): [number | Date | undefined, number | Date | undefined] {
   const filteredData = filter ? data.filter(filter) : data
   if (filteredData.length === 0) return [undefined, undefined]
   if (Array.isArray(filteredData[0][path])) {

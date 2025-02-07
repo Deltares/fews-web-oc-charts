@@ -1,20 +1,20 @@
-import * as d3 from "d3";
-import { DateTime } from "luxon";
-import { AxisOrientation } from "./axisOrientation.js";
-import { AxisPosition } from "./axisPosition.js";
-import { createAxis } from "./createAxis.js";
+import * as d3 from 'd3'
+import { DateTime } from 'luxon'
+import { AxisOrientation } from './axisOrientation.js'
+import { AxisPosition } from './axisPosition.js'
+import { createAxis } from './createAxis.js'
 import { generateMultiFormat } from '../Utils/date.js'
-import { AxisType } from "./axisType.js";
-import { niceDegreeSteps } from "../Utils/niceDegreeSteps.js";
+import { AxisType } from './axisType.js'
+import { niceDegreeSteps } from '../Utils/niceDegreeSteps.js'
 
 export interface BaseAxisOptions {
-  axisKey: string;
-  axisIndex: number;
-  orientation: AxisOrientation;
-  position: AxisPosition;
-  type: AxisType;
-  timeZone: string;
-  locale: string;
+  axisKey: string
+  axisIndex: number
+  orientation: AxisOrientation
+  position: AxisPosition
+  type: AxisType
+  timeZone: string
+  locale: string
   labelAngle?: number
 }
 
@@ -27,7 +27,12 @@ export abstract class Axis {
   spanScale: any
   clientRect: DOMRect
 
-  constructor(group: d3.Selection<SVGGElement, unknown, null, unknown>, scale: any, spanScale: any, options: Partial<BaseAxisOptions>) {
+  constructor(
+    group: d3.Selection<SVGGElement, unknown, null, unknown>,
+    scale: any,
+    spanScale: any,
+    options: Partial<BaseAxisOptions>,
+  ) {
     this.options = options as any
     this.orientation = options.orientation!
     this.position = options.position!
@@ -51,9 +56,7 @@ export abstract class Axis {
     } else if (this.options.type === AxisType.degrees) {
       this.updateTicksForDegrees()
     }
-    this.group
-      .attr('transform', this.translateAxis(this.position))
-      .call(this.axis)
+    this.group.attr('transform', this.translateAxis(this.position)).call(this.axis)
     if (this.options.labelAngle !== undefined) {
       this.translateTickLabels(this.orientation, this.options.labelAngle)
     }
@@ -68,13 +71,13 @@ export abstract class Axis {
     const scale = this.axis.scale()
     const offsetDomain = scale.domain().map((d: Date) => {
       const m = DateTime.fromJSDate(d).setZone(this.options.timeZone)
-      return new Date(d.getTime() + m.offset * 60000);
+      return new Date(d.getTime() + m.offset * 60000)
     })
     const offsetScale = d3.scaleUtc().domain(offsetDomain)
     const tickValues = offsetScale.ticks(5)
     const offsetValues = tickValues.map((d) => {
       const m = DateTime.fromJSDate(d).setZone(this.options.timeZone)
-      return new Date(d.getTime() - m.offset * 60000);
+      return new Date(d.getTime() - m.offset * 60000)
     })
     this.axis.tickValues(offsetValues)
     this.axis.tickFormat(generateMultiFormat(this.options.timeZone, this.options.locale))

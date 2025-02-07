@@ -1,6 +1,6 @@
 import { Axes } from '../Axes/axes.js'
 import { AxisType } from '../Axis/axisType.js'
-import { CartesianAxes } from '../index.js';
+import { CartesianAxes } from '../index.js'
 import { Visitor } from './visitor.js'
 import { DateTime, Duration } from 'luxon'
 import { defaultsDeep } from 'lodash-es'
@@ -16,17 +16,14 @@ export class DstIndicator implements Visitor {
 
   // tslint:disable-next-line:no-empty
   constructor(options: DstIndicatorOptions) {
-    this.options = defaultsDeep({},
-      options,
-      {
-        x: { axisIndex: 0 }
-      },
-    ) as DstIndicatorOptions
+    this.options = defaultsDeep({}, options, {
+      x: { axisIndex: 0 },
+    }) as DstIndicatorOptions
   }
 
   visit(axis: Axes) {
     this.axis = axis as CartesianAxes
-    if ("x" in this.options) {
+    if ('x' in this.options) {
       const axisIndex = this.options.x.axisIndex
       if (this.axis.options.x[axisIndex] && this.axis.options.x[axisIndex].type === AxisType.time) {
         this.create(axis as CartesianAxes)
@@ -44,12 +41,16 @@ export class DstIndicator implements Visitor {
   }
 
   redraw() {
-    if ("x" in this.options) {
+    if ('x' in this.options) {
       const axisIndex = this.options.x.axisIndex
       const scale = this.axis.xScales[axisIndex]
       const domain = scale.domain()
-      const startDate = DateTime.fromJSDate(domain[0]).setZone(this.axis.options.x[axisIndex].timeZone)
-      const endDate = DateTime.fromJSDate(domain[1]).setZone(this.axis.options.x[axisIndex].timeZone)
+      const startDate = DateTime.fromJSDate(domain[0]).setZone(
+        this.axis.options.x[axisIndex].timeZone,
+      )
+      const endDate = DateTime.fromJSDate(domain[1]).setZone(
+        this.axis.options.x[axisIndex].timeZone,
+      )
       if (startDate.isInDST !== endDate.isInDST) {
         this.dstDate = this.findDst(startDate, endDate)
         const x = scale(this.dstDate)
@@ -66,7 +67,6 @@ export class DstIndicator implements Visitor {
           .attr('y', -5)
           .attr('text-anchor', 'middle')
           .text('dst transition')
-
       } else {
         this.group.attr('display', 'none')
       }
@@ -85,10 +85,7 @@ export class DstIndicator implements Visitor {
         d2 = intermediate
       }
       duration = d2.diff(d1)
-
     }
     return d2.set({ second: 0 }).toJSDate()
   }
-
-
 }

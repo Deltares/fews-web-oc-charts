@@ -96,52 +96,52 @@ plot1ZoomXY.addTo(
   axisZoomXY,
   { x: { key: 'x', axisIndex: 0 }, y: { key: 'y', axisIndex: 0 } },
   'local',
-  style1
+  style1,
 )
 plot2ZoomXY.addTo(
   axisZoomXY,
   { x: { key: 'x', axisIndex: 1 }, y: { key: 'y', axisIndex: 0 } },
   'mexico',
-  style2
+  style2,
 )
 
 plot1ZoomX.addTo(
   axisZoomX,
   { x: { key: 'x', axisIndex: 0 }, y: { key: 'y', axisIndex: 0 } },
   'local',
-  style1
+  style1,
 )
 plot2ZoomX.addTo(
   axisZoomX,
   { x: { key: 'x', axisIndex: 1 }, y: { key: 'y', axisIndex: 0 } },
   'mexico',
-  style2
+  style2,
 )
 
 plot1ZoomY.addTo(
   axisZoomY,
   { x: { key: 'x', axisIndex: 0 }, y: { key: 'y', axisIndex: 0 } },
   'local',
-  style1
+  style1,
 )
 plot2ZoomY.addTo(
   axisZoomY,
   { x: { key: 'x', axisIndex: 1 }, y: { key: 'y', axisIndex: 0 } },
   'mexico',
-  style2
+  style2,
 )
 
 plot1NoZoom.addTo(
   axisNoZoom,
   { x: { key: 'x', axisIndex: 0 }, y: { key: 'y', axisIndex: 0 } },
   'local',
-  style1
+  style1,
 )
 plot2NoZoom.addTo(
   axisNoZoom,
   { x: { key: 'x', axisIndex: 1 }, y: { key: 'y', axisIndex: 0 } },
   'mexico',
-  style2
+  style2,
 )
 
 const mouseOver = new MouseOver(['local', 'mexico'])
@@ -167,5 +167,5 @@ axisNoZoom.accept(zoomHandlerNoWheel)
 axisNoZoom.accept(mouseOver)
 
 addListenerByClassName('theme-button', 'click', () =>
-  document.documentElement.classList.toggle('dark')
+  document.documentElement.classList.toggle('dark'),
 )

@@ -1,6 +1,6 @@
 import * as d3 from 'd3'
 import { Axes } from '../Axes/axes.js'
-import { AxisType, CartesianAxes } from '../index.js';
+import { AxisType, CartesianAxes } from '../index.js'
 import { Visitor } from './visitor.js'
 import { TooltipPosition } from '../Tooltip/tooltip.js'
 import { dateFormatter } from '../Utils/date.js'
@@ -35,7 +35,8 @@ export class VerticalMouseOver implements Visitor {
     // Make sure the <g> mouse group picks up pointer events.
     this.mouseGroup.attr('pointer-events', 'all')
 
-    this.group = axes.canvas.insert('g', '.mouse')
+    this.group = axes.canvas
+      .insert('g', '.mouse')
       .attr('class', 'mouse-over')
       .attr('font-family', 'sans-serif')
 
@@ -49,11 +50,7 @@ export class VerticalMouseOver implements Visitor {
         return d
       })
 
-    this.group
-      .append('g')
-      .attr('class', 'mouse-y')
-      .append('text')
-      .text('')
+    this.group.append('g').attr('class', 'mouse-y').append('text').text('')
 
     this.updateLineIndicators()
 
@@ -78,7 +75,6 @@ export class VerticalMouseOver implements Visitor {
     this.axes.tooltip.hide()
   }
 
-
   onPointerover(): void {
     // on mouse in show line, circles and text
     this.axes.tooltip.show()
@@ -90,9 +86,7 @@ export class VerticalMouseOver implements Visitor {
         const selector = `[data-chart-id="${d}"]`
         const element = this.axes.chartGroup.select(selector).select('path')
         if (element.node() === null) return
-        return window
-          .getComputedStyle(element.node() as Element)
-          .getPropertyValue('stroke')
+        return window.getComputedStyle(element.node() as Element).getPropertyValue('stroke')
       })
     this.group.select('.mouse-y text').style('fill-opacity', '1')
   }
@@ -101,21 +95,18 @@ export class VerticalMouseOver implements Visitor {
     const axes = this.axes
     let rMin = Infinity
     let yPos = mouse[1]
-    this.mousePerLine
-      .each(d => {
-        const selector = `[data-chart-id="${d}"]`
-        const element = axes.canvas
-          .selectAll<SVGElement, any>(selector)
-          .select<SVGElement>('path')
-        if (element.node() !== null) {
-          if (this.isHidden(element) || element.datum().length === 0) {
-            //skip
-          } else {
-            const datum = element.datum();
-            [yPos, rMin] = this.closestPointForChart(d, datum, mouse[1], yPos, rMin)
-          }
+    this.mousePerLine.each((d) => {
+      const selector = `[data-chart-id="${d}"]`
+      const element = axes.canvas.selectAll<SVGElement, any>(selector).select<SVGElement>('path')
+      if (element.node() !== null) {
+        if (this.isHidden(element) || element.datum().length === 0) {
+          //skip
+        } else {
+          const datum = element.datum()
+          ;[yPos, rMin] = this.closestPointForChart(d, datum, mouse[1], yPos, rMin)
         }
-      })
+      }
+    })
     return yPos
   }
 
@@ -124,10 +115,9 @@ export class VerticalMouseOver implements Visitor {
     return style === null || style.getPropertyValue('visibility') === 'hidden'
   }
 
-
   closestPointForChart(id: string, datum: any[], y: number, yPos: number, rMin: number) {
     const axis = this.axes
-    const chart = axis.charts.find(c => c.id === id)
+    const chart = axis.charts.find((c) => c.id === id)
     const yIndex = chart.axisIndex.y.axisIndex
     const yScale = axis.yScales[yIndex]
     const mouseValue = yScale.invert(y)
@@ -145,7 +135,7 @@ export class VerticalMouseOver implements Visitor {
     const idx = bisect(datum, mouseValue)
     if (idx - 1 >= 0 && !xIsNull(datum[idx - 1])[xKey]) {
       const y0 = yScale(datum[idx - 1][yKey])
-      const r0 =  distanceSquared(y0, y)
+      const r0 = distanceSquared(y0, y)
       if (r0 < rMin) {
         rMin = r0
         yPos = y0
@@ -168,7 +158,7 @@ export class VerticalMouseOver implements Visitor {
 
     this.mousePerLine.each((d, i) => {
       const selector = `[data-chart-id="${d}"]`
-      const chart = axis.charts.find(c => c.id === d)
+      const chart = axis.charts.find((c) => c.id === d)
       const xIndex = chart.axisIndex.x.axisIndex
       const xScale = axis.xScales[xIndex]
       const yIndex = chart.axisIndex.y.axisIndex
@@ -182,7 +172,7 @@ export class VerticalMouseOver implements Visitor {
       const style = window.getComputedStyle(element.node() as Element)
       const stroke = style.getPropertyValue('stroke')
       const datum = element.datum()
-      if (datum === null || Array.isArray(datum) && datum.length === 0) {
+      if (datum === null || (Array.isArray(datum) && datum.length === 0)) {
         return
       }
       const yValue = yScale.invert(mouse[1])
@@ -224,7 +214,7 @@ export class VerticalMouseOver implements Visitor {
   }
 
   findClosestPoint(y, y1, y2) {
-    if ((y - y1) < (y2 - y)) {
+    if (y - y1 < y2 - y) {
       return [y2, 1]
     } else {
       return [y1, 0]
@@ -260,7 +250,7 @@ export class VerticalMouseOver implements Visitor {
   }
 
   determineLabel(xExtent: any[], xValue: any[] | any) {
-    const s = d3.formatSpecifier("f")
+    const s = d3.formatSpecifier('f')
     s.precision = d3.precisionFixed((xExtent[1] - xExtent[0]) / 100)
     let xLabel
     if (Array.isArray(xValue)) {
@@ -310,10 +300,13 @@ export class VerticalMouseOver implements Visitor {
     let text = ''
     switch (axes.options.y[0].type) {
       case AxisType.time:
-        text = dateFormatter(axes.yScales[0].invert(yPos), 'yyyy-MM-dd HH:mm ZZZZ', { timeZone: axes.options.y[0].timeZone, locale: axes.options.y[0].locale });
+        text = dateFormatter(axes.yScales[0].invert(yPos), 'yyyy-MM-dd HH:mm ZZZZ', {
+          timeZone: axes.options.y[0].timeZone,
+          locale: axes.options.y[0].locale,
+        })
         break
       default:
-        const s = d3.formatSpecifier("f")
+        const s = d3.formatSpecifier('f')
         s.precision = d3.precisionFixed(axes.yScales[0].domain()[1] / 100)
         text = d3.format(s.toString())(axes.yScales[0].invert(yPos))
         break
@@ -337,36 +330,42 @@ export class VerticalMouseOver implements Visitor {
           htmlContent.appendChild(document.createElement('br'))
         }
       }
-      axes.tooltip.update(htmlContent, TooltipPosition.Top, mouse[0] + axes.margin.left, mouse[1] + axes.margin.top)
-      if (axes.tooltip.isHidden) { axes.tooltip.show() }
+      axes.tooltip.update(
+        htmlContent,
+        TooltipPosition.Top,
+        mouse[0] + axes.margin.left,
+        mouse[1] + axes.margin.top,
+      )
+      if (axes.tooltip.isHidden) {
+        axes.tooltip.show()
+      }
     }
   }
 
   updateLineIndicators(): void {
-    const traces = (this.trace !== undefined)
-      ? this.trace
-      : this.axes.charts.map((chart) => { return chart.id })
+    const traces =
+      this.trace !== undefined
+        ? this.trace
+        : this.axes.charts.map((chart) => {
+            return chart.id
+          })
 
-    const mousePerLine = this.group
-      .selectAll<SVGGElement, string>('.mouse-per-line')
-      .data(traces)
+    const mousePerLine = this.group.selectAll<SVGGElement, string>('.mouse-per-line').data(traces)
 
     const enter = mousePerLine
       .enter()
       .append('g')
       .attr('class', 'mouse-per-line')
-      .attr('data-mouse-id', d => d)
+      .attr('data-mouse-id', (d) => d)
 
-     enter
+    enter
       .append('circle')
       .attr('r', 3)
       .style('fill', 'white')
       .style('opacity', '0')
       .style('stroke-width', '1px')
 
-    mousePerLine
-      .exit()
-      .remove()
+    mousePerLine.exit().remove()
 
     this.mousePerLine = enter.merge(mousePerLine)
   }

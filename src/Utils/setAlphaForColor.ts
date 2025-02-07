@@ -1,4 +1,3 @@
-
 /**
  * Sets the alpha value for a given color supporting alpha channels.
  * @param color - The color to modify.
@@ -10,7 +9,12 @@ export function setAlphaForColor(color: string, alpha: number) {
     return color.replace(/[\d\.]+\)/, `${alpha})`)
   }
   if (color.startsWith('#') && color.length === 9) {
-    return color.slice(0, -2) + Math.round(255 * alpha).toString(16).toUpperCase()
+    return (
+      color.slice(0, -2) +
+      Math.round(255 * alpha)
+        .toString(16)
+        .toUpperCase()
+    )
   }
   return color
 }

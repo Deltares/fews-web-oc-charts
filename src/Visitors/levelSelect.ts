@@ -1,6 +1,6 @@
 import * as d3 from 'd3'
 import { Axes } from '../Axes/axes.js'
-import { CartesianAxes } from '../index.js';
+import { CartesianAxes } from '../index.js'
 import { Visitor } from './visitor.js'
 import { defaultsDeep } from 'lodash-es'
 
@@ -16,7 +16,7 @@ export class LevelSelect implements Visitor {
   callback: Function
   format: any
   options: LevelSelectOptions = {
-    y: { axisIndex: 0 }
+    y: { axisIndex: 0 },
   }
 
   // use shared Visitor constuctor (Visitor should be a abstract class)
@@ -24,9 +24,7 @@ export class LevelSelect implements Visitor {
     this.value = value
     this.callback = callback
     this.format = d3.format('.2f')
-    this.options = defaultsDeep(this.options,
-      options
-    ) as LevelSelectOptions
+    this.options = defaultsDeep(this.options, options) as LevelSelectOptions
   }
 
   visit(axis: Axes) {
@@ -53,7 +51,7 @@ export class LevelSelect implements Visitor {
             })
             .on('end', (event) => {
               this.end(event)
-            })
+            }),
         )
     }
     this.redraw()
@@ -63,7 +61,7 @@ export class LevelSelect implements Visitor {
     const axisIndex = this.options.y.axisIndex
     const scale = this.axis.yScales[axisIndex]
     let y = scale(this.value)
-    y = (y === undefined) ? scale.range()[1] : y
+    y = y === undefined ? scale.range()[1] : y
     // line
     this.group
       .select('line')
@@ -71,10 +69,7 @@ export class LevelSelect implements Visitor {
       .attr('x2', this.axis.width)
       .attr('transform', 'translate( 0, ' + y + ')')
     // text
-    this.group
-      .select('text')
-      .attr('y', y)
-      .text(this.format(this.value))
+    this.group.select('text').attr('y', y).text(this.format(this.value))
     // handle
     this.group.select('polygon').attr('transform', 'translate( 0, ' + y + ')')
   }

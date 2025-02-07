@@ -61,7 +61,7 @@ const legend = new Legend(
       label: '90% interval',
     },
   ],
-  document.getElementById('chart-legend-1')
+  document.getElementById('chart-legend-1'),
 )
 
 const currentTime = new CurrentTime({
@@ -222,7 +222,7 @@ function dataload() {
           },
         },
         'percent90',
-        style90
+        style90,
       )
       plotControl.addTo(
         axis,
@@ -237,7 +237,7 @@ function dataload() {
           },
         },
         'control',
-        '#control-line'
+        '#control-line',
       )
       plotMedian.addTo(
         axis,
@@ -252,7 +252,7 @@ function dataload() {
           },
         },
         'median',
-        '#median-line'
+        '#median-line',
       )
       axis.redraw({
         x: {
@@ -275,6 +275,6 @@ function dataload() {
 window.setTimeout(dataload, 1000)
 
 addListenerByClassName('theme-button', 'click', () =>
-  document.documentElement.classList.toggle('dark')
+  document.documentElement.classList.toggle('dark'),
 )
 addListenerByClassName('legend-button', 'click', (event) => toggleChart(event.target, axis))

@@ -77,21 +77,21 @@ function dataload() {
         axis,
         { x: { key: 'x', axisIndex: 0 }, y: { key: 'y', axisIndex: 1 } },
         'precipitationProbability',
-        { fill: 'none', stroke: 'rgb(44, 175, 254)' }
+        { fill: 'none', stroke: 'rgb(44, 175, 254)' },
       )
 
       plotPrecipitation.addTo(
         axis,
         { x: { key: 'x', axisIndex: 0 }, y: { key: 'y', axisIndex: 0 } },
         'precipitation',
-        { fill: 'rgba(84, 79, 197, .2)', stroke: 'none' }
+        { fill: 'rgba(84, 79, 197, .2)', stroke: 'none' },
       )
 
       plotPrecipitationContour.addTo(
         axis,
         { x: { key: 'x', axisIndex: 0 }, y: { key: 'y', axisIndex: 0 } },
         'precipitationContour',
-        { fill: 'none', stroke: 'currentColor' }
+        { fill: 'none', stroke: 'currentColor' },
       )
 
       axis.accept(currentTime)
@@ -136,6 +136,6 @@ function toggleFilter(element) {
 }
 
 addListenerByClassName('theme-button', 'click', () =>
-  document.documentElement.classList.toggle('dark')
+  document.documentElement.classList.toggle('dark'),
 )
 addListenerByClassName('extent-filter', 'click', (event) => toggleFilter(event.target))

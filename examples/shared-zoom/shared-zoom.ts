@@ -111,13 +111,13 @@ axes.forEach((axis, i) => {
     axis,
     { x: { key: 'x', axisIndex: 0 }, y: { key: 'y', axisIndex: 0 } },
     'local',
-    style1
+    style1,
   )
   plot2.addTo(
     axis,
     { x: { key: 'x', axisIndex: 1 }, y: { key: 'y', axisIndex: 0 } },
     'mexico',
-    style2
+    style2,
   )
 })
 
@@ -158,5 +158,5 @@ axisZoom5.accept(zoomHandlerXY)
 axisZoom5.accept(new MouseOver(['local', 'mexico']))
 
 addListenerByClassName('theme-button', 'click', () =>
-  document.documentElement.classList.toggle('dark')
+  document.documentElement.classList.toggle('dark'),
 )

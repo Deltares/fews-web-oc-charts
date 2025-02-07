@@ -6,7 +6,6 @@ import { PolarAxes } from '../Axes/polarAxes.js'
 import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js'
 
 export class ChartRule extends Chart {
-
   plotterCartesian(axis: CartesianAxes, axisIndex: AxisIndex) {
     const xKey = this.dataKeys.x
     const yKey = this.dataKeys.y
@@ -43,7 +42,7 @@ export class ChartRule extends Chart {
               this.options.tooltip.anchor,
               ', using ',
               TooltipAnchor.Pointer,
-              ' instead.'
+              ' instead.',
             )
           }
           axis.tooltip.show()
@@ -54,7 +53,7 @@ export class ChartRule extends Chart {
               ? this.options.tooltip.position
               : TooltipPosition.Top,
             pointer[0],
-            pointer[1]
+            pointer[1],
           )
         })
         .on('pointerout', () => {
@@ -73,12 +72,7 @@ export class ChartRule extends Chart {
     const source = this.group.select('line').node() as Element
     const svg = d3.create('svg').attr('width', 20).attr('height', 20)
     const group = svg.append('g').attr('transform', 'translate(0, 10)')
-    const element = group
-      .append('line')
-      .attr('x1', 10)
-      .attr('x2', 10)
-      .attr('y1', -8)
-      .attr('y2', 8)
+    const element = group.append('line').attr('x1', 10).attr('x2', 10).attr('y1', -8).attr('y2', 8)
     this.applyStyle(source, element, props)
     if (asSvgElement) return element.node()
     return svg.node()

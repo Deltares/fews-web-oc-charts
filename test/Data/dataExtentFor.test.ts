@@ -68,7 +68,6 @@ describe('dataExtentFor', () => {
     const extent = dataExtentFor(data, 'x')
     expect(extent).toStrictEqual([new Date('2024-01-01'), new Date('2024-03-01')])
   })
-
 })
 
 describe('dataExtentFor with filter', () => {
@@ -88,7 +87,6 @@ describe('dataExtentFor with filter', () => {
     expect(extent).toStrictEqual([-1, 999])
   })
 
-
   test('fiterscalar x valued data', () => {
     const data = [
       {
@@ -106,11 +104,11 @@ describe('dataExtentFor with filter', () => {
     expect(extent).toStrictEqual([-1, 1])
   })
 
-
   test('scalar x valued data', () => {
     const data = [
       {
-        x: 999, flag: 4
+        x: 999,
+        flag: 4,
       },
       {
         x: -1,
@@ -119,7 +117,7 @@ describe('dataExtentFor with filter', () => {
         x: 1,
       },
     ]
-    const filter = (d: {flag?: number}) => d.flag !== 4
+    const filter = (d: { flag?: number }) => d.flag !== 4
     const extent = dataExtentFor(data, 'x', filter)
     expect(extent).toStrictEqual([-1, 1])
   })
@@ -144,13 +142,16 @@ describe('dataExtentFor with filter', () => {
   test('all flagged data', () => {
     const data = [
       {
-        x: 999, flag: 4
+        x: 999,
+        flag: 4,
       },
       {
-        x: -1, flag: 4
+        x: -1,
+        flag: 4,
       },
       {
-        x: 1, flag: 4
+        x: 1,
+        flag: 4,
       },
     ]
     const filter = (d) => d.flag !== 4
@@ -181,16 +182,20 @@ describe('dataExtentFor with filter', () => {
   test('array valued single flagged data', () => {
     const data = [
       {
-        x: [0, 1], flag: 0
+        x: [0, 1],
+        flag: 0,
       },
       {
-        x: [-999, 999], flag: 4
+        x: [-999, 999],
+        flag: 4,
       },
       {
-        x: [0, 1], flag: 0
+        x: [0, 1],
+        flag: 0,
       },
       {
-        x: [-1, 1], flag: 0
+        x: [-1, 1],
+        flag: 0,
       },
     ]
     const filter = (d) => d.flag !== 4
@@ -201,22 +206,24 @@ describe('dataExtentFor with filter', () => {
   test('array valued all flagged data', () => {
     const data = [
       {
-        x: [0, 1], flag: 4
+        x: [0, 1],
+        flag: 4,
       },
       {
-        x: [-1, 0], flag: 4
+        x: [-1, 0],
+        flag: 4,
       },
       {
-        x: [0, 1], flag: 4
+        x: [0, 1],
+        flag: 4,
       },
       {
-        x: [0, 1], flag: 4
+        x: [0, 1],
+        flag: 4,
       },
     ]
     const filter = (d) => d.flag !== 4
     const extent = dataExtentFor(data, 'x', filter)
     expect(extent).toStrictEqual([undefined, undefined])
   })
-
 })
-

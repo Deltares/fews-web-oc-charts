@@ -69,7 +69,7 @@ export interface ChartOptionsForKeys {
   angular?: ChartOptionItem
 }
 
-const chartKeys: (keyof ChartOptionsForKeys)[] = ['x', 'x1', 'y', 'radial', 'angular'];
+const chartKeys: (keyof ChartOptionsForKeys)[] = ['x', 'x1', 'y', 'radial', 'angular']
 
 export interface ChartOptions extends ChartOptionsForKeys {
   transitionTime?: number
@@ -182,7 +182,7 @@ export abstract class Chart {
     return this
   }
 
-  setOptions(options: ChartOptions) {    
+  setOptions(options: ChartOptions) {
     for (const key of chartKeys) {
       if (key in options && options[key].extentFilter !== undefined) {
         this._extent[key] = undefined
@@ -260,7 +260,7 @@ export abstract class Chart {
   protected defaultToolTipText(
     data: number | number[] | any,
     key: string,
-    decimals: number
+    decimals: number,
   ): string {
     if (data instanceof Array) {
       if (data[0] != data[1]) {
@@ -289,7 +289,7 @@ export abstract class Chart {
   public onPointerMove(
     _x: number | Date,
     _xScale,
-    _yScale
+    _yScale,
   ): void | { point: DataPointXY; style: SvgPropertiesHyphen } {}
 
   public onPointerOut() {}
@@ -418,7 +418,7 @@ export abstract class Chart {
   protected applyStyle(
     source: Element,
     element: d3.Selection<SVGElement, unknown, SVGElement, unknown>,
-    props: string[]
+    props: string[],
   ) {
     if (this.style === undefined) {
       const s = window.getComputedStyle(source)

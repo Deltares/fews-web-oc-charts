@@ -5,10 +5,10 @@ import { defaultsDeep } from 'lodash-es'
 import { D3Selection } from '../index.js'
 
 export interface UnitOptions {
-  unit?: string;
-  factor?: number;
-  precision?: string;
-  scale?: (x: number) => string;
+  unit?: string
+  factor?: number
+  precision?: string
+  scale?: (x: number) => string
 }
 
 export interface ValueFieldOptions {
@@ -21,7 +21,7 @@ export interface DataFieldOptions {
   selector?: string | string[]
   labelField?: {
     text?: string
-  },
+  }
   valueField?: ValueFieldOptions
 }
 
@@ -37,9 +37,13 @@ export class DataField implements Visitor {
   private formatter: any
   private clickCount = 0
 
-  constructor(container: D3Selection<SVGElement, SVGElement>, options: DataFieldOptions, formatter?: any) {
+  constructor(
+    container: D3Selection<SVGElement, SVGElement>,
+    options: DataFieldOptions,
+    formatter?: any,
+  ) {
     this.container = container
-    this.options = defaultsDeep({},options)
+    this.options = defaultsDeep({}, options)
     this.formatter = formatter !== undefined ? formatter : this.valueFormatter
   }
 
@@ -56,16 +60,16 @@ export class DataField implements Visitor {
         .attr('class', 'data-field-label')
         .text(this.options.labelField.text)
 
-      this.value = this.group
-        .append('text')
-        .attr('class', 'data-field-value')
+      this.value = this.group.append('text').attr('class', 'data-field-value')
 
-
-      this.selectors = this.options.selector instanceof Array ? this.options.selector : [this.options.selector]
+      this.selectors =
+        this.options.selector instanceof Array ? this.options.selector : [this.options.selector]
       this.units = this.options.valueField?.units ?? []
 
       if (this.units.length > 1) {
-        this.value.on('click', () => { this.onClick() })
+        this.value.on('click', () => {
+          this.onClick()
+        })
         this.value.style('cursor', 'pointer')
       }
     }
@@ -89,15 +93,18 @@ export class DataField implements Visitor {
   redraw() {
     this.value.html(null)
 
-    const elements = this.selectors.map((selector) => {
-      return d3.select(`[data-chart-id="${selector}"]`).select('path')
-    }).filter(element => element.node() !== null)
+    const elements = this.selectors
+      .map((selector) => {
+        return d3.select(`[data-chart-id="${selector}"]`).select('path')
+      })
+      .filter((element) => element.node() !== null)
 
     elements.forEach((element, i) => {
       const isLast = i === elements.length - 1
       const data = element.datum()
       const style = window.getComputedStyle(element.node() as Element)
-      this.value.append('tspan')
+      this.value
+        .append('tspan')
         .text(this.formatter(data, i, isLast))
         .style('fill', style.getPropertyValue('stroke'))
     })
@@ -112,14 +119,15 @@ export class DataField implements Visitor {
     const value = this.getValue(d)
     const units = this.getUnit()
     const separator = this.options.valueField.hyphen ?? ''
-    const symbol = isLast ? units?.unit ?? '' : separator
+    const symbol = isLast ? (units?.unit ?? '') : separator
     if (value === null) {
-      return '-' + symbol;
+      return '-' + symbol
     }
     const format = (value: any): string => {
       if (value === null) return '-'
       if (units?.factor !== undefined) {
-        const d3Format = units?.precision !== undefined ? d3.format(units.precision) : d3.format(".1f");
+        const d3Format =
+          units?.precision !== undefined ? d3.format(units.precision) : d3.format('.1f')
         return d3Format(value * units.factor)
       }
       if (units?.scale !== undefined) {
@@ -128,20 +136,20 @@ export class DataField implements Visitor {
       return value
     }
     if (Array.isArray(value)) {
-      if (value.every(value => value === null)) {
-        return '-' + symbol;
+      if (value.every((value) => value === null)) {
+        return '-' + symbol
       }
       const min = Math.min(...value)
       const max = Math.max(...value)
       if (min === max) {
-        const valueString: string = format(min);
-        return valueString + symbol;
+        const valueString: string = format(min)
+        return valueString + symbol
       }
       const valueString: string = `${format(min)} - ${format(max)}`
-      return valueString + symbol;
+      return valueString + symbol
     }
-    const valueString: string = format(value);
-    return valueString + symbol;
+    const valueString: string = format(value)
+    return valueString + symbol
   }
 
   getUnit() {

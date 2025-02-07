@@ -1,1 +1,1 @@
-export { default as symbolArrow } from "./arrow.js";
+export { default as symbolArrow } from './arrow.js'

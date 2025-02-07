@@ -78,26 +78,26 @@ function dataload() {
         axis,
         { x: { key: 'x', axisIndex: 0 }, y: { key: 'y', axisIndex: 0 } },
         'percent90',
-        style90
+        style90,
       )
       plotPercentile50.addTo(
         axis,
         { x: { key: 'x', axisIndex: 0 }, y: { key: 'y', axisIndex: 1 } },
         'percent50',
-        style50
+        style50,
       )
 
       plotControl1.addTo(
         axis,
         { x: { key: 'x', axisIndex: 0 }, y: { key: 'y', axisIndex: 0 } },
         'control',
-        '#control-line'
+        '#control-line',
       )
       plotMedian1.addTo(
         axis,
         { x: { key: 'x', axisIndex: 0 }, y: { key: 'y', axisIndex: 1 } },
         'median',
-        '#median-line'
+        '#median-line',
       )
       axis.accept(currentTime)
       axis.redraw({ x: { autoScale: true }, y: { autoScale: true } })
@@ -110,5 +110,5 @@ function dataload() {
 window.setTimeout(dataload, 1)
 
 addListenerByClassName('theme-button', 'click', () =>
-  document.documentElement.classList.toggle('dark')
+  document.documentElement.classList.toggle('dark'),
 )

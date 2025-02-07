@@ -123,7 +123,7 @@ const container4 = document.getElementById('chart-waterlevel4')
 const axis4 = new CartesianAxes(container4, null, null, axisOptions4)
 const legend4 = new Legend(
   [legendLabels[2], legendLabels[3]],
-  document.getElementById('legend-waterlevel4')
+  document.getElementById('legend-waterlevel4'),
 )
 
 function getRoundedDate(minutes, d = new Date()) {
@@ -375,5 +375,5 @@ function zoomToDomain(plot) {
 }
 
 addListenerByClassName('theme-button', 'click', () =>
-  document.documentElement.classList.toggle('dark')
+  document.documentElement.classList.toggle('dark'),
 )

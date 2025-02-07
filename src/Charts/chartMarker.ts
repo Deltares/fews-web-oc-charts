@@ -67,7 +67,7 @@ export class ChartMarker extends Chart {
               this.options.tooltip.anchor,
               ', using ',
               TooltipAnchor.Pointer,
-              ' instead.'
+              ' instead.',
             )
           }
           axis.tooltip.show()
@@ -78,7 +78,7 @@ export class ChartMarker extends Chart {
               ? this.options.tooltip.position
               : TooltipPosition.Top,
             pointer[0],
-            pointer[1]
+            pointer[1],
           )
         })
         .on('pointerout', () => {
@@ -140,7 +140,7 @@ export class ChartMarker extends Chart {
               this.options.tooltip.anchor,
               ', using ',
               TooltipAnchor.Pointer,
-              ' instead.'
+              ' instead.',
             )
           }
           const pointer = d3.pointer(e, axis.container)
@@ -153,7 +153,7 @@ export class ChartMarker extends Chart {
               ? this.options.tooltip.position
               : TooltipPosition.Top,
             x,
-            y
+            y,
           )
         })
         .on('pointerout', () => {

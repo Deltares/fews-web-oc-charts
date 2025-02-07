@@ -33,42 +33,21 @@ export class Tooltip {
       .append('div')
       .attr('class', 'tooltip')
       .style('opacity', 0)
-    this.tooltipText = this.tooltip
-      .append('div')
-      .attr('class', 'tooltiptext right')
+    this.tooltipText = this.tooltip.append('div').attr('class', 'tooltiptext right')
   }
 
   show() {
     this.isHidden = false
-    this.tooltip
-      .transition()
-      .duration(50)
-      .style('opacity', 1)
+    this.tooltip.transition().duration(50).style('opacity', 1)
   }
 
   update(htmlElement: HTMLElement, position: TooltipPosition, x: number, y: number) {
-    this.tooltip
-      .style('left', x + 'px')
-      .style('top', y + 'px')
-    this.tooltipText
-      .attr('class', `tooltiptext ${position}`)
-      .node().replaceChildren(htmlElement)
+    this.tooltip.style('left', x + 'px').style('top', y + 'px')
+    this.tooltipText.attr('class', `tooltiptext ${position}`).node().replaceChildren(htmlElement)
   }
 
   hide() {
     this.isHidden = true
-    this.tooltip
-      .transition()
-      .duration(50)
-      .style('opacity', 0)
+    this.tooltip.transition().duration(50).style('opacity', 0)
   }
 }
-
-
-
-
-
-
-
-
-

@@ -49,7 +49,7 @@ export class ChartArea extends Chart {
       colorScale.domain(
         d3.extent(this.data, function (d: any): number {
           return d[colorKey]
-        })
+        }),
       )
     }
 
@@ -132,11 +132,7 @@ export class ChartArea extends Chart {
     const element = this.group.select('path')
     if (element.node() === null) return
     const color = window.getComputedStyle(element.node() as Element).getPropertyValue('fill')
-    this.highlight
-      .select('path')
-      .style('opacity', 1)
-      .style('fill', color)
-      .attr('transform', null)
+    this.highlight.select('path').style('opacity', 1).style('fill', color).attr('transform', null)
   }
 
   public onPointerOut() {
@@ -191,7 +187,8 @@ export class ChartArea extends Chart {
 
     const point = this.options.curve === CurveType.StepBefore ? datum[1] : datum[0]
 
-    this.highlight.select('path')
+    this.highlight
+      .select('path')
       .datum(datum)
       .join('path')
       .attr('d', this._areaGenerator)
