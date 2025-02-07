@@ -1,5 +1,5 @@
 import '../../src/scss/wb-charts.scss'
-import '../shared.css'
+import '../shared/shared.css'
 import './escalation-levels.css'
 
 import * as d3 from 'd3'

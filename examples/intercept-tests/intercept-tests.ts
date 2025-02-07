@@ -1,5 +1,5 @@
 import '../../src/scss/wb-charts.scss'
-import '../shared.css'
+import '../shared/shared.css'
 import './intercept-tests.css'
 
 import * as d3 from 'd3'
