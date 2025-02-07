@@ -1,5 +1,5 @@
-import '../../src/scss/wb-charts.scss'
-import '../shared/shared.css'
+import '@lib/scss/wb-charts.scss'
+import '@shared/shared.css'
 import './wind-direction.css'
 
 import {
@@ -21,8 +21,8 @@ import {
   scaleWindCategories,
   TooltipAnchor,
   ZoomHandler,
-} from '../../src'
-import { addListenerByClassName, addListenerById } from '../shared'
+} from '@lib'
+import { addListenerByClassName, addListenerById } from '@shared'
 
 import * as d3 from 'd3'
 

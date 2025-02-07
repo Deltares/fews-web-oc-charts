@@ -1,9 +1,9 @@
-import '../../src/scss/wb-charts.scss'
-import '../shared/shared.css'
+import '@lib/scss/wb-charts.scss'
+import '@shared/shared.css'
 import './progress.css'
 
-import { AUTO_SCALE, AxisType, ChartProgress, PolarAxes } from '../../src'
-import { addListenerByClassName, addListenerById } from '../shared'
+import { AUTO_SCALE, AxisType, ChartProgress, PolarAxes } from '@lib'
+import { addListenerByClassName, addListenerById } from '@shared'
 
 const startDay = new Date(Date.now())
 startDay.setMinutes(0)

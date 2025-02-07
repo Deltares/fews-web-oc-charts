@@ -13,7 +13,12 @@
     "moduleDetection": "force",
     "noEmit": true,
 
-    "types": ["vite/client"]
+    "types": ["vite/client"],
+
+    "paths": {
+      "@lib": ["./src"],
+      "@shared": ["./examples/shared"]
+    },
   },
 
   /* FIXME: the "examples" directory should be added here, but there are too

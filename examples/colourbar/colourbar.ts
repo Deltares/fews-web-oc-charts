@@ -1,10 +1,10 @@
-import '../../src/scss/wb-charts.scss'
-import '../shared/shared.css'
+import '@lib/scss/wb-charts.scss'
+import '@shared/shared.css'
 import './colourbar.css'
 
 import * as d3 from 'd3'
-import { ColourBar } from '../../src'
-import { addListenerByClassName } from '../shared'
+import { ColourBar } from '@lib'
+import { addListenerByClassName } from '@shared'
 
 const colorMap = [
   {

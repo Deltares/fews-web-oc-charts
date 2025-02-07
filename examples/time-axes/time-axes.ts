@@ -1,5 +1,5 @@
-import '../../src/scss/wb-charts.scss'
-import '../shared/shared.css'
+import '@lib/scss/wb-charts.scss'
+import '@shared/shared.css'
 import './time-axes.css'
 
 import {
@@ -10,8 +10,8 @@ import {
   ChartLine,
   MouseOver,
   ZoomHandler,
-} from '../../src'
-import { addListenerByClassName } from '../shared'
+} from '@lib'
+import { addListenerByClassName } from '@shared'
 
 const container = document.getElementById('chart-container-1')
 const axisOptions: CartesianAxesOptions = {

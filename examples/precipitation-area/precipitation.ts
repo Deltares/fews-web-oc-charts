@@ -1,5 +1,5 @@
-import '../../src/scss/wb-charts.scss'
-import '../shared/shared.css'
+import '@lib/scss/wb-charts.scss'
+import '@shared/shared.css'
 import './precipitation.css'
 
 import * as d3 from 'd3'
@@ -12,8 +12,8 @@ import {
   CurrentTime,
   MouseOver,
   ZoomHandler,
-} from '../../src'
-import { addListenerByClassName } from '../shared'
+} from '@lib'
+import { addListenerByClassName } from '@shared'
 
 const container = document.getElementById('chart-container-1')
 const axis = new CartesianAxes(container, null, null, {

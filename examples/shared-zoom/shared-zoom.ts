@@ -1,5 +1,5 @@
-import '../../src/scss/wb-charts.scss'
-import '../shared/shared.css'
+import '@lib/scss/wb-charts.scss'
+import '@shared/shared.css'
 import './shared-zoom.css'
 
 import {
@@ -12,8 +12,8 @@ import {
   WheelMode,
   ZoomHandler,
   ZoomMode,
-} from '../../src'
-import { addListenerByClassName } from '../shared'
+} from '@lib'
+import { addListenerByClassName } from '@shared'
 
 const containerZoom0 = document.getElementById('chart-container-0')
 const containerZoom1 = document.getElementById('chart-container-1')
