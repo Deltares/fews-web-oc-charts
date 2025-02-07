@@ -5,15 +5,15 @@ type BrowserConfig = NonNullable<TestConfig['browser']>
 type BrowserInstanceConfig = NonNullable<BrowserConfig['instances']>[number]
 
 function getBrowserInstances(mode: string): BrowserInstanceConfig[] {
-  if (mode !== 'test' && mode !== 'full-test') {
+  if (mode !== 'test' && mode !== 'all-browsers') {
     throw new Error(`Unknown test mode "${mode}".`)
   }
-  // Run test suite with all browsers in Playwright when running in "full-test"
+  // Run test suite with all browsers in Playwright when running in "all-browsers"
   // mode, otherwise, only run in chromium.
   // FIXME: currently, "webkit" requires many extra dependencies to be installed
   //        in the runner for the CI, so only use chromium and firefox for now.
   const browsers =
-    mode === 'full-test' ? ['chromium', 'firefox'] : ['chromium']
+    mode === 'all-browsers' ? ['chromium', 'firefox'] : ['chromium']
   return browsers.map(browser => ({ browser }))
 }
 
