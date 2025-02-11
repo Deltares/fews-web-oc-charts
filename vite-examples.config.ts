@@ -6,7 +6,6 @@ export default defineConfig({
     rollupOptions: {
       input: {
         'alert-lines': resolveRelativePath('examples/alert-lines/index.html'),
-        availability: resolveRelativePath('examples/availability/index.html'),
         'chart-text': resolveRelativePath('examples/chart-text/index.html'),
         colourbar: resolveRelativePath('examples/colourbar/index.html'),
         ensemble: resolveRelativePath('examples/ensemble/index.html'),
@@ -15,6 +14,7 @@ export default defineConfig({
         'extent-filter': resolveRelativePath('examples/extent-filter/index.html'),
         'grouped-bar': resolveRelativePath('examples/grouped-bar/index.html'),
         'intercept-tests': resolveRelativePath('examples/intercept-tests/index.html'),
+        matrix: resolveRelativePath('examples/matrix/index.html'),
         mouseover: resolveRelativePath('examples/mouseover/index.html'),
         'precipitation-area': resolveRelativePath('examples/precipitation-area/index.html'),
         'precipitation-bar': resolveRelativePath('examples/precipitation-bar/index.html'),

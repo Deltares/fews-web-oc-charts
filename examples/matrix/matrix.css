@@ -1,0 +1,16 @@
+.chart-container {
+  /* Note: we need a positioned element for the tooltips to be rendered
+           correctly. See issue #133. */
+  position: relative;
+  margin: 40px auto;
+}
+
+#chart-container-sparsity {
+  width: 400px;
+  height: 400px;
+}
+
+#chart-container-availability {
+  width: 100%;
+  height: 100px;
+}
