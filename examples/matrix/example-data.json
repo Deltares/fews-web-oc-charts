@@ -1,0 +1,52 @@
+[
+  {
+    "date": "2025-01-01T12:00Z",
+    "series": "'series-1'",
+    "availability": "validated"
+  },
+  {
+    "date": "2025-01-01T13:00Z",
+    "series": "'series-1'",
+    "availability": "warning"
+  },
+  {
+    "date": "2025-01-01T14:00Z",
+    "series": "'series-1'",
+    "availability": null
+  },
+  {
+    "date": "2025-01-01T15:00Z",
+    "series": "'series-1'",
+    "availability": "error"
+  },
+  {
+    "date": "2025-01-01T16:00Z",
+    "series": "'series-1'",
+    "availability": "unvalidated"
+  },
+  {
+    "date": "2025-01-01T12:00Z",
+    "series": "'series-2'",
+    "availability": "unvalidated"
+  },
+  {
+    "date": "2025-01-01T13:00Z",
+    "series": "'series-2'",
+    "availability": "error"
+  },
+  {
+    "date": "2025-01-01T14:00Z",
+    "series": "'series-2'",
+    "availability": "warning"
+  },
+  {
+    "date": "2025-01-01T15:00Z",
+    "series": "'series-2'",
+    "availability": null
+  },
+  {
+    "date": "2025-01-01T16:00Z",
+    "series": "'series-2'",
+    "availability": "validated"
+  }
+]
