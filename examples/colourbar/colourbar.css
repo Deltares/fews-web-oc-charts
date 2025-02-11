@@ -1,4 +1,11 @@
-#chart-container-left,
-#chart-container-right {
-  display: inline-block;
+.horizontal-colorbar {
+  display: flex;
+  justify-content: center;
+  margin: 20px auto;
+}
+
+.vertical-colorbar-container {
+  margin: 20px auto;
+  display: flex;
+  justify-content: center;
 }
