@@ -1,7 +1,4 @@
-#chart-container-1 {
-  display: block;
-  position: relative;
+#chart-container {
   width: 100%;
-  height: 100vh;
-  max-height: 414px;
+  height: 400px;
 }
