@@ -24,7 +24,6 @@ export default defineConfig({
         'shared-zoom': resolveRelativePath('examples/shared-zoom/index.html'),
         spectrum: resolveRelativePath('examples/spectrum/index.html'),
         'time-axes': resolveRelativePath('examples/time-axes/index.html'),
-        'varying-warninglevels': resolveRelativePath('examples/varying-warninglevels/index.html'),
         vertical: resolveRelativePath('examples/vertical/index.html'),
         'wheel-zoom': resolveRelativePath('examples/wheel-zoom/index.html'),
         'wind-current-roses': resolveRelativePath('examples/wind-current-roses/index.html'),
