@@ -15,6 +15,7 @@ export default defineConfig({
         'extent-filter': resolveRelativePath('examples/extent-filter/index.html'),
         'grouped-bar': resolveRelativePath('examples/grouped-bar/index.html'),
         'intercept-tests': resolveRelativePath('examples/intercept-tests/index.html'),
+        marker: resolveRelativePath('examples/marker/index.html'),
         matrix: resolveRelativePath('examples/matrix/index.html'),
         mouseover: resolveRelativePath('examples/mouseover/index.html'),
         'precipitation-area': resolveRelativePath('examples/precipitation-area/index.html'),
