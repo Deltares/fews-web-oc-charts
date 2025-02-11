@@ -2,28 +2,26 @@
 <html>
   <head>
     <meta charset="UTF-8" />
-    <title>Colour bar demo</title>
+    <title>Colour bar example</title>
   </head>
 
   <body>
-    <button class="theme-button" type="button" data-id="theme">Theme</button>
-    <div id="chart-container-0"></div>
-    <br />
-    <div id="chart-container-1"></div>
-    <br />
-    <div id="chart-container-2"></div>
-    <br />
-    <div id="chart-container-3"></div>
-    <br />
-    <div id="chart-container-4"></div>
-    <br />
-    <div id="chart-container-5"></div>
-    <br />
-    <div id="chart-container-6"></div>
-    <br />
-    <div>
-      <div id="chart-container-left"></div>
-      <div id="chart-container-right"></div>
+    <theme-button></theme-button>
+    <div id="container-linear-non-interpolated" class="horizontal-colorbar">
+      <svg version="1.1" width="500" height="60" xmlns="http://www.w3.org/2000/svg">
+        <g transform="translate(50, 20)"></g>
+      </svg>
+    </div>
+    <div id="container-linear-interpolated" class="horizontal-colorbar">
+      <svg version="1.1" width="500" height="60" xmlns="http://www.w3.org/2000/svg">
+        <g transform="translate(50, 20)"></g>
+      </svg>
+    </div>
+    <div id="container-non-linear-non-interpolated" class="horizontal-colorbar"></div>
+    <div id="container-non-linear-interpolated" class="horizontal-colorbar"></div>
+    <div class="vertical-colorbar-container">
+      <div id="container-vertical-left"></div>
+      <div id="container-vertical-right"></div>
     </div>
     <script type="module" src="/examples/colourbar/colourbar.ts"></script>
   </body>

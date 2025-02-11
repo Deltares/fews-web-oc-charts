@@ -1,0 +1,46 @@
+[
+  {
+    "lowerValue": -2.0,
+    "color": "#070268"
+  },
+  {
+    "lowerValue": -1.5,
+    "color": "#0900ae"
+  },
+  {
+    "lowerValue": -1.0,
+    "color": "#4040ff"
+  },
+  {
+    "lowerValue": -0.5,
+    "color": "#0080c0"
+  },
+  {
+    "lowerValue": 0.0,
+    "color": "#129ffe"
+  },
+  {
+    "lowerValue": 0.5,
+    "color": "#00ff40"
+  },
+  {
+    "lowerValue": 1.0,
+    "color": "#ffff00"
+  },
+  {
+    "lowerValue": 1.5,
+    "color": "#ff8000"
+  },
+  {
+    "lowerValue": 2.0,
+    "color": "#ff0000"
+  },
+  {
+    "lowerValue": 2.5,
+    "color": "#a80000"
+  },
+  {
+    "lowerValue": 3.0,
+    "color": "#800000"
+  }
+]
