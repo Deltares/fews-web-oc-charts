@@ -2,142 +2,96 @@ import '@lib/scss/wb-charts.scss'
 import '@shared/shared.css'
 import './chart-text.css'
 
-import {
-  AxisPosition,
-  AxisType,
-  CartesianAxes,
-  CartesianAxesOptions,
-  ChartLine,
-  ChartText,
-  MouseOver,
-  ZoomHandler,
-} from '@lib'
-import { addListenerByClassName } from '@shared'
+import '@shared/theme-button'
 
-const container = document.getElementById('chart-container-1')
-const axisOptions: CartesianAxesOptions = {
-  x: [
-    {
-      type: AxisType.time,
-      position: AxisPosition.Bottom,
-      showGrid: true,
-    },
-    {
-      type: AxisType.time,
-      position: AxisPosition.Top,
-      showGrid: true,
-      locale: 'es-MX',
-      timeZone: 'Mexico/General',
-    },
-  ],
-  y: [
-    {
-      label: 'Sine',
-      position: AxisPosition.Left,
-      unit: '-',
-      showGrid: true,
-      domain: [-1.5, 1.5],
-    },
-  ],
-  margin: {
-    left: 50,
-    right: 50,
-  },
-}
-const axis = new CartesianAxes(container, null, null, axisOptions)
+import { type AxisIndex, AxisType, CartesianAxes, ChartLine, ChartText } from '@lib'
+import { generateExampleData } from '@shared'
 
-// Generate time series with a sine function at every day; generate dates
-// in UTC.
-const startDate = new Date(2021, 8, 15)
-const numDays = 1
-const frequency = 3
-const step = 0.01 // in days
+const container = document.getElementById('chart-container')
+const axes = new CartesianAxes(container, null, null, {
+  x: [{ type: AxisType.time }],
+  y: [{ type: AxisType.value, domain: [-1.5, 1.5] }],
+  automargin: true,
+})
 
-const data = []
-const startTime = startDate.getTime()
-const numSteps = numDays / step
-for (let i = 0; i < numSteps; i++) {
-  const curTime = startTime + i * step * 24 * 60 * 60 * 1000
-  data.push({
-    x: new Date(curTime),
-    y: Math.sin(2 * Math.PI * frequency * i * step),
-    value: i % 5 === 0 ? Math.sin(2 * Math.PI * frequency * i * step).toFixed(2) : undefined,
-  })
+// Generate simple scalar example data.
+const startTime = new Date('2025-01-01T12:00Z')
+const endTime = new Date('2025-01-02T12:00Z')
+const exampleData = generateExampleData([startTime, endTime], [-1, 1], 100)
+
+// Add a "label" field to every 5th member of the example data.
+const exampleDataWithLabels = exampleData.map((entry, index) => ({
+  ...entry,
+  label: index % 5 === 0 ? entry.y.toFixed(2) : null,
+}))
+
+const axisIndex: AxisIndex = {
+  x: { key: 'x', axisIndex: 0 },
+  y: { key: 'y', axisIndex: 0 },
 }
 
-const plot1 = new ChartLine(data, {})
-const plot2 = new ChartLine(data, {})
-const plot3 = new ChartText(data, {
-  text: {
-    attributes: {
-      'text-anchor': 'middle',
-    },
-  },
-})
-const plot4 = new ChartText(data, {
-  text: {
-    position: 'bottom',
-    angle: -45,
-    attributes: {
-      dy: '-0.5em',
-    },
-  },
-})
-const plot5 = new ChartText(data, {
-  text: {
-    angle: 45,
-    attributes: {
-      dy: '0.5em',
-    },
-  },
-})
-
-const style1 = {
+// Create line with example data.
+const line = new ChartLine(exampleData, {})
+line.addTo(axes, axisIndex, 'line', {
   fill: 'none',
   stroke: 'skyblue',
-}
-const style2 = {
-  fill: 'none',
-  stroke: 'red',
-  'stroke-dasharray': '5,5',
-}
-plot1.addTo(axis, { x: { key: 'x', axisIndex: 0 }, y: { key: 'y', axisIndex: 0 } }, 'local', style1)
-plot2.addTo(
-  axis,
-  { x: { key: 'x', axisIndex: 1 }, y: { key: 'y', axisIndex: 0 } },
-  'mexico',
-  style2,
-)
-plot3.addTo(
-  axis,
-  {
-    x: { key: 'x', axisIndex: 1 },
-    y: { key: 'y', axisIndex: 0 },
-    value: { key: 'value', axisIndex: 0 },
+  'stroke-width': '2',
+})
+
+// Add text along the line.
+const textAlongLine = new ChartText(exampleDataWithLabels, {
+  text: {
+    attributes: {
+      // Align the text in the middle of the line with <text> CSS properties.
+      'text-anchor': 'middle',
+      'dominant-baseline': 'middle',
+    },
   },
-  'text',
-  {},
-)
-plot4.addTo(
-  axis,
-  { x: { key: 'x', axisIndex: 1 }, value: { key: 'value', axisIndex: 0 } },
-  'text-bottom',
-  {},
-)
-plot5.addTo(
-  axis,
-  { x: { key: 'x', axisIndex: 1 }, value: { key: 'value', axisIndex: 0 } },
-  'text-top',
-  {},
-)
+})
+// Specifying x, y, and a value key will draw text (specified as the value key)
+// along the line.
+const axisIndexWithLabels: AxisIndex = {
+  ...axisIndex,
+  value: { key: 'label' },
+}
+textAlongLine.addTo(axes, axisIndexWithLabels, 'text-along-line', {})
 
-const mouseOver = new MouseOver(['local', 'mexico'])
-const zoomHandler = new ZoomHandler()
+// Add text along the bottom of the chart.
+const textAlongBottom = new ChartText(exampleDataWithLabels, {
+  text: {
+    position: 'bottom',
+    attributes: {
+      // Position the text relative to the bottom of the chart with <text> CSS
+      // properties.
+      dy: '-0.5em',
+      'text-anchor': 'middle',
+      'dominant-baseline': 'bottom',
+    },
+  },
+})
+const axisIndexWithoutY: AxisIndex = {
+  x: { key: 'x', axisIndex: 0 },
+  value: { key: 'label' },
+}
+textAlongBottom.addTo(axes, axisIndexWithoutY, 'text-bottom', {})
 
-axis.redraw({ x: { autoScale: true }, y: { autoScale: true } })
-axis.accept(zoomHandler)
-axis.accept(mouseOver)
+// Add text along the top of the chart.
+const textAlongTop = new ChartText(exampleDataWithLabels, {
+  text: {
+    // Text can be rotated with the angle key, specified in degrees clockwise
+    // rotation.
+    angle: 45,
+    // Omitting the position key will default to the top of the chart, if used
+    // with an axis index without "y".
+    attributes: {
+      // Position the text relative to the top of the chart with <text> CSS
+      // properties.
+      dy: '1em',
+      'text-anchor': 'middle',
+      'dominant-baseline': 'hanging',
+    },
+  },
+})
+textAlongTop.addTo(axes, axisIndexWithoutY, 'text-top', {})
 
-addListenerByClassName('theme-button', 'click', () =>
-  document.documentElement.classList.toggle('dark'),
-)
+axes.redraw({ x: { autoScale: true } })
