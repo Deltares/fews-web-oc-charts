@@ -1,6 +1,6 @@
 import '@lib/scss/wb-charts.scss'
 import '@shared/shared.css'
-import './alertLines.css'
+import './alert-lines.css'
 
 import '@shared/theme-button'
 
