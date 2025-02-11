@@ -30,9 +30,21 @@ const indexHtmlContent = `
 </html>
 `
 
+const isDev = process.env.NODE_ENV === 'development'
+
+// Ensure the dist directory exists
+const distDir = isDev ? path.resolve(__dirname, 'dist') : __dirname
+
+if (isDev && !fs.existsSync(distDir)) {
+  fs.mkdirSync(distDir)
+}
+
+// Write the generated index.html to the dist folder during development
+fs.writeFileSync(path.resolve(distDir, 'index.html'), indexHtmlContent)
+
 // Define Vite build inputs
 const inputEntries: Record<string, string> = {
-  main: 'index.html', // Virtual main index
+  main: path.resolve(distDir, 'index.html'), // Auto-generated main index
 }
 
 // Add each example folder's index.html as an entry point
@@ -46,21 +58,9 @@ export default defineConfig({
       input: inputEntries,
     },
   },
-  plugins: [
-    {
-      name: 'serve-index-html',
-      configureServer(server) {
-        server.middlewares.use((req, res, next) => {
-          if (req.url === '/') {
-            res.setHeader('Content-Type', 'text/html')
-            res.end(indexHtmlContent)
-          } else {
-            next()
-          }
-        })
-      },
-    },
-  ],
+  server: {
+    open: '/dist/index.html',
+  },
   resolve: {
     alias: {
       '@lib': path.resolve(__dirname, './src'),
