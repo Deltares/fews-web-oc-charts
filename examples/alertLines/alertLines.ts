@@ -2,10 +2,10 @@ import '@lib/scss/wb-charts.scss'
 import '@shared/shared.css'
 import './alertLines.css'
 
-import { AlertLines, AxisType, CartesianAxes, ChartLine } from '@lib'
-import { addListenerById, generateExampleData } from '@shared'
+import '@shared/theme-button'
 
-addListenerById('theme-button', 'click', () => document.documentElement.classList.toggle('dark'))
+import { AlertLines, AxisType, CartesianAxes, ChartLine } from '@lib'
+import { generateExampleData } from '@shared'
 
 // Create new axes.
 const container = document.getElementById('chart-container')
