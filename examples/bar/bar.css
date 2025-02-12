@@ -1,0 +1,7 @@
+.chart-container {
+  /* We need the container to be positioned for the tooltips to show up
+  correctly. See issue #133. */
+  position: relative;
+  width: 100%;
+  height: 400px;
+}
