@@ -2,140 +2,56 @@ import '@lib/scss/wb-charts.scss'
 import '@shared/shared.css'
 import './extent-filter.css'
 
-import * as d3 from 'd3'
-import {
-  AxisType,
-  CartesianAxes,
-  ChartArea,
-  ChartLine,
-  ChartMarker,
-  CurrentTime,
-  MouseOver,
-  ZoomHandler,
-} from '@lib'
-import { addListenerByClassName } from '@shared'
+import '@shared/theme-button'
 
-const container = document.getElementById('chart-container-1')
-const axis = new CartesianAxes(container, null, null, {
-  x: [{ type: AxisType.time, showGrid: true }],
-  y: [
-    { label: 'Precipitation', unit: 'mm', showGrid: true, defaultDomain: [0, 2], nice: true },
-    {
-      label: 'Precipitation Probability',
-      unit: '%',
-      showGrid: false,
-      defaultDomain: [0, 100],
-      position: 'right',
-      nice: false,
-    },
-  ],
-  margin: { left: 50, right: 50 },
+import { AxisType, CartesianAxes, ChartLine } from '@lib'
+import type { DataPoint } from '../../src/Data/types'
+import { ExampleEvent, generateExampleData } from '@shared'
+
+function createAxes(containerId: string): CartesianAxes {
+  // Create new axes.
+  const container = document.getElementById(containerId)
+  return new CartesianAxes(container, null, null, {
+    x: [{ type: AxisType.time }],
+    y: [{ type: AxisType.value }],
+    automargin: true,
+  })
+}
+
+// Generate simple scalar example data, then add a few outliers.
+const startTime = new Date('2025-01-01T12:00Z')
+const endTime = new Date('2025-01-05T12:00Z')
+const exampleData = generateExampleData([startTime, endTime], [-2, 4], 100)
+exampleData[10].y = 99
+exampleData[15].y = 105
+
+const axisIndex = { x: { key: 'x', axisIndex: 0 }, y: { key: 'y', axisIndex: 0 } }
+
+// Create chart without extent filter; the y-axis is autoscaled to the full
+// extent of the data.
+const axesWithout = createAxes('chart-container-without-filter')
+// Create line.
+const lineWithout = new ChartLine(exampleData, {})
+lineWithout.addTo(axesWithout, axisIndex, 'example', {
+  fill: 'none',
+  stroke: 'skyblue',
+  'stroke-width': '2',
 })
+axesWithout.redraw({ x: { autoScale: true }, y: { autoScale: true } })
 
-const mouseOver = new MouseOver([
-  'precipitationContour',
-  'precipitationProbability',
-  'precipitation',
-])
-const zoom = new ZoomHandler()
-const currentTime = new CurrentTime({ x: { axisIndex: 0 } })
+// Create chart with extent filter; outliers (as defined by the extent filter
+// function) are ignored when determining the autoscaled y-axis extent.
+const extentFilter = (event: ExampleEvent<Date>) => event.y < 99
+// The type of the extent filter function is inconvenient and needs a cast. See
+// issue #142.
+const extentFilterTyped = extentFilter as unknown as (event: DataPoint) => boolean
 
-function dataload() {
-  d3.json('./open-meteo-outliers.json')
-    .then(function (data) {
-      const precipitation = []
-      const precipitationProbability = []
-      const precipitationProbabilityArea = []
-
-      data.hourly.time.forEach(function (t, i) {
-        const dateTime = new Date(t)
-        precipitation.push({ x: dateTime, y: data.hourly.precipitation[i] })
-        precipitationProbability.push({ x: dateTime, y: data.hourly.precipitation_probability[i] })
-        precipitationProbabilityArea.push({
-          x: dateTime,
-          y: [0, data.hourly.precipitation_probability[i]],
-        })
-      })
-
-      const extentFilter = (d) => {
-        return d.y !== 999
-      }
-
-      const plotPrecipitation = new ChartArea(precipitation, {
-        curve: 'stepBefore',
-        y: { extentFilter },
-      })
-      const plotPrecipitationContour = new ChartMarker(precipitation, {
-        tooltip: { alignment: 'right' },
-        y: { extentFilter },
-      })
-      const plotPrecipitationProbability = new ChartLine(precipitationProbability, {
-        y: { extentFilter },
-      })
-
-      plotPrecipitationProbability.addTo(
-        axis,
-        { x: { key: 'x', axisIndex: 0 }, y: { key: 'y', axisIndex: 1 } },
-        'precipitationProbability',
-        { fill: 'none', stroke: 'rgb(44, 175, 254)' },
-      )
-
-      plotPrecipitation.addTo(
-        axis,
-        { x: { key: 'x', axisIndex: 0 }, y: { key: 'y', axisIndex: 0 } },
-        'precipitation',
-        { fill: 'rgba(84, 79, 197, .2)', stroke: 'none' },
-      )
-
-      plotPrecipitationContour.addTo(
-        axis,
-        { x: { key: 'x', axisIndex: 0 }, y: { key: 'y', axisIndex: 0 } },
-        'precipitationContour',
-        { fill: 'none', stroke: 'currentColor' },
-      )
-
-      axis.accept(currentTime)
-      axis.redraw({ x: { autoScale: true }, y: { autoScale: true } })
-      axis.zoom()
-      axis.accept(zoom)
-      axis.accept(mouseOver)
-    })
-    .catch((error) => console.error(`Failed to create chart: ${error}`))
-}
-window.setTimeout(dataload, 1)
-
-function toggleFilterByIds(ids, active) {
-  const extentFilter = (d) => {
-    return d.y !== 999
-  }
-
-  if (active) {
-    for (const chart of axis.charts) {
-      if (ids.includes(chart.id)) {
-        chart.setOptions({ y: { extentFilter } })
-      }
-    }
-  } else {
-    for (const chart of axis.charts) {
-      if (ids.includes(chart.id)) {
-        chart.setOptions({ y: { extentFilter: () => true } })
-      }
-    }
-  }
-  axis.redraw({ y: { autoScale: true } })
-}
-
-function toggleFilter(element) {
-  if (element.dataset.filter === 'true') {
-    element.dataset.filter = 'false'
-  } else {
-    element.dataset.filter = 'true'
-  }
-  const ids = element.getAttribute('data-id').split(',')
-  toggleFilterByIds(ids, element.dataset.filter === 'true')
-}
-
-addListenerByClassName('theme-button', 'click', () =>
-  document.documentElement.classList.toggle('dark'),
-)
-addListenerByClassName('extent-filter', 'click', (event) => toggleFilter(event.target))
+const axesWith = createAxes('chart-container-with-filter')
+// Create line.
+const lineWith = new ChartLine(exampleData, { y: { extentFilter: extentFilterTyped } })
+lineWith.addTo(axesWith, axisIndex, 'example', {
+  fill: 'none',
+  stroke: 'skyblue',
+  'stroke-width': '2',
+})
+axesWith.redraw({ x: { autoScale: true }, y: { autoScale: true } })

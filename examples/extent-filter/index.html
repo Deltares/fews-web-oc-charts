@@ -2,23 +2,13 @@
 <html>
   <head>
     <meta charset="UTF-8" />
-    <title>Precipitation as area chart</title>
+    <title>Extent filter example</title>
   </head>
 
   <body>
-    <button class="theme-button" type="button" data-id="theme">Theme</button>
-    <button
-      class="extent-filter"
-      type="button"
-      data-filter="true"
-      data-id="precipitationContour,precipitationProbability,precipitation"
-    >
-      Filter
-    </button>
-    <div>
-      <div id="chart-container-1"></div>
-      <div id="chart-legend-1"></div>
-    </div>
+    <theme-button>></theme-button>
+    <div id="chart-container-without-filter" class="chart-container"></div>
+    <div id="chart-container-with-filter" class="chart-container"></div>
     <script type="module" src="/examples/extent-filter/extent-filter.ts"></script>
   </body>
 </html>
