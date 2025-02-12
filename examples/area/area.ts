@@ -4,7 +4,7 @@ import './area.css'
 
 import '@shared/theme-button'
 
-import { AxisType, CartesianAxes, ChartArea } from '@lib'
+import { AxisType, CartesianAxes, ChartArea, ChartMarker } from '@lib'
 import { generateExampleData } from '@shared'
 
 function createAxes(containerId: string): CartesianAxes {
@@ -21,21 +21,28 @@ function createAxes(containerId: string): CartesianAxes {
 // then add a fixed offset to those data.
 const startTime = new Date('2025-01-01T12:00Z')
 const endTime = new Date('2025-01-02T12:00Z')
-const scalarData = generateExampleData([startTime, endTime], [-2, 4], 20)
-const exampleData = scalarData.map(({ x, y }) => ({
+const exampleScalarData = generateExampleData([startTime, endTime], [-2, 4], 20)
+const exampleAreaData = exampleScalarData.map(({ x, y }) => ({
   x,
   y: [y - 1, y + 1],
 }))
-const offsetExampleData = (offset: number) =>
-  exampleData.map(({ x, y }) => ({
+const offsetExampleAreaData = (offset: number) =>
+  exampleAreaData.map(({ x, y }) => ({
     x,
     y: y.map((value) => value + offset),
   }))
+const upperBoundExampleAreaData = (offset: number) =>
+  exampleAreaData.map(({ x, y }) => ({
+    x,
+    y: y[1] + offset,
+  }))
+
+const axisIndex = { x: { key: 'x', axisIndex: 0 }, y: { key: 'y', axisIndex: 0 } }
 
 // Create area chart with smooth curve.
 const axes = createAxes('chart-container')
-const area = new ChartArea(exampleData, {})
-area.addTo(axes, { x: { key: 'x', axisIndex: 0 }, y: { key: 'y', axisIndex: 0 } }, 'example', {
+const area = new ChartArea(exampleAreaData, {})
+area.addTo(axes, axisIndex, 'example', {
   fill: 'skyblue',
 })
 axes.redraw({ x: { autoScale: true }, y: { autoScale: true } })
@@ -43,32 +50,42 @@ axes.redraw({ x: { autoScale: true }, y: { autoScale: true } })
 // Create area chart with stepped curve, before in the middle, and after the
 // data point.
 const axesStep = createAxes('chart-container-step')
-const areaStepBefore = new ChartArea(offsetExampleData(-3), { curve: 'stepBefore' })
-areaStepBefore.addTo(
-  axesStep,
-  { x: { key: 'x', axisIndex: 0 }, y: { key: 'y', axisIndex: 0 } },
-  'example',
-  { fill: 'blue', opacity: 0.5 },
-)
-const areaStepMiddle = new ChartArea(exampleData, { curve: 'step' })
-areaStepMiddle.addTo(
-  axesStep,
-  { x: { key: 'x', axisIndex: 0 }, y: { key: 'y', axisIndex: 0 } },
-  'example',
-  {
-    fill: 'green',
-    opacity: 0.5,
-  },
-)
-const areaStepAfter = new ChartArea(offsetExampleData(3), { curve: 'stepAfter' })
-areaStepAfter.addTo(
-  axesStep,
-  { x: { key: 'x', axisIndex: 0 }, y: { key: 'y', axisIndex: 0 } },
-  'example',
-  {
-    fill: 'red',
-    opacity: 0.5,
-  },
-)
+const markerOptions = { symbol: { size: 40 } }
+
+const referenceMarkersStepBefore = new ChartMarker(upperBoundExampleAreaData(-3), markerOptions)
+const areaStepBefore = new ChartArea(offsetExampleAreaData(-3), { curve: 'stepBefore' })
+areaStepBefore.addTo(axesStep, axisIndex, 'example-area-step-before', {
+  fill: 'blue',
+  opacity: 0.5,
+})
+referenceMarkersStepBefore.addTo(axesStep, axisIndex, 'example-line-step-before', {
+  fill: 'white',
+  stroke: 'blue',
+  'stroke-width': '2',
+})
+
+const referenceMarkersStepMiddle = new ChartMarker(upperBoundExampleAreaData(0), markerOptions)
+const areaStepMiddle = new ChartArea(exampleAreaData, { curve: 'step' })
+areaStepMiddle.addTo(axesStep, axisIndex, 'example-area-step-middle', {
+  fill: 'green',
+  opacity: 0.5,
+})
+referenceMarkersStepMiddle.addTo(axesStep, axisIndex, 'example-line-step-middle', {
+  fill: 'white',
+  stroke: 'green',
+  'stroke-width': '2',
+})
+
+const referenceMarkersStepAfter = new ChartMarker(upperBoundExampleAreaData(3), markerOptions)
+const areaStepAfter = new ChartArea(offsetExampleAreaData(3), { curve: 'stepAfter' })
+areaStepAfter.addTo(axesStep, axisIndex, 'example-area-step-after', {
+  fill: 'red',
+  opacity: 0.5,
+})
+referenceMarkersStepAfter.addTo(axesStep, axisIndex, 'example-line-step-after', {
+  fill: 'white',
+  stroke: 'red',
+  'stroke-width': '2',
+})
 
 axesStep.redraw({ x: { autoScale: true }, y: { autoScale: true } })
