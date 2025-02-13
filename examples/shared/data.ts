@@ -3,6 +3,11 @@ export interface ExampleEvent<T extends Date | number> {
   y: number
 }
 
+export interface ExamplePolarEvent {
+  angular: number
+  radial: number
+}
+
 export function generateExampleData(
   rangeX: [Date, Date],
   rangeY: [number, number],
@@ -35,4 +40,29 @@ export function generateExampleData(
     events.push({ x, y })
   }
   return events
+}
+
+export function generatePolarExampleData(
+  rangeAngular: [number, number],
+  rangeRadial: [number, number],
+  numPoints: number,
+): ExamplePolarEvent[] {
+  const computeFactorOffset = (range: [number, number]) => {
+    const [min, max] = range
+    const factor = max - min
+    const offset = min
+    return [factor, offset]
+  }
+  const [factorAngular, offsetAngular] = computeFactorOffset(rangeAngular)
+  const [factorRadial, offsetRadial] = computeFactorOffset(rangeRadial)
+
+  const exampleData: ExamplePolarEvent[] = []
+  for (let i = 0; i < numPoints; i++) {
+    const s = i / (numPoints - 1)
+
+    const angular = factorAngular * s + offsetAngular
+    const radial = factorRadial * s + offsetRadial
+    exampleData.push({ angular, radial })
+  }
+  return exampleData
 }
