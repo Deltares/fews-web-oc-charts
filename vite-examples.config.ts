@@ -20,6 +20,7 @@ export default defineConfig({
         'polar-axes-options': resolveRelativePath('examples/polar-axes-options/index.html'),
         'polar-line-marker': resolveRelativePath('examples/polar-line-marker/index.html'),
         progress: resolveRelativePath('examples/progress/index.html'),
+        range: resolveRelativePath('examples/range/index.html'),
         rule: resolveRelativePath('examples/rule/index.html'),
         'secondary-axis': resolveRelativePath('examples/secondary-axis/index.html'),
         'shared-zoom': resolveRelativePath('examples/shared-zoom/index.html'),
