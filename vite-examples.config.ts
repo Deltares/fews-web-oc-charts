@@ -17,6 +17,7 @@ export default defineConfig({
         marker: resolveRelativePath('examples/marker/index.html'),
         matrix: resolveRelativePath('examples/matrix/index.html'),
         mouseover: resolveRelativePath('examples/mouseover/index.html'),
+        'polar-axes-options': resolveRelativePath('examples/polar-axes-options/index.html'),
         'polar-line-marker': resolveRelativePath('examples/polar-line-marker/index.html'),
         progress: resolveRelativePath('examples/progress/index.html'),
         rule: resolveRelativePath('examples/rule/index.html'),
