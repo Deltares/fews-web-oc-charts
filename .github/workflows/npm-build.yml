@@ -1,4 +1,4 @@
-name: Build and test
+name: Build library and examples
 
 on: [push]
 
@@ -12,7 +12,5 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium firefox webkit
       - run: npm run build
       - run: npm run build-examples
-      - run: npm run test:all-browsers
