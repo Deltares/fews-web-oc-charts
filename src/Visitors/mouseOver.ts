@@ -12,9 +12,14 @@ export class MouseOver implements Visitor {
   private group: d3.Selection<SVGElement, unknown, SVGElement, unknown>
   private axes: CartesianAxes
   private mouseGroup: d3.Selection<SVGElement, unknown, SVGElement, unknown>
+  private customNumberFormatter: ((value: number, extent?: [number, number]) => string) | null
 
-  constructor(trace?: string[]) {
+  constructor(
+    trace?: string[],
+    numberFormatter?: (value: number, extent?: [number, number]) => string,
+  ) {
     this.setTrace(trace)
+    this.customNumberFormatter = numberFormatter ?? null
   }
 
   setTrace(trace: string[]) {
@@ -160,12 +165,9 @@ export class MouseOver implements Visitor {
           let label = ''
           const yValue = value.y
           if (yValue instanceof Date) {
-            label = dateFormatter(yValue, 'yyyy-MM-dd HH:mm ZZZZ', {
-              timeZone: axes.options.x[0].timeZone,
-              locale: axes.options.x[0].locale,
-            })
+            label = this.createTimeLabel(yValue)
           } else {
-            label = this.valueLabel(extent, yValue)
+            label = this.createValueLabel(extent, yValue)
           }
           const spanElement = document.createElement('span')
           spanElement.style.color = color
@@ -186,35 +188,48 @@ export class MouseOver implements Visitor {
     }
   }
 
-  private valueLabel(extent: number[], value: number | number[]) {
+  private createTimeLabel(value: Date): string {
+    return dateFormatter(value, 'yyyy-MM-dd HH:mm ZZZZ', {
+      timeZone: this.axes.options.x[0].timeZone,
+      locale: this.axes.options.x[0].locale,
+    })
+  }
+
+  private createValueLabel(extent: number[], value: number | number[]): string {
     const s = d3.formatSpecifier('f')
     s.precision = d3.precisionFixed((extent[1] - extent[0]) / 100)
+
+    const formatNumber =
+      this.customNumberFormatter !== null
+        ? (value: number) => this.customNumberFormatter(value, extent as [number, number])
+        : d3.format(s.toString())
+
     if (Array.isArray(value)) {
-      const labels: string[] = [...value]
-        .sort((a, b) => a - b)
-        .map((v) => d3.format(s.toString())(v))
+      const labels = [...value].sort((a, b) => a - b).map(formatNumber)
       return labels.join('–')
     } else {
-      return d3.format(s.toString())(value)
+      return formatNumber(value)
     }
   }
 
   private xText(axes: CartesianAxes, xPos: number): string {
-    let text = ''
-    switch (axes.options.x[0].type) {
-      case AxisType.time:
-        text = dateFormatter(axes.xScales[0].invert(xPos), 'yyyy-MM-dd HH:mm ZZZZ', {
-          timeZone: axes.options.x[0].timeZone,
-          locale: axes.options.x[0].locale,
-        })
-        break
-      default:
-        const s = d3.formatSpecifier('f')
-        s.precision = d3.precisionFixed(axes.xScales[0].domain()[1] / 100)
-        text = d3.format(s.toString())(axes.xScales[0].invert(xPos))
-        break
+    if (axes.options.x[0].type === AxisType.time) {
+      return dateFormatter(axes.xScales[0].invert(xPos), 'yyyy-MM-dd HH:mm ZZZZ', {
+        timeZone: axes.options.x[0].timeZone,
+        locale: axes.options.x[0].locale,
+      })
+    } else {
+      const s = d3.formatSpecifier('f')
+      const xDomain = axes.xScales[0].domain()
+      s.precision = d3.precisionFixed(xDomain[1] / 100)
+
+      // Pass the x-domain as the extent for the formatting.
+      const formatNumber =
+        this.customNumberFormatter !== null
+          ? (value: number) => this.customNumberFormatter(value, xDomain as [number, number])
+          : d3.format(s.toString())
+      return formatNumber(axes.xScales[0].invert(xPos))
     }
-    return text
   }
 
   redraw(): void {
