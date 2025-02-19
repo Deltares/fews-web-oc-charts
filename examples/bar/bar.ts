@@ -45,7 +45,7 @@ axesSimple.redraw({ x: { autoScale: true }, y: { autoScale: true } })
 // Create color mapped bar chart.
 const axesColormapped = createAxes('chart-container-colormapped', AxisType.time)
 
-// The color map is specified as a function that accept a value, for example
+// The color map is specified as a function that accepts a value, for example
 // created with d3 here.
 const colormap = d3.scaleSequential(d3.interpolateRdYlGn).domain([-2, 4])
 const barColormapped = new ChartBar(exampleData, { color: { map: colormap } })
