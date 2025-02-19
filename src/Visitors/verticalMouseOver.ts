@@ -16,9 +16,14 @@ export class VerticalMouseOver implements Visitor {
   private axes: CartesianAxes
   private mouseGroup: d3.Selection<SVGElement, unknown, SVGElement, unknown>
   private mousePerLine!: d3.Selection<d3.BaseType, string, SVGElement, unknown>
+  private customNumberFormatter: ((value: number, extent?: [number, number]) => string) | null
 
-  constructor(trace?: string[]) {
+  constructor(
+    trace?: string[],
+    numberFormatter?: (value: number, extent?: [number, number]) => string,
+  ) {
     this.setTrace(trace)
+    this.customNumberFormatter = numberFormatter ?? null
   }
 
   setTrace(trace: string[]) {
@@ -249,20 +254,21 @@ export class VerticalMouseOver implements Visitor {
     return isDescending ? inputDatum.length - 1 - idx : idx
   }
 
-  determineLabel(xExtent: any[], xValue: any[] | any) {
+  determineLabel(extent: any[], value: any[] | any) {
     const s = d3.formatSpecifier('f')
-    s.precision = d3.precisionFixed((xExtent[1] - xExtent[0]) / 100)
-    let xLabel
-    if (Array.isArray(xValue)) {
-      const labels: string[] = []
-      for (let j = 0; j < xValue.length; j++) {
-        labels[j] = d3.format(s.toString())(xValue[j])
-      }
-      xLabel = labels.join('–')
+    s.precision = d3.precisionFixed((extent[1] - extent[0]) / 100)
+
+    const formatNumber =
+      this.customNumberFormatter !== null
+        ? (value: number) => this.customNumberFormatter(value, extent as [number, number])
+        : d3.format(s.toString())
+
+    if (Array.isArray(value)) {
+      const labels = [...value].sort((a, b) => a - b).map(formatNumber)
+      return labels.join('–')
     } else {
-      xLabel = d3.format(s.toString())(xValue)
+      return formatNumber(value)
     }
-    return xLabel
   }
 
   updatePoints(pointData) {
@@ -297,21 +303,23 @@ export class VerticalMouseOver implements Visitor {
   }
 
   private yText(axes: CartesianAxes, yPos: any): string {
-    let text = ''
-    switch (axes.options.y[0].type) {
-      case AxisType.time:
-        text = dateFormatter(axes.yScales[0].invert(yPos), 'yyyy-MM-dd HH:mm ZZZZ', {
-          timeZone: axes.options.y[0].timeZone,
-          locale: axes.options.y[0].locale,
-        })
-        break
-      default:
-        const s = d3.formatSpecifier('f')
-        s.precision = d3.precisionFixed(axes.yScales[0].domain()[1] / 100)
-        text = d3.format(s.toString())(axes.yScales[0].invert(yPos))
-        break
+    if (axes.options.y[0].type === AxisType.time) {
+      return dateFormatter(axes.yScales[0].invert(yPos), 'yyyy-MM-dd HH:mm ZZZZ', {
+        timeZone: axes.options.y[0].timeZone,
+        locale: axes.options.y[0].locale,
+      })
+    } else {
+      const s = d3.formatSpecifier('f')
+      const yDomain = axes.yScales[0].domain()
+      s.precision = d3.precisionFixed(yDomain[1] / 100)
+
+      // Pass the y-domain as the extent for the formatting.
+      const formatNumber =
+        this.customNumberFormatter !== null
+          ? (value: number) => this.customNumberFormatter(value, yDomain as [number, number])
+          : d3.format(s.toString())
+      return formatNumber(axes.yScales[0].invert(yPos))
     }
-    return text
   }
 
   updateTooltip(pointData, mouse) {
