@@ -5,7 +5,7 @@ import './alert-lines.css'
 import '@shared/theme-button'
 
 import { AlertLines, AxisType, CartesianAxes, ChartLine } from '@lib'
-import { generateExampleData } from '@shared'
+import { generateExampleTimeSeriesData } from '@shared'
 
 // Create new axes.
 const container = document.getElementById('chart-container')
@@ -18,7 +18,7 @@ const axes = new CartesianAxes(container, null, null, {
 // Generate simple scalar example data.
 const startTime = new Date('2025-01-01T12:00Z')
 const endTime = new Date('2025-01-02T12:00Z')
-const exampleData = generateExampleData([startTime, endTime], [-2, 4], 100)
+const exampleData = generateExampleTimeSeriesData([startTime, endTime], [-2, 4], 100)
 
 // Create line.
 const line = new ChartLine(exampleData, {})

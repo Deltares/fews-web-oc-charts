@@ -5,7 +5,7 @@ import './marker.css'
 import '@shared/theme-button'
 
 import { AxisType, CartesianAxes, ChartMarker } from '@lib'
-import { generateExampleData } from '@shared'
+import { generateExampleTimeSeriesData } from '@shared'
 
 function createAxes(containerId: string): CartesianAxes {
   const container = document.getElementById(containerId)
@@ -19,7 +19,7 @@ function createAxes(containerId: string): CartesianAxes {
 // Generate simple scalar example data.
 const startTime = new Date('2025-01-01T12:00Z')
 const endTime = new Date('2025-01-02T12:00Z')
-const exampleData = generateExampleData([startTime, endTime], [-2, 4], 100)
+const exampleData = generateExampleTimeSeriesData([startTime, endTime], [-2, 4], 100)
 
 // Plot data with markers on every data point.
 const axes = createAxes('chart-container')

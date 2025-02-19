@@ -7,7 +7,7 @@ import '@shared/theme-button'
 import * as d3 from 'd3'
 
 import { AxisType, CartesianAxes, ChartBar, ChartLine, TooltipAnchor } from '@lib'
-import { generateExampleData } from '@shared'
+import { generateExampleTimeSeriesData } from '@shared'
 
 function createAxes(
   containerId: string,
@@ -25,7 +25,7 @@ function createAxes(
 // Generate simple scalar example data.
 const startTime = new Date('2025-01-01T12:00Z')
 const endTime = new Date('2025-01-02T12:00Z')
-const exampleData = generateExampleData([startTime, endTime], [-2, 4], 100)
+const exampleData = generateExampleTimeSeriesData([startTime, endTime], [-2, 4], 100)
 
 const axisIndex = { x: { key: 'x', axisIndex: 0 }, y: { key: 'y', axisIndex: 0 } }
 

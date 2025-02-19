@@ -6,7 +6,7 @@ import '@shared/theme-button'
 
 import { AxisType, CartesianAxes, ChartLine } from '@lib'
 import type { DataPoint } from '../../src/Data/types'
-import { ExampleEvent, generateExampleData } from '@shared'
+import { ExampleEvent, generateExampleTimeSeriesData } from '@shared'
 
 function createAxes(containerId: string): CartesianAxes {
   // Create new axes.
@@ -21,7 +21,7 @@ function createAxes(containerId: string): CartesianAxes {
 // Generate simple scalar example data, then add a few outliers.
 const startTime = new Date('2025-01-01T12:00Z')
 const endTime = new Date('2025-01-05T12:00Z')
-const exampleData = generateExampleData([startTime, endTime], [-2, 4], 100)
+const exampleData = generateExampleTimeSeriesData([startTime, endTime], [-2, 4], 100)
 exampleData[10].y = 99
 exampleData[15].y = 105
 
