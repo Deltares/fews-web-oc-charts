@@ -2,19 +2,12 @@
 <html>
   <head>
     <meta charset="UTF-8" />
-    <title>Ensemble Tech Demo</title>
+    <title>Mouseover example</title>
   </head>
-
   <body>
-    <button class="theme-button" type="button" data-id="theme">Theme</button>
-    <div>
-      <div id="chart-container-1"></div>
-      <div id="chart-legend-1"></div>
-    </div>
-    <button class="legend-button" type="button" data-id="median">median</button>
-    <button class="legend-button" type="button" data-id="control">control</button>
-    <button class="legend-button" type="button" data-id="percent50,percent90">percentile</button>
-    <button class="legend-button" type="button" data-id="ensemble">ensemble</button>
+    <theme-button></theme-button>
+    <div id="chart-container-1" class="chart-container"></div>
+    <div id="chart-container-2" class="chart-container"></div>
     <script type="module" src="/examples/mouseover/mouseover.ts"></script>
   </body>
 </html>
