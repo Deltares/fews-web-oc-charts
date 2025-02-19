@@ -132,3 +132,33 @@ const axesSelection = createExampleChart(
 )
 const mouseOverSelection = new MouseOver(['example-1', 'example-3'])
 axesSelection.accept(mouseOverSelection)
+
+// Add mouseover with custom number formatter that uses the extent.
+
+const axesNumberFormatter = createExampleChart(
+  'chart-container-3',
+  exampleValueData,
+  AxisType.value,
+  [-6, 12],
+  [-3, 5],
+)
+
+const formatNumber = (value: number, extent: [number, number]) => {
+  const formattedValue = value.toFixed(2)
+  const formattedExtent = extent.map((val) => val.toFixed(2))
+  return `Value: ${formattedValue} (Extent: ${formattedExtent.join('–')})`
+}
+const mouseOverNumberFormatter = new MouseOver(undefined, formatNumber)
+axesNumberFormatter.accept(mouseOverNumberFormatter)
+
+// Add mouseover with custom number formatter that does not use the extent.
+const axesNumberFormatterNoExtent = createExampleChart(
+  'chart-container-4',
+  exampleValueData,
+  AxisType.value,
+  [-6, 12],
+  [-3, 5],
+)
+const formatNumberNoExtent = (value: number) => value.toFixed(3)
+const mouseOverNumberFormatterNoExtent = new MouseOver(undefined, formatNumberNoExtent)
+axesNumberFormatterNoExtent.accept(mouseOverNumberFormatterNoExtent)
