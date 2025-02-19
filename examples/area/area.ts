@@ -5,7 +5,7 @@ import './area.css'
 import '@shared/theme-button'
 
 import { AxisType, CartesianAxes, ChartArea, ChartMarker } from '@lib'
-import { generateExampleData } from '@shared'
+import { generateExampleTimeSeriesData } from '@shared'
 
 function createAxes(containerId: string): CartesianAxes {
   const container = document.getElementById(containerId)
@@ -21,7 +21,7 @@ function createAxes(containerId: string): CartesianAxes {
 // then add a fixed offset to those data.
 const startTime = new Date('2025-01-01T12:00Z')
 const endTime = new Date('2025-01-02T12:00Z')
-const exampleScalarData = generateExampleData([startTime, endTime], [-2, 4], 20)
+const exampleScalarData = generateExampleTimeSeriesData([startTime, endTime], [-2, 4], 20)
 const exampleAreaData = exampleScalarData.map(({ x, y }) => ({
   x,
   y: [y - 1, y + 1],

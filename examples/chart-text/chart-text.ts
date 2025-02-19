@@ -5,7 +5,7 @@ import './chart-text.css'
 import '@shared/theme-button'
 
 import { type AxisIndex, AxisType, CartesianAxes, ChartLine, ChartText } from '@lib'
-import { generateExampleData } from '@shared'
+import { generateExampleTimeSeriesData } from '@shared'
 
 const container = document.getElementById('chart-container')
 const axes = new CartesianAxes(container, null, null, {
@@ -17,7 +17,7 @@ const axes = new CartesianAxes(container, null, null, {
 // Generate simple scalar example data.
 const startTime = new Date('2025-01-01T12:00Z')
 const endTime = new Date('2025-01-02T12:00Z')
-const exampleData = generateExampleData([startTime, endTime], [-1, 1], 100)
+const exampleData = generateExampleTimeSeriesData([startTime, endTime], [-1, 1], 100)
 
 // Add a "label" field to every 5th member of the example data.
 const exampleDataWithLabels = exampleData.map((entry, index) => ({

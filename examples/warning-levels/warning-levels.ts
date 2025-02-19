@@ -5,7 +5,7 @@ import './warning-levels.css'
 import '@shared/theme-button'
 
 import { AxisType, CartesianAxes, ChartLine, WarningLevels } from '@lib'
-import { type ExampleEvent, generateExampleData } from '@shared'
+import { type ExampleEvent, generateExampleTimeSeriesData } from '@shared'
 
 function createLineChart(containerId: string, exampleData: ExampleEvent<Date>[]): CartesianAxes {
   // Create new axes.
@@ -32,7 +32,7 @@ function createLineChart(containerId: string, exampleData: ExampleEvent<Date>[])
 // Generate simple scalar example data.
 const startTime = new Date('2025-01-01T12:00Z')
 const endTime = new Date('2025-01-05T12:00Z')
-const exampleData = generateExampleData([startTime, endTime], [-2, 4], 100)
+const exampleData = generateExampleTimeSeriesData([startTime, endTime], [-2, 4], 100)
 
 // The `escalationLevels` parameter of `WarningLevels` does not have a type. See
 // issue #139.
