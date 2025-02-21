@@ -1,0 +1,10 @@
+.example-row {
+  display: flex;
+  column-gap: 10px;
+  margin-top: 10px;
+}
+
+.chart-container {
+  width: 400px;
+  height: 400px;
+}
