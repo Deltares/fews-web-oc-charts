@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="nl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Update Chart Demo</title>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/locale/nl.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment-timezone/0.5.23/moment-timezone-with-data.js"></script>
+    <script src="https://d3js.org/d3.v7.js"></script>
+    <script src="https://d3js.org/d3-selection-multi.v1.min.js"></script>
+    <link rel="stylesheet" href="/lib/css/wb-charts.css" />
+    <link rel="stylesheet" href="../shared.css" />
+    <script type="text/javascript" src="../shared.js"></script>
+    <link rel="stylesheet" href="update-chart.css" />
+    <script type="text/javascript" src="update-chart.js"></script>
+    <script src="/dist/wb-charts.umd.js"></script>
+  </head>
+  <body>
+    <button type="button" id="update-data-button">Update data</button>
+    <div class="chart-wind-time">
+      <div id="wind-rose">
+        <div id="legend-wind-rose"></div>
+        <br />
+        <div id="chart-wind-rose"></div>
+        <div>
+          <span id="slider-datetime"></span>
+          <input id="slider" type="range" value="1" name="points" min="0" max="2" title="time selection" />
+        </div>
+      </div>
+      <div class="chart-container">
+        <div id="legend-wind-direction-time"></div>
+        <br />
+        <div id="chart-wind-direction-time"></div>
+        <button id="btn-zoom-reset" >Restore zoom</button>
+        <button id="btn-zoom-full" >Zoom to full extent</button>
+        <button id="btn-zoom-y">Zoom Y-axis to defaultDomain</button>
+        <button id="btn-zoom-domain" >Zoom Y-axis to [-50, 180]</button>
+      </div>
+    </div>
+  </body>
+</html>
