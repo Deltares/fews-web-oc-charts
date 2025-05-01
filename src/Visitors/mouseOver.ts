@@ -1,9 +1,8 @@
 import * as d3 from 'd3'
 import { Axes } from '../Axes/axes.js'
-import { AxisType, CartesianAxes, Chart, TooltipPosition } from '../index.js'
+import { AxisType, CartesianAxes, TooltipPosition } from '../index.js'
 import { Visitor } from './visitor.js'
 import { dateFormatter } from '../Utils/date.js'
-import { setAlphaForColor } from '../Utils/setAlphaForColor.js'
 
 export class MouseOver implements Visitor {
   private trace: string[]
@@ -109,8 +108,14 @@ export class MouseOver implements Visitor {
     const seen = new Set()
     for (const chart of this.axes.charts) {
       if (traces.includes(chart.id) && chart.visible && !seen.has(chart.id)) {
-        const spanElement: void | HTMLSpanElement =
-          chart.mouseOverFormatterCartesian(mouse) ?? this.defaultMouseOverFormatter(mouse, chart)
+        const extent = this.axes.chartsExtent('y', chart.axisIndex.y.axisIndex, {})
+        const precision = d3.precisionFixed((extent[1] - extent[0]) / 100)
+        const spanElement: void | HTMLSpanElement = chart.mouseOverFormatterCartesian(
+          mouse,
+          precision,
+          this.axes.xScales,
+          this.axes.yScales,
+        )
         if (spanElement) {
           spanElements.push(spanElement)
         }
@@ -118,35 +123,6 @@ export class MouseOver implements Visitor {
       seen.add(chart.id)
     }
     this.updateTooltip(spanElements, mouse)
-  }
-
-  defaultMouseOverFormatter(mouse: [number, number], chart: Chart): void | HTMLSpanElement {
-    const xIndex = chart.axisIndex.x.axisIndex
-    const xScale = this.axes.xScales[xIndex]
-    const yIndex = chart.axisIndex.y.axisIndex
-    const yScale = this.axes.yScales[yIndex]
-    const point = chart.onPointerMove(xScale.invert(mouse[0]), xScale, yScale)
-    if (point) {
-      let color = point.style?.color
-      if (color) {
-        color = setAlphaForColor(color, 1)
-      }
-      const value = point.point
-      if (value.y !== undefined) {
-        const extent = this.axes.chartsExtent('y', yIndex, {})
-        let label = ''
-        const yValue = value.y
-        if (yValue instanceof Date) {
-          label = this.createTimeLabel(yValue)
-        } else {
-          label = this.createValueLabel(extent, yValue)
-        }
-        const spanElement = document.createElement('span')
-        spanElement.style.color = color
-        spanElement.innerText = label
-        return spanElement
-      }
-    }
   }
 
   update(mouse: [number, number]) {
@@ -188,30 +164,6 @@ export class MouseOver implements Visitor {
       if (axes.tooltip.isHidden) {
         axes.tooltip.show()
       }
-    }
-  }
-
-  private createTimeLabel(value: Date): string {
-    return dateFormatter(value, 'yyyy-MM-dd HH:mm ZZZZ', {
-      timeZone: this.axes.options.x[0].timeZone,
-      locale: this.axes.options.x[0].locale,
-    })
-  }
-
-  private createValueLabel(extent: number[], value: number | number[]): string {
-    const s = d3.formatSpecifier('f')
-    s.precision = d3.precisionFixed((extent[1] - extent[0]) / 100)
-
-    const formatNumber =
-      this.customNumberFormatter !== null
-        ? (value: number) => this.customNumberFormatter(value, extent as [number, number])
-        : d3.format(s.toString())
-
-    if (Array.isArray(value)) {
-      const labels = [...value].sort((a, b) => a - b).map(formatNumber)
-      return labels.join('–')
-    } else {
-      return formatNumber(value)
     }
   }
 
