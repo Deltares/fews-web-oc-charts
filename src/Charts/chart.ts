@@ -6,6 +6,7 @@ import { defaultsDeep, isNull, merge } from 'lodash-es'
 import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js'
 import type { DataPoint, DataPointXY } from '../Data/types.js'
 import { dataExtentFor } from '../Data/dataExtentFor.js'
+import { setAlphaForColor } from '../Utils/setAlphaForColor.js'
 
 export const AUTO_SCALE = 1
 
@@ -203,7 +204,46 @@ export abstract class Chart {
     }
   }
 
-  mouseOverFormatterCartesian(mouse: [number, number]): void | HTMLSpanElement {}
+  mouseOverFormatterCartesian(
+    mouse: [number, number],
+    precision: number,
+    xScales: Array<any>,
+    yScales: Array<any>,
+  ): void | HTMLSpanElement {
+    const xIndex = this.axisIndex.x.axisIndex
+    const xScale = xScales[xIndex]
+    const yIndex = this.axisIndex.y.axisIndex
+    const yScale = yScales[yIndex]
+    const point = this.onPointerMove(xScale.invert(mouse[0]), xScale, yScale)
+    if (point) {
+      let color = point.style?.color
+      if (color) {
+        color = setAlphaForColor(color, 1)
+      }
+      const value = point.point
+      if (value.y !== undefined) {
+        const label = this.defaultMouseOverText(value.y, precision)
+        const spanElement = document.createElement('span')
+        spanElement.style.color = color
+        spanElement.innerText = label
+        return spanElement
+      }
+    }
+  }
+
+  private defaultMouseOverText(data: number | number[] | any, precision: number): string {
+    const s = d3.formatSpecifier('f')
+    s.precision = precision
+    const formatNumber = d3.format(s.toString())
+
+    if (Array.isArray(data) && typeof data[0] === 'number') {
+      const labels = [...data].sort((a, b) => a - b).map(formatNumber)
+      return labels.join('–')
+    } else if (typeof data === 'number') {
+      return formatNumber(data)
+    }
+    return data
+  }
 
   protected defaultToolTipFormatterCartesian(d): HTMLElement {
     const xKey = this.dataKeys.x
