@@ -203,6 +203,8 @@ export abstract class Chart {
     }
   }
 
+  mouseOverFormatterCartesian(mouse: [number, number]): void | HTMLSpanElement {}
+
   protected defaultToolTipFormatterCartesian(d): HTMLElement {
     const xKey = this.dataKeys.x
     const yKey = this.dataKeys.y

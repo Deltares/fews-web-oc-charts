@@ -1,11 +1,9 @@
 import * as d3 from 'd3'
 import { Axes } from '../Axes/axes.js'
-import { AxisType, CartesianAxes, TooltipPosition } from '../index.js'
+import { AxisType, CartesianAxes, Chart, TooltipPosition } from '../index.js'
 import { Visitor } from './visitor.js'
 import { dateFormatter } from '../Utils/date.js'
 import { setAlphaForColor } from '../Utils/setAlphaForColor.js'
-import { SvgPropertiesHyphen } from 'csstype'
-import type { DataPointXY } from '../Data/types'
 
 export class MouseOver implements Visitor {
   private trace: string[]
@@ -107,22 +105,48 @@ export class MouseOver implements Visitor {
             return chart.id
           })
 
-    const points: { point: DataPointXY; style: SvgPropertiesHyphen; axisIndex: number }[] = []
+    const spanElements: HTMLSpanElement[] = []
     const seen = new Set()
     for (const chart of this.axes.charts) {
       if (traces.includes(chart.id) && chart.visible && !seen.has(chart.id)) {
-        const xIndex = chart.axisIndex.x.axisIndex
-        const xScale = this.axes.xScales[xIndex]
-        const yIndex = chart.axisIndex.y.axisIndex
-        const yScale = this.axes.yScales[yIndex]
-        const point = chart.onPointerMove(xScale.invert(mouse[0]), xScale, yScale)
-        if (point) {
-          points.push({ ...point, axisIndex: yIndex })
+        const spanElement: void | HTMLSpanElement =
+          chart.mouseOverFormatterCartesian(mouse) ?? this.defaultMouseOverFormatter(mouse, chart)
+        if (spanElement) {
+          spanElements.push(spanElement)
         }
       }
       seen.add(chart.id)
     }
-    this.updateTooltip(points, mouse)
+    this.updateTooltip(spanElements, mouse)
+  }
+
+  defaultMouseOverFormatter(mouse: [number, number], chart: Chart): void | HTMLSpanElement {
+    const xIndex = chart.axisIndex.x.axisIndex
+    const xScale = this.axes.xScales[xIndex]
+    const yIndex = chart.axisIndex.y.axisIndex
+    const yScale = this.axes.yScales[yIndex]
+    const point = chart.onPointerMove(xScale.invert(mouse[0]), xScale, yScale)
+    if (point) {
+      let color = point.style?.color
+      if (color) {
+        color = setAlphaForColor(color, 1)
+      }
+      const value = point.point
+      if (value.y !== undefined) {
+        const extent = this.axes.chartsExtent('y', yIndex, {})
+        let label = ''
+        const yValue = value.y
+        if (yValue instanceof Date) {
+          label = this.createTimeLabel(yValue)
+        } else {
+          label = this.createValueLabel(extent, yValue)
+        }
+        const spanElement = document.createElement('span')
+        spanElement.style.color = color
+        spanElement.innerText = label
+        return spanElement
+      }
+    }
   }
 
   update(mouse: [number, number]) {
@@ -145,36 +169,15 @@ export class MouseOver implements Visitor {
       .text(this.xText(axes, xPos))
   }
 
-  updateTooltip(
-    pointData: { point: DataPointXY; style: SvgPropertiesHyphen; axisIndex: number }[],
-    mouse: [number, number],
-  ) {
+  updateTooltip(spanElements: HTMLSpanElement[], mouse: [number, number]) {
     const axes = this.axes
-    if (Object.keys(pointData).length === 0) {
+    if (spanElements.length === 0) {
       axes.tooltip.hide()
     } else {
       const htmlContent = document.createElement('div')
-      for (const item of pointData) {
-        let color = item.style?.color
-        if (color) {
-          color = setAlphaForColor(color, 1)
-        }
-        const value = item.point
-        if (value.y !== undefined) {
-          const extent = this.axes.chartsExtent('y', item.axisIndex, {})
-          let label = ''
-          const yValue = value.y
-          if (yValue instanceof Date) {
-            label = this.createTimeLabel(yValue)
-          } else {
-            label = this.createValueLabel(extent, yValue)
-          }
-          const spanElement = document.createElement('span')
-          spanElement.style.color = color
-          spanElement.innerText = label
-          htmlContent.appendChild(spanElement)
-          htmlContent.appendChild(document.createElement('br'))
-        }
+      for (const span of spanElements) {
+        htmlContent.appendChild(span)
+        htmlContent.appendChild(document.createElement('br'))
       }
       axes.tooltip.update(
         htmlContent,
