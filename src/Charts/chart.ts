@@ -54,6 +54,14 @@ export interface TooltipOptions {
   toolTipFormatter?: (d: DataPointXY) => HTMLElement
 }
 
+export interface MouseOverOptions {
+  formatter?: (
+    d: void | { point: DataPointXY; style: SvgPropertiesHyphen },
+    precision: number,
+  ) => void | HTMLSpanElement
+  textFormatter?: (d: DataValue, precision: number) => string
+}
+
 export enum CurveType {
   Linear = 'linear',
   Basis = 'basis',
@@ -80,6 +88,7 @@ export interface ChartOptions extends ChartOptionsForKeys {
   curve?: string
   text?: TextOptions
   tooltip?: TooltipOptions
+  mouseover?: MouseOverOptions
 }
 
 export interface DataKeys {
@@ -215,7 +224,11 @@ export abstract class Chart {
     const yIndex = this.axisIndex.y.axisIndex
     const yScale = yScales[yIndex]
     const d = this.onPointerMove(xScale.invert(mouse[0]), xScale, yScale)
-    return this.defaultMouseOverFormatterCartesian(d, precision)
+    if (this.options.mouseover === undefined || this.options.mouseover.formatter === undefined) {
+      return this.defaultMouseOverFormatterCartesian(d, precision)
+    } else {
+      return this.options.mouseover.formatter(d, precision)
+    }
   }
 
   protected defaultMouseOverFormatterCartesian(
@@ -238,7 +251,7 @@ export abstract class Chart {
     }
   }
 
-  protected mouseOverTextFormatter(data: DataValue, precision: number): string {
+  protected defaultMouseOverTextFormatter(data: DataValue, precision: number): string {
     const s = d3.formatSpecifier('f')
     s.precision = precision
     const formatNumber = d3.format(s.toString())
@@ -250,6 +263,17 @@ export abstract class Chart {
       return formatNumber(data)
     } else if (data instanceof Date) {
       return data.toISOString()
+    }
+  }
+
+  protected mouseOverTextFormatter(d: DataValue, precision: number): string {
+    if (
+      this.options.mouseover === undefined ||
+      this.options.mouseover.textFormatter === undefined
+    ) {
+      return this.defaultMouseOverTextFormatter(d, precision)
+    } else {
+      return this.options.mouseover.textFormatter(d, precision)
     }
   }
 
