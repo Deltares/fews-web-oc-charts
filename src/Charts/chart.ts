@@ -214,16 +214,9 @@ export abstract class Chart {
   }
 
   mouseOverFormatterCartesian(
-    mouse: [number, number],
+    d: void | { point: DataPointXY; style: SvgPropertiesHyphen },
     precision: number,
-    xScales: Array<any>,
-    yScales: Array<any>,
   ): void | HTMLSpanElement {
-    const xIndex = this.axisIndex.x.axisIndex
-    const xScale = xScales[xIndex]
-    const yIndex = this.axisIndex.y.axisIndex
-    const yScale = yScales[yIndex]
-    const d = this.onPointerMove(xScale.invert(mouse[0]), xScale, yScale)
     if (this.options.mouseover === undefined || this.options.mouseover.formatter === undefined) {
       return this.defaultMouseOverFormatterCartesian(d, precision)
     } else {

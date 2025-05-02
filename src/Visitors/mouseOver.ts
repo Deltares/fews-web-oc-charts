@@ -108,13 +108,16 @@ export class MouseOver implements Visitor {
     const seen = new Set()
     for (const chart of this.axes.charts) {
       if (traces.includes(chart.id) && chart.visible && !seen.has(chart.id)) {
+        const xIndex = chart.axisIndex.x.axisIndex
+        const xScale = this.axes.xScales[xIndex]
+        const yIndex = chart.axisIndex.y.axisIndex
+        const yScale = this.axes.yScales[yIndex]
         const extent = this.axes.chartsExtent('y', chart.axisIndex.y.axisIndex, {})
         const precision = d3.precisionFixed((extent[1] - extent[0]) / 100)
+        const pointData = chart.onPointerMove(xScale.invert(mouse[0]), xScale, yScale)
         const spanElement: void | HTMLSpanElement = chart.mouseOverFormatterCartesian(
-          mouse,
+          pointData,
           precision,
-          this.axes.xScales,
-          this.axes.yScales,
         )
         if (spanElement) {
           spanElements.push(spanElement)
