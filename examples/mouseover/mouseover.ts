@@ -1,10 +1,11 @@
 import '@lib/scss/wb-charts.scss'
+import { SvgPropertiesHyphen } from 'csstype'
 import '@shared/shared.css'
 import './mouseover.css'
 
 import '@shared/theme-button'
 
-import { AxisType, CartesianAxes, ChartLine, MouseOver, VerticalMouseOver } from '@lib'
+import { AxisType, CartesianAxes, ChartLine, MouseOver, VerticalMouseOver, type ChartOptions, type DataPointXY, type MouseOverOptions } from '@lib'
 import {
   ExampleEvent,
   generateExampleTimeSeriesData,
@@ -23,6 +24,7 @@ function createExampleChart<T extends Date | number>(
   xAxisType: AxisType,
   domainX: [T, T],
   domainY: [number, number],
+  mouseOverOptions?: MouseOverOptions,
 ): CartesianAxes {
   // Create new axes.
   const container = document.getElementById(containerId)
@@ -41,7 +43,11 @@ function createExampleChart<T extends Date | number>(
 
   // Create line.
   exampleData.forEach((data) => {
-    const line = new ChartLine(data.events, {})
+    const chartOptions: ChartOptions = {}
+    if (mouseOverOptions) {
+      chartOptions.mouseover = mouseOverOptions
+    }
+    const line = new ChartLine(data.events, chartOptions)
     line.addTo(
       axes,
       {
@@ -133,14 +139,18 @@ const axesSelection = createExampleChart(
 const mouseOverSelection = new MouseOver(['example-1', 'example-3'])
 axesSelection.accept(mouseOverSelection)
 
-// Add mouseover with custom number formatter that uses the extent.
-
+// Add mouseover with custom number formatter that uses the extent, and custom text formatter for the label.
+const mouseOverTextFormatter = (data: number | number[] | any, precision: number) => {
+  const formattedValue = data.toFixed(precision)
+  return `Value: ${formattedValue} (Precision: ${precision})`
+}
 const axesFormatter = createExampleChart(
   'chart-container-3',
   exampleValueData,
   AxisType.value,
   [-6, 12],
   [-3, 5],
+  {textFormatter: mouseOverTextFormatter},
 )
 
 const formatNumber = (value: number, extent: [number, number]) => {
@@ -148,24 +158,53 @@ const formatNumber = (value: number, extent: [number, number]) => {
   const formattedExtent = extent.map((val) => val.toFixed(2))
   return `Value: ${formattedValue} (Extent: ${formattedExtent.join('–')})`
 }
-const mouseOverFormatter = new MouseOver(undefined, formatNumber)
-axesFormatter.accept(mouseOverFormatter)
+const mouseOverExtent = new MouseOver(undefined, formatNumber)
+axesFormatter.accept(mouseOverExtent)
 
-// Add mouseover with custom number formatter that does not use the extent.
+// Add mouseover with custom number formatter that does not use the extent, and use that formatter for the label as well.
+const formatNumberNoExtent = (value: number) => `Value: ${value.toFixed(3)}`
 const axesFormatterNoExtent = createExampleChart(
   'chart-container-4',
   exampleValueData,
   AxisType.value,
   [-6, 12],
   [-3, 5],
+  {textFormatter: formatNumberNoExtent},
 )
-const formatNumberNoExtent = (value: number) => `Value: ${value.toFixed(3)}`
-const mouseOverFormatterNoExtent = new MouseOver(undefined, formatNumberNoExtent)
-axesFormatterNoExtent.accept(mouseOverFormatterNoExtent)
+const mouseOverNoExtent = new MouseOver(undefined, formatNumberNoExtent)
+axesFormatterNoExtent.accept(mouseOverNoExtent)
+
+// Add mouseover with custom formatter.
+function mouseOverFormatter(
+  d: void | { point: DataPointXY; style: SvgPropertiesHyphen },
+  precision: number,
+): void | HTMLSpanElement {
+  if (d) {
+    const value = d.point
+    if (value.y !== undefined) {
+      const spanElement = document.createElement('span')
+      if (d.style.color) {
+        spanElement.style.background = d.style.color
+      }
+      spanElement.innerText = `Formatted: ${d.point.y.toFixed(precision)}`
+      return spanElement
+    }
+  }
+}
+const axesCustomMouseOverLabel = createExampleChart(
+  'chart-container-5',
+  exampleValueData,
+  AxisType.value,
+  [-6, 12],
+  [-3, 5],
+  {formatter: mouseOverFormatter},
+)
+const mouseOver = new MouseOver(undefined)
+axesCustomMouseOverLabel.accept(mouseOver)
 
 // Add vertical mouseover.
 const axesVertical = createExampleChart(
-  'chart-container-5',
+  'chart-container-6',
   exampleValueData,
   AxisType.value,
   [-6, 12],
@@ -176,7 +215,7 @@ axesVertical.accept(mouseOverVertical)
 
 // Add vertical mouseover with number formatter.
 const axesVerticalFormatter = createExampleChart(
-  'chart-container-6',
+  'chart-container-7',
   exampleValueData,
   AxisType.value,
   [-6, 12],
