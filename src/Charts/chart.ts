@@ -4,7 +4,7 @@ import { Axes, AxisIndex } from '../Axes/axes.js'
 import { CartesianAxes, PolarAxes } from '../index.js'
 import { defaultsDeep, isNull, merge } from 'lodash-es'
 import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js'
-import type { DataPoint, DataPointXY } from '../Data/types.js'
+import type { DataPoint, DataPointXY, DataValue } from '../Data/types.js'
 import { dataExtentFor } from '../Data/dataExtentFor.js'
 import { setAlphaForColor } from '../Utils/setAlphaForColor.js'
 
@@ -214,15 +214,22 @@ export abstract class Chart {
     const xScale = xScales[xIndex]
     const yIndex = this.axisIndex.y.axisIndex
     const yScale = yScales[yIndex]
-    const point = this.onPointerMove(xScale.invert(mouse[0]), xScale, yScale)
-    if (point) {
-      let color = point.style?.color
+    const d = this.onPointerMove(xScale.invert(mouse[0]), xScale, yScale)
+    return this.defaultMouseOverFormatterCartesian(d, precision)
+  }
+
+  protected defaultMouseOverFormatterCartesian(
+    d: void | { point: DataPointXY; style: SvgPropertiesHyphen },
+    precision: number,
+  ): void | HTMLSpanElement {
+    if (d) {
+      let color = d.style?.color
       if (color) {
         color = setAlphaForColor(color, 1)
       }
-      const value = point.point
+      const value = d.point
       if (value.y !== undefined) {
-        const label = this.defaultMouseOverText(value.y, precision)
+        const label = this.mouseOverTextFormatter(value.y, precision)
         const spanElement = document.createElement('span')
         spanElement.style.color = color
         spanElement.innerText = label
@@ -231,18 +238,19 @@ export abstract class Chart {
     }
   }
 
-  private defaultMouseOverText(data: number | number[] | any, precision: number): string {
+  protected mouseOverTextFormatter(data: DataValue, precision: number): string {
     const s = d3.formatSpecifier('f')
     s.precision = precision
     const formatNumber = d3.format(s.toString())
 
-    if (Array.isArray(data) && typeof data[0] === 'number') {
+    if (Array.isArray(data)) {
       const labels = [...data].sort((a, b) => a - b).map(formatNumber)
       return labels.join('–')
     } else if (typeof data === 'number') {
       return formatNumber(data)
+    } else if (data instanceof Date) {
+      return data.toISOString()
     }
-    return data
   }
 
   protected defaultToolTipFormatterCartesian(d): HTMLElement {
