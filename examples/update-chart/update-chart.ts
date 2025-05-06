@@ -1,33 +1,54 @@
-function onLoad() {
+import '@lib/scss/wb-charts.scss'
+import '@shared/shared.css'
+import './update-chart.css'
 
-  function createData() {
-    var currentTime = new Date()
-    var timeStep = 5 * 60 * 60 * 1000 // 5 minutes
-    var windDirData = [
+import {
+  AxisPosition,
+  CartesianAxes,
+  ChartLine,
+  MouseOver,
+  ZoomHandler,
+  PolarAxes,
+  Direction,
+  ChartArrow,
+  Legend,
+} from '@lib'
+import { addListenerById } from '@shared'
+
+interface DataEntry {
+  t: Date
+  y: number
+}
+
+function onLoad() {
+  function createData(): DataEntry[] {
+    const currentTime = new Date()
+    const timeStep = 5 * 60 * 60 * 1000 // 5 minutes
+    const windDirData = [
       {
         t: new Date(currentTime.getTime() - timeStep),
-        y: 360*Math.random()
+        y: 360 * Math.random(),
       },
       {
         t: currentTime,
-        y: 360*Math.random()
+        y: 360 * Math.random(),
       },
       {
         t: new Date(currentTime.getTime() + timeStep),
-        y: 360*Math.random()
+        y: 360 * Math.random(),
       },
     ]
     return windDirData
   }
 
   // Create wind direction chart
-  defaultYDomain = [0, 360]
-  var chartContainer = document.getElementById('chart-wind-direction-time')
-  var windDirAxis = new wbCharts.CartesianAxes(chartContainer, null, null, {
+  const defaultYDomain = [0, 360]
+  const chartContainer = document.getElementById('chart-wind-direction-time')
+  const windDirAxis = new CartesianAxes(chartContainer, null, null, {
     x: [
       {
         type: 'time',
-        position: wbCharts.AxisPosition.Bottom,
+        position: AxisPosition.Bottom,
         showGrid: true,
       },
     ],
@@ -38,7 +59,7 @@ function onLoad() {
         type: 'degrees',
         domain: defaultYDomain,
         defaultDomain: defaultYDomain,
-        position: wbCharts.AxisPosition.Left,
+        position: AxisPosition.Left,
         showGrid: true,
         nice: true,
       },
@@ -50,10 +71,10 @@ function onLoad() {
   })
 
   // Create wind rose
-  var containerWindrose = document.getElementById('chart-wind-rose')
-  windRoseAxis = new wbCharts.PolarAxes(containerWindrose, null, null, {
+  const containerWindrose = document.getElementById('chart-wind-rose')
+  const windRoseAxis = new PolarAxes(containerWindrose, null, null, {
     angular: {
-      direction: wbCharts.Direction.CLOCKWISE,
+      direction: Direction.CLOCKWISE,
       intercept: Math.PI / 2,
       format: (value) => `${value}°`,
     },
@@ -61,30 +82,35 @@ function onLoad() {
   })
 
   // Create data and add to chart and windrose
-  var windDirObservedData = createData()
-  var windDirObsChartLine = new wbCharts.ChartLine(windDirObservedData, {})
-  windDirObsChartLine.addTo(windDirAxis, { x: { key: 't', axisIndex: 0 }, y: { key: 'y', axisIndex: 0 } },
+  let windDirObservedData = createData()
+  const windDirObsChartLine = new ChartLine(windDirObservedData, {})
+  windDirObsChartLine.addTo(
+    windDirAxis,
+    { x: { key: 't', axisIndex: 0 }, y: { key: 'y', axisIndex: 0 } },
     'winddirection',
-    '#winddirection-line-time'
+    '#winddirection-line-time',
   )
 
-  var windDirModelData = createData()
-  var windDirModelChart = new wbCharts.ChartLine(windDirModelData, {})
-  windDirModelChart.addTo(windDirAxis, { x: { key: 't', axisIndex: 0 }, y: { key: 'y', axisIndex: 0 } },
+  let windDirModelData = createData()
+  const windDirModelChart = new ChartLine(windDirModelData, {})
+  windDirModelChart.addTo(
+    windDirAxis,
+    { x: { key: 't', axisIndex: 0 }, y: { key: 'y', axisIndex: 0 } },
     'winddirection-forecast',
-    '#winddirection-forecast-line-time'
+    '#winddirection-forecast-line-time',
   )
 
-  function cartesianDataToArrowData(data) {
-    var input = document.getElementById('slider')
-    return [{
-      x: [1,0],
-      y: [data[input.value].y, data[input.value].y]
-    }]
+  function cartesianDataToArrowData(data: DataEntry[]) {
+    const input = document.getElementById('slider') as HTMLInputElement
+    return [
+      {
+        x: [1, 0],
+        y: [data[input.value].y, data[input.value].y],
+      },
+    ]
   }
 
-  windDirObsChartArrow = new wbCharts.ChartArrow(cartesianDataToArrowData(windDirObservedData),
-  {
+  const windDirObsChartArrow = new ChartArrow(cartesianDataToArrowData(windDirObservedData), {
     transitionTime: null,
     symbol: { size: 64 },
     radial: { includeInTooltip: false },
@@ -94,11 +120,10 @@ function onLoad() {
     windRoseAxis,
     { radial: { key: 'x' }, angular: { key: 'y' } },
     'direction-measured',
-    '#polar-line'
+    '#polar-line',
   )
 
-  windDirModelChartArrow = new wbCharts.ChartArrow(cartesianDataToArrowData(windDirModelData),
-  {
+  const windDirModelChartArrow = new ChartArrow(cartesianDataToArrowData(windDirModelData), {
     transitionTime: null,
     symbol: { size: 64 },
     radial: { includeInTooltip: false },
@@ -108,27 +133,27 @@ function onLoad() {
     windRoseAxis,
     { radial: { key: 'x' }, angular: { key: 'y' } },
     'direction-forecast',
-    '#polar-line-forecast'
+    '#polar-line-forecast',
   )
 
   // Create legend and other visitors
-  var legendWindDirection = new wbCharts.Legend(
+  const legendWindDirection = new Legend(
     [
       { selector: 'winddirection', label: 'Windrichting meting' },
       { selector: 'winddirection-forecast', label: 'Windrichting model' },
     ],
-    document.getElementById('legend-wind-direction-time')
+    document.getElementById('legend-wind-direction-time'),
   )
-  var legendWindRose = new wbCharts.Legend(
+  const legendWindRose = new Legend(
     [
       { selector: 'direction-measured', label: 'Windrichting meting' },
       { selector: 'direction-forecast', label: 'Windrichting verwachting' },
     ],
-    document.getElementById('legend-wind-rose')
+    document.getElementById('legend-wind-rose'),
   )
 
-  mouseOver = new wbCharts.MouseOver(['winddirection', 'winddirection-forecast'])
-  zoom = new wbCharts.ZoomHandler()
+  const mouseOver = new MouseOver(['winddirection', 'winddirection-forecast'])
+  const zoom = new ZoomHandler()
   // Draw chart and add visitors
   windDirAxis.accept(zoom)
   windDirAxis.redraw({ x: { autoScale: true }, y: { autoScale: true } })
@@ -154,7 +179,7 @@ function onLoad() {
       y: {
         nice: false,
         domain: undefined,
-      }
+      },
     })
 
     // Update the windrose
@@ -164,7 +189,7 @@ function onLoad() {
   }
 
   addListenerById('update-data-button', 'click', () => updateData())
-  var input = document.getElementById('slider')
+  const input = document.getElementById('slider') as HTMLInputElement
   input.onchange = function () {
     windDirObsChartArrow.data = cartesianDataToArrowData(windDirObservedData)
     windDirModelChartArrow.data = cartesianDataToArrowData(windDirModelData)
