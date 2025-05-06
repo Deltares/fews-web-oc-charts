@@ -37,6 +37,7 @@ export class CartesianAxes extends Axes {
   xInitialExtent: Array<any> = []
   yInitialExtent: Array<any> = []
   clipPathId: string
+  xDomainCallbacks: DomainChangeCallback[] = []
   declare options: CartesianAxesOptions
 
   constructor(
@@ -134,9 +135,16 @@ export class CartesianAxes extends Axes {
       scales = this.yScales
       initialExtents = this.yInitialExtent
     }
-    for (const axisIndex of [0, 1]) {
+    for (const axisIndex of [0, 1] as (0 | 1)[]) {
       const scale = scales[axisIndex]
       if (!scale) continue
+
+      const setCurrentDomain = (domain: [number, number] | [Date, Date]) =>
+        this.setDomain(axisKey, axisIndex, domain)
+      const makeDomainNice = () => {
+        const updatedDomain = niceDomain(scale.domain(), 16)
+        setCurrentDomain(updatedDomain)
+      }
 
       const axisOptions = this.options[axisKey][axisIndex]
       const axisScaleOptions: ScaleOptions = {
@@ -147,8 +155,8 @@ export class CartesianAxes extends Axes {
       }
       const zoomOptions = { ...{ autoScale: false }, ...axisScaleOptions, ...options }
       if (zoomOptions?.domain) {
-        scale.domain(zoomOptions.domain)
-        if (zoomOptions?.nice === true) scale.domain(niceDomain(scale.domain(), 16))
+        setCurrentDomain(zoomOptions.domain)
+        if (zoomOptions?.nice === true) makeDomainNice()
       } else if (zoomOptions.autoScale === true || zoomOptions.fullExtent === true) {
         let defaultExtent
         let dataExtent = new Array(2)
@@ -169,8 +177,8 @@ export class CartesianAxes extends Axes {
             dataExtent = d3.extent([...dataExtent, 0])
           }
         }
-        scale.domain(dataExtent)
-        if (zoomOptions?.nice === true) scale.domain(niceDomain(scale.domain(), 16))
+        setCurrentDomain(dataExtent as [number, number] | [Date, Date])
+        if (zoomOptions?.nice === true) makeDomainNice()
       } else if (this.options[axisKey][axisIndex].type === AxisType.band) {
         let extent = new Array(0)
         for (const chart of this.charts) {
@@ -179,7 +187,7 @@ export class CartesianAxes extends Axes {
             break
           }
         }
-        scale.domain(extent)
+        setCurrentDomain(extent as [number, number] | [Date, Date])
       }
       const domain = scale.domain()
       if (initialExtents[axisIndex] === undefined && !isNaN(domain[0]) && !isNaN(domain[1]))
@@ -358,6 +366,26 @@ export class CartesianAxes extends Axes {
         .attr('x', this.width + 10)
         .text(this.options.x[1].unit)
     }
+  }
+
+  getScale(axisKey: keyof CartesianAxesOptions, axisIndex: 0 | 1): any {
+    const scales = axisKey === 'x' ? this.xScales : this.yScales
+    const scale = scales[axisIndex]
+    return scale
+  }
+
+  setDomain(
+    axisKey: keyof CartesianAxesOptions,
+    axisIndex: 0 | 1,
+    domain: [number, number] | [Date, Date],
+  ): void {
+    const scale = this.getScale(axisKey, axisIndex)
+    if (!scale) {
+      throw new Error(
+        `Cannot set domain of ${axisKey}-axis ${axisIndex} because the axis does not exist.`,
+      )
+    }
+    scale.domain(domain)
   }
 
   protected initXScales(options: CartesianAxisOptions[]): void {
