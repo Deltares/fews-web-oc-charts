@@ -53,13 +53,25 @@ exampleFolders.forEach((folder) => {
 })
 
 export default defineConfig({
+  plugins: [
+    {
+      name: 'redirect-home',
+      configureServer(server) {
+        server.middlewares.use((req, res, next) => {
+          if (req.url === '/') {
+            res.writeHead(302, { Location: '/dist/index.html' })
+            res.end()
+          } else {
+            next()
+          }
+        })
+      },
+    },
+  ],
   build: {
     rollupOptions: {
       input: inputEntries,
     },
-  },
-  server: {
-    open: '/dist/index.html',
   },
   resolve: {
     alias: {
