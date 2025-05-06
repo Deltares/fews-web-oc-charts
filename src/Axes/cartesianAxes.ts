@@ -134,9 +134,11 @@ export class CartesianAxes extends Axes {
       scales = this.yScales
       initialExtents = this.yInitialExtent
     }
-    for (const key in scales) {
-      const scale = scales[key]
-      const axisOptions = this.options[axisKey][key]
+    for (const axisIndex of [0, 1]) {
+      const scale = scales[axisIndex]
+      if (!scale) continue
+
+      const axisOptions = this.options[axisKey][axisIndex]
       const axisScaleOptions: ScaleOptions = {
         domain: axisOptions.domain,
         nice: axisOptions.nice,
@@ -153,7 +155,7 @@ export class CartesianAxes extends Axes {
         if (axisOptions?.defaultDomain !== undefined) {
           defaultExtent = axisOptions?.defaultDomain
         }
-        dataExtent = this.chartsExtent(axisKey, +key, zoomOptions)
+        dataExtent = this.chartsExtent(axisKey, axisIndex, zoomOptions)
         if (zoomOptions?.symmetric === true) {
           const max = Math.max(Math.abs(dataExtent[0]), Math.abs(dataExtent[1]))
           dataExtent[0] = -max
@@ -169,10 +171,10 @@ export class CartesianAxes extends Axes {
         }
         scale.domain(dataExtent)
         if (zoomOptions?.nice === true) scale.domain(niceDomain(scale.domain(), 16))
-      } else if (this.options[axisKey][key].type === AxisType.band) {
+      } else if (this.options[axisKey][axisIndex].type === AxisType.band) {
         let extent = new Array(0)
         for (const chart of this.charts) {
-          if (chart.axisIndex[axisKey]?.axisIndex === +key) {
+          if (chart.axisIndex[axisKey]?.axisIndex === axisIndex) {
             extent = chart.data.map((d) => d[chart.dataKeys[axisKey]])
             break
           }
@@ -180,8 +182,8 @@ export class CartesianAxes extends Axes {
         scale.domain(extent)
       }
       const domain = scale.domain()
-      if (initialExtents[key] === undefined && !isNaN(domain[0]) && !isNaN(domain[1]))
-        initialExtents[key] = domain
+      if (initialExtents[axisIndex] === undefined && !isNaN(domain[0]) && !isNaN(domain[1]))
+        initialExtents[axisIndex] = domain
     }
   }
 
