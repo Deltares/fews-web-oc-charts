@@ -1,6 +1,6 @@
 import * as d3 from 'd3'
 import type { Axes } from '../Axes/axes.js'
-import type { CartesianAxes, D3Selection } from '../index.js'
+import type { CartesianAxes, CartesianAxesOptions, D3Selection } from '../index.js'
 import type { Visitor } from './visitor.js'
 
 const SelectionMode = {
@@ -274,10 +274,18 @@ export class ZoomHandler implements Visitor {
     }
   }
 
-  private updateAxisScales(scales: Array<any>, point: [number, number], index: number): void {
-    for (const scale of scales) {
+  private updateAxisScales(
+    axis: CartesianAxes,
+    axisKey: keyof CartesianAxesOptions,
+    point: [number, number],
+    index: number,
+  ): void {
+    for (const axisIndex of [0, 1] as (0 | 1)[]) {
+      const scale = axis.getScale(axisKey, axisIndex)
+      if (!scale) continue
+
       const extent = d3.extent([point[index], this.brushStartPoint[index]].map(scale.invert))
-      scale.domain(extent)
+      axis.setDomain(axisKey, axisIndex, extent as [number, number] | [Date, Date])
     }
   }
 
@@ -296,13 +304,13 @@ export class ZoomHandler implements Visitor {
       const axes = [ZoomMode.X, ZoomMode.XY].includes(this.options.sharedZoomMode)
         ? this.axes
         : [axis]
-      axes.forEach((axis) => this.updateAxisScales(axis.xScales, point, 0))
+      axes.forEach((axis) => this.updateAxisScales(axis, 'x', point, 0))
     }
     const updateYScales = () => {
       const axes = [ZoomMode.Y, ZoomMode.XY].includes(this.options.sharedZoomMode)
         ? this.axes
         : [axis]
-      axes.forEach((axis) => this.updateAxisScales(axis.yScales, point, 1))
+      axes.forEach((axis) => this.updateAxisScales(axis, 'y', point, 1))
     }
     switch (this.mode) {
       case SelectionMode.X: {
