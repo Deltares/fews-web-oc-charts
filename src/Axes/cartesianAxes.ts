@@ -1,5 +1,5 @@
 import * as d3 from 'd3'
-import { defaultsDeep, merge } from 'lodash-es'
+import { defaultsDeep, isEqual, merge } from 'lodash-es'
 
 import { Axes, AxesOptions } from './axes.js'
 import { AxisType } from '../Axis/axisType.js'
@@ -20,6 +20,15 @@ export interface CartesianAxesOptions extends AxesOptions {
   x: CartesianAxisOptions[]
   y: CartesianAxisOptions[]
 }
+
+export interface DomainChangeEvent {
+  axisIndex: 0 | 1
+  old: [number, number] | [Date, Date]
+  new: [number, number] | [Date, Date]
+}
+
+export type CartesianAxesEventType = 'update:x-domain'
+export type DomainChangeCallback = (event: DomainChangeEvent) => void
 
 const defaultAxesOptions = {
   margin: { top: 20, right: 50, bottom: 20, left: 50 },
@@ -75,6 +84,16 @@ export class CartesianAxes extends Axes {
 
   get yScalesDomains(): Array<Array<number>> {
     return this.yScales.map((scale) => scale.domain())
+  }
+
+  addEventListener(_event: CartesianAxesEventType, callback: DomainChangeCallback) {
+    this.xDomainCallbacks.push(callback)
+  }
+
+  removeEventListener(_event: CartesianAxesEventType, callback: DomainChangeCallback) {
+    // Remove only the specified callback from the list of callbacks; this is a no-op
+    // if the specified callback does not exist.
+    this.xDomainCallbacks = this.xDomainCallbacks.filter((entry) => entry !== callback)
   }
 
   setDefaultAxisOptions(axisOptions: CartesianAxisOptions[], defaultOptions: CartesianAxisOptions) {
@@ -377,7 +396,7 @@ export class CartesianAxes extends Axes {
   setDomain(
     axisKey: keyof CartesianAxesOptions,
     axisIndex: 0 | 1,
-    domain: [number, number] | [Date, Date],
+    newDomain: [number, number] | [Date, Date],
   ): void {
     const scale = this.getScale(axisKey, axisIndex)
     if (!scale) {
@@ -385,7 +404,18 @@ export class CartesianAxes extends Axes {
         `Cannot set domain of ${axisKey}-axis ${axisIndex} because the axis does not exist.`,
       )
     }
-    scale.domain(domain)
+    const oldDomain = scale.domain()
+    scale.domain(newDomain)
+
+    // Call all domain change callbacks when the x-axis is changed.
+    if (axisKey === 'x' && this.xDomainCallbacks.length > 0 && !isEqual(oldDomain, newDomain)) {
+      const event: DomainChangeEvent = {
+        axisIndex,
+        old: oldDomain,
+        new: newDomain,
+      }
+      this.xDomainCallbacks.forEach((callback) => callback(event))
+    }
   }
 
   protected initXScales(options: CartesianAxisOptions[]): void {
