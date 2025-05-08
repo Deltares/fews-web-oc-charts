@@ -58,7 +58,7 @@ export interface MouseOverOptions {
   formatter?: (
     d: void | { point: DataPointXY; style: SvgPropertiesHyphen },
     precision: number,
-  ) => void | HTMLSpanElement
+  ) => HTMLSpanElement | undefined
   textFormatter?: (d: DataValue, precision: number) => string
 }
 
@@ -216,7 +216,7 @@ export abstract class Chart {
   mouseOverFormatterCartesian(
     d: void | { point: DataPointXY; style: SvgPropertiesHyphen },
     precision: number,
-  ): void | HTMLSpanElement {
+  ): HTMLSpanElement | undefined {
     if (this.options.mouseover === undefined || this.options.mouseover.formatter === undefined) {
       return this.defaultMouseOverFormatterCartesian(d, precision)
     } else {
@@ -227,7 +227,7 @@ export abstract class Chart {
   protected defaultMouseOverFormatterCartesian(
     d: void | { point: DataPointXY; style: SvgPropertiesHyphen },
     precision: number,
-  ): void | HTMLSpanElement {
+  ): HTMLSpanElement | undefined {
     if (d) {
       let color = d.style?.color
       if (color) {
@@ -242,6 +242,7 @@ export abstract class Chart {
         return spanElement
       }
     }
+    return undefined
   }
 
   protected defaultMouseOverTextFormatter(data: DataValue, precision: number): string {

@@ -178,7 +178,7 @@ axesFormatterNoExtent.accept(mouseOverNoExtent)
 function mouseOverFormatter(
   d: void | { point: DataPointXY; style: SvgPropertiesHyphen },
   precision: number,
-): void | HTMLSpanElement {
+): HTMLSpanElement | undefined {
   if (d) {
     const value = d.point
     if (value.y !== undefined) {
@@ -190,6 +190,7 @@ function mouseOverFormatter(
       return spanElement
     }
   }
+  return undefined
 }
 const axesCustomMouseOverLabel = createExampleChart(
   'chart-container-5',
