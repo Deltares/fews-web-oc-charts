@@ -120,6 +120,7 @@ export class CartesianAxes extends Axes {
       .attr('width', this.width)
       .attr('height', this.height)
       .attr('fill', 'none')
+      .attr('pointer-events', 'all')
   }
 
   updateCanvas(): void {
