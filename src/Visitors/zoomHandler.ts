@@ -101,6 +101,9 @@ export class ZoomHandler implements Visitor {
 
     mouseRect
       .on('mousedown', (event: MouseEvent) => {
+        // Only listen for left mouse button clicks.
+        if (event.button !== 0) return
+
         event.preventDefault()
         this.initSelection(axis, mouseGroup, brushGroup, d3.pointer(event))
         document.addEventListener('mouseup', documentMouseUp)
