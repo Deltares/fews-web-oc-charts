@@ -66,7 +66,7 @@ export class ZoomHandler implements Visitor {
   }
   createHandler(axis: CartesianAxes): void {
     const mouseGroup = axis.layers.mouse
-    const mouseRect = mouseGroup.select('rect').attr('pointer-events', 'all')
+    const mouseRect = mouseGroup.select('rect')
     const brushGroup = axis.canvas.insert('g', '.mouse').attr('class', 'brush')
     brushGroup.append('rect').attr('class', 'select-rect').attr('visibility', 'hidden')
     brushGroup
@@ -101,6 +101,10 @@ export class ZoomHandler implements Visitor {
 
     mouseRect
       .on('mousedown', (event: MouseEvent) => {
+        // Only listen for left mouse button clicks without modifying keys.
+        if (event.button !== 0) return
+        if (event.ctrlKey || event.shiftKey) return
+
         event.preventDefault()
         this.initSelection(axis, mouseGroup, brushGroup, d3.pointer(event))
         document.addEventListener('mouseup', documentMouseUp)

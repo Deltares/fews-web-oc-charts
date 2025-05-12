@@ -1,4 +1,4 @@
-const Layers = {
+export const Layers = {
   canvas: undefined,
   grid: undefined,
   axis: undefined,
@@ -8,7 +8,7 @@ const Layers = {
   mouse: undefined,
 } as const
 
-type LayerKeys = keyof typeof Layers
+export type LayerKeys = keyof typeof Layers
 
 export function createLayers(element, width, height) {
   const result: Record<LayerKeys, any> = { ...Layers }
