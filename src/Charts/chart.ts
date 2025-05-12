@@ -217,7 +217,7 @@ export abstract class Chart {
     d: void | { point: DataPointXY; style: SvgPropertiesHyphen },
     precision: number,
   ): HTMLSpanElement | undefined {
-    if (this.options.mouseover?.textFormatter === undefined) {
+    if (this.options.mouseover?.formatter === undefined) {
       return this.defaultMouseOverFormatterCartesian(d, precision)
     } else {
       return this.options.mouseover.formatter(d, precision)
