@@ -25,6 +25,7 @@ export interface DomainChangeEvent {
   axisIndex: 0 | 1
   old: [number, number] | [Date, Date]
   new: [number, number] | [Date, Date]
+  fromZoomReset: boolean
 }
 
 export type CartesianAxesEventType = 'update:x-domain'
@@ -49,6 +50,8 @@ export class CartesianAxes extends Axes {
   xDomainCallbacks: DomainChangeCallback[] = []
   declare options: CartesianAxesOptions
 
+  private isDomainChangeFromZoomReset
+
   constructor(
     container: HTMLElement,
     width: number | null,
@@ -56,6 +59,8 @@ export class CartesianAxes extends Axes {
     options: CartesianAxesOptions,
   ) {
     super(container, width, height, options, defaultAxesOptions)
+    this.isDomainChangeFromZoomReset = false
+
     // Set defaults for each x- and y-axis.
     this.setDefaultAxisOptions(this.options.x, defaultAxesOptions.x[0])
     this.setDefaultAxisOptions(this.options.y, defaultAxesOptions.y[0])
@@ -243,6 +248,9 @@ export class CartesianAxes extends Axes {
     for (const visitor of this.visitors) {
       visitor.redraw()
     }
+    // Reset keeping track of zoom resets after the first redraw call after a
+    // zoom reset.
+    this.isDomainChangeFromZoomReset = false
   }
 
   removeInitialExtent(): void {
@@ -267,6 +275,7 @@ export class CartesianAxes extends Axes {
     ) {
       yOptions.fullExtent = true
     }
+    this.isDomainChangeFromZoomReset = true
     this.redraw({ x: xOptions, y: yOptions })
   }
 
@@ -414,6 +423,7 @@ export class CartesianAxes extends Axes {
         axisIndex,
         old: oldDomain,
         new: newDomain,
+        fromZoomReset: this.isDomainChangeFromZoomReset,
       }
       this.xDomainCallbacks.forEach((callback) => callback(event))
     }
