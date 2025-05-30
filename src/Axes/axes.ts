@@ -154,11 +154,15 @@ export abstract class Axes {
     }
     this.charts.splice(i, 1)
     this.chartGroup.selectAll(`[data-chart-id="${id}"]`).remove()
+    const front = this.canvas.select<SVGGElement>('.front')
+    if (front) {
+      front.selectAll(`[data-chart-id="${id}"]`).remove()
+    }
   }
 
   removeAllCharts(): void {
     for (const chart of this.charts) {
-      chart.group = null
+      this.removeChart(chart.id)
     }
     this.charts = []
     this.chartGroup.selectAll('g').remove()
