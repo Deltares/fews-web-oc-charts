@@ -166,18 +166,23 @@ export class ChartLine extends Chart {
       this.highlight.select('circle').style('opacity', 0)
       return
     }
+    const element = this.group.select('path')
+    const color =
+      element.node() === null
+        ? null
+        : window.getComputedStyle(element.node() as Element).getPropertyValue('stroke')
+
     this.highlight
       .select('circle')
       .attr('transform', () => {
         return `translate(${xScale(point.x)}, ${yScale(point.y)})`
       })
       .style('opacity', 1)
+      .style('fill', color)
 
-    const element = this.group.select('path')
-    if (element.node() === null) {
+    if (color === null) {
       return { point, style: {} }
     } else {
-      const color = window.getComputedStyle(element.node() as Element).getPropertyValue('stroke')
       return { point, style: { color } }
     }
   }
