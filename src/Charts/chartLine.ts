@@ -1,6 +1,6 @@
 import * as d3 from 'd3'
 import { CartesianAxes, PolarAxes } from '../index.js'
-import { Chart, CurveType, type PointAlignment } from './chart.js'
+import { Chart } from './chart.js'
 import { TooltipPosition } from '../Tooltip/tooltip.js'
 
 export class ChartLine extends Chart {
