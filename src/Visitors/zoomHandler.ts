@@ -146,8 +146,21 @@ export class ZoomHandler implements Visitor {
     axis.container.dispatchEvent(zoomEvent)
   }
 
-  private updateZoomAxisScales(scales: Array<any>, coord: number, factor: number): void {
-    for (const scale of scales) {
+  private updateZoomAxisScales(
+    axis: CartesianAxes,
+    axisKey: keyof CartesianAxesOptions,
+    coord: number,
+    factor: number,
+  ): void {
+    for (const axisIndex of [0, 1] as (0 | 1)[]) {
+      const scale = axis.getScale(axisKey, axisIndex)
+      if (!scale) continue
+
+      const axisOptions = axis.options[axisKey][axisIndex]
+      const isBandScale = axisOptions?.type === 'band'
+      // Skipping band scales as they do not have a numeric domain
+      if (isBandScale) continue
+
       const x = scale.invert(coord)
       scale.domain([x - (x - scale.domain()[0]) * factor, x - (x - scale.domain()[1]) * factor])
     }
@@ -158,13 +171,13 @@ export class ZoomHandler implements Visitor {
       const axes = [ZoomMode.X, ZoomMode.XY].includes(this.options.sharedZoomMode)
         ? this.axes
         : [axis]
-      axes.forEach((axis) => this.updateZoomAxisScales(axis.xScales, point[0], factor))
+      axes.forEach((axis) => this.updateZoomAxisScales(axis, 'x', point[0], factor))
     }
     const updateYScales = () => {
       const axes = [ZoomMode.Y, ZoomMode.XY].includes(this.options.sharedZoomMode)
         ? this.axes
         : [axis]
-      axes.forEach((axis) => this.updateZoomAxisScales(axis.yScales, point[1], factor))
+      axes.forEach((axis) => this.updateZoomAxisScales(axis, 'y', point[1], factor))
     }
     switch (this.options.wheelMode) {
       case WheelMode.X:
@@ -287,6 +300,11 @@ export class ZoomHandler implements Visitor {
     for (const axisIndex of [0, 1] as (0 | 1)[]) {
       const scale = axis.getScale(axisKey, axisIndex)
       if (!scale) continue
+
+      const axisOptions = axis.options[axisKey][axisIndex]
+      const isBandScale = axisOptions?.type === 'band'
+      // Skipping band scales as they do not have a numeric domain
+      if (isBandScale) continue
 
       const extent = d3.extent([point[index], this.brushStartPoint[index]].map(scale.invert))
       axis.setDomain(axisKey, axisIndex, extent as [number, number] | [Date, Date])
