@@ -1,5 +1,5 @@
 import * as d3 from 'd3'
-import { CartesianAxes, PolarAxes } from '../index.js'
+import { AxisType, CartesianAxes, PolarAxes } from '../index.js'
 import { Chart, AUTO_SCALE } from './chart.js'
 import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js'
 
@@ -20,6 +20,20 @@ export class ChartMatrix extends Chart {
     this.setPadding(x0, this.options.x)
     this.setPadding(y0, this.options.y)
 
+    const axisOptions = axis.options.x[axisIndex.x.axisIndex]
+    const isBandScale = axisOptions?.type === AxisType.band
+
+    const mappedData = this.mapDataCartesian(xScale.domain())
+
+    const xRect = (_d: unknown, i: number) => {
+      return i === 0 ? 0 : xScale(mappedData[i - 1][xKey])
+    }
+    const getWidthRect = (_: unknown, i: number) => {
+      return i === 0
+        ? xScale(mappedData[i][xKey])
+        : xScale(mappedData[i][xKey]) - xScale(mappedData[i - 1][xKey])
+    }
+
     const colorScale = d3.scaleLinear().domain([0, 1])
     if (this.options.colorScale === AUTO_SCALE) {
       colorScale.domain(
@@ -35,17 +49,17 @@ export class ChartMatrix extends Chart {
 
     const elements = this.group
       .selectAll('rect')
-      .data(data)
+      .data(isBandScale ? data : mappedData)
       .join('rect')
       .attr('display', (d) => {
         return d[valueKey] === null ? 'none' : undefined
       })
-      .attr('x', (d) => x0(d[xKey]))
+      .attr('x', isBandScale ? (d) => x0(d[xKey]) : xRect)
       .attr('y', (d) => y0(d[yKey]))
-      .attr('width', x0.bandwidth())
+      .attr('width', isBandScale ? x0.bandwidth() : getWidthRect)
       .attr('height', y0.bandwidth())
       .attr('stroke-width', 0)
-      .attr('shape-rendering', 'auto')
+      .attr('shape-rendering', 'crispEdges')
       .attr('fill', (d) => (d[colorKey] !== null ? colorMap(d[colorKey]) : 'none'))
     if (this.options.tooltip !== undefined) {
       elements

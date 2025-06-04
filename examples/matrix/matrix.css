@@ -14,3 +14,8 @@
   width: 100%;
   height: 100px;
 }
+
+#chart-container-time {
+  width: 100%;
+  height: 200px;
+}

@@ -8,6 +8,7 @@ export function niceDomain(
   count: number,
   axisType = AxisType.value,
 ): [number, number] {
+  if (axisType === AxisType.band) return domain
   if (domain === undefined) return
   // Minimal increment to avoid round extreme values to be on the edge of the chart
   let max = domain[1]

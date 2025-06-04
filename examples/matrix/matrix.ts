@@ -7,6 +7,7 @@ import '@shared/theme-button'
 import exampleDataComplete from './example-data.json'
 
 import { AxisType, CartesianAxes, ChartMatrix, TooltipAnchor } from '@lib'
+import { generateExampleTimeSeriesData } from '@shared'
 
 interface ExampleMatrixData {
   i: number
@@ -28,10 +29,10 @@ function generateExampleMatrix(
   return data
 }
 
-function createMatrixAxes(containerId: string): CartesianAxes {
+function createMatrixAxes(containerId: string, xAxisType: AxisType): CartesianAxes {
   const container = document.getElementById(containerId)
   return new CartesianAxes(container, null, null, {
-    x: [{ type: AxisType.band }],
+    x: [{ type: xAxisType }],
     y: [{ type: AxisType.band }],
     margin: {
       top: 0,
@@ -44,7 +45,7 @@ function createMatrixAxes(containerId: string): CartesianAxes {
 }
 
 // Create matrix plot showing the (random) sparsity pattern of a matrix.
-const axesSparse = createMatrixAxes('chart-container-sparsity')
+const axesSparse = createMatrixAxes('chart-container-sparsity', AxisType.band)
 const matrixData = generateExampleMatrix(25, 25, 0.7)
 const matrixSparse = new ChartMatrix(matrixData, {
   x: {
@@ -88,7 +89,7 @@ const colorForAvailability = (availability: string) => {
       return 'black'
   }
 }
-const axesAvailability = createMatrixAxes('chart-container-availability')
+const axesAvailability = createMatrixAxes('chart-container-availability', AxisType.band)
 const matrixAvailability = new ChartMatrix(exampleDataComplete, {
   x: {
     paddingOuter: 0.1,
@@ -119,3 +120,31 @@ matrixAvailability.addTo(
 // Note: we cannot redraw with autoscale enabled, as this cuts off data. See
 //       issue #132.
 axesAvailability.redraw({})
+
+// Generate simple scalar example data.
+const startTime = new Date('2025-01-01T12:00Z')
+const endTime = new Date('2025-01-02T12:00Z')
+const exampleData = generateExampleTimeSeriesData([startTime, endTime], [-2, 4], 100).map(
+  (event) => ({
+    x: event.x,
+    y: Math.round(event.y)
+  }),
+)
+
+const axesTime = createMatrixAxes('chart-container-time', AxisType.time)
+
+const matrixTime = new ChartMatrix(exampleData, {
+  color: { map: () => 'blue' },
+})
+matrixTime.addTo(
+  axesTime,
+  {
+    x: { key: 'x', axisIndex: 0 },
+    y: { key: 'y', axisIndex: 0 },
+  },
+  'example-time',
+  {},
+)
+axesTime.redraw({
+  x: { autoScale: true },
+})

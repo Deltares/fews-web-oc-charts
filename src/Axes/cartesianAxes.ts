@@ -164,14 +164,14 @@ export class CartesianAxes extends Axes {
       const scale = scales[axisIndex]
       if (!scale) continue
 
+      const axisOptions = this.options[axisKey][axisIndex]
       const setCurrentDomain = (domain: [number, number] | [Date, Date]) =>
         this.setDomain(axisKey, axisIndex, domain)
       const makeDomainNice = () => {
-        const updatedDomain = niceDomain(scale.domain(), 16)
+        const updatedDomain = niceDomain(scale.domain(), 16, axisOptions.type)
         setCurrentDomain(updatedDomain)
       }
 
-      const axisOptions = this.options[axisKey][axisIndex]
       const axisScaleOptions: ScaleOptions = {
         domain: axisOptions.domain,
         nice: axisOptions.nice,
@@ -182,6 +182,10 @@ export class CartesianAxes extends Axes {
       if (zoomOptions?.domain) {
         setCurrentDomain(zoomOptions.domain)
         if (zoomOptions?.nice === true) makeDomainNice()
+      } else if (axisOptions.type === AxisType.band) {
+        const charts = this.charts.filter(chart => chart.axisIndex[axisKey]?.axisIndex === axisIndex)
+        const extent = charts.flatMap((chart) => chart.data.map((d) => d[chart.dataKeys[axisKey]]))
+        setCurrentDomain(extent as [number, number] | [Date, Date])
       } else if (zoomOptions.autoScale === true || zoomOptions.fullExtent === true) {
         let defaultExtent
         let dataExtent = new Array(2)
@@ -204,15 +208,6 @@ export class CartesianAxes extends Axes {
         }
         setCurrentDomain(dataExtent as [number, number] | [Date, Date])
         if (zoomOptions?.nice === true) makeDomainNice()
-      } else if (this.options[axisKey][axisIndex].type === AxisType.band) {
-        let extent = new Array(0)
-        for (const chart of this.charts) {
-          if (chart.axisIndex[axisKey]?.axisIndex === axisIndex) {
-            extent = chart.data.map((d) => d[chart.dataKeys[axisKey]])
-            break
-          }
-        }
-        setCurrentDomain(extent as [number, number] | [Date, Date])
       }
       const domain = scale.domain()
       if (initialExtents[axisIndex] === undefined && !isNaN(domain[0]) && !isNaN(domain[1]))
