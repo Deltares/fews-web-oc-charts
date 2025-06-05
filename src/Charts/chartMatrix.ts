@@ -29,9 +29,7 @@ export class ChartMatrix extends Chart {
       return i === 0 ? 0 : xScale(mappedData[i - 1][xKey])
     }
     const getWidthRect = (_: unknown, i: number) => {
-      return i === 0
-        ? xScale(mappedData[i][xKey])
-        : xScale(mappedData[i][xKey]) - xScale(mappedData[i - 1][xKey])
+      return i === 0 ? 0 : xScale(mappedData[i][xKey]) - xScale(mappedData[i - 1][xKey])
     }
 
     const colorScale = d3.scaleLinear().domain([0, 1])
