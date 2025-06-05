@@ -124,23 +124,26 @@ axesAvailability.redraw({})
 // Generate simple scalar example data.
 const startTime = new Date('2025-01-01T12:00Z')
 const endTime = new Date('2025-01-02T12:00Z')
-const exampleData = generateExampleTimeSeriesData([startTime, endTime], [-2, 4], 100).map(
-  (event) => ({
+const colors = ['red', 'green', 'blue', 'orange', 'purple', 'cyan']
+const exampleData = generateExampleTimeSeriesData([startTime, endTime], [-2, 4], 10).map(
+  (event, i) => ({
     x: event.x,
-    y: Math.round(event.y)
+    y: Math.round(event.y),
+    color: colors[i % colors.length],
   }),
 )
 
 const axesTime = createMatrixAxes('chart-container-time', AxisType.time)
 
 const matrixTime = new ChartMatrix(exampleData, {
-  color: { map: () => 'blue' },
+  color: { map: (value: string) => value },
 })
 matrixTime.addTo(
   axesTime,
   {
     x: { key: 'x', axisIndex: 0 },
     y: { key: 'y', axisIndex: 0 },
+    color: { key: 'color' },
   },
   'example-time',
   {},
