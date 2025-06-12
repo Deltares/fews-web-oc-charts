@@ -94,7 +94,12 @@ export class ZoomHandler implements Visitor {
       .attr('width', 2 * this.MINMOVE)
       .attr('height', 4)
 
-    const documentMouseUp = (): void => {
+    const documentMouseUp = (event: MouseEvent): void => {
+      // If this mouseup event is handled by the listener on the mouseRect, just
+      // return.
+      const isWithinAxes = mouseRect.nodes().some((node: HTMLElement) => node === event.target)
+      if (isWithinAxes) return
+
       this.endSelection(axis, mouseGroup, brushGroup, null)
     }
 
@@ -106,14 +111,18 @@ export class ZoomHandler implements Visitor {
 
         event.preventDefault()
         this.initSelection(axis, mouseGroup, brushGroup, d3.pointer(event))
+        mouseRect.on(
+          'mouseup',
+          (event: MouseEvent) => {
+            this.endSelection(axis, mouseGroup, brushGroup, d3.pointer(event))
+            this.axes.forEach((axis) => {
+              this.dispatchZoomEvent(axis)
+            })
+            mouseGroup.dispatch('pointerover')
+          },
+          { once: true },
+        )
         document.addEventListener('mouseup', documentMouseUp, { once: true })
-      })
-      .on('mouseup', (event: MouseEvent) => {
-        this.endSelection(axis, mouseGroup, brushGroup, d3.pointer(event))
-        this.axes.forEach((axis) => {
-          this.dispatchZoomEvent(axis)
-        })
-        mouseGroup.dispatch('pointerover')
       })
       .on('dblclick', () => {
         this.axes.forEach((axis) => this.resetZoom(axis))
