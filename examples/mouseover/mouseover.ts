@@ -5,7 +5,16 @@ import './mouseover.css'
 
 import '@shared/theme-button'
 
-import { AxisType, CartesianAxes, ChartLine, MouseOver, VerticalMouseOver, type ChartOptions, type DataPointXY, type MouseOverOptions } from '@lib'
+import {
+  AxisType,
+  CartesianAxes,
+  ChartLine,
+  MouseOver,
+  VerticalMouseOver,
+  type ChartOptions,
+  type DataPointXY,
+  type MouseOverOptions,
+} from '@lib'
 import {
   ExampleEvent,
   generateExampleTimeSeriesData,
@@ -150,7 +159,7 @@ const axesFormatter = createExampleChart(
   AxisType.value,
   [-6, 12],
   [-3, 5],
-  {textFormatter: mouseOverTextFormatter},
+  { textFormatter: mouseOverTextFormatter },
 )
 
 const formatNumber = (value: number, extent: [number, number]) => {
@@ -169,7 +178,7 @@ const axesFormatterNoExtent = createExampleChart(
   AxisType.value,
   [-6, 12],
   [-3, 5],
-  {textFormatter: formatNumberNoExtent},
+  { textFormatter: formatNumberNoExtent },
 )
 const mouseOverNoExtent = new MouseOver(undefined, formatNumberNoExtent)
 axesFormatterNoExtent.accept(mouseOverNoExtent)
@@ -198,7 +207,7 @@ const axesCustomMouseOverLabel = createExampleChart(
   AxisType.value,
   [-6, 12],
   [-3, 5],
-  {formatter: mouseOverFormatter},
+  { formatter: mouseOverFormatter },
 )
 const mouseOver = new MouseOver(undefined)
 axesCustomMouseOverLabel.accept(mouseOver)
