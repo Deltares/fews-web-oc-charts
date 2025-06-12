@@ -96,7 +96,6 @@ export class ZoomHandler implements Visitor {
 
     const documentMouseUp = (): void => {
       this.endSelection(axis, mouseGroup, brushGroup, null)
-      document.removeEventListener('mouseup', documentMouseUp)
     }
 
     mouseRect
@@ -107,10 +106,9 @@ export class ZoomHandler implements Visitor {
 
         event.preventDefault()
         this.initSelection(axis, mouseGroup, brushGroup, d3.pointer(event))
-        document.addEventListener('mouseup', documentMouseUp)
+        document.addEventListener('mouseup', documentMouseUp, { once: true })
       })
       .on('mouseup', (event: MouseEvent) => {
-        document.removeEventListener('mouseup', documentMouseUp)
         this.endSelection(axis, mouseGroup, brushGroup, d3.pointer(event))
         this.axes.forEach((axis) => {
           this.dispatchZoomEvent(axis)
