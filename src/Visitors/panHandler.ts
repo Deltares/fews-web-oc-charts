@@ -194,6 +194,10 @@ export class PanHandler implements Visitor {
     if (!isModifierKeyPress(keyboardEvent, this.modifierKey)) return
     window.addEventListener('keyup', this.keyUpCallback)
     window.removeEventListener('keydown', this.keyDownCallback)
+    // Also check whether the window loses focus, since Windows might highjack
+    // the keyup event, so we stay in a panning state. Just disable panning if
+    // we lose focus.
+    window.addEventListener('blur', () => this.disablePanning(), { once: true })
     this.enablePanning()
   }
 
