@@ -69,10 +69,19 @@ export class ZoomHandler implements Visitor {
 
     this.axes = []
   }
+
   visit(axis: Axes): void {
     this.axes.push(axis as CartesianAxes)
     this.createHandler(axis as CartesianAxes)
   }
+
+  updateOptions(options: Partial<ZoomHandlerOptions>): void {
+    this.options = { ...this.options, ...options }
+    if ('wheelMode' in options) {
+      this.axes.forEach((axis) => this.updateWheelMode(axis))
+    }
+  }
+
   createHandler(axis: CartesianAxes): void {
     const mouseGroup = axis.layers.mouse
     const mouseRect = mouseGroup.select('rect')
@@ -138,7 +147,14 @@ export class ZoomHandler implements Visitor {
         mouseGroup.dispatch('pointerover')
       })
 
-    if (this.options.wheelMode !== WheelMode.NONE) {
+    this.updateWheelMode(axis)
+  }
+
+  private updateWheelMode(axis: CartesianAxes): void {
+    const mouseRect = axis.layers.mouse.select('rect')
+    if (this.options.wheelMode === WheelMode.NONE) {
+      mouseRect.on('wheel', null)
+    } else {
       mouseRect.on('wheel', (event: WheelEvent) => {
         if (!matchesModifierKey(event, this.options.scrollModifierKey)) return
 
