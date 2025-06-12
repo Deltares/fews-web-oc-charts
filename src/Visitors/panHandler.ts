@@ -3,6 +3,7 @@ import * as d3 from 'd3'
 import { Axes, CartesianAxes } from '../Axes'
 import { Visitor } from './visitor'
 import { LayerKeys } from '../Layers/layers'
+import { isModifierKeyPress, ModifierKey } from '../Utils'
 
 type SelectionNoData<T extends SVGElement> = d3.Selection<T, undefined, null, undefined>
 
@@ -33,23 +34,6 @@ function isMouseButtonPress(event: MouseEvent, button: MouseButton): boolean {
     return event.button === 0
   } else {
     return event.button === 1
-  }
-}
-
-export enum ModifierKey {
-  None = 'none',
-  Ctrl = 'ctrl',
-  Shift = 'shift',
-}
-
-function isModifierKeyPress(event: KeyboardEvent, modifier: ModifierKey): boolean {
-  switch (modifier) {
-    case ModifierKey.None:
-      return false
-    case ModifierKey.Ctrl:
-      return event.key === 'Control'
-    case ModifierKey.Shift:
-      return event.key === 'Shift'
   }
 }
 
