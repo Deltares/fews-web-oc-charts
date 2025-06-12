@@ -4,7 +4,7 @@ import './wheel-zoom.css'
 
 import '@shared/theme-button'
 
-import { AxisType, CartesianAxes, ChartLine, WheelMode, ZoomHandler } from '@lib'
+import { AxisType, CartesianAxes, ChartLine, ModifierKey, WheelMode, ZoomHandler } from '@lib'
 import { type ExampleEvent, generateExampleTimeSeriesData } from '@shared'
 
 function createChart(containerId: string, exampleData: ExampleEvent<Date>[]): CartesianAxes {
@@ -43,6 +43,10 @@ axesZoomX.accept(zoomHandlerX)
 const axesZoomY = createChart('chart-container-zoom-y', exampleData)
 const zoomHandlerY = new ZoomHandler(WheelMode.Y)
 axesZoomY.accept(zoomHandlerY)
+
+const axesZoomModifier = createChart('chart-container-zoom-modifier', exampleData)
+const zoomHandlerModifier = new ZoomHandler(WheelMode.XY, ModifierKey.Shift)
+axesZoomModifier.accept(zoomHandlerModifier)
 
 const axesNoWheel = createChart('chart-container-no-wheel', exampleData)
 const zoomHandlerNoWheel = new ZoomHandler()

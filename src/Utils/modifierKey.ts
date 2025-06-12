@@ -14,3 +14,14 @@ export function isModifierKeyPress(event: KeyboardEvent, modifier: ModifierKey):
       return event.key === 'Shift'
   }
 }
+
+export function matchesModifierKey(event: MouseEvent, modifier: ModifierKey): boolean {
+  switch (modifier) {
+    case ModifierKey.None:
+      return true
+    case ModifierKey.Ctrl:
+      return event.ctrlKey
+    case ModifierKey.Shift:
+      return event.shiftKey
+  }
+}

@@ -1,6 +1,12 @@
 import * as d3 from 'd3'
 import type { Axes } from '../Axes/axes.js'
-import type { CartesianAxes, CartesianAxesOptions, D3Selection } from '../index.js'
+import {
+  CartesianAxes,
+  CartesianAxesOptions,
+  D3Selection,
+  matchesModifierKey,
+  ModifierKey,
+} from '../index.js'
 import type { Visitor } from './visitor.js'
 
 const SelectionMode = {
@@ -28,6 +34,7 @@ export enum WheelMode {
 export interface ZoomHandlerOptions {
   wheelMode: WheelMode
   sharedZoomMode: ZoomMode
+  scrollModifierKey: ModifierKey
 }
 
 function isWheelMode(arg: any): arg is WheelMode {
@@ -44,16 +51,18 @@ export class ZoomHandler implements Visitor {
   private readonly MINMOVE = 15
   private lastPoint: [number, number]
 
-  constructor(wheelMode?: WheelMode)
+  constructor(wheelMode?: WheelMode, scrollModifierKey?: ModifierKey)
   constructor(options?: Partial<ZoomHandlerOptions>)
-  constructor(param?: WheelMode | Partial<ZoomHandlerOptions>) {
+  constructor(param?: WheelMode | Partial<ZoomHandlerOptions>, scrollModifierKey?: ModifierKey) {
     this.options = {
       wheelMode: WheelMode.NONE,
       sharedZoomMode: ZoomMode.XY,
+      scrollModifierKey: ModifierKey.None,
     }
 
     if (isWheelMode(param)) {
       this.options.wheelMode = param ?? WheelMode.NONE
+      this.options.scrollModifierKey = scrollModifierKey ?? ModifierKey.None
     } else {
       this.options = { ...this.options, ...param }
     }
@@ -131,6 +140,8 @@ export class ZoomHandler implements Visitor {
 
     if (this.options.wheelMode !== WheelMode.NONE) {
       mouseRect.on('wheel', (event: WheelEvent) => {
+        if (!matchesModifierKey(event, this.options.scrollModifierKey)) return
+
         event.preventDefault() // prevent page scrolling
         const delta = event.deltaY
         const factor = delta > 0 ? 1.1 : 0.9
