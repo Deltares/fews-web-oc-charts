@@ -4,9 +4,19 @@
  * @param {string} eventType - The type of event to listen for (e.g., 'click', 'mouseover').
  * @param {Function} listenerFunction - The function to be executed when the event is triggered.
  */
-export function addListenerById(id, eventType, listenerFunction) {
-  const buttons = document.getElementById(id)
-  buttons.addEventListener(eventType, (event) => listenerFunction(event))
+export function addListenerById<K extends keyof HTMLElementEventMap>(
+  id: string,
+  eventType: K,
+  listenerFunction: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
+  options?: boolean | AddEventListenerOptions,
+): void {
+  const element = document.getElementById(id)
+
+  if (element) {
+    element.addEventListener(eventType, listenerFunction as EventListener, options)
+  } else {
+    console.warn(`No element found with ID: ${id}`)
+  }
 }
 
 /**
@@ -15,9 +25,20 @@ export function addListenerById(id, eventType, listenerFunction) {
  * @param {string} eventType - The type of event to listen for (e.g., 'click', 'mouseover').
  * @param {Function} listenerFunction - The function to be executed when the event is triggered.
  */
-export function addListenerByClassName(className, eventType, listenerFunction) {
-  const buttons = document.getElementsByClassName(className)
-  for (let i = 0; i < buttons.length; i++) {
-    buttons[i].addEventListener(eventType, (event) => listenerFunction(event))
+export function addListenerByClassName<
+  K extends keyof HTMLElementEventMap
+>(
+  className: string,
+  eventType: K,
+  listenerFunction: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
+  options?: boolean | AddEventListenerOptions
+): void {
+  const elements = document.getElementsByClassName(className);
+
+  for (let i = 0; i < elements.length; i++) {
+    // TypeScript only knows this as Element, so cast to HTMLElement:
+    const element = elements[i] as HTMLElement;
+    element.addEventListener(eventType, listenerFunction as EventListener, options);
   }
 }
+

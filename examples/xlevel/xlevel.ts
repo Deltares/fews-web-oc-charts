@@ -20,6 +20,7 @@ import {
   ZoomHandler,
 } from '@lib'
 import { addListenerByClassName, addListenerById, percentile } from '@shared'
+import { EnsembleData } from '../data/types'
 
 const container = document.getElementById('chart-container-1')
 const axis = new CartesianAxes(container, null, null, {
@@ -80,7 +81,7 @@ const dstIndicator = new DstIndicator({
   },
 })
 
-function getRoundedDate(minutes, d = new Date()) {
+function getRoundedDate(minutes: number, d = new Date()) {
   const ms = 1000 * 60 * minutes // convert minutes to ms
   const roundedDate = new Date(Math.round(d.getTime() / ms) * ms)
   return roundedDate
@@ -103,8 +104,8 @@ const crossSectionSelect2 = new CrossSectionSelect(
   ['control'],
 )
 
-function formatTime(timestamp) {
-  return dateFormatter(timestamp, 'yyyy-MM-dd HH:mm ZZZZ', { timeZone: axis.timeZone })
+function formatTime(timestamp: Date) {
+  return dateFormatter(timestamp, 'yyyy-MM-dd HH:mm ZZZZ')
 }
 crossSectionSelect1.format = formatTime
 crossSectionSelect2.format = formatTime
@@ -202,7 +203,7 @@ axis.accept(legend)
 
 function dataload() {
   d3.json('../data/ensemble.json')
-    .then(function (data) {
+    .then(function (data: EnsembleData) {
       const nEnsemble = data.values[0].length
       const members = Array(nEnsemble)
       const percentiles = [[], [], []]
@@ -319,7 +320,7 @@ function dataload() {
           autoScale: true,
         },
       })
-      escalationLevels.forEach((el, i) => {
+      escalationLevels.forEach((el, _i) => {
         const escalationLine = new ChartLine(el.events, {
           curve: 'stepAfter',
           x: { includeInAutoScale: false },
@@ -358,7 +359,8 @@ addListenerById('button-move-right', 'click', () => moveLine(10 * 60 * 1000))
 
 addListenerByClassName('my-legend-button', 'click', (event) => toggleChart(event.target))
 
-function toggleChart(element) {
+function toggleChart(target: EventTarget) {
+  const element = target as HTMLElement
   const ids = element.getAttribute('data-id').split(',')
   for (const id of ids) {
     toggleChartVisibility(axis, id)
@@ -367,7 +369,7 @@ function toggleChart(element) {
   crossSectionSelect2.redraw()
 }
 
-function moveLine(dx) {
+function moveLine(dx: number) {
   crossSectionSelect1.value = new Date(crossSectionSelect1.value.getTime() + dx)
   crossSectionSelect1.redraw()
   crossSectionSelect1.end()
