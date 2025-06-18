@@ -18,6 +18,7 @@ import {
   ZoomHandler,
 } from '@lib'
 import { addListenerByClassName, addListenerById, percentile } from '@shared'
+import { EnsembleData } from '../data/types'
 
 const defaultYDomain1: [number, number] = [-100, 100]
 const defaultYDomain2: [number, number] = [50, 150]
@@ -200,9 +201,11 @@ const plot4 = {
 }
 axis4.accept(legend4)
 
-function dataload(plot) {
+type Plot = typeof plot1
+
+function dataload(plot: Plot) {
   d3.json('../data/ensemble.json')
-    .then(function (data) {
+    .then(function (data: EnsembleData) {
       // load data
       const nEnsemble = data.values[0].length
       const members = Array(nEnsemble)
@@ -259,8 +262,8 @@ function dataload(plot) {
       const mouseOver = new MouseOver(['control', 'median', 'percent90'])
       const zoom = new ZoomHandler()
 
-      let plotMedian
-      let plotControl
+      let plotMedian: ChartLine
+      let plotControl: ChartLine
       if (!plot.onlyRanges) {
         plotMedian = new ChartLine(percentiles[0], {})
         plotControl = new ChartLine(members[0], {})
@@ -319,7 +322,7 @@ addListenerById('btn-reset-4', 'click', () => {
   restoreZoom(plot4)
 })
 
-function restoreZoom(plot) {
+function restoreZoom(plot: Plot) {
   plot.axis.redraw({ x: { autoScale: true }, y: { autoScale: true, nice: true } })
 }
 
@@ -336,7 +339,7 @@ addListenerById('btn-zoom-full-4', 'click', () => {
   zoomToFullExtent(plot4)
 })
 
-function zoomToFullExtent(plot) {
+function zoomToFullExtent(plot: Plot) {
   plot.axis.redraw({ x: { autoScale: true }, y: { fullExtent: true, nice: true } })
 }
 
@@ -353,7 +356,7 @@ addListenerById('btn-zoom-y-4', 'click', () => {
   zoomToYDefault(plot4, defaultYDomain4)
 })
 
-function zoomToYDefault(plot, defaultYDomain) {
+function zoomToYDefault(plot: Plot, defaultYDomain: [number, number]) {
   plot.axis.redraw({ x: { autoScale: true }, y: { domain: defaultYDomain, nice: true } })
 }
 
@@ -370,7 +373,7 @@ addListenerById('btn-zoom-domain-4', 'click', () => {
   zoomToDomain(plot4)
 })
 
-function zoomToDomain(plot) {
+function zoomToDomain(plot: Plot) {
   plot.axis.redraw({ x: { autoScale: true }, y: { domain: [-350, 480], nice: false } })
 }
 
