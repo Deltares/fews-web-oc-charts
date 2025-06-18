@@ -6,11 +6,11 @@ import { defaultsDeep } from 'lodash-es'
 import { bboxCollide } from '../Utils/bboxCollide.js'
 
 type CrossSectionSelectOptions = {
-  x: { axisIndex: number }
-  draggable: boolean
+  x?: { axisIndex: number }
+  draggable?: boolean
 }
 
-export class CrossSectionSelect implements Visitor {
+export class CrossSectionSelect<V extends number | Date> implements Visitor {
   private trace: string[]
   private group: any
   private backGroup: any
@@ -18,9 +18,9 @@ export class CrossSectionSelect implements Visitor {
   private pointRadius = 3
   private simulation: d3.Simulation<any, any>
   private axis: CartesianAxes
-  value: number | Date
+  value: V
   currentData: any
-  callback: (value: number | Date) => void
+  callback: (value: V) => void
   format: (n: number | { valueOf(): number } | Date) => string
   private options: CrossSectionSelectOptions = {
     x: { axisIndex: 0 },
@@ -30,8 +30,8 @@ export class CrossSectionSelect implements Visitor {
 
   // use shared Visitor constuctor (Visitor should be a abstract class)
   constructor(
-    value: number | Date,
-    callback: (value: number | Date) => void,
+    value: V,
+    callback: (value: V) => void,
     options: CrossSectionSelectOptions,
     trace?: string[],
   ) {
