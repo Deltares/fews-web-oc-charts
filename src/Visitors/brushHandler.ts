@@ -26,8 +26,15 @@ export class BrushHandler implements Visitor {
     x?: d3.Selection<SVGTextElement, unknown, SVGGElement, unknown>
     y?: d3.Selection<SVGTextElement, unknown, SVGGElement, unknown>
   }
+  private axis: CartesianAxes | null = null
   private axes: CartesianAxes[] = []
   private options: BrushHandlerOptions
+  private brush: d3.BrushBehavior<unknown> | null = null
+  private brushGroup: d3.Selection<SVGGElement, unknown, SVGGElement, unknown> | null = null
+  private lastDomainUpdate: {
+    x?: Domain
+    y?: Domain
+  }
 
   constructor(options?: Partial<BrushHandlerOptions>) {
     this.options = defaultsDeep({}, options, defaultBrushHandlerOptions)
@@ -39,6 +46,7 @@ export class BrushHandler implements Visitor {
       throw new Error('Brush handler is only supported on Cartesian axes.')
     }
 
+    this.axis = axes
     this.createHandler(axes)
   }
 
@@ -49,13 +57,26 @@ export class BrushHandler implements Visitor {
     this.axes.push(axes)
   }
 
+  updateBrushDomain(domains: { x?: Domain; y?: Domain }): void {
+    if (!this.brush || !this.brushGroup) {
+      throw new Error('Brush has not been created yet.')
+    }
+
+    this.lastDomainUpdate = domains
+
+    // TODO: Add support for other brush modes
+    if (this.options.brushMode === BrushMode.X) {
+      const xScale = this.axis?.getScale('x', 0)
+      if (xScale) {
+        this.brushGroup.call(this.brush.move, domains.x.map(xScale))
+      }
+    }
+  }
+
   private createHandler(axes: CartesianAxes) {
     this.createLabels(axes)
 
     const brushed = ({ selection }) => {
-      if (!(axes instanceof CartesianAxes)) {
-        throw new Error('Brush handler is only supported on Cartesian axes.')
-      }
       if (!selection) return
 
       const updateLabelsForAxis = (axisKey: 'x' | 'y', range: [number, number]) => {
@@ -89,7 +110,7 @@ export class BrushHandler implements Visitor {
       }
 
       if (this.options.brushMode === BrushMode.Y) {
-        updateForAxis('y', selection)
+        updateForAxis('y', selection.toReversed())
       }
 
       if (this.options.brushMode === BrushMode.XY) {
@@ -97,10 +118,7 @@ export class BrushHandler implements Visitor {
           'x',
           selection.map((s: number[]) => s[0]),
         )
-        updateForAxis(
-          'y',
-          selection.map((s: number[]) => s[1]),
-        )
+        updateForAxis('y', selection.map((s: number[]) => s[1]).toReversed())
       }
     }
     const debouncedBrushed = debounce(brushed)
@@ -110,9 +128,10 @@ export class BrushHandler implements Visitor {
 
       this.hideLabels()
       this.axes.forEach((axis) => axis.resetZoom())
+      this.updateBrushDomain(this.lastDomainUpdate)
     }
 
-    const brush = getBrush(this.options.brushMode)
+    this.brush = getBrush(this.options.brushMode)
       .extent([
         [0, 0],
         [axes.width, axes.height],
@@ -120,7 +139,7 @@ export class BrushHandler implements Visitor {
       .on('brush', debouncedBrushed)
       .on('end', brushended)
 
-    axes.canvas.append('g').call(brush)
+    this.brushGroup = axes.canvas.append('g').call(this.brush)
   }
 
   private createLabels(axes: CartesianAxes) {

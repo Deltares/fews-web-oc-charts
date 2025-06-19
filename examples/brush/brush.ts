@@ -6,7 +6,16 @@ import '@shared/theme-button'
 
 import { ExampleEvent, generateExampleTimeSeriesData } from '@shared'
 
-import { AxisType, CartesianAxes, CartesianAxesOptions, ChartLine, BrushHandler } from '@lib'
+import {
+  AxisType,
+  CartesianAxes,
+  CartesianAxesOptions,
+  ChartLine,
+  BrushHandler,
+  ZoomHandler,
+  PanHandler,
+  ModifierKey,
+} from '@lib'
 
 function createAxes(
   containerId: string,
@@ -49,9 +58,28 @@ const exampleData1 = generateExampleTimeSeriesData(dataDomain, [-1, 1], 100)
 
 const axes1 = createAxes('chart-container', exampleData1, domain)
 
+const zoomHandler = new ZoomHandler()
+axes1.accept(zoomHandler)
+
+const panHandler = new PanHandler({ mouseButton: 0, modifierKey: ModifierKey.Shift })
+axes1.accept(panHandler)
+
 const axes2 = createAxes('chart-container-mini', exampleData1, dataDomain, false)
 
-const brushHandler = new BrushHandler({ brushMode: 'X'})
+const brushHandler = new BrushHandler({ brushMode: 'X' })
 brushHandler.addAxes(axes1)
 
 axes2.accept(brushHandler)
+
+// Without this setTimeout, the brush will not be updated on initial load.
+setTimeout(() => {
+  brushHandler.updateBrushDomain({
+    x: domain,
+  })
+})
+
+axes1.addEventListener('update:x-domain', (e) => {
+  brushHandler.updateBrushDomain({
+    x: e.new,
+  })
+})
