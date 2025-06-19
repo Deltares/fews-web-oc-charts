@@ -21,7 +21,5 @@
     }
   },
 
-  /* FIXME: the "examples" directory should be added here, but there are too
-            many type errors to fix for now. */
   "include": ["src", "test", "examples", "*.config.ts"]
 }

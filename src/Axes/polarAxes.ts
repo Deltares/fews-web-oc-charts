@@ -23,8 +23,8 @@ export interface AngularAxisOptions extends AxisOptions {
 
 export interface PolarAxesOptions extends AxesOptions {
   innerRadius?: number
-  radial: RadialAxisOptions
-  angular: AngularAxisOptions
+  radial?: RadialAxisOptions
+  angular?: AngularAxisOptions
 }
 
 const polarAxesDefaultOptions: PolarAxesOptions = {
