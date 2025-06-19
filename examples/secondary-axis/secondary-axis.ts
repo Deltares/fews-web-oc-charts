@@ -15,6 +15,7 @@ import {
   ZoomHandler,
 } from '@lib'
 import { addListenerByClassName, percentile } from '@shared'
+import { EnsembleData } from '../data/types'
 
 const container = document.getElementById('chart-container-1')
 const axis = new CartesianAxes(container, null, null, {
@@ -40,7 +41,7 @@ const currentTime = new CurrentTime({ x: { axisIndex: 0 } })
 
 function dataload() {
   d3.json('../data/ensemble.json')
-    .then(function (data) {
+    .then(function (data: EnsembleData) {
       const nEnsemble = data.values[0].length
       const members = Array(nEnsemble)
       const percentiles = [[], [], []]

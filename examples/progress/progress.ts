@@ -137,43 +137,41 @@ const expextedData = [
 
 const planned = new ChartProgress(planning, {
   colorScale: AUTO_SCALE,
-  t: {
-    format: dateFormat,
-  },
-  style: {
-    fill: 'none',
-    'stroke-width': '2px',
-    stroke: 'currentColor',
-    'stroke-dasharray': '5 5',
+  text: {
+    formatter: dateFormat,
   },
 })
 const progress = new ChartProgress(progressData, {
   colorScale: AUTO_SCALE,
-  t: {
-    format: dateFormat,
+  text: {
+    formatter: dateFormat,
   },
 })
 const expected = new ChartProgress(expextedData, {
   colorScale: AUTO_SCALE,
-  t: {
-    format: dateFormat,
-  },
-  style: {
-    'fill-opacity': '.1',
+  text: {
+    formatter: dateFormat,
   },
 })
 
-expected.addTo(polarAxis1, {
-  radial: {
-    key: 'x',
+expected.addTo(
+  polarAxis1,
+  {
+    radial: {
+      key: 'x',
+    },
+    angular: {
+      key: 'y',
+    },
+    color: {
+      key: 'v',
+    },
   },
-  angular: {
-    key: 'y',
+  'expected',
+  {
+    'fill-opacity': '.1',
   },
-  color: {
-    key: 'v',
-  },
-})
+)
 progress.addTo(polarAxis1, {
   radial: {
     key: 'x',
@@ -185,62 +183,70 @@ progress.addTo(polarAxis1, {
     key: 'v',
   },
 })
-planned.addTo(polarAxis1, {
-  radial: {
-    key: 'x',
+planned.addTo(
+  polarAxis1,
+  {
+    radial: {
+      key: 'x',
+    },
+    angular: {
+      key: 'y',
+    },
+    color: {
+      key: 'v',
+    },
   },
-  angular: {
-    key: 'y',
-  },
-  color: {
-    key: 'v',
-  },
-})
-
-polarAxis1.redraw()
-
-const planned2 = new ChartProgress(planning, {
-  colorScale: AUTO_SCALE,
-  t: {
-    format: dateFormat,
-  },
-  style: {
+  'planned',
+  {
     fill: 'none',
     'stroke-width': '2px',
     stroke: 'currentColor',
     'stroke-dasharray': '5 5',
   },
+)
+
+polarAxis1.redraw()
+
+const planned2 = new ChartProgress(planning, {
+  colorScale: AUTO_SCALE,
+  text: {
+    formatter: dateFormat,
+  },
 })
 const progress2 = new ChartProgress(progressData, {
   colorScale: AUTO_SCALE,
-  t: {
-    format: dateFormat,
+  text: {
+    formatter: dateFormat,
   },
 })
 
 const expected2 = new ChartProgress(expextedData, {
   colorScale: AUTO_SCALE,
-  t: {
-    format: dateFormat,
-  },
-  style: {
-    'fill-opacity': '.1',
+  text: {
+    formatter: dateFormat,
   },
 })
 
-expected2.addTo(polarAxis1, {
-  radial: {
-    key: 'x',
-    axisIndex: 0,
+expected2.addTo(
+  polarAxis1,
+  {
+    radial: {
+      key: 'x',
+      axisIndex: 0,
+    },
+    angular: {
+      key: 'y',
+      axisIndex: 0,
+    },
+    color: {
+      key: 'v',
+    },
   },
-  angular: {
-    key: 'y',
-    axisIndex: 0,
+  'expected2',
+  {
+    'fill-opacity': '.1',
   },
-  color: {
-    key: 'v',
-  },
-})
+)
 progress2.addTo(polarAxis1, {
   radial: {
     key: 'x',
@@ -254,42 +260,53 @@ progress2.addTo(polarAxis1, {
     key: 'v',
   },
 })
-planned2.addTo(polarAxis1, {
-  radial: {
-    key: 'x',
-    axisIndex: 0,
+planned2.addTo(
+  polarAxis1,
+  {
+    radial: {
+      key: 'x',
+      axisIndex: 0,
+    },
+    angular: {
+      key: 'y',
+      axisIndex: 0,
+    },
+    color: {
+      key: 'v',
+    },
   },
-  angular: {
-    key: 'y',
-    axisIndex: 0,
+  'planned',
+  {
+    fill: 'none',
+    'stroke-width': '2px',
+    stroke: 'currentColor',
+    'stroke-dasharray': '5 5',
   },
-  color: {
-    key: 'v',
-  },
-})
+)
 polarAxis2.redraw()
 
-function saveSvgAsPng(svgElement, name) {
+function saveSvgAsPng(svgElement: SVGSVGElement, name: string) {
+  console.log('Saving chart as PNG:', name, svgElement)
   // FIXME: the functions for saving charts no longer exist in
   //        fews-web-oc-charts.
-  const bbox = svgElement.getBoundingClientRect()
-  const svgString = getSvgAsString(svgElement)
-  svgStringToImage(svgString, 2 * bbox.width, 2 * bbox.height, save)
-
-  function save(dataBlob, filesize) {
-    saveAs(dataBlob, `${name}.png`)
-  }
+  // const bbox = svgElement.getBoundingClientRect()
+  // const svgString = getSvgAsString(svgElement)
+  // svgStringToImage(svgString, 2 * bbox.width, 2 * bbox.height, save)
+  //
+  // function save(dataBlob, filesize) {
+  //   saveAs(dataBlob, `${name}.png`)
+  // }
 }
 
 function download() {
   const element = document.getElementById('1')
-  saveSvgAsPng(element.children[0], 'hello')
+  saveSvgAsPng(element.children[0] as SVGSVGElement, 'hello')
 }
 
 function togglePrintSheet() {
   // FIXME: switching from light to dark mode works differently from when this
   //        was written.
-  let status
+  let status: boolean
   for (let i = 0; i < document.styleSheets.length; i++) {
     const s = document.styleSheets[i]
     if (s.href !== undefined && s.href.match(/wb-charts-dark\.css/)) {

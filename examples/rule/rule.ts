@@ -19,6 +19,7 @@ import {
   ZoomHandler,
 } from '@lib'
 import { addListenerByClassName, percentile, toggleChart } from '@shared'
+import { EnsembleData } from '../data/types'
 
 const container = document.getElementById('chart-container-1')
 const axis = new CartesianAxes(container, null, null, {
@@ -74,9 +75,7 @@ const dstIndicator = new DstIndicator({
     axisIndex: 0,
   },
 })
-const levelSelect = new LevelSelect(function (x) {
-  console.log(x)
-})
+const levelSelect = new LevelSelect(100, (x) => console.log(x))
 
 // const refDate = new Date(2019,02,31);
 const refDate = new Date()
@@ -168,7 +167,7 @@ axis.accept(legend)
 
 function dataload() {
   d3.json('../data/ensemble.json')
-    .then(function (data) {
+    .then(function (data: EnsembleData) {
       const nEnsemble = data.values[0].length
       const members = Array(nEnsemble)
       const percentiles = [[], [], []]
@@ -277,4 +276,6 @@ window.setTimeout(dataload, 1000)
 addListenerByClassName('theme-button', 'click', () =>
   document.documentElement.classList.toggle('dark'),
 )
-addListenerByClassName('legend-button', 'click', (event) => toggleChart(event.target, axis))
+addListenerByClassName('legend-button', 'click', (event) =>
+  toggleChart(event.target as HTMLElement, axis),
+)
