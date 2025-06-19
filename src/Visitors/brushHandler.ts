@@ -65,10 +65,16 @@ export class BrushHandler implements Visitor {
     this.lastDomainUpdate = domains
 
     // TODO: Add support for other brush modes
-    if (this.options.brushMode === BrushMode.X) {
+    if (this.options.brushMode === BrushMode.X && domains.x) {
       const xScale = this.axis?.getScale('x', 0)
       if (xScale) {
-        this.brushGroup.call(this.brush.move, domains.x.map(xScale))
+        const domain: number[] = domains.x.map(xScale)
+
+        // Clamp the domain to the scale range
+        domain[0] = Math.max(domain[0], xScale.range()[0])
+        domain[1] = Math.min(domain[1], xScale.range()[1])
+
+        this.brushGroup.call(this.brush.move, domain)
       }
     }
   }
