@@ -15,6 +15,10 @@ import {
   ZoomHandler,
   PanHandler,
   ModifierKey,
+  PanningDirection,
+  MouseButton,
+  BrushMode,
+  WheelMode,
 } from '@lib'
 
 function createAxes(
@@ -51,22 +55,26 @@ function createAxes(
   return axes
 }
 
-const domain: [Date, Date] = [new Date('2025-01-01T00:00Z'), new Date('2025-01-03T00:00Z')]
+const domain: [Date, Date] = [new Date('2025-01-04T00:00Z'), new Date('2025-01-05T00:00Z')]
 const dataDomain: [Date, Date] = [new Date('2025-01-01T00:00Z'), new Date('2025-01-08T00:00Z')]
 
 const exampleData1 = generateExampleTimeSeriesData(dataDomain, [-1, 1], 100)
 
 const axes1 = createAxes('chart-container', exampleData1, domain)
 
-const zoomHandler = new ZoomHandler()
-axes1.accept(zoomHandler)
+const zoomHandler = new ZoomHandler(WheelMode.X)
+const panHandler = new PanHandler({
+  direction: PanningDirection.X,
+  mouseButton: MouseButton.Left,
+  modifierKey: ModifierKey.Shift,
+})
 
-const panHandler = new PanHandler({ mouseButton: 0, modifierKey: ModifierKey.Shift })
+axes1.accept(zoomHandler)
 axes1.accept(panHandler)
 
 const axes2 = createAxes('chart-container-mini', exampleData1, dataDomain, false)
 
-const brushHandler = new BrushHandler({ brushMode: 'X' })
+const brushHandler = new BrushHandler({ brushMode: BrushMode.X })
 brushHandler.addAxes(axes1)
 
 axes2.accept(brushHandler)
