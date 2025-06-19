@@ -12,6 +12,9 @@ import {
   Direction,
   ChartArrow,
   Legend,
+  AxisType,
+  TooltipAnchor,
+  ChartArrowData,
 } from '@lib'
 import { addListenerById } from '@shared'
 
@@ -42,12 +45,12 @@ function onLoad() {
   }
 
   // Create wind direction chart
-  const defaultYDomain = [0, 360]
+  const defaultYDomain: [number, number] = [0, 360]
   const chartContainer = document.getElementById('chart-wind-direction-time')
   const windDirAxis = new CartesianAxes(chartContainer, null, null, {
     x: [
       {
-        type: 'time',
+        type: AxisType.time,
         position: AxisPosition.Bottom,
         showGrid: true,
       },
@@ -56,7 +59,7 @@ function onLoad() {
       {
         label: 'windrichting',
         unit: '°',
-        type: 'degrees',
+        type: AxisType.degrees,
         domain: defaultYDomain,
         defaultDomain: defaultYDomain,
         position: AxisPosition.Left,
@@ -100,7 +103,7 @@ function onLoad() {
     '#winddirection-forecast-line-time',
   )
 
-  function cartesianDataToArrowData(data: DataEntry[]) {
+  function cartesianDataToArrowData(data: DataEntry[]): ChartArrowData[] {
     const input = document.getElementById('slider') as HTMLInputElement
     return [
       {
@@ -114,7 +117,7 @@ function onLoad() {
     transitionTime: null,
     symbol: { size: 64 },
     radial: { includeInTooltip: false },
-    tooltip: { anchor: 'pointer' },
+    tooltip: { anchor: TooltipAnchor.Pointer },
   })
   windDirObsChartArrow.addTo(
     windRoseAxis,
@@ -127,7 +130,7 @@ function onLoad() {
     transitionTime: null,
     symbol: { size: 64 },
     radial: { includeInTooltip: false },
-    tooltip: { anchor: 'pointer' },
+    tooltip: { anchor: TooltipAnchor.Pointer },
   })
   windDirModelChartArrow.addTo(
     windRoseAxis,

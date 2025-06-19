@@ -18,14 +18,14 @@ const DefaultSymbolOptions: Partial<SymbolOptions> = {
   size: 10,
 }
 
-interface chartArrowData {
+export interface ChartArrowData {
   [key: string]: [number, number]
 }
 
 export class ChartArrow extends Chart {
-  private previousData: chartArrowData[] = []
+  private previousData: ChartArrowData[] = []
 
-  constructor(data: chartArrowData[], options: ChartOptions) {
+  constructor(data: ChartArrowData[], options: ChartOptions) {
     // Assumes data to be of the format {this.dataKeys.radial: [number, number], this.dataKeys.angular: [number, number]}[]
     super(data, options)
     this.options = defaultsDeep(this.options, this.options, { symbol: DefaultSymbolOptions })
@@ -35,7 +35,7 @@ export class ChartArrow extends Chart {
     throw new Error('defaultToolTipFormatterCartesian is not implemented for ChartArrow')
   }
 
-  defaultToolTipFormatterPolar(d: chartArrowData[]): HTMLElement {
+  defaultToolTipFormatterPolar(d: ChartArrowData[]): HTMLElement {
     const tKey = this.dataKeys.angular
     const rKey = this.dataKeys.radial
     const html = document.createElement('div')
@@ -64,7 +64,7 @@ export class ChartArrow extends Chart {
     const arrowHeadSize = this.options.symbol.size
 
     // Define functions that draw the arrow initially, and that translate the arrow to the correct position.
-    function arrowGenerator(d: chartArrowData) {
+    function arrowGenerator(d: ChartArrowData) {
       const radius1: number = axis.radialScale(d[rKey][0])
       const radius2: number = axis.radialScale(d[rKey][1])
       const theta1: number = axis.angularScale(d[tKey][0])
@@ -141,7 +141,7 @@ export class ChartArrow extends Chart {
     // Add tooltip to the arrow
     if (this.options.tooltip !== undefined) {
       arrow
-        .on('pointerover', (e: any, d: chartArrowData[]) => {
+        .on('pointerover', (e: any, d: ChartArrowData[]) => {
           axis.tooltip.show()
           const pointer = d3.pointer(e, axis.container)
           axis.tooltip.update(

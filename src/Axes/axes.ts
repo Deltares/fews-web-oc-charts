@@ -21,7 +21,7 @@ export interface AxesOptions {
 
 interface AxisIndexItem {
   key: string
-  axisIndex: number
+  axisIndex?: number
 }
 
 export interface AxisIndex {

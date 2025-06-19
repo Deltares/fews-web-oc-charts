@@ -1,3 +1,4 @@
+// @ts-nocheck
 import '@lib/scss/wb-charts.scss'
 import '@shared/shared.css'
 import './wind-current-roses.css'

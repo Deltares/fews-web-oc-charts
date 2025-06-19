@@ -20,11 +20,11 @@ export class LevelSelect implements Visitor {
   }
 
   // use shared Visitor constuctor (Visitor should be a abstract class)
-  constructor(value: number, callback: Function, options: LevelSelectOptions) {
+  constructor(value: number, callback: (v: number) => unknown, options?: LevelSelectOptions) {
     this.value = value
     this.callback = callback
     this.format = d3.format('.2f')
-    this.options = defaultsDeep(this.options, options) as LevelSelectOptions
+    this.options = defaultsDeep(this.options, options)
   }
 
   visit(axis: Axes) {

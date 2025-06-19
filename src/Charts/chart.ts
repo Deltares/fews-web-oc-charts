@@ -28,15 +28,15 @@ interface ColorOptionItem {
 }
 
 export interface SymbolOptions {
-  id: number
-  size: number
-  skip: number
+  id?: number
+  size?: number
+  skip?: number
 }
 
 export interface TextOptions {
   dx?: number
   dy?: number
-  attributes: SvgPropertiesHyphen
+  attributes?: SvgPropertiesHyphen
   angle?: number
   position?: TextPosition
   formatter?: (d: unknown) => string
@@ -168,7 +168,7 @@ export abstract class Chart {
     this._isVisible = value
   }
 
-  addTo(axis: Axes, axisIndex: AxisIndex, id: string, style: SvgPropertiesHyphen | string) {
+  addTo(axis: Axes, axisIndex: AxisIndex, id?: string, style?: SvgPropertiesHyphen | string) {
     this.id = id ? id : ''
     if (typeof style === 'string') {
       this.cssSelector = style

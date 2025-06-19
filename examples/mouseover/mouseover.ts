@@ -195,7 +195,7 @@ function mouseOverFormatter(
       if (d.style.color) {
         spanElement.style.background = d.style.color
       }
-      spanElement.innerText = `Formatted: ${d.point.y.toFixed(precision)}`
+      spanElement.innerText = `Formatted: ${(d.point.y as number).toFixed(precision)}`
       return spanElement
     }
   }

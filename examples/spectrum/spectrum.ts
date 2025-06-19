@@ -15,7 +15,7 @@ import {
 } from '@lib'
 import { addListenerByClassName } from '@shared'
 
-function randomSpectrum(a) {
+function randomSpectrum(a: number) {
   const spectrum = []
   for (let i = 0; i < 50; i++) {
     spectrum.push({
@@ -129,13 +129,11 @@ const axis = new CartesianAxes(container2, null, null, {
   x: [
     {
       position: AxisPosition.Bottom,
-      axisIndex: 0,
     },
   ],
   y: [
     {
       position: AxisPosition.Left,
-      axisIndex: 0,
     },
   ],
 })
@@ -182,7 +180,7 @@ const updateCharts = function () {
 }
 const input = document.getElementById('slider')
 input.onchange = function (event) {
-  updateCharts(event)
+  updateCharts()
 }
 
 addListenerByClassName('theme-button', 'click', () =>
