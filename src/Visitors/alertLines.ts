@@ -6,6 +6,7 @@ export interface AlertLineOptions {
   x1: number | Date
   x2: number | Date
   value: number
+  labelPosition?: 'left' | 'right'
   description: string
   yAxisIndex: number
   color: string
@@ -73,10 +74,19 @@ export class AlertLines implements Visitor {
       .filter((d) => {
         return xScale(d.x1) < this.axis.width - 10
       })
-      .attr('text-anchor', 'end')
+      .attr('text-anchor', (d) => {
+        if (d.labelPosition === 'left') {
+          return 'end'
+        } else {
+          return 'start'
+        }
+      })
       .attr('x', (d: AlertLineOptions) => {
-        const x = xScale(d.x2)
-        return Math.min(x, this.axis.width)
+        if (d.labelPosition === 'left') {
+          return Math.max(xScale(d.x1), 0)
+        } else {
+          return Math.min(xScale(d.x2), this.axis.width)
+        }
       })
       .attr('y', (d: AlertLineOptions) => {
         const yScale = this.axis.yScales[d.yAxisIndex]
