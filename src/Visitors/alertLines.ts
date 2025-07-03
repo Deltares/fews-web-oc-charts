@@ -76,23 +76,22 @@ export class AlertLines implements Visitor {
       })
       .attr('text-anchor', (d) => {
         if (d.labelPosition === 'left') {
-          return 'end'
-        } else {
           return 'start'
+        } else {
+          return 'end'
         }
       })
       .attr('x', (d: AlertLineOptions) => {
         if (d.labelPosition === 'left') {
-          return Math.max(xScale(d.x1), 0)
+          return Math.max(xScale(d.x1), 0) + 10
         } else {
-          return Math.min(xScale(d.x2), this.axis.width)
+          return Math.min(xScale(d.x2), this.axis.width) - 10
         }
       })
       .attr('y', (d: AlertLineOptions) => {
         const yScale = this.axis.yScales[d.yAxisIndex]
         return yScale(d.value)
       })
-      .attr('dx', '-10px')
       .attr('dy', '-.35em')
       .style('fill', (d: AlertLineOptions) => d.color)
       .text((d: AlertLineOptions) => d.description)
