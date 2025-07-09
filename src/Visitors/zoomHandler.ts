@@ -196,7 +196,8 @@ export class ZoomHandler implements Visitor {
       if (isBandScale) continue
 
       const x = scale.invert(coord)
-      scale.domain([x - (x - scale.domain()[0]) * factor, x - (x - scale.domain()[1]) * factor])
+      const extent = [x - (x - scale.domain()[0]) * factor, x - (x - scale.domain()[1]) * factor]
+      axis.setDomain(axisKey, axisIndex, extent as [number, number] | [Date, Date])
     }
   }
 
