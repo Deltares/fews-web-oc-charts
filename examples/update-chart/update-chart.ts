@@ -121,7 +121,7 @@ function onLoad() {
   })
   windDirObsChartArrow.addTo(
     windRoseAxis,
-    { radial: { key: 'x' }, angular: { key: 'y' } },
+    { radial: { key: 'x', axisIndex: 0 }, angular: { key: 'y', axisIndex: 0 } },
     'direction-measured',
     '#polar-line',
   )
@@ -134,7 +134,7 @@ function onLoad() {
   })
   windDirModelChartArrow.addTo(
     windRoseAxis,
-    { radial: { key: 'x' }, angular: { key: 'y' } },
+    { radial: { key: 'x', axisIndex: 0 }, angular: { key: 'y', axisIndex: 0 } },
     'direction-forecast',
     '#polar-line-forecast',
   )
