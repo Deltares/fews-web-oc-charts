@@ -68,7 +68,7 @@ const axesOptionsTime: CartesianAxesOptions = {
       type: AxisType.time,
       label: 'Date',
       labelAngle: 45,
-      position: 'atzero'
+      position: 'atzero',
     },
   ],
   y: [

@@ -85,12 +85,8 @@ export class ChartArea extends Chart {
     } else {
       areaGenerator
         .defined((d) => !isNull(d[yKey]))
-        .y0(function (d: any) {
-          return yScale(0)
-        })
-        .y1(function (d: any) {
-          return yScale(d[yKey])
-        })
+        .y0(() => yScale(0))
+        .y1((d) => yScale(d[yKey]))
     }
 
     const curve = this.curveGenerator
@@ -100,11 +96,7 @@ export class ChartArea extends Chart {
 
     this._areaGenerator = areaGenerator
 
-    const area = this.group
-      .select('path')
-      .datum(this.data.slice(i0, i1))
-      .join('path')
-      .attr('d', areaGenerator)
+    this.group.select('path').datum(this.data.slice(i0, i1)).join('path').attr('d', areaGenerator)
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

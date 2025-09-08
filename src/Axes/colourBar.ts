@@ -230,6 +230,7 @@ export class ColourBar {
           return i % stride === 0
         }),
       )
+      // eslint-disable-next-line @typescript-eslint/no-base-to-string
       axis.tickFormat((d) => d.toString())
     } else if (this.options.ticks) {
       axis.ticks(this.options.ticks)

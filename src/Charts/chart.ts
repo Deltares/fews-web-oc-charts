@@ -85,7 +85,7 @@ export interface ChartOptions extends ChartOptionsForKeys {
   color?: ColorOptionItem
   colorScale?: any
   symbol?: SymbolOptions
-  curve?: string
+  curve?: CurveType
   text?: TextOptions
   tooltip?: TooltipOptions
   mouseover?: MouseOverOptions
@@ -322,11 +322,7 @@ export abstract class Chart {
     return html
   }
 
-  protected defaultToolTipText(
-    data: number | number[] | any,
-    key: string,
-    decimals: number,
-  ): string {
+  protected defaultToolTipText(data: any, key: string, decimals: number): string {
     if (data instanceof Array) {
       if (data[0] != data[1]) {
         return key + ': ' + data[0].toFixed(decimals) + ' - ' + data[1].toFixed(decimals)

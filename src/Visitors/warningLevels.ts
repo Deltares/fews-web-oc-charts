@@ -53,7 +53,7 @@ export class WarningLevels implements Visitor {
     this.warningAxis = d3
       .axisRight(this.scale)
       .tickValues(tickValues)
-      .tickFormat((d, i) => {
+      .tickFormat((d, _i) => {
         const level = escalationLevels.find((l) => l.val === d)
         return level.id
       })
@@ -68,9 +68,7 @@ export class WarningLevels implements Visitor {
       .selectAll('.tick text')
       .append('title')
       .attr('class', 'tooltip')
-      .text((d, i) => {
-        return 'waarschuwing waardes' + escalationLevels[i].c + '' + d
-      })
+      .text((d: any, i) => 'waarschuwing waardes' + escalationLevels[i].c + '' + d)
 
     this.sections = this.axis.canvas.select('.canvas').append('g').attr('class', 'warning-sections')
 
@@ -82,15 +80,13 @@ export class WarningLevels implements Visitor {
     const scaleX = this.axis.xScales[0].copy()
     const domainY = scaleY.domain()
 
-    const bisect = d3.bisector((data: any) => {
-      return data.date
-    }).left
+    const bisector = d3.bisector((data: any) => data.date)
 
     const escalationLevels = this.escalationLevels ?? []
     const tickLevels = escalationLevels
       .map((el) => {
         // set label at height of level at right side of chart
-        const idx = bisect(el.events, scaleX.domain()[1])
+        const idx = bisector.left(el.events, scaleX.domain()[1])
         return { id: el.id, val: el.events[Math.max(0, idx - 1)].value }
       })
       .filter((el) => {
@@ -117,40 +113,29 @@ export class WarningLevels implements Visitor {
         .area()
         .curve(d3.curveStepAfter)
         .defined((e: any) => !isNull(e.value))
-        .x((e: any, j) => {
-          return scaleX(e.date)
-        })
+        .x((e: any) => scaleX(e.date))
+
       if (d.c === '<') {
         if (i === 0) {
           //set lower bound to bottom of chart
-          areaGen.y0((e, j) => {
-            return scaleY(domainY[0])
-          })
+          areaGen.y0(() => scaleY(domainY[0]))
         } else {
           // set lower bound to value of the threshold below this one
-          areaGen.y0((e, j) => {
-            return scaleY(escalationLevels[i - 1].events[j].value)
-          })
+          areaGen.y0((e, j) => scaleY(escalationLevels[i - 1].events[j].value))
         }
+
         // set upper bound to value of this threshold
-        areaGen.y1((e: any, j) => {
-          return scaleY(e.value)
-        })
+        areaGen.y1((e: any) => scaleY(e.value))
       } else if (d.c === '>') {
         // set lower bound to value of this threshold
-        areaGen.y0((e: any, j) => {
-          return scaleY(e.value)
-        })
+        areaGen.y0((e: any) => scaleY(e.value))
+
         if (i === escalationLevels.length - 1) {
           // set upper bound to top of chart
-          areaGen.y1((e, j) => {
-            return scaleY(domainY[1])
-          })
+          areaGen.y1(() => scaleY(domainY[1]))
         } else {
           // set upper bound to value of threshold above this one
-          areaGen.y1((e, j) => {
-            return scaleY(escalationLevels[i + 1].events[j].value)
-          })
+          areaGen.y1((e, j) => scaleY(escalationLevels[i + 1].events[j].value))
         }
       }
       return areaGen

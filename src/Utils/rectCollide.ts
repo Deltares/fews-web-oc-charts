@@ -12,7 +12,6 @@ export function rectCollide() {
   let strength = 1
   let iterations = 1
   let nodeCenterX
-  let nodeMass
   let nodeCenterY
 
   function force() {
@@ -28,13 +27,12 @@ export function rectCollide() {
 
       while (++j < nodes.length) {
         node = nodes[j]
-        nodeMass = masses[j]
         nodeCenterX = xCenter(node)
         nodeCenterY = yCenter(node)
         tree.visit(collisionDetection)
       } //end nodes loop
     } //end iterate function
-    function collisionDetection(quad, x0, y0, x1, y1) {
+    function collisionDetection(quad, _x0, _y0, _x1, _y1) {
       let updated = false
       const data = quad.data
       if (data) {

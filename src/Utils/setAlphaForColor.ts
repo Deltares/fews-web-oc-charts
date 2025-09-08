@@ -6,6 +6,7 @@
  */
 export function setAlphaForColor(color: string, alpha: number) {
   if (color.startsWith('rgba') || color.startsWith('hsla')) {
+    // eslint-disable-next-line no-useless-escape
     return color.replace(/[\d\.]+\)/, `${alpha})`)
   }
   if (color.startsWith('#') && color.length === 9) {

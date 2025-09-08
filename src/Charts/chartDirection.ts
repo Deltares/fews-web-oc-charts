@@ -56,12 +56,12 @@ export class ChartDirection extends Chart {
     elements
       .enter()
       .append('g')
-      .attr('transform', (d: any, i: number) => {
+      .attr('transform', (d: any, _i: number) => {
         return 'translate(' + xScale(d[xKey]) + ',' + yScale(d[yKey]) + ')'
       })
       .append('path')
       .attr('d', d3.symbol().type(symbolArrow).size(this.options.symbol.size))
-      .attr('transform', (d: any, i: number) => {
+      .attr('transform', (d: any, _i: number) => {
         return `rotate(${d[dKey] - 180})`
       })
     if (this.options.tooltip !== undefined) {
@@ -96,16 +96,17 @@ export class ChartDirection extends Chart {
     }
 
     elements
-      .attr('transform', (d: any, i: number) => {
+      .attr('transform', (d: any, _i: number) => {
         return 'translate(' + xScale(d[xKey]) + ',' + yScale(d[yKey]) + ')'
       })
       .select('path')
       .attr('d', d3.symbol().type(symbolArrow).size(this.options.symbol.size))
-      .attr('transform', (d: any, i: number) => {
+      .attr('transform', (d: any, _i: number) => {
         return `rotate(${d[dKey] - 180})`
       })
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   plotterPolar(axis: PolarAxes, dataKeys: any) {
     this.group = this.selectGroup(axis, 'chart-marker')
     const rKey = this.dataKeys.radial
@@ -116,7 +117,7 @@ export class ChartDirection extends Chart {
     function arcTransform(p) {
       // We only use 'd', but list d,i,a as params just to show can have them as params.
       // Code only really uses d and t.
-      return function (d, i, a) {
+      return function (d, i, _a) {
         const old = p[i]
         if (mean(old[tKey]) - mean(d[tKey]) > 180) {
           old[tKey] = old[tKey] - 360
@@ -149,7 +150,7 @@ export class ChartDirection extends Chart {
     elements
       .enter()
       .append('path')
-      .attr('transform', (d: any, i: number) => {
+      .attr('transform', (d: any, _i: number) => {
         const r: number = axis.radialScale(d[rKey])
         const t: number = axis.angularScale(d[tKey])
         return 'translate(' + -r * Math.sin(-t) + ',' + -r * Math.cos(-t) + ')'

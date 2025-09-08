@@ -47,7 +47,7 @@ export class ChartText extends Chart {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   plotterPolar(axis: PolarAxes, dataKeys: any) {
     throw new Error('Polar axis are not supported by ChartText')
   }

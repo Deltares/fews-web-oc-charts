@@ -54,17 +54,16 @@ export class ChartHistogram extends Chart {
       })
       .attr('width', x1.bandwidth())
 
-    const that = this
-    if (that.options.tooltip !== undefined) {
+    if (this.options.tooltip !== undefined) {
       update
         .on('pointerover', function (_e: any, d) {
           if (
-            that.options.tooltip.anchor !== undefined &&
-            that.options.tooltip.anchor !== TooltipAnchor.Top
+            this.options.tooltip.anchor !== undefined &&
+            this.options.tooltip.anchor !== TooltipAnchor.Top
           ) {
             console.error(
               'Tooltip not implemented for anchor ',
-              that.options.tooltip.anchor,
+              this.options.tooltip.anchor,
               ', using ',
               TooltipAnchor.Top,
               ' instead.',
@@ -72,9 +71,9 @@ export class ChartHistogram extends Chart {
           }
           axis.tooltip.show()
           axis.tooltip.update(
-            that.toolTipFormatterCartesian(d),
-            that.options.tooltip.position !== undefined
-              ? that.options.tooltip.position
+            this.toolTipFormatterCartesian(d),
+            this.options.tooltip.position !== undefined
+              ? this.options.tooltip.position
               : TooltipPosition.Top,
             axis.margin.left + x1(d[xKey]) + x1.bandwidth() / 2,
             axis.margin.top + Math.min(yScale(d[yKey]), yScale(0)),
@@ -101,6 +100,7 @@ export class ChartHistogram extends Chart {
       })
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   plotterPolar(axis: PolarAxes, dataKeys: any) {
     throw new Error('plotterPolar is not implemented for ChartHistogram')
   }

@@ -31,6 +31,7 @@ export class ChartArrow extends Chart {
     this.options = defaultsDeep(this.options, this.options, { symbol: DefaultSymbolOptions })
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   defaultToolTipFormatterCartesian(d): HTMLElement {
     throw new Error('defaultToolTipFormatterCartesian is not implemented for ChartArrow')
   }
@@ -86,12 +87,12 @@ export class ChartArrow extends Chart {
         L${0},${-(tailLength - 2 * l)}`
     }
 
-    function arcTransform(p) {
+    function arcTransform(p: ChartArrowData[]) {
       // We only use 'd', but list d,i,a as params just to show can have them as params.
       // Code only really uses d.
-      return function (d, i, a) {
+      return function (d, i, _a) {
         if (p.length === 0) {
-          return function (x) {
+          return function (_x) {
             return 'translate()'
           }
         }
@@ -162,7 +163,6 @@ export class ChartArrow extends Chart {
     this.previousData = this.data
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   drawLegendSymbol(legendId?: string, asSvgElement?: boolean) {
     const props = ['stroke', 'stroke-width', 'stroke-dasharray', 'fill']
     const source = this.group.select('path').node() as Element

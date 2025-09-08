@@ -52,6 +52,7 @@ export class DataField implements Visitor {
     this.create(axis)
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   create(axis: Axes) {
     if (!this.group) {
       this.group = this.container.append('g').attr('class', 'data-field')
@@ -115,7 +116,7 @@ export class DataField implements Visitor {
     this.redraw()
   }
 
-  valueFormatter(d: unknown, i: number, isLast?: boolean) {
+  valueFormatter = (d: unknown, _i: number, isLast?: boolean) => {
     const value = this.getValue(d)
     const units = this.getUnit()
     const separator = this.options.valueField.hyphen ?? ''

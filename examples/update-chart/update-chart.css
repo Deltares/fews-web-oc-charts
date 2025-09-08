@@ -48,7 +48,6 @@ input[type='range']::-ms-thumb {
   display: block;
 }
 
-
 #chart-wind-direction-time {
   position: relative;
   display: block;
@@ -71,7 +70,6 @@ input[type='range']::-ms-thumb {
   stroke: rgb(214, 39, 40);
   stroke-width: 3px;
 }
-
 
 #winddirection-line-time {
   fill: none;

@@ -91,7 +91,7 @@ export class BeaufortAxis implements Visitor {
 
     const isVertical = this.isVertical
     const colors = this.options.colors === undefined ? {} : this.options.colors
-    ticks.selectAll('.tick').each(function (d, i) {
+    ticks.selectAll('.tick').each(function (d, _i) {
       if (d3.select(this).select('rect').size() === 0) {
         d3.select(this).append('rect')
       }

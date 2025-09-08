@@ -16,7 +16,7 @@ export enum Direction {
 export type RadialAxisOptions = AxisOptions
 
 export interface AngularAxisOptions extends AxisOptions {
-  direction?: number
+  direction?: Direction
   range?: number[]
   intercept?: number
 }
@@ -72,7 +72,7 @@ export class PolarAxes extends Axes {
     merge(this.options, options)
   }
 
-  get direction(): number {
+  get direction(): Direction {
     return this.options.angular.direction
       ? this.options.angular.direction
       : polarAxesDefaultOptions.angular.direction
