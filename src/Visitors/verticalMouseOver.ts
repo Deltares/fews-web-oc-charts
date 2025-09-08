@@ -134,10 +134,8 @@ export class VerticalMouseOver implements Visitor {
         return isNull(d[xKey][0])
       }
     }
-    const bisect = d3.bisector((data) => {
-      return data[yKey]
-    }).right
-    const idx = bisect(datum, mouseValue)
+    const bisector = d3.bisector((data) => data[yKey])
+    const idx = bisector.right(datum, mouseValue)
     if (idx - 1 >= 0 && !xIsNull(datum[idx - 1])[xKey]) {
       const y0 = yScale(datum[idx - 1][yKey])
       const r0 = distanceSquared(y0, y)
@@ -161,7 +159,7 @@ export class VerticalMouseOver implements Visitor {
     const axis = this.axes
     const pointData = {}
 
-    this.mousePerLine.each((d, i) => {
+    this.mousePerLine.each((d, _i) => {
       const selector = `[data-chart-id="${d}"]`
       const chart = axis.charts.find((c) => c.id === d)
       const xIndex = chart.axisIndex.x.axisIndex
@@ -229,9 +227,7 @@ export class VerticalMouseOver implements Visitor {
   findIndex(inputDatum, xKey, yKey, yValue) {
     const isDescending = inputDatum[inputDatum.length - 1][yKey] < inputDatum[0][yKey]
     const datum = isDescending ? inputDatum.reverse() : inputDatum
-    const bisect = d3.bisector((data) => {
-      return data[yKey]
-    }).left
+    const bisector = d3.bisector((data) => data[yKey])
 
     let xIsNull = (d) => isNull(d[xKey])
     if (Array.isArray(datum[0][xKey])) {
@@ -239,7 +235,7 @@ export class VerticalMouseOver implements Visitor {
         return isNull(d[xKey][0])
       }
     }
-    const idx = bisect(datum, yValue)
+    const idx = bisector.left(datum, yValue)
     // before first point
     if (idx === 0 && datum[idx][yKey] > yValue) {
       return
@@ -254,7 +250,7 @@ export class VerticalMouseOver implements Visitor {
     return isDescending ? inputDatum.length - 1 - idx : idx
   }
 
-  determineLabel(extent: any[], value: any[] | any) {
+  determineLabel(extent: any[], value: any) {
     const s = d3.formatSpecifier('f')
     s.precision = d3.precisionFixed((extent[1] - extent[0]) / 100)
 
@@ -274,14 +270,14 @@ export class VerticalMouseOver implements Visitor {
   updatePoints(pointData) {
     const keys = Object.keys(pointData)
     this.mousePerLine
-      .attr('transform', (id, i) => {
+      .attr('transform', (id, _i) => {
         if (keys.includes(id)) {
           return `translate(${pointData[id].x0} , ${pointData[id].y0})`
         } else {
           return `translate(0, ${-window.innerWidth})`
         }
       })
-      .style('opacity', (id, i) => {
+      .style('opacity', (id, _i) => {
         if (keys.includes(id) && pointData[id].x0 !== undefined && pointData[id].y0 !== undefined) {
           return '1'
         }

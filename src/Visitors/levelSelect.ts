@@ -95,6 +95,7 @@ export class LevelSelect implements Visitor {
     this.redraw()
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   end(event) {
     this.group.select('text').remove()
     if (typeof this.callback === 'function') {

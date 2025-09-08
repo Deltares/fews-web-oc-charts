@@ -1,3 +1,5 @@
+import { D3Selection } from '@lib'
+
 export const Layers = {
   canvas: undefined,
   grid: undefined,
@@ -10,7 +12,7 @@ export const Layers = {
 
 export type LayerKeys = keyof typeof Layers
 
-export function createLayers(element, width, height) {
+export function createLayers(element: D3Selection<SVGGElement>) {
   const result: Record<LayerKeys, any> = { ...Layers }
   for (const key in Layers) {
     result[key] = element.append('g').attr('class', key)

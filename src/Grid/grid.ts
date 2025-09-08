@@ -30,7 +30,7 @@ export class Grid {
     const scale = this.axis.scale()
     if (this.options.axisKey === 'x') {
       const grid = d3.axisBottom(scale)
-      const size = d3.max(this.span.range() as number[]) as number
+      const size = d3.max(this.span.range() as number[])
       grid.tickSize(size)
       grid.ticks(5)
       if (this.axis.tickValues() !== null) {
@@ -39,7 +39,7 @@ export class Grid {
       this.updateTicks(this.group, grid)
     } else if (this.options.axisKey === 'y') {
       const grid = d3.axisRight(scale)
-      const size = d3.max(this.span.range() as number[]) as number
+      const size = d3.max(this.span.range() as number[])
       grid.tickSize(size)
       grid.ticks(5)
       if (this.axis.tickValues() !== null) {

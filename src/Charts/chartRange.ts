@@ -59,7 +59,7 @@ export class ChartRange extends Chart {
 
     if (this.options.tooltip !== undefined) {
       update
-        .on('pointerover', (_e: any, d) => {
+        .on('pointerover', (_e: any, _d) => {
           if (
             this.options.tooltip.anchor !== undefined &&
             this.options.tooltip.anchor !== TooltipAnchor.Center
@@ -115,6 +115,7 @@ export class ChartRange extends Chart {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   plotterPolar(axis: PolarAxes, axisIndex: AxisIndex) {
     const rKey = this.dataKeys.radial
     const tKey = this.dataKeys.angular
@@ -134,18 +135,10 @@ export class ChartRange extends Chart {
 
     const arcGenerator = d3
       .arc()
-      .innerRadius((d: any, i) => {
-        return axis.radialScale(d[rKey][0])
-      })
-      .outerRadius((d: any, i) => {
-        return axis.radialScale(d[rKey][1])
-      })
-      .startAngle((d: any, i) => {
-        return axis.angularScale(d[tKey][0])
-      })
-      .endAngle((d: any, i) => {
-        return axis.angularScale(d[tKey][1])
-      })
+      .innerRadius((d) => axis.radialScale(d[rKey][0]))
+      .outerRadius((d) => axis.radialScale(d[rKey][1]))
+      .startAngle((d) => axis.angularScale(d[tKey][0]))
+      .endAngle((d) => axis.angularScale(d[tKey][1]))
 
     this.group = this.selectGroup(axis, 'chart-range')
     this.group.style('stroke', 'none')
@@ -180,14 +173,12 @@ export class ChartRange extends Chart {
           if (this.options.tooltip.anchor === TooltipAnchor.Center) {
             const start = angularPosition(d[tKey][0])
             const end = angularPosition(d[tKey][1])
-            const centroid = d3
-              .arc()
-              .centroid({
-                innerRadius: axis.radialScale(d[rKey][0]),
-                outerRadius: axis.radialScale(d[rKey][1]),
-                startAngle: axis.angularScale(start),
-                endAngle: axis.angularScale(end),
-              })
+            const centroid = d3.arc().centroid({
+              innerRadius: axis.radialScale(d[rKey][0]),
+              outerRadius: axis.radialScale(d[rKey][1]),
+              startAngle: axis.angularScale(start),
+              endAngle: axis.angularScale(end),
+            })
             x = axis.margin.left + axis.width / 2 + centroid[0]
             y = axis.margin.top + axis.height / 2 + centroid[1]
           } else {
@@ -237,7 +228,7 @@ export class ChartRange extends Chart {
 
     this.previousData = { ...this.data }
     function arcTween(transition: any, p: any) {
-      transition.attrTween('d', (d: any, i: number, a: any) => {
+      transition.attrTween('d', (d: any, i: number, _a: any) => {
         const old = p[i]
         if (mean(old[tKey]) - mean(d[tKey]) > 180) {
           old[tKey] = old[tKey].map((x) => {

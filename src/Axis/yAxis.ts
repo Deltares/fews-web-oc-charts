@@ -38,7 +38,7 @@ export class YAxis extends Axis {
       case 180:
         this.group.selectAll('text').attr('transform', `rotate(${angle})`)
         break
-      default:
+      default: {
         const anchor = textAnchorForAngle(angle, orientation)
         const offset = orientation === AxisOrientation.Right ? 15 : -15
         this.group
@@ -50,6 +50,7 @@ export class YAxis extends Axis {
           .attr('text-anchor', anchor)
           .attr('dominant-baseline', 'middle')
           .attr('transform', `translate(${offset}, 0) rotate(${angle})`)
+      }
     }
   }
 }

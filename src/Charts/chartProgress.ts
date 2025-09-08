@@ -13,10 +13,12 @@ function mean(x: number[] | number) {
 export class ChartProgress extends Chart {
   private previousData: any[] = []
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   plotterCartesian(axis: CartesianAxes, dataKeys: any) {
     throw new Error('Not implemented')
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   plotterPolar(axis: PolarAxes, dataKeys: any) {
     const tKey = this.dataKeys.angular
     const rKey = this.dataKeys.radial
@@ -31,18 +33,10 @@ export class ChartProgress extends Chart {
 
     const arcGenerator = d3
       .arc()
-      .innerRadius(function (d: any, i) {
-        return scale(d[rKey])
-      })
-      .outerRadius(function (d: any, i) {
-        return scale(d[rKey]) + scale.bandwidth()
-      })
-      .startAngle(function (d: any, i) {
-        return axis.angularScale(d[tKey][0])
-      })
-      .endAngle(function (d: any, i) {
-        return axis.angularScale(d[tKey][1])
-      })
+      .innerRadius((d) => scale(d[rKey]))
+      .outerRadius((d) => scale(d[rKey]) + scale.bandwidth())
+      .startAngle((d) => axis.angularScale(d[tKey][0]))
+      .endAngle((d) => axis.angularScale(d[tKey][1]))
       .cornerRadius(scale.bandwidth() / 8)
 
     this.group = this.selectGroup(axis, 'chart-range')
@@ -93,30 +87,22 @@ export class ChartProgress extends Chart {
 
     if (colorKey) {
       enter
-        .style('fill', (d: any) => {
-          return colorMap[d[colorKey]]
-        })
-        .style('stroke', (d: any) => {
-          return colorMap[d[colorKey]]
-        })
+        .style('fill', (d) => colorMap[d[colorKey]])
+        .style('stroke', (d) => colorMap[d[colorKey]])
     }
 
     const update = elements.transition(t).call(arcTween, this.previousData)
 
     if (colorKey) {
       update
-        .style('fill', (d: any) => {
-          return colorMap[d[colorKey]]
-        })
-        .style('stroke', (d: any) => {
-          return colorMap[d[colorKey]]
-        })
+        .style('fill', (d) => colorMap[d[colorKey]])
+        .style('stroke', (d) => colorMap[d[colorKey]])
     }
 
     this.previousData = { ...this.data }
 
     function arcTween(transition: any, p: any) {
-      transition.attrTween('d', (d: any, i: number, a: any) => {
+      transition.attrTween('d', (d: any, i: number, _a: any) => {
         const old = p[i]
         if (mean(old[tKey]) - mean(d[tKey]) > 180) {
           old[tKey] = old[tKey].map((x) => {

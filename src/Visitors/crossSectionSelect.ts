@@ -208,10 +208,6 @@ export class CrossSectionSelect<V extends number | Date> implements Visitor {
     let j = 0
     const sortedPoint = [...points].sort((a, b) => a.y - b.y)
 
-    const centerY =
-      sortedPoint.reduce((total, p) => {
-        return total + p.y
-      }, 0) / sortedPoint.length
     for (const p of sortedPoint) {
       if (p.y === undefined) continue
       nodes.push({
@@ -355,12 +351,10 @@ export class CrossSectionSelect<V extends number | Date> implements Visitor {
     const xDataKey = chart.dataKeys.x
     const yDataKey = chart.dataKeys.y
     const data = chart.data
-    const bisect = d3.bisector(function (datum) {
-      return datum[xDataKey]
-    }).left
+    const bisector = d3.bisector((datum) => datum[xDataKey])
 
     const xValue = xScale.invert(xPos)
-    let idx = bisect(data, xValue)
+    let idx = bisector.left(data, xValue)
     if (idx < 0) return { id: chart.id, x: undefined, y: undefined, d: undefined }
     idx = Math.min(idx, data.length - 1)
     let yValue = data[idx][yDataKey]
@@ -387,7 +381,7 @@ export class CrossSectionSelect<V extends number | Date> implements Visitor {
     return { id: chart.id, x, y, value: yLabel, d }
   }
 
-  determineLabel(yExtent: any[], yValue: any[] | any) {
+  determineLabel(yExtent: any[], yValue: any) {
     const s = d3.formatSpecifier('f')
     s.precision = d3.precisionFixed((yExtent[1] - yExtent[0]) / 100)
     let yLabel

@@ -46,7 +46,7 @@ export class Legend implements Visitor {
 
     const enter = entries.enter().append('g').attr('class', 'legend-entry')
 
-    const updateSelection = entries.merge(enter).each(function (d, i) {
+    const updateSelection = entries.merge(enter).each(function (d, _i) {
       const legendElement = d3.select(this)
       const chartsInGroup = that.axis.charts.filter((c) => c.id === d.selector)
       const symbol = legendElement.append('g')

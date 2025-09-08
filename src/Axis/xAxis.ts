@@ -46,7 +46,7 @@ export class XAxis extends Axis {
       case 180:
         this.group.selectAll('text').attr('transform', `rotate(${angle})`)
         break
-      default:
+      default: {
         const anchor = textAnchorForAngle(angle, orientation)
         const offset = orientation === AxisOrientation.Top ? -15 : 15
         this.group
@@ -58,6 +58,7 @@ export class XAxis extends Axis {
           .attr('text-anchor', anchor)
           .attr('dominant-baseline', 'middle')
           .attr('transform', `translate(0, ${offset}) rotate(${angle})`)
+      }
     }
   }
 }
