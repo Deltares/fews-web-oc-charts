@@ -159,9 +159,11 @@ expected.addTo(
   {
     radial: {
       key: 'x',
+      axisIndex: 0,
     },
     angular: {
       key: 'y',
+      axisIndex: 0,
     },
     color: {
       key: 'v',
@@ -175,9 +177,11 @@ expected.addTo(
 progress.addTo(polarAxis1, {
   radial: {
     key: 'x',
+    axisIndex: 0,
   },
   angular: {
     key: 'y',
+    axisIndex: 0,
   },
   color: {
     key: 'v',
@@ -188,9 +192,11 @@ planned.addTo(
   {
     radial: {
       key: 'x',
+      axisIndex: 0,
     },
     angular: {
       key: 'y',
+      axisIndex: 0,
     },
     color: {
       key: 'v',
