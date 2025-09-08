@@ -291,24 +291,6 @@ planned2.addTo(
 )
 polarAxis2.redraw()
 
-function saveSvgAsPng(svgElement: SVGSVGElement, name: string) {
-  console.log('Saving chart as PNG:', name, svgElement)
-  // FIXME: the functions for saving charts no longer exist in
-  //        fews-web-oc-charts.
-  // const bbox = svgElement.getBoundingClientRect()
-  // const svgString = getSvgAsString(svgElement)
-  // svgStringToImage(svgString, 2 * bbox.width, 2 * bbox.height, save)
-  //
-  // function save(dataBlob, filesize) {
-  //   saveAs(dataBlob, `${name}.png`)
-  // }
-}
-
-function download() {
-  const element = document.getElementById('1')
-  saveSvgAsPng(element.children[0] as SVGSVGElement, 'hello')
-}
-
 function togglePrintSheet() {
   // FIXME: switching from light to dark mode works differently from when this
   //        was written.
@@ -329,7 +311,6 @@ function togglePrintSheet() {
   }
 }
 
-addListenerById('download-btn', 'click', download)
 addListenerById('toggle-print-sheet', 'click', togglePrintSheet)
 addListenerByClassName('theme-button', 'click', () =>
   document.documentElement.classList.toggle('dark'),
