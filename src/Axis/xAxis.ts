@@ -31,7 +31,10 @@ export class XAxis extends Axis {
     if (position === AxisPosition.AtZero) {
       return `translate(0,${this.spanScale(0)})`
     } else if (position === AxisPosition.Bottom) {
-      return `translate(0,${this.spanScale.range()[0]})`
+      const range = this.spanScale.range()
+      // Range will always be [0, height] or [height, 0]
+      const height = Math.max(...range)
+      return `translate(0,${height})`
     }
     return ''
   }
