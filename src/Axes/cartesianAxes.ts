@@ -427,9 +427,9 @@ export class CartesianAxes extends Axes {
   }
 
   protected initXScales(options: CartesianAxisOptions[]): void {
-    for (const option of options) {
+    for (const axisOptions of options) {
       let scale
-      switch (option.type) {
+      switch (axisOptions.type) {
         case AxisType.time:
           scale = d3.scaleUtc()
           break
@@ -468,7 +468,7 @@ export class CartesianAxes extends Axes {
   }
 
   protected setRangeX(options): void {
-    for (const [key, scale] of this.xScales) {
+    for (const [key, scale] of this.xScales.entries()) {
       if (options[key].reverse) {
         scale.range([this.width, 0])
       } else {
@@ -478,7 +478,7 @@ export class CartesianAxes extends Axes {
   }
 
   protected setRangeY(options): void {
-    for (const [key, scale] of this.yScales) {
+    for (const [key, scale] of this.yScales.entries()) {
       if (options[key].reverse) {
         scale.range([0, this.height])
       } else {

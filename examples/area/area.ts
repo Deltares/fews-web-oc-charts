@@ -4,7 +4,7 @@ import './area.css'
 
 import '@shared/theme-button'
 
-import { AxisType, CartesianAxes, ChartArea, ChartMarker } from '@lib'
+import { AxisType, CartesianAxes, ChartArea, ChartMarker, CurveType } from '@lib'
 import { generateExampleTimeSeriesData } from '@shared'
 
 function createAxes(containerId: string): CartesianAxes {
@@ -53,7 +53,7 @@ const axesStep = createAxes('chart-container-step')
 const markerOptions = { symbol: { size: 40 } }
 
 const referenceMarkersStepBefore = new ChartMarker(upperBoundExampleAreaData(-3), markerOptions)
-const areaStepBefore = new ChartArea(offsetExampleAreaData(-3), { curve: 'stepBefore' })
+const areaStepBefore = new ChartArea(offsetExampleAreaData(-3), { curve: CurveType.StepBefore })
 areaStepBefore.addTo(axesStep, axisIndex, 'example-area-step-before', {
   fill: 'blue',
   opacity: 0.5,
@@ -65,7 +65,7 @@ referenceMarkersStepBefore.addTo(axesStep, axisIndex, 'example-line-step-before'
 })
 
 const referenceMarkersStepMiddle = new ChartMarker(upperBoundExampleAreaData(0), markerOptions)
-const areaStepMiddle = new ChartArea(exampleAreaData, { curve: 'step' })
+const areaStepMiddle = new ChartArea(exampleAreaData, { curve: CurveType.Step })
 areaStepMiddle.addTo(axesStep, axisIndex, 'example-area-step-middle', {
   fill: 'green',
   opacity: 0.5,
@@ -77,7 +77,7 @@ referenceMarkersStepMiddle.addTo(axesStep, axisIndex, 'example-line-step-middle'
 })
 
 const referenceMarkersStepAfter = new ChartMarker(upperBoundExampleAreaData(3), markerOptions)
-const areaStepAfter = new ChartArea(offsetExampleAreaData(3), { curve: 'stepAfter' })
+const areaStepAfter = new ChartArea(offsetExampleAreaData(3), { curve: CurveType.StepAfter })
 areaStepAfter.addTo(axesStep, axisIndex, 'example-area-step-after', {
   fill: 'red',
   opacity: 0.5,

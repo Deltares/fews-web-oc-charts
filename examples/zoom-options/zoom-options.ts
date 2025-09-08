@@ -11,6 +11,7 @@ import {
   CartesianAxisOptions,
   ChartArea,
   ChartLine,
+  CurveType,
   Legend,
   MouseOver,
   ResetZoom,
@@ -282,7 +283,7 @@ function dataload(plot: Plot) {
       plot.axis.accept(escalationsVisitor)
       plot.escalations.forEach(function (el, i) {
         const escLevel = new ChartLine(el.events, {
-          curve: 'stepAfter',
+          curve: CurveType.StepAfter,
           y: { includeInAutoScale: false },
         })
         escLevel.addTo(plot.axis, chartOptionLevels, el.id, {

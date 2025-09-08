@@ -3,7 +3,7 @@ import '@shared/shared.css'
 import './progress.css'
 
 import { AUTO_SCALE, AxisType, ChartProgress, PolarAxes } from '@lib'
-import { addListenerByClassName, addListenerById } from '@shared'
+import { addListenerByClassName } from '@shared'
 
 const startDay = new Date(Date.now())
 startDay.setMinutes(0)
@@ -291,27 +291,6 @@ planned2.addTo(
 )
 polarAxis2.redraw()
 
-function togglePrintSheet() {
-  // FIXME: switching from light to dark mode works differently from when this
-  //        was written.
-  let status: boolean
-  for (let i = 0; i < document.styleSheets.length; i++) {
-    const s = document.styleSheets[i]
-    if (s.href !== undefined && s.href.match(/wb-charts-dark\.css/)) {
-      s.disabled = !s.disabled
-      status = s.disabled
-    }
-  }
-  for (let i = 0; i < document.styleSheets.length; i++) {
-    const s = document.styleSheets[i]
-    if (s.href !== undefined && s.href.match(/wb-charts-print\.css/)) {
-      s.disabled = !status
-      console.log(s.disabled)
-    }
-  }
-}
-
-addListenerById('toggle-print-sheet', 'click', togglePrintSheet)
 addListenerByClassName('theme-button', 'click', () =>
   document.documentElement.classList.toggle('dark'),
 )

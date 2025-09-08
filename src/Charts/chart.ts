@@ -62,13 +62,15 @@ export interface MouseOverOptions {
   textFormatter?: (d: DataValue, precision: number) => string
 }
 
-export enum CurveType {
-  Linear = 'linear',
-  Basis = 'basis',
-  Step = 'step',
-  StepAfter = 'stepAfter',
-  StepBefore = 'stepBefore',
-}
+export const CurveType = {
+  Linear: 'linear',
+  Basis: 'basis',
+  Step: 'step',
+  StepAfter: 'stepAfter',
+  StepBefore: 'stepBefore',
+} as const
+
+export type CurveType = (typeof CurveType)[keyof typeof CurveType]
 
 export interface ChartOptionsForKeys {
   x?: ChartOptionItem

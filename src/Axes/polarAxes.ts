@@ -8,10 +8,12 @@ import { DateTime } from 'luxon'
 import { niceDegreeSteps } from '../Utils/niceDegreeSteps.js'
 import { D3Selection } from '../Utils/elementTypes.js'
 
-export enum Direction {
-  CLOCKWISE = -1,
-  ANTICLOCKWISE = 1,
-}
+export const Direction = {
+  CLOCKWISE: -1,
+  ANTICLOCKWISE: 1,
+} as const
+
+export type Direction = (typeof Direction)[keyof typeof Direction]
 
 export type RadialAxisOptions = AxisOptions
 

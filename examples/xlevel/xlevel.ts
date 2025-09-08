@@ -11,6 +11,7 @@ import {
   ChartLine,
   CrossSectionSelect,
   CurrentTime,
+  CurveType,
   dateFormatter,
   DstIndicator,
   Legend,
@@ -322,7 +323,7 @@ function dataload() {
       })
       escalationLevels.forEach((el, _i) => {
         const escalationLine = new ChartLine(el.events, {
-          curve: 'stepAfter',
+          curve: CurveType.StepAfter,
           x: { includeInAutoScale: false },
         })
         escalationLine.addTo(

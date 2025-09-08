@@ -59,7 +59,7 @@ export class ChartRange extends Chart {
 
     if (this.options.tooltip !== undefined) {
       update
-        .on('pointerover', (_e: any, _d) => {
+        .on('pointerover', (_e: any, d) => {
           if (
             this.options.tooltip.anchor !== undefined &&
             this.options.tooltip.anchor !== TooltipAnchor.Center
