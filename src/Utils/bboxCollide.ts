@@ -203,7 +203,7 @@ export function bboxCollide(bbox) {
 
   force.bbox = function (_) {
     if (arguments.length) {
-      return (bbox = typeof _ === 'function' ? _ : constant(+_)), force
+      return ((bbox = typeof _ === 'function' ? _ : constant(+_)), force)
     }
     return bbox
   }
