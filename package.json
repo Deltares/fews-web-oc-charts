@@ -1,6 +1,6 @@
 {
   "name": "@deltares/fews-web-oc-charts",
-  "version": "4.1.0",
+  "version": "4.1.1",
   "description": "FEWS Chart Library",
   "license": "MIT",
   "private": false,
