@@ -2,7 +2,7 @@ import * as d3 from 'd3'
 
 import { Axes, CartesianAxes } from '../Axes'
 import { Visitor } from './visitor'
-import { defaultsDeep } from 'lodash-es'
+import { defaultsDeep, isEqual } from 'lodash-es'
 
 export const BrushMode = {
   X: 'X',
@@ -13,13 +13,24 @@ export type BrushMode = (typeof BrushMode)[keyof typeof BrushMode]
 
 export interface BrushHandlerOptions {
   brushMode: BrushMode
+  domain: Domains
 }
 
 const defaultBrushHandlerOptions: BrushHandlerOptions = {
   brushMode: BrushMode.X,
+  domain: {},
 }
 
 type Domain = [number, number] | [Date, Date]
+type Domains = { x?: Domain; y?: Domain }
+
+export interface BrushDomainChangeEvent {
+  old: Domain
+  new: Domain
+}
+
+export type BrushHandlerEventType = 'update:x-brush-domain'
+export type BrushDomainChangeCallback = (event: BrushDomainChangeEvent) => void
 
 export class BrushHandler implements Visitor {
   private labels: {
@@ -27,14 +38,11 @@ export class BrushHandler implements Visitor {
     y?: d3.Selection<SVGTextElement, unknown, SVGGElement, unknown>
   }
   private axis: CartesianAxes | null = null
-  private axes: CartesianAxes[] = []
   private options: BrushHandlerOptions
   private brush: d3.BrushBehavior<unknown> | null = null
   private brushGroup: d3.Selection<SVGGElement, unknown, SVGGElement, unknown> | null = null
-  private lastDomainUpdate: {
-    x?: Domain
-    y?: Domain
-  }
+  private lastDomainUpdate: Domains = {}
+  private domainChangeCallbacks: BrushDomainChangeCallback[] = []
 
   constructor(options?: Partial<BrushHandlerOptions>) {
     this.options = defaultsDeep({}, options, defaultBrushHandlerOptions)
@@ -48,16 +56,23 @@ export class BrushHandler implements Visitor {
 
     this.axis = axes
     this.createHandler(axes)
+    // Requires a timeout to ensure the brush is created before updating the domain
+    setTimeout(() => {
+      this.setBrushDomain(this.options.domain)
+    })
   }
 
-  addAxes(axes: Axes): void {
-    if (!(axes instanceof CartesianAxes)) {
-      throw new Error('Brush handler is only supported on Cartesian axes.')
-    }
-    this.axes.push(axes)
+  addEventListener(_event: BrushHandlerEventType, callback: BrushDomainChangeCallback) {
+    this.domainChangeCallbacks.push(callback)
   }
 
-  updateBrushDomain(domains: { x?: Domain; y?: Domain }): void {
+  removeEventListener(_event: BrushHandlerEventType, callback: BrushDomainChangeCallback) {
+    // Remove only the specified callback from the list of callbacks; this is a no-op
+    // if the specified callback does not exist.
+    this.domainChangeCallbacks = this.domainChangeCallbacks.filter((entry) => entry !== callback)
+  }
+
+  setBrushDomain(domains: Domains): void {
     if (!this.brush || !this.brushGroup) {
       throw new Error('Brush has not been created yet.')
     }
@@ -82,7 +97,7 @@ export class BrushHandler implements Visitor {
   private createHandler(axes: CartesianAxes) {
     this.createLabels(axes)
 
-    const brushed = ({ selection }) => {
+    const brushed = ({ selection, sourceEvent }) => {
       if (!selection) return
 
       const updateLabelsForAxis = (axisKey: 'x' | 'y', range: [number, number]) => {
@@ -98,12 +113,22 @@ export class BrushHandler implements Visitor {
 
       const updateDomainForAxis = (axisKey: 'x' | 'y', range: [number, number]) => {
         const scale = axes.getScale(axisKey, 0)
-        const extent = range.map(scale.invert, scale) as Domain
-        this.axes.forEach((axis) => {
-          axis.setDomain(axisKey, 0, extent)
-          axis.update()
-          axis.zoom()
-        })
+        const oldDomain = scale.domain()
+        const newDomain = range.map(scale.invert, scale) as Domain
+
+        if (
+          sourceEvent &&
+          axisKey === 'x' &&
+          this.domainChangeCallbacks.length > 0 &&
+          !isEqual(oldDomain, newDomain)
+        ) {
+          const event: BrushDomainChangeEvent = {
+            old: oldDomain,
+            new: newDomain,
+          }
+
+          this.domainChangeCallbacks.forEach((callback) => callback(event))
+        }
       }
 
       const updateForAxis = (axisKey: 'x' | 'y', range: [number, number]) => {
@@ -127,14 +152,11 @@ export class BrushHandler implements Visitor {
         updateForAxis('y', selection.map((s: number[]) => s[1]).toReversed())
       }
     }
-    const debouncedBrushed = debounce(brushed)
-
     const brushended = ({ selection }) => {
       if (selection) return
 
       this.hideLabels()
-      this.axes.forEach((axis) => axis.resetZoom())
-      this.updateBrushDomain(this.lastDomainUpdate)
+      this.setBrushDomain(this.lastDomainUpdate)
     }
 
     this.brush = getBrush(this.options.brushMode)
@@ -142,7 +164,7 @@ export class BrushHandler implements Visitor {
         [0, 0],
         [axes.width, axes.height],
       ])
-      .on('brush', debouncedBrushed)
+      .on('brush', brushed)
       .on('end', brushended)
 
     this.brushGroup = axes.canvas.append('g').call(this.brush)
@@ -202,15 +224,5 @@ function getBrush(mode: BrushMode) {
       return d3.brush()
     default:
       throw new Error(`Unknown brush mode: ${mode}`)
-  }
-}
-
-function debounce(fn: Function) {
-  let frame: number
-  return function (...args: any[]) {
-    if (frame) cancelAnimationFrame(frame)
-    frame = requestAnimationFrame(() => {
-      fn.apply(this, args)
-    })
   }
 }
