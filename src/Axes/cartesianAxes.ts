@@ -235,7 +235,7 @@ export class CartesianAxes extends Axes {
     return extent
   }
 
-  redraw(options?): void {
+  redraw(options?: { x?: ZoomOptions; y?: ZoomOptions }): void {
     this.updateAxisScales(options?.x ?? {}, 'x')
     this.updateAxisScales(options?.y ?? {}, 'y')
     this.update()
