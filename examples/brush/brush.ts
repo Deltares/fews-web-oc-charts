@@ -74,20 +74,14 @@ axes1.accept(panHandler)
 
 const axes2 = createAxes('chart-container-mini', exampleData1, dataDomain, false)
 
-const brushHandler = new BrushHandler({ brushMode: BrushMode.X })
-brushHandler.addAxes(axes1)
+const brushHandler = new BrushHandler({ brushMode: BrushMode.X, domain: { x: domain } })
 
 axes2.accept(brushHandler)
 
-// Without this setTimeout, the brush will not be updated on initial load.
-setTimeout(() => {
-  brushHandler.updateBrushDomain({
-    x: domain,
-  })
+brushHandler.addEventListener('update:x-brush-domain', (e) => {
+  axes1.redraw({ x: { domain: e.new } })
 })
 
 axes1.addEventListener('update:x-domain', (e) => {
-  brushHandler.updateBrushDomain({
-    x: e.new,
-  })
+  brushHandler.setBrushDomain({ x: e.new })
 })

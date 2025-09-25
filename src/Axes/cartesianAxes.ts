@@ -183,7 +183,9 @@ export class CartesianAxes extends Axes {
         setCurrentDomain(zoomOptions.domain)
         if (zoomOptions?.nice === true) makeDomainNice()
       } else if (axisOptions.type === AxisType.band) {
-        const charts = this.charts.filter(chart => chart.axisIndex[axisKey]?.axisIndex === axisIndex)
+        const charts = this.charts.filter(
+          (chart) => chart.axisIndex[axisKey]?.axisIndex === axisIndex,
+        )
         const extent = charts.flatMap((chart) => chart.data.map((d) => d[chart.dataKeys[axisKey]]))
         setCurrentDomain(extent as [number, number] | [Date, Date])
       } else if (zoomOptions.autoScale === true || zoomOptions.fullExtent === true) {
@@ -233,7 +235,7 @@ export class CartesianAxes extends Axes {
     return extent
   }
 
-  redraw(options?): void {
+  redraw(options?: { x?: ZoomOptions; y?: ZoomOptions }): void {
     this.updateAxisScales(options?.x ?? {}, 'x')
     this.updateAxisScales(options?.y ?? {}, 'y')
     this.update()
