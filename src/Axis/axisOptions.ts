@@ -12,6 +12,7 @@ export interface AxisOptions extends ScaleOptions {
   type?: AxisType
   unit?: string
   showGrid?: boolean
+  showAxis?: boolean
   format?: (x: number | Date) => string
   reverse?: boolean
   locale?: string
