@@ -211,7 +211,29 @@ export class BrushHandler implements Visitor {
     this.labels.y?.attr('fill', 'none').text('')
   }
 
-  redraw(): void {}
+  redraw(): void {
+    if (!this.axis || !this.brush || !this.brushGroup) return
+
+    // Update brush extent to match new axis size
+    this.brush.extent([
+      [0, 0],
+      [this.axis.width, this.axis.height],
+    ])
+    this.brushGroup.call(this.brush)
+
+    // Re-apply the last domain to update the brush position
+    if (this.lastDomainUpdate) {
+      this.setBrushDomain(this.lastDomainUpdate)
+    }
+
+    // Reposition labels
+    if (this.labels.x) {
+      this.labels.x.attr('y', this.axis.height + 20)
+    }
+    if (this.labels.y) {
+      this.labels.y.attr('x', this.axis.width)
+    }
+  }
 }
 
 function getBrush(mode: BrushMode) {
