@@ -489,16 +489,18 @@ export class CartesianAxes extends Axes {
 
   protected initAxisX(options: CartesianAxisOptions[]): void {
     for (const [axisIndex, axisOptions] of options.entries()) {
-      this.axisHandles[`x${axisIndex}`] = new XAxis(
-        this.layers.axis,
-        this.xScales[axisIndex],
-        this.yScales[0],
-        {
-          axisKey: 'x',
-          axisIndex,
-          ...axisOptions,
-        },
-      )
+      if (axisOptions.showAxis ?? true) {
+        this.axisHandles[`x${axisIndex}`] = new XAxis(
+          this.layers.axis,
+          this.xScales[axisIndex],
+          this.yScales[0],
+          {
+            axisKey: 'x',
+            axisIndex,
+            ...axisOptions,
+          },
+        )
+      }
       if (axisOptions.showGrid) {
         this.gridHandles[`x${axisIndex}`] = new Grid(
           this.layers.grid,
@@ -512,16 +514,18 @@ export class CartesianAxes extends Axes {
 
   protected initAxisY(options: CartesianAxisOptions[]): void {
     for (const [axisIndex, axisOptions] of options.entries()) {
-      this.axisHandles[`y${axisIndex}`] = new YAxis(
-        this.layers.axis,
-        this.yScales[axisIndex],
-        this.xScales[0],
-        {
-          axisKey: 'y',
-          axisIndex,
-          ...axisOptions,
-        },
-      )
+      if (axisOptions.showAxis ?? true) {
+        this.axisHandles[`y${axisIndex}`] = new YAxis(
+          this.layers.axis,
+          this.yScales[axisIndex],
+          this.xScales[0],
+          {
+            axisKey: 'y',
+            axisIndex,
+            ...axisOptions,
+          },
+        )
+      }
       if (axisOptions.showGrid) {
         this.gridHandles[`y${axisIndex}`] = new Grid(
           this.layers.grid,
