@@ -74,7 +74,11 @@ axes1.accept(panHandler)
 
 const axes2 = createAxes('chart-container-mini', exampleData1, dataDomain, false)
 
-const brushHandler = new BrushHandler({ brushMode: BrushMode.X, domain: { x: domain } })
+const brushHandler = new BrushHandler({
+  brushMode: BrushMode.X,
+  domain: { x: domain },
+  labelFormatter: (date: Date) => date.toLocaleString(),
+})
 
 axes2.accept(brushHandler)
 
