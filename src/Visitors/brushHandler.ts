@@ -14,11 +14,13 @@ export type BrushMode = (typeof BrushMode)[keyof typeof BrushMode]
 export interface BrushHandlerOptions {
   brushMode: BrushMode
   domain: Domains
+  labelFormatter: (value: number | Date) => string
 }
 
 const defaultBrushHandlerOptions: BrushHandlerOptions = {
   brushMode: BrushMode.X,
   domain: {},
+  labelFormatter: (value) => value.toString(),
 }
 
 type Domain = [number, number] | [Date, Date]
@@ -106,7 +108,7 @@ export class BrushHandler implements Visitor {
           axisKey,
           range.map((value: number) => ({
             value,
-            text: scale.invert(value),
+            text: this.options.labelFormatter(scale.invert(value)),
           })),
         )
       }
