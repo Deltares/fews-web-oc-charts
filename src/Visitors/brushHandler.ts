@@ -79,10 +79,10 @@ export class BrushHandler implements Visitor {
       throw new Error('Brush has not been created yet.')
     }
 
-    this.lastDomainUpdate = domains
-
     // TODO: Add support for other brush modes
     if (this.options.brushMode === BrushMode.X && domains.x) {
+      this.lastDomainUpdate = domains
+
       const xScale = this.axis?.getScale('x', 0)
       if (xScale) {
         const domain: number[] = domains.x.map(xScale)
