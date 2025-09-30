@@ -58,10 +58,7 @@ export class BrushHandler implements Visitor {
 
     this.axis = axes
     this.createHandler(axes)
-    // Requires a timeout to ensure the brush is created before updating the domain
-    setTimeout(() => {
-      this.setBrushDomain(this.options.domain)
-    })
+    this.setBrushDomain(this.options.domain)
   }
 
   addEventListener(_event: BrushHandlerEventType, callback: BrushDomainChangeCallback) {
@@ -91,7 +88,10 @@ export class BrushHandler implements Visitor {
         domain[0] = Math.max(domain[0], xScale.range()[0])
         domain[1] = Math.min(domain[1], xScale.range()[1])
 
-        this.brushGroup.call(this.brush.move, domain as d3.BrushSelection)
+        // Requires a timeout to ensure the brush is updated correctly
+        setTimeout(() => {
+          this.brushGroup.call(this.brush.move, domain as d3.BrushSelection)
+        })
       }
     }
   }
