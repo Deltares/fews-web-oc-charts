@@ -166,10 +166,11 @@ export class BrushHandler implements Visitor {
         [0, 0],
         [axes.width, axes.height],
       ])
+      .handleSize(5)
       .on('brush', brushed)
       .on('end', brushended)
 
-    this.brushGroup = axes.canvas.append('g').call(this.brush)
+    this.brushGroup = axes.canvas.append('g').attr('class', 'brush').call(this.brush)
   }
 
   private createLabels(axes: CartesianAxes) {
