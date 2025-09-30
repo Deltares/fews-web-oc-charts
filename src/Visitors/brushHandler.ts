@@ -90,7 +90,7 @@ export class BrushHandler implements Visitor {
 
         // Requires a timeout to ensure the brush is updated correctly
         setTimeout(() => {
-          this.brushGroup.call(this.brush.move, domain as d3.BrushSelection)
+          this.brushGroup.call(this.brush.move.bind(this.brush), domain as d3.BrushSelection)
         })
       }
     }
