@@ -75,7 +75,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Deltares/fews-web-oc-charts"
+    "url": "git+https://github.com/Deltares/fews-web-oc-charts.git"
   },
   "bugs": {
     "url": "https://github.com/Deltares/fews-web-oc-charts/issues"
