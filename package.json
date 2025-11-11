@@ -21,13 +21,6 @@
     "import": "./dist/fews-web-oc-charts.js",
     "types": "./dist/index.d.ts"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Deltares/fews-web-oc-charts"
-  },
-  "bugs": {
-    "url": "https://github.com/Deltares/fews-web-oc-charts/issues"
-  },
   "engines": {
     "node": ">=22.0.0"
   },
@@ -78,5 +71,16 @@
   },
   "volta": {
     "node": "22.13.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Deltares/fews-web-oc-charts"
+  },
+  "bugs": {
+    "url": "https://github.com/Deltares/fews-web-oc-charts/issues"
+  },
+    "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
   }
 }
