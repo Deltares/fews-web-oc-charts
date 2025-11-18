@@ -9,6 +9,20 @@ import {
 } from '../index.js'
 import type { Visitor } from './visitor.js'
 
+export type ZoomHandlerEventType = 'zoom' | 'reset-zoom'
+
+export interface CartesianDomain {
+  x: [number, number] | [Date, Date]
+  y: [number, number] | [Date, Date]
+}
+export interface ZoomEvent {
+  targetAxes: CartesianAxes[]
+}
+export type ResetZoomEvent = ZoomEvent
+
+export type ZoomCallback = (event: ZoomEvent) => void
+export type ResetZoomCallback = (event: ResetZoomEvent) => void
+
 const SelectionMode = {
   CANCEL: 'CANCEL',
   X: 'X',
@@ -51,6 +65,9 @@ export class ZoomHandler implements Visitor {
   private readonly MINMOVE = 15
   private lastPoint: [number, number]
 
+  private zoomCallbacks: ZoomCallback[] = []
+  private resetZoomCallbacks: ResetZoomCallback[] = []
+
   constructor(wheelMode?: WheelMode, scrollModifierKey?: ModifierKey)
   constructor(options?: Partial<ZoomHandlerOptions>)
   constructor(param?: WheelMode | Partial<ZoomHandlerOptions>, scrollModifierKey?: ModifierKey) {
@@ -68,6 +85,29 @@ export class ZoomHandler implements Visitor {
     }
 
     this.axes = []
+  }
+
+  addEventListener(event: 'zoom', callback: ZoomCallback): void
+  addEventListener(event: 'reset-zoom', callback: ResetZoomCallback): void
+  addEventListener(event: ZoomHandlerEventType, callback: ZoomCallback | ResetZoomCallback): void {
+    if (event === 'zoom') {
+      this.zoomCallbacks.push(callback)
+    } else {
+      this.resetZoomCallbacks.push(callback)
+    }
+  }
+
+  removeEventListener(event: 'zoom', callback: ZoomCallback): void
+  removeEventListener(event: 'reset-zoom', callback: ResetZoomCallback): void
+  removeEventListener(
+    event: ZoomHandlerEventType,
+    callback: ZoomCallback | ResetZoomCallback,
+  ): void {
+    if (event === 'zoom') {
+      this.zoomCallbacks = this.zoomCallbacks.filter((entry) => entry !== callback)
+    } else {
+      this.resetZoomCallbacks = this.resetZoomCallbacks.filter((entry) => entry !== callback)
+    }
   }
 
   visit(axis: Axes): void {
@@ -233,6 +273,7 @@ export class ZoomHandler implements Visitor {
       axis.update()
       axis.zoom()
     })
+    this.zoomCallbacks.forEach((callback) => callback({ targetAxes: this.axes }))
   }
 
   initSelection(
@@ -395,10 +436,12 @@ export class ZoomHandler implements Visitor {
     brushGroup.selectAll('*').attr('visibility', 'hidden')
     mouseGroup.dispatch('pointerover')
     this.axes.forEach((axis) => axis.zoom())
+    this.zoomCallbacks.forEach((callback) => callback({ targetAxes: this.axes }))
   }
 
   resetZoom(axis: Axes): void {
     axis.resetZoom()
+    this.resetZoomCallbacks.forEach((callback) => callback({ targetAxes: this.axes }))
   }
 
   redraw(): void {
