@@ -62,7 +62,7 @@ export class ZoomHandler implements Visitor {
   private axes: CartesianAxes[]
   private mode: SelectionMode
   private options: ZoomHandlerOptions
-  private readonly MINMOVE = 15
+  private readonly MINMOVE = 25
   private lastPoint: [number, number]
 
   private zoomCallbacks: ZoomCallback[] = []
