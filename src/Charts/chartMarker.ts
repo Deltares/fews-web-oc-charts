@@ -227,8 +227,8 @@ export class ChartMarker extends Chart {
     this.highlight.select('circle').style('opacity', 0)
   }
 
-  public onPointerMove(x: number | Date, xScale, yScale) {
-    const index = this.findXIndex(x, this.options.tooltip?.alignment ?? 'middle')
+  public onPointerMove(value: number | Date, key: 'x' | 'y', xScale, yScale) {
+    const index = this.findIndex(value, key, this.options.tooltip?.alignment ?? 'middle')
     const point = this.datum[index]
     if (point === undefined) {
       this.highlight.select('rect').style('opacity', 0)

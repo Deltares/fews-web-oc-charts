@@ -9,7 +9,8 @@ import {
   CartesianAxesOptions,
   ChartLine,
   LabelOrientation,
-  VerticalMouseOver,
+  MouseOver,
+  MouseOverDirection,
   ZoomHandler,
 } from '@lib'
 import { addListenerByClassName } from '@shared'
@@ -89,7 +90,10 @@ function setupVerticalDateTimeMouseover() {
     style2,
   )
 
-  const mouseOver = new VerticalMouseOver(['local', 'mexico'])
+  const mouseOver = new MouseOver({
+    trace: ['local', 'mexico'],
+    direction: MouseOverDirection.Vertical,
+  })
   const zoomHandler = new ZoomHandler()
 
   axis.redraw({ x: { autoScale: true }, y: { autoScale: true } })
@@ -165,7 +169,10 @@ function setupVerticalProfileMouseover() {
     style1,
   )
 
-  const mouseOver = new VerticalMouseOver(['vertical-profile'])
+  const mouseOver = new MouseOver({
+    trace: ['vertical-profile'],
+    direction: MouseOverDirection.Vertical,
+  })
   const zoomHandler = new ZoomHandler()
 
   axis.redraw({ x: { autoScale: true }, y: { autoScale: true } })

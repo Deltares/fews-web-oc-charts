@@ -350,49 +350,47 @@ export abstract class Chart {
   public onPointerOver() {}
 
   public onPointerMove(
-    _x: number | Date,
+    _value: number | Date,
+    _key: 'x' | 'y',
     _xScale,
     _yScale,
   ): void | { point: DataPointXY; style: SvgPropertiesHyphen } {}
 
   public onPointerOut() {}
 
-  protected findXIndex(xValue, method?: PointAlignment) {
+  protected findIndex(
+    value: number | Date,
+    key: 'x' | 'y',
+    method?: PointAlignment,
+  ): number | undefined {
     const datum = this.datum
-    if (datum.length === 0) return
+    if (!datum || datum.length === 0) return
 
     const xKey = this.dataKeys.x
     const yKey = this.dataKeys.y
+    const targetKey = key === 'x' ? xKey : yKey
 
-    let yIsNull = (d) => isNull(d[yKey])
-    if (Array.isArray(datum[0][yKey])) {
-      yIsNull = (d) => {
-        return isNull(d[yKey][0])
-      }
+    let isNullFn = (d) => isNull(d[targetKey])
+    if (Array.isArray(datum[0][targetKey])) {
+      isNullFn = (d) => isNull(d[targetKey][0])
     }
 
-    const bisect = d3.bisector((data) => {
-      return data[xKey]
-    })[method === 'middle' ? 'center' : 'left']
-    let idx = bisect(datum, xValue)
+    const bisector = d3.bisector((d) => d[targetKey])[method === 'middle' ? 'center' : 'left']
+    let idx = bisector(datum, value)
     if (method === 'left') idx = idx - 1
 
     // before first point
-    if (idx === 0 && datum[idx][xKey] > xValue) {
-      return
-    }
+    if (idx === 0 && datum[idx][targetKey] > value) return
     // after last point
-    if (idx === datum.length - 1 && datum[idx][xKey] < xValue) {
-      return
-    }
-    if (!datum[idx] || yIsNull(datum[idx])) {
-      return
-    }
-    // check if point before or after is null
+    if (idx === datum.length - 1 && datum[idx][targetKey] < value) return
+    // current point null
+    if (!datum[idx] || isNullFn(datum[idx])) return
+
+    // check neighbors for middle alignment
     if (method === 'middle') {
       if (
-        (xValue < datum[idx][xKey] && yIsNull(datum[idx - 1])) ||
-        (xValue > datum[idx][xKey] && yIsNull(datum[idx + 1]))
+        (value < datum[idx][targetKey] && isNullFn(datum[idx - 1])) ||
+        (value > datum[idx][targetKey] && isNullFn(datum[idx + 1]))
       ) {
         return
       }
