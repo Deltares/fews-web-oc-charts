@@ -369,10 +369,11 @@ export abstract class Chart {
     const xKey = this.dataKeys.x
     const yKey = this.dataKeys.y
     const targetKey = key === 'x' ? xKey : yKey
+    const inverseKey = key === 'x' ? yKey : xKey
 
-    let isNullFn = (d) => isNull(d[targetKey])
-    if (Array.isArray(datum[0][targetKey])) {
-      isNullFn = (d) => isNull(d[targetKey][0])
+    let isInverseNullFn = (d) => isNull(d[inverseKey])
+    if (Array.isArray(datum[0][inverseKey])) {
+      isInverseNullFn = (d) => isNull(d[inverseKey][0])
     }
 
     const bisector = d3.bisector((d) => d[targetKey])[method === 'middle' ? 'center' : 'left']
@@ -384,13 +385,13 @@ export abstract class Chart {
     // after last point
     if (idx === datum.length - 1 && datum[idx][targetKey] < value) return
     // current point null
-    if (!datum[idx] || isNullFn(datum[idx])) return
+    if (!datum[idx] || isInverseNullFn(datum[idx])) return
 
     // check neighbors for middle alignment
     if (method === 'middle') {
       if (
-        (value < datum[idx][targetKey] && isNullFn(datum[idx - 1])) ||
-        (value > datum[idx][targetKey] && isNullFn(datum[idx + 1]))
+        (value < datum[idx][targetKey] && isInverseNullFn(datum[idx - 1])) ||
+        (value > datum[idx][targetKey] && isInverseNullFn(datum[idx + 1]))
       ) {
         return
       }
