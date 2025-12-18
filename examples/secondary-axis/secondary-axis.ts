@@ -35,7 +35,7 @@ const axis = new CartesianAxes(container, null, null, {
 })
 
 const refDate = new Date()
-const mouseOver = new MouseOver(['control', 'median'])
+const mouseOver = new MouseOver({ trace: ['control', 'median'] })
 const zoom = new ZoomHandler()
 const currentTime = new CurrentTime({ x: { axisIndex: 0 } })
 

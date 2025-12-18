@@ -524,7 +524,7 @@ function updateChartWindTime(windSpeedTimeSeriesM, windSpeedTimeSeriesF, windSto
 
   windTimeAxis.redraw({ x: { autoScale: true } })
   windTimeAxis.accept(new ZoomHandler())
-  const mouseOverWindTime = new MouseOver(['windstoot', 'wind', 'wind-forecast'])
+  const mouseOverWindTime = new MouseOver({ trace: ['windstoot', 'wind', 'wind-forecast'] })
   windTimeAxis.accept(mouseOverWindTime)
   windTimeAxis.accept(new CurrentTime({ x: { axisIndex: 0 } }))
 }
@@ -534,7 +534,7 @@ function updateChartWindDirectionTime(windDirectionTimeSeriesM, windDirectionTim
   windDirectionTimeF.data = windDirectionTimeSeriesF
   windDirectionTimeAxis.redraw({ x: { autoScale: true } })
 
-  const mouseOverWindDirectionTime = new MouseOver(['winddirection', 'winddirection-forecast'])
+  const mouseOverWindDirectionTime = new MouseOver({ trace: ['winddirection', 'winddirection-forecast'] })
   windDirectionTimeAxis.accept(new ZoomHandler())
   windDirectionTimeAxis.accept(mouseOverWindDirectionTime)
   windDirectionTimeAxis.accept(new CurrentTime({ x: { axisIndex: 0 } }))

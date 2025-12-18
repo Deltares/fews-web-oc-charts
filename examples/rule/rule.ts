@@ -80,7 +80,7 @@ const levelSelect = new LevelSelect(100, (x) => console.log(x))
 // const refDate = new Date(2019,02,31);
 const refDate = new Date()
 const refYear = refDate.getFullYear()
-const mouseOver = new MouseOver(['control', 'median'])
+const mouseOver = new MouseOver({ trace: ['control', 'median'] })
 const escalationLevels = [
   {
     id: 'laag',

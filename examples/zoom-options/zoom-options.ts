@@ -260,7 +260,7 @@ function dataload(plot: Plot) {
       })
 
       // Plot
-      const mouseOver = new MouseOver(['control', 'median', 'percent90'])
+      const mouseOver = new MouseOver({ trace: ['control', 'median', 'percent90'] })
       const zoom = new ZoomHandler()
 
       let plotMedian: ChartLine

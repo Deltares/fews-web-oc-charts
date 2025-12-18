@@ -127,11 +127,11 @@ const zoomHandlerX = new ZoomHandler({
 })
 axisZoom0.redraw({ x: { autoScale: true }, y: { autoScale: true } })
 axisZoom0.accept(zoomHandlerX)
-axisZoom0.accept(new MouseOver(['local', 'mexico']))
+axisZoom0.accept(new MouseOver({ trace: ['local', 'mexico'] }))
 
 axisZoom1.redraw({ x: { autoScale: true }, y: { autoScale: true } })
 axisZoom1.accept(zoomHandlerX)
-axisZoom1.accept(new MouseOver(['local', 'mexico']))
+axisZoom1.accept(new MouseOver({ trace: ['local', 'mexico'] }))
 
 const zoomHandlerY = new ZoomHandler({
   sharedZoomMode: ZoomMode.Y,
@@ -139,11 +139,11 @@ const zoomHandlerY = new ZoomHandler({
 })
 axisZoom2.redraw({ x: { autoScale: true }, y: { autoScale: true } })
 axisZoom2.accept(zoomHandlerY)
-axisZoom2.accept(new MouseOver(['local', 'mexico']))
+axisZoom2.accept(new MouseOver({ trace: ['local', 'mexico'] }))
 
 axisZoom3.redraw({ x: { autoScale: true }, y: { autoScale: true } })
 axisZoom3.accept(zoomHandlerY)
-axisZoom3.accept(new MouseOver(['local', 'mexico']))
+axisZoom3.accept(new MouseOver({ trace: ['local', 'mexico'] }))
 
 const zoomHandlerXY = new ZoomHandler({
   sharedZoomMode: ZoomMode.XY,
@@ -151,11 +151,11 @@ const zoomHandlerXY = new ZoomHandler({
 })
 axisZoom4.redraw({ x: { autoScale: true }, y: { autoScale: true } })
 axisZoom4.accept(zoomHandlerXY)
-axisZoom4.accept(new MouseOver(['local', 'mexico']))
+axisZoom4.accept(new MouseOver({ trace: ['local', 'mexico'] }))
 
 axisZoom5.redraw({ x: { autoScale: true }, y: { autoScale: true } })
 axisZoom5.accept(zoomHandlerXY)
-axisZoom5.accept(new MouseOver(['local', 'mexico']))
+axisZoom5.accept(new MouseOver({ trace: ['local', 'mexico'] }))
 
 addListenerByClassName('theme-button', 'click', () =>
   document.documentElement.classList.toggle('dark'),

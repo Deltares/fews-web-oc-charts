@@ -113,7 +113,7 @@ crossSectionSelect2.format = formatTime
 
 const refDate = getRoundedDate(10, new Date())
 const refYear = refDate.getFullYear()
-const mouseOver = new MouseOver(['control', 'median'])
+const mouseOver = new MouseOver({ trace: ['control', 'median'] })
 const escalationLevels = [
   {
     id: 'laag',

@@ -10,7 +10,7 @@ import {
   CartesianAxes,
   ChartLine,
   MouseOver,
-  VerticalMouseOver,
+  MouseOverDirection,
   type ChartOptions,
   type DataPointXY,
   type MouseOverOptions,
@@ -145,7 +145,7 @@ const axesSelection = createExampleChart(
   [new Date('2025-01-01T10:00Z'), new Date('2025-01-02T16:00Z')],
   [-3, 5],
 )
-const mouseOverSelection = new MouseOver(['example-1', 'example-3'])
+const mouseOverSelection = new MouseOver({ trace: ['example-1', 'example-3'] })
 axesSelection.accept(mouseOverSelection)
 
 // Add mouseover with custom number formatter that uses the extent, and custom text formatter for the label.
@@ -167,7 +167,7 @@ const formatNumber = (value: number, extent: [number, number]) => {
   const formattedExtent = extent.map((val) => val.toFixed(2))
   return `Value: ${formattedValue} (Extent: ${formattedExtent.join('–')})`
 }
-const mouseOverExtent = new MouseOver(undefined, formatNumber)
+const mouseOverExtent = new MouseOver({ numberFormatter: formatNumber })
 axesFormatter.accept(mouseOverExtent)
 
 // Add mouseover with custom number formatter that does not use the extent, and use that formatter for the label as well.
@@ -180,7 +180,7 @@ const axesFormatterNoExtent = createExampleChart(
   [-3, 5],
   { textFormatter: formatNumberNoExtent },
 )
-const mouseOverNoExtent = new MouseOver(undefined, formatNumberNoExtent)
+const mouseOverNoExtent = new MouseOver({ numberFormatter: formatNumberNoExtent })
 axesFormatterNoExtent.accept(mouseOverNoExtent)
 
 // Add mouseover with custom formatter.
@@ -209,7 +209,7 @@ const axesCustomMouseOverLabel = createExampleChart(
   [-3, 5],
   { formatter: mouseOverFormatter },
 )
-const mouseOver = new MouseOver(undefined)
+const mouseOver = new MouseOver()
 axesCustomMouseOverLabel.accept(mouseOver)
 
 // Add vertical mouseover.
@@ -220,7 +220,7 @@ const axesVertical = createExampleChart(
   [-6, 12],
   [-3, 5],
 )
-const mouseOverVertical = new VerticalMouseOver()
+const mouseOverVertical = new MouseOver({ direction: MouseOverDirection.Vertical })
 axesVertical.accept(mouseOverVertical)
 
 // Add vertical mouseover with number formatter.
@@ -231,5 +231,8 @@ const axesVerticalFormatter = createExampleChart(
   [-6, 12],
   [-3, 5],
 )
-const mouseOverVerticalFormatter = new VerticalMouseOver(undefined, formatNumberNoExtent)
+const mouseOverVerticalFormatter = new MouseOver({
+  numberFormatter: formatNumberNoExtent,
+  direction: MouseOverDirection.Vertical,
+})
 axesVerticalFormatter.accept(mouseOverVerticalFormatter)

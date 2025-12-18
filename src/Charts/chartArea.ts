@@ -131,13 +131,13 @@ export class ChartArea extends Chart {
     this.highlight.select('path').style('opacity', 0)
   }
 
-  public onPointerMove(x: number | Date, _xScale, _yScale) {
+  public onPointerMove(value: number | Date, key: 'x' | 'y', _xScale, _yScale) {
     let alignment: PointAlignment = this.options.tooltip?.alignment ?? 'middle'
     if (this.options.curve === CurveType.StepBefore || this.options.curve === CurveType.StepAfter) {
       alignment = 'right'
     }
 
-    const index = this.findXIndex(x, alignment)
+    const index = this.findIndex(value, key, alignment)
     if (index === undefined) {
       this.highlight.select('path').style('opacity', 0)
     }

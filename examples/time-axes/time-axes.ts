@@ -82,7 +82,7 @@ plot2.addTo(
   style2,
 )
 
-const mouseOver = new MouseOver(['local', 'mexico'])
+const mouseOver = new MouseOver({ trace: ['local', 'mexico'] })
 const zoomHandler = new ZoomHandler()
 
 axis.redraw({ x: { autoScale: true }, y: { autoScale: true } })
