@@ -4,19 +4,29 @@ import { AxisType, CartesianAxes, TooltipPosition } from '../index.js'
 import { Visitor } from './visitor.js'
 import { dateFormatter } from '../Utils/date.js'
 
+export enum MouseOverDirection {
+  Horizontal = 'horizontal',
+  Vertical = 'vertical',
+}
+
+interface MouseOverOptions {
+  trace?: string[]
+  numberFormatter?: (value: number, extent?: [number, number]) => string
+  direction?: MouseOverDirection
+}
+
 export class MouseOver implements Visitor {
-  private trace: string[]
+  private trace: string[] | undefined
   private group: d3.Selection<SVGElement, unknown, SVGElement, unknown>
   private axes: CartesianAxes
   private mouseGroup: d3.Selection<SVGElement, unknown, SVGElement, unknown>
   private customNumberFormatter: ((value: number, extent?: [number, number]) => string) | null
+  private direction: MouseOverDirection
 
-  constructor(
-    trace?: string[],
-    numberFormatter?: (value: number, extent?: [number, number]) => string,
-  ) {
-    this.setTrace(trace)
-    this.customNumberFormatter = numberFormatter ?? null
+  constructor(options: MouseOverOptions = {}) {
+    this.setTrace(options.trace)
+    this.customNumberFormatter = options.numberFormatter ?? null
+    this.direction = options.direction ?? MouseOverDirection.Horizontal
   }
 
   setTrace(trace: string[]) {
@@ -42,18 +52,26 @@ export class MouseOver implements Visitor {
       .append('path')
       .attr('class', 'mouse-line')
       .style('opacity', '0')
-      .attr('d', function () {
-        let d = 'M' + 0 + ',' + axes.height
-        d += ' ' + 0 + ',' + 0
-        return d
+      .attr('d', () => {
+        if (this.direction === MouseOverDirection.Vertical) {
+          // horizontal line
+          return `M${axes.width},0 0,0`
+        } else {
+          // vertical line
+          return `M0,${axes.height} 0,0`
+        }
       })
 
-    this.group
-      .append('g')
-      .attr('class', 'mouse-x')
-      .attr('transform', 'translate(' + 0 + ',' + axes.height + ')')
-      .append('text')
-      .text('')
+    if (this.direction === MouseOverDirection.Vertical) {
+      this.group.append('g').attr('class', 'mouse-y').append('text').text('')
+    } else {
+      this.group
+        .append('g')
+        .attr('class', 'mouse-x')
+        .attr('transform', `translate(0,${axes.height})`)
+        .append('text')
+        .text('')
+    }
 
     this.mouseGroup
       .on('pointerout', () => this.onPointerout())
@@ -110,11 +128,20 @@ export class MouseOver implements Visitor {
       if (traces.includes(chart.id) && chart.visible && !seen.has(chart.id)) {
         const xIndex = chart.axisIndex.x.axisIndex
         const xScale = this.axes.xScales[xIndex]
+
         const yIndex = chart.axisIndex.y.axisIndex
         const yScale = this.axes.yScales[yIndex]
+
         const extent = this.axes.chartsExtent('y', chart.axisIndex.y.axisIndex, {})
         const precision = d3.precisionFixed((extent[1] - extent[0]) / 100)
-        const pointData = chart.onPointerMove(xScale.invert(mouse[0]), xScale, yScale)
+
+        const value =
+          this.direction === MouseOverDirection.Vertical
+            ? yScale.invert(mouse[1])
+            : xScale.invert(mouse[0])
+        const key = this.direction === MouseOverDirection.Vertical ? 'y' : 'x'
+        const pointData = chart.onPointerMove(value, key, xScale, yScale)
+
         const spanElement: HTMLSpanElement | undefined = chart.mouseOverFormatterCartesian(
           pointData,
           precision,
@@ -129,23 +156,41 @@ export class MouseOver implements Visitor {
   }
 
   update(mouse: [number, number]) {
-    // update line
-    this.updateXLine(mouse[0])
-    this.updateXValue(mouse[0])
+    if (this.direction === MouseOverDirection.Vertical) {
+      this.updateYLine(mouse[1])
+      this.updateYValue(mouse[1])
+    } else {
+      this.updateXLine(mouse[0])
+      this.updateXValue(mouse[0])
+    }
+
     this.updateChartIndicators(mouse)
   }
 
   updateXLine(xPos: number) {
-    this.group.select('.mouse-line').attr('transform', 'translate(' + xPos + ',' + 0 + ')')
+    this.group.select('.mouse-line').attr('transform', `translate(${xPos},0)`)
   }
 
-  updateXValue(xPos) {
+  updateXValue(xPos: number) {
     const axes = this.axes
     this.group
       .select('.mouse-x')
-      .attr('transform', 'translate(' + (xPos + 2) + ',' + (axes.height - 5) + ')')
+      .attr('transform', `translate(${xPos + 2},${axes.height - 5})`)
       .select('text')
       .text(this.xText(axes, xPos))
+  }
+
+  updateYLine(yPos: number) {
+    this.group.select('.mouse-line').attr('transform', `translate(0,${yPos})`)
+  }
+
+  updateYValue(yPos: number) {
+    const axes = this.axes
+    this.group
+      .select('.mouse-y')
+      .attr('transform', `translate(2,${yPos - 2})`)
+      .select('text')
+      .text(this.yText(axes, yPos))
   }
 
   updateTooltip(spanElements: HTMLSpanElement[], mouse: [number, number]) {
@@ -160,7 +205,9 @@ export class MouseOver implements Visitor {
       }
       axes.tooltip.update(
         htmlContent,
-        TooltipPosition.Right,
+        this.direction === MouseOverDirection.Vertical
+          ? TooltipPosition.Top
+          : TooltipPosition.Right,
         mouse[0] + axes.margin.left,
         mouse[1] + axes.margin.top,
       )
@@ -190,11 +237,33 @@ export class MouseOver implements Visitor {
     }
   }
 
+  private yText(axes: CartesianAxes, yPos: number): string {
+    if (axes.options.y[0].type === AxisType.time) {
+      return dateFormatter(axes.yScales[0].invert(yPos), 'yyyy-MM-dd HH:mm ZZZZ', {
+        timeZone: axes.options.y[0].timeZone,
+        locale: axes.options.y[0].locale,
+      })
+    } else {
+      const s = d3.formatSpecifier('f')
+      const yDomain = axes.yScales[0].domain()
+      s.precision = d3.precisionFixed(yDomain[1] / 100)
+
+      const formatNumber =
+        this.customNumberFormatter !== null
+          ? (value: number) => this.customNumberFormatter(value, yDomain as [number, number])
+          : d3.format(s.toString())
+
+      return formatNumber(axes.yScales[0].invert(yPos))
+    }
+  }
+
   redraw(): void {
     this.group.select('.mouse-line').attr('d', () => {
-      let d = 'M' + 0 + ',' + this.axes.height
-      d += ' ' + 0 + ',' + 0
-      return d
+      if (this.direction === MouseOverDirection.Vertical) {
+        return `M${this.axes.width},0 0,0`
+      } else {
+        return `M0,${this.axes.height} 0,0`
+      }
     })
     for (const chart of this.axes.charts) {
       chart.onPointerOut()

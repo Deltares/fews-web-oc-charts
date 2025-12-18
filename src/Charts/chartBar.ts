@@ -178,8 +178,8 @@ export class ChartBar extends Chart {
     this.highlight.select('rect').style('opacity', 0)
   }
 
-  public onPointerMove(x: number | Date, _xScale, yScale) {
-    const index = this.findXIndex(x)
+  public onPointerMove(value: number | Date, key: 'x' | 'y', _xScale, yScale) {
+    const index = this.findIndex(value, key)
     const point = this.datum[index]
     if (point === undefined) {
       this.highlight.select('rect').style('opacity', 0)

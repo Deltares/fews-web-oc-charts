@@ -155,7 +155,7 @@ function onLoad() {
     document.getElementById('legend-wind-rose'),
   )
 
-  const mouseOver = new MouseOver(['winddirection', 'winddirection-forecast'])
+  const mouseOver = new MouseOver({ trace: ['winddirection', 'winddirection-forecast'] })
   const zoom = new ZoomHandler()
   // Draw chart and add visitors
   windDirAxis.accept(zoom)
