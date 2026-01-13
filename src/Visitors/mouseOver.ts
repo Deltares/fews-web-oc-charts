@@ -29,7 +29,7 @@ export class MouseOver implements Visitor {
     this.direction = options.direction ?? MouseOverDirection.Horizontal
   }
 
-  setTrace(trace: string[]) {
+  setTrace(trace: string[] | undefined) {
     this.trace = trace
   }
 
