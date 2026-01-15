@@ -132,6 +132,9 @@ export class MouseOver implements Visitor {
             return chart.id
           })
 
+    const key = this.direction === MouseOverDirection.Vertical ? 'y' : 'x'
+    const inverseKey = this.direction === MouseOverDirection.Vertical ? 'x' : 'y'
+
     const spanElements: HTMLSpanElement[] = []
     const seen = new Set()
     for (const chart of this.axes.charts) {
@@ -142,17 +145,17 @@ export class MouseOver implements Visitor {
         const yIndex = chart.axisIndex.y.axisIndex
         const yScale = this.axes.yScales[yIndex]
 
-        const extent = this.axes.chartsExtent('y', chart.axisIndex.y.axisIndex, {})
+        const extent = this.axes.chartsExtent(inverseKey, chart.axisIndex[inverseKey].axisIndex, {})
         const precision = d3.precisionFixed((extent[1] - extent[0]) / 100)
 
         const value =
           this.direction === MouseOverDirection.Vertical
             ? yScale.invert(mouse[1])
             : xScale.invert(mouse[0])
-        const key = this.direction === MouseOverDirection.Vertical ? 'y' : 'x'
         const pointData = chart.onPointerMove(value, key, xScale, yScale)
 
         const spanElement: HTMLSpanElement | undefined = chart.mouseOverFormatterCartesian(
+          inverseKey,
           pointData,
           precision,
         )

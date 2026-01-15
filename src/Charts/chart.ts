@@ -216,17 +216,19 @@ export abstract class Chart {
   }
 
   mouseOverFormatterCartesian(
+    key: 'x' | 'y',
     d: void | { point: DataPointXY; style: SvgPropertiesHyphen },
     precision: number,
   ): HTMLSpanElement | undefined {
     if (this.options.mouseover?.formatter === undefined) {
-      return this.defaultMouseOverFormatterCartesian(d, precision)
+      return this.defaultMouseOverFormatterCartesian(key, d, precision)
     } else {
       return this.options.mouseover.formatter(d, precision)
     }
   }
 
   protected defaultMouseOverFormatterCartesian(
+    key: 'x' | 'y',
     d: void | { point: DataPointXY; style: SvgPropertiesHyphen },
     precision: number,
   ): HTMLSpanElement | undefined {
@@ -236,8 +238,8 @@ export abstract class Chart {
         color = setAlphaForColor(color, 1)
       }
       const value = d.point
-      if (value.y !== undefined) {
-        const label = this.mouseOverTextFormatter(value.y, precision)
+      if (value[key] !== undefined) {
+        const label = this.mouseOverTextFormatter(value[key], precision)
         const spanElement = document.createElement('span')
         spanElement.style.color = color
         spanElement.innerText = label
@@ -363,13 +365,15 @@ export abstract class Chart {
     key: 'x' | 'y',
     method?: PointAlignment,
   ): number | undefined {
-    const datum = this.datum
-    if (!datum || datum.length === 0) return
+    if (!this.datum || this.datum.length === 0) return
 
     const xKey = this.dataKeys.x
     const yKey = this.dataKeys.y
     const targetKey = key === 'x' ? xKey : yKey
     const inverseKey = key === 'x' ? yKey : xKey
+
+    const isDescending = this.datum[this.datum.length - 1][targetKey] < this.datum[0][targetKey]
+    const datum = isDescending ? [...this.datum].reverse() : this.datum
 
     let isInverseNullFn = (d) => isNull(d[inverseKey])
     if (Array.isArray(datum[0][inverseKey])) {
@@ -397,7 +401,7 @@ export abstract class Chart {
       }
     }
 
-    return idx
+    return isDescending ? datum.length - 1 - idx : idx
   }
 
   protected selectGroup(axis: CartesianAxes | PolarAxes, cssClass: string) {
