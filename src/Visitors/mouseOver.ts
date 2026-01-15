@@ -87,7 +87,13 @@ export class MouseOver implements Visitor {
   onPointerout(): void {
     // on mouse out hide line, circles and text
     this.group.select('.mouse-line').style('opacity', '0')
-    this.group.selectAll('.mouse-x text').style('fill-opacity', '0')
+
+    if (this.direction === MouseOverDirection.Vertical) {
+      this.group.select('.mouse-y text').style('fill-opacity', '0')
+    } else {
+      this.group.select('.mouse-x text').style('fill-opacity', '0')
+    }
+
     for (const chart of this.axes.charts) {
       chart.onPointerOut()
     }
@@ -111,7 +117,11 @@ export class MouseOver implements Visitor {
         chart.onPointerOut()
       }
     }
-    this.group.select('.mouse-x text').style('fill-opacity', '1')
+    if (this.direction === MouseOverDirection.Vertical) {
+      this.group.select('.mouse-y text').style('fill-opacity', '1')
+    } else {
+      this.group.select('.mouse-x text').style('fill-opacity', '1')
+    }
   }
 
   updateChartIndicators(mouse: [number, number]): void {
