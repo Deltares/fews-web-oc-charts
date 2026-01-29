@@ -223,7 +223,8 @@ export class CartesianAxes extends Axes {
     options: ZoomOptions,
   ): any[] {
     let extent = new Array(2)
-    for (const chart of this.charts) {
+    const visibleCharts = this.charts.filter((chart) => chart.visible)
+    for (const chart of visibleCharts) {
       if (
         (options.fullExtent || chart.options[axisKey].includeInAutoScale) &&
         chart.axisIndex[axisKey]?.axisIndex === +axisIndex
