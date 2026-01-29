@@ -165,15 +165,20 @@ export class CartesianAxes extends Axes {
       if (!scale) continue
 
       const axisOptions = this.options[axisKey][axisIndex]
+
       const setCurrentDomain = (domain: [number, number] | [Date, Date]) =>
         this.setDomain(axisKey, axisIndex, domain)
-      const makeDomainNice = () => {
-        const updatedDomain = niceDomain(scale.domain(), 16, axisOptions.type)
+
+      const makeDomainNice = (dataExtent, defaultExtent) => {
+        const updatedDomain = niceDomain(dataExtent, 16, axisOptions.type)
+        if (defaultExtent !== undefined) {
+          updatedDomain[0] = Math.min(defaultExtent[0], updatedDomain[0])
+          updatedDomain[1] = Math.max(defaultExtent[1], updatedDomain[1])
+        }
         setCurrentDomain(updatedDomain)
       }
 
       const axisScaleOptions: ScaleOptions = {
-        domain: axisOptions.domain,
         nice: axisOptions.nice,
         includeZero: axisOptions.includeZero,
         symmetric: axisOptions.symmetric,
@@ -181,7 +186,6 @@ export class CartesianAxes extends Axes {
       const zoomOptions = { ...{ autoScale: false }, ...axisScaleOptions, ...options }
       if (zoomOptions?.domain) {
         setCurrentDomain(zoomOptions.domain)
-        if (zoomOptions?.nice === true) makeDomainNice()
       } else if (axisOptions.type === AxisType.band) {
         const charts = this.charts.filter(
           (chart) => chart.axisIndex[axisKey]?.axisIndex === axisIndex,
@@ -200,20 +204,24 @@ export class CartesianAxes extends Axes {
           dataExtent[0] = -max
           dataExtent[1] = max
         }
-        if (defaultExtent !== undefined) {
-          if (defaultExtent[0] < dataExtent[0] || defaultExtent[1] > dataExtent[1]) {
-            dataExtent = d3.extent([...defaultExtent, ...dataExtent])
-          }
-          if (zoomOptions?.includeZero === true) {
-            dataExtent = d3.extent([...dataExtent, 0])
-          }
+        if (zoomOptions?.includeZero === true) {
+          dataExtent = d3.extent([...dataExtent, 0])
         }
-        setCurrentDomain(dataExtent as [number, number] | [Date, Date])
-        if (zoomOptions?.nice === true) makeDomainNice()
+        if (zoomOptions?.nice === true) {
+          makeDomainNice(dataExtent, defaultExtent)
+        } else {
+          if (defaultExtent !== undefined) {
+            if (defaultExtent[0] < dataExtent[0] || defaultExtent[1] > dataExtent[1]) {
+              dataExtent = d3.extent([...defaultExtent, ...dataExtent])
+            }
+          }
+          setCurrentDomain(dataExtent as [number, number] | [Date, Date])
+        }
       }
       const domain = scale.domain()
-      if (initialExtents[axisIndex] === undefined && !isNaN(domain[0]) && !isNaN(domain[1]))
+      if (initialExtents[axisIndex] === undefined && !isNaN(domain[0]) && !isNaN(domain[1])) {
         initialExtents[axisIndex] = domain
+      }
     }
   }
 
