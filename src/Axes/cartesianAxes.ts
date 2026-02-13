@@ -4,7 +4,7 @@ import { defaultsDeep, isEqual, merge } from 'lodash-es'
 import { Axes, AxesOptions } from './axes.js'
 import { AxisType } from '../Axis/axisType.js'
 import { ResetZoom, ScaleOptions, ZoomOptions } from '../Scale/scaleOptions.js'
-import { niceDomain } from './niceDomain.js'
+import { getNiceDomain } from './getNiceDomain.js'
 import { Grid } from '../Grid/grid.js'
 import { CartesianAxisOptions } from '../Axis/cartesianAxisOptions.js'
 import { XAxis } from '../Axis/xAxis.js'
@@ -13,6 +13,7 @@ import { createLayers } from '../Layers/layers.js'
 import { LabelOrientation } from '../Axis/labelOrientation.js'
 import { AxisPosition } from '../Axis/axisPosition.js'
 import { ceilByStep } from '../Utils/roundNumber.js'
+import { niceDomain } from './niceDomain.js'
 
 export type CartesianAxesIndex = { x: { axisIndex: number }; y: { axisIndex: number } }
 
@@ -166,14 +167,21 @@ export class CartesianAxes extends Axes {
 
       const axisOptions = this.options[axisKey][axisIndex]
 
-      const setCurrentDomain = (domain: [number, number] | [Date, Date]) =>
+      const setCurrentDomain = (domain: [number, number] | [Date, Date]) => {
         this.setDomain(axisKey, axisIndex, domain)
+      }
 
-      const makeDomainNice = (dataExtent, defaultExtent) => {
-        const updatedDomain = niceDomain(dataExtent, 16, axisOptions.type)
-        if (defaultExtent !== undefined) {
-          updatedDomain[0] = Math.min(defaultExtent[0], updatedDomain[0])
-          updatedDomain[1] = Math.max(defaultExtent[1], updatedDomain[1])
+      const makeDomainNice = (dataExtent, defaultDomain) => {
+        let updatedDomain =
+          axisOptions.type === AxisType.degrees
+            ? niceDomain(dataExtent, 16, AxisType.degrees)
+            : getNiceDomain({ defaultDomain, dataExtent, bufferRatio: 0.05 })
+        if (zoomOptions?.includeZero === true) {
+          updatedDomain = d3.extent([...updatedDomain, 0])
+        }
+        if (defaultDomain !== undefined) {
+          updatedDomain[0] = Math.min(defaultDomain[0], updatedDomain[0])
+          updatedDomain[1] = Math.max(defaultDomain[1], updatedDomain[1])
         }
         setCurrentDomain(updatedDomain)
       }
