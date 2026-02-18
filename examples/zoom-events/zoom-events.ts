@@ -36,5 +36,5 @@ axes.redraw({ x: { autoScale: true }, y: { autoScale: true } })
 const zoomHandler = new ZoomHandler(WheelMode.XY)
 axes.accept(zoomHandler)
 
-zoomHandler.addEventListener('zoom', () => updateStatus('Zoomed'))
+zoomHandler.addEventListener('zoom', (event) => updateStatus(`Zoomed: ${event.mode}`))
 zoomHandler.addEventListener('reset-zoom', () => updateStatus('Zoom reset'))

@@ -16,34 +16,34 @@ export interface CartesianDomain {
   y: [number, number] | [Date, Date]
 }
 export interface ZoomEvent {
+  mode: ZoomMode
   targetAxes: CartesianAxes[]
 }
-export type ResetZoomEvent = ZoomEvent
+export type ResetZoomEvent = Omit<ZoomEvent, 'mode'>
 
 export type ZoomCallback = (event: ZoomEvent) => void
 export type ResetZoomCallback = (event: ResetZoomEvent) => void
-
-const SelectionMode = {
-  CANCEL: 'CANCEL',
-  X: 'X',
-  XY: 'XY',
-  Y: 'Y',
-}
-type SelectionMode = (typeof SelectionMode)[keyof typeof SelectionMode]
 
 export const ZoomMode = {
   X: 'X',
   XY: 'XY',
   Y: 'Y',
 }
+
+export const SelectionMode = {
+  CANCEL: 'CANCEL',
+  ...ZoomMode,
+}
+type SelectionMode = (typeof SelectionMode)[keyof typeof SelectionMode]
+
 export type ZoomMode = (typeof ZoomMode)[keyof typeof ZoomMode]
 
-export enum WheelMode {
-  X = 0,
-  XY = 1,
-  Y = 2,
-  NONE = 3,
+export const WheelMode = {
+  NONE: 'NONE',
+  ...ZoomMode,
 }
+
+export type WheelMode = (typeof WheelMode)[keyof typeof WheelMode]
 
 export interface ZoomHandlerOptions {
   wheelMode: WheelMode
@@ -260,25 +260,29 @@ export class ZoomHandler implements Visitor {
         : [axis]
       axes.forEach((axis) => this.updateZoomAxisScales(axis, 'y', point[1], factor))
     }
+    let mode: ZoomMode | null = null
     switch (this.options.wheelMode) {
       case WheelMode.X:
+        mode = ZoomMode.X
         updateXScales()
         break
       case WheelMode.Y:
+        mode = ZoomMode.Y
         updateYScales()
         break
       case WheelMode.XY:
+        mode = ZoomMode.XY
         updateXScales()
         updateYScales()
         break
       case WheelMode.NONE:
-        break
+        return
     }
     this.axes.forEach((axis) => {
       axis.update()
       axis.zoom()
     })
-    this.zoomCallbacks.forEach((callback) => callback({ targetAxes: this.axes }))
+    this.zoomCallbacks.forEach((callback) => callback({ targetAxes: this.axes, mode }))
   }
 
   initSelection(
@@ -442,7 +446,7 @@ export class ZoomHandler implements Visitor {
     brushGroup.selectAll('*').attr('visibility', 'hidden')
     mouseGroup.dispatch('pointerover')
     this.axes.forEach((axis) => axis.zoom())
-    this.zoomCallbacks.forEach((callback) => callback({ targetAxes: this.axes }))
+    this.zoomCallbacks.forEach((callback) => callback({ targetAxes: this.axes, mode: this.mode }))
   }
 
   resetZoom(axis: Axes): void {
