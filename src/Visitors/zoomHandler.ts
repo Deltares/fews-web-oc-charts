@@ -67,6 +67,7 @@ export class ZoomHandler implements Visitor {
 
   private zoomCallbacks: ZoomCallback[] = []
   private resetZoomCallbacks: ResetZoomCallback[] = []
+  private onMouseMove: (event: MouseEvent) => void
 
   constructor(wheelMode?: WheelMode, scrollModifierKey?: ModifierKey)
   constructor(options?: Partial<ZoomHandlerOptions>)
@@ -159,6 +160,10 @@ export class ZoomHandler implements Visitor {
       if (isWithinAxes) return
 
       this.endSelection(axis, mouseGroup, brushGroup, null)
+    }
+
+    this.onMouseMove = (event: MouseEvent) => {
+      this.updateSelection(axis, brushGroup, d3.pointer(event, mouseRect.node()))
     }
 
     mouseRect
@@ -285,11 +290,8 @@ export class ZoomHandler implements Visitor {
     this.brushStartPoint = point
     this.lastPoint = null
     this.mode = SelectionMode.CANCEL
-    const mouseRect = mouseGroup.select('rect')
     mouseGroup.dispatch('pointerout')
-    mouseRect.on('mousemove', (event: MouseEvent) => {
-      this.updateSelection(axis, brushGroup, d3.pointer(event))
-    })
+    window.addEventListener('mousemove', this.onMouseMove)
     brushGroup
       .select('.select-rect')
       .attr('visibility', 'initial')
@@ -301,10 +303,15 @@ export class ZoomHandler implements Visitor {
 
   updateSelection(axis: Axes, brushGroup: BrushGroup, point: [number, number]): void {
     if (!this.brushStartPoint) return
-    this.lastPoint = point
+    // Point should be inside axes
+    const pointInside: [number, number] = [
+      Math.max(0, Math.min(axis.width, point[0])),
+      Math.max(0, Math.min(axis.height, point[1])),
+    ]
+    this.lastPoint = pointInside
     const m = [0, 0]
-    m[0] = point[0] - this.brushStartPoint[0]
-    m[1] = point[1] - this.brushStartPoint[1]
+    m[0] = pointInside[0] - this.brushStartPoint[0]
+    m[1] = pointInside[1] - this.brushStartPoint[1]
     let x = this.brushStartPoint[0]
     let y = this.brushStartPoint[1]
     const width = Math.abs(m[0])
@@ -396,8 +403,7 @@ export class ZoomHandler implements Visitor {
   ): void {
     if (!this.brushStartPoint) return
     point = point !== null ? point : this.lastPoint
-    const mouseRect = mouseGroup.select('rect')
-    mouseRect.on('mousemove', null)
+    window.removeEventListener('mousemove', this.onMouseMove)
     brushGroup.select('.select-rect').attr('visibility', 'hidden')
     const updateXScales = () => {
       const axes = [ZoomMode.X, ZoomMode.XY].includes(this.options.sharedZoomMode)
