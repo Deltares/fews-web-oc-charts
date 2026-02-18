@@ -66,7 +66,7 @@ export class ChartMarker extends Chart {
         .attr('refX', size / 2)
         .attr('refY', size / 2)
         .append('path')
-        .attr('d', d3.symbol(d3.symbols[symbolId], size))
+        .attr('d', d3.symbol(d3.symbolsFill[symbolId], size))
         .attr('transform', `translate(${size / 2}, ${size / 2})`)
     }
 
