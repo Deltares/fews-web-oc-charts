@@ -162,16 +162,11 @@ export class ZoomHandler implements Visitor {
       this.endSelection(axis, mouseGroup, brushGroup, null)
     }
 
-    this.onMouseMove = (event: MouseEvent) => {
-      this.updateSelection(axis, brushGroup, d3.pointer(event, mouseRect.node()))
-    }
-
     mouseRect
       .on('mousedown', (event: MouseEvent) => {
         // Only listen for left mouse button clicks without modifying keys.
         if (event.button !== 0) return
         if (event.ctrlKey || event.shiftKey) return
-
         event.preventDefault()
         this.initSelection(axis, mouseGroup, brushGroup, d3.pointer(event))
         mouseRect.on(
@@ -295,6 +290,10 @@ export class ZoomHandler implements Visitor {
     this.lastPoint = null
     this.mode = SelectionMode.CANCEL
     mouseGroup.dispatch('pointerout')
+    const mouseRect = mouseGroup.select('rect')
+    this.onMouseMove = (event: MouseEvent) => {
+      this.updateSelection(axis, brushGroup, d3.pointer(event, mouseRect.node()))
+    }
     window.addEventListener('mousemove', this.onMouseMove)
     brushGroup
       .select('.select-rect')
