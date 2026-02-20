@@ -179,6 +179,7 @@ export class CartesianAxes extends Axes {
       }
 
       const axisScaleOptions: ScaleOptions = {
+        domain: axisOptions.domain,
         nice: axisOptions.nice,
         includeZero: axisOptions.includeZero,
         symmetric: axisOptions.symmetric,
