@@ -246,8 +246,12 @@ export class CartesianAxes extends Axes {
   }
 
   redraw(options?: { x?: ZoomOptions; y?: ZoomOptions }): void {
-    this.updateAxisScales(options?.x ?? {}, 'x')
-    this.updateAxisScales(options?.y ?? {}, 'y')
+    if (options?.x) {
+      this.updateAxisScales(options?.x ?? {}, 'x')
+    }
+    if (options?.y) {
+      this.updateAxisScales(options?.y ?? {}, 'y')
+    }
     this.update()
     for (const chart of this.charts) {
       chart.plotter(this, chart.axisIndex)
