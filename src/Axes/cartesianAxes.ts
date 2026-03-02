@@ -67,7 +67,7 @@ export class CartesianAxes extends Axes {
     this.setDefaultAxisOptions(this.options.y, defaultAxesOptions.y[0])
     this.setDefaultTimeOptions(this.options.x)
     this.setDefaultTimeOptions(this.options.y)
-    this.clipPathId = 'id-' + Math.random().toString(36).substring(2, 18)
+    this.clipPathId = 'clip-path-id-' + this.axesId
     this.setClipPath()
 
     this.layers = createLayers(this.canvas)

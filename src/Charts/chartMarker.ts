@@ -53,7 +53,7 @@ export class ChartMarker extends Chart {
 
     const size = this.options.symbol.size
     const symbolId = this.options.symbol.id
-    const markerId = `marker-${symbolId}-${size}`
+    const markerId = `marker-${symbolId}-${size}-${axis.axesId}`
     const markerSymbol = axis.defs.select(`#${markerId}`)
     if (markerSymbol.empty()) {
       axis.defs
@@ -131,7 +131,7 @@ export class ChartMarker extends Chart {
 
     const size = this.options.symbol.size
     const symbolId = this.options.symbol.id
-    const markerId = `marker-${symbolId}-${size}`
+    const markerId = `marker-${symbolId}-${size}-${axis.axesId}`
     const markerSymbol = axis.defs.select(`#${markerId}`)
     if (markerSymbol.empty()) {
       axis.defs
