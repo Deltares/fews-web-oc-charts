@@ -2,8 +2,8 @@
   position: relative;
   display: block;
   width: 100%;
-  height: 100vh;
-  max-height: 414px;
+  min-height: 460px;
+  height: min(78vh, 620px);
 }
 
 /* .chart-line { fill: none; stroke: skyblue; } */
