@@ -23,6 +23,18 @@ interface ActiveChartContext {
   inverseAxisIndex: number
 }
 
+interface DirectionStrategy {
+  key: 'x' | 'y'
+  inverseKey: 'x' | 'y'
+  valueLabelSelector: '.mouse-x text' | '.mouse-y text'
+  createLinePath: (width: number, height: number) => string
+  updateGuideAndValue: (mouse: [number, number]) => void
+  pointerValue: (mouse: [number, number], xScale: any, yScale: any) => number | Date
+  tooltipBaseX: (mouse: [number, number]) => number
+  defaultTooltipPosition: TooltipPosition
+  createValueLabelGroup: () => void
+}
+
 export class MouseOver implements Visitor {
   private trace: string[] | undefined
   private group!: d3.Selection<SVGGElement, unknown, null, unknown>
@@ -45,8 +57,51 @@ export class MouseOver implements Visitor {
     this.trace = trace
   }
 
-  private isVerticalDirection(): boolean {
-    return this.direction === MouseOverDirection.Vertical
+  private directionStrategy(): DirectionStrategy {
+    if (this.direction === MouseOverDirection.Vertical) {
+      return {
+        key: 'y',
+        inverseKey: 'x',
+        valueLabelSelector: '.mouse-y text',
+        createLinePath: (width: number) => `M${width},0 0,0`,
+        updateGuideAndValue: (mouse: [number, number]) => {
+          this.updateYLine(mouse[1])
+          this.updateYValue(mouse[1])
+        },
+        pointerValue: (mouse: [number, number], _xScale: any, yScale: any) =>
+          yScale.invert(mouse[1]),
+        tooltipBaseX: (mouse: [number, number]) =>
+          this.lastPointerType === 'touch'
+            ? this.axes.margin.left + 16
+            : mouse[0] + this.axes.margin.left,
+        defaultTooltipPosition: TooltipPosition.Top,
+        createValueLabelGroup: () => {
+          this.group.append('g').attr('class', 'mouse-y').append('text').text('')
+        },
+      }
+    }
+
+    return {
+      key: 'x',
+      inverseKey: 'y',
+      valueLabelSelector: '.mouse-x text',
+      createLinePath: (_width: number, height: number) => `M0,${height} 0,0`,
+      updateGuideAndValue: (mouse: [number, number]) => {
+        this.updateXLine(mouse[0])
+        this.updateXValue(mouse[0])
+      },
+      pointerValue: (mouse: [number, number], xScale: any, _yScale: any) => xScale.invert(mouse[0]),
+      tooltipBaseX: (mouse: [number, number]) => mouse[0] + this.axes.margin.left,
+      defaultTooltipPosition: TooltipPosition.Right,
+      createValueLabelGroup: () => {
+        this.group
+          .append('g')
+          .attr('class', 'mouse-x')
+          .attr('transform', `translate(0,${this.axes.height})`)
+          .append('text')
+          .text('')
+      },
+    }
   }
 
   private resolvedTraces(): string[] {
@@ -54,7 +109,7 @@ export class MouseOver implements Visitor {
   }
 
   private createMouseLinePath(width: number, height: number): string {
-    return this.isVerticalDirection() ? `M${width},0 0,0` : `M0,${height} 0,0`
+    return this.directionStrategy().createLinePath(width, height)
   }
 
   private setLineVisibility(visible: boolean): void {
@@ -62,42 +117,26 @@ export class MouseOver implements Visitor {
   }
 
   private setValueLabelVisibility(visible: boolean): void {
-    if (this.isVerticalDirection()) {
-      this.group.select('.mouse-y text').style('fill-opacity', visible ? '1' : '0')
-    } else {
-      this.group.select('.mouse-x text').style('fill-opacity', visible ? '1' : '0')
-    }
+    this.group
+      .select(this.directionStrategy().valueLabelSelector)
+      .style('fill-opacity', visible ? '1' : '0')
   }
 
   private updateGuideLineAndValue(mouse: [number, number]): void {
-    if (this.isVerticalDirection()) {
-      this.updateYLine(mouse[1])
-      this.updateYValue(mouse[1])
-    } else {
-      this.updateXLine(mouse[0])
-      this.updateXValue(mouse[0])
-    }
+    this.directionStrategy().updateGuideAndValue(mouse)
   }
 
   private tooltipBaseX(mouse: [number, number]): number {
-    if (!this.isVerticalDirection()) {
-      return mouse[0] + this.axes.margin.left
-    }
-
-    // Keep touch interactions offset from the finger, but let mouse/pen follow x.
-    return this.lastPointerType === 'touch'
-      ? this.axes.margin.left + 16
-      : mouse[0] + this.axes.margin.left
+    return this.directionStrategy().tooltipBaseX(mouse)
   }
 
   private directionKeys(): { key: 'x' | 'y'; inverseKey: 'x' | 'y' } {
-    return this.isVerticalDirection()
-      ? { key: 'y', inverseKey: 'x' }
-      : { key: 'x', inverseKey: 'y' }
+    const { key, inverseKey } = this.directionStrategy()
+    return { key, inverseKey }
   }
 
   private pointerValue(mouse: [number, number], xScale: any, yScale: any): number | Date {
-    return this.isVerticalDirection() ? yScale.invert(mouse[1]) : xScale.invert(mouse[0])
+    return this.directionStrategy().pointerValue(mouse, xScale, yScale)
   }
 
   private buildTooltipContent(spanElements: HTMLSpanElement[]): HTMLElement {
@@ -213,16 +252,7 @@ export class MouseOver implements Visitor {
       .style('opacity', '0')
       .attr('d', () => this.createMouseLinePath(axes.width, axes.height))
 
-    if (this.isVerticalDirection()) {
-      this.group.append('g').attr('class', 'mouse-y').append('text').text('')
-    } else {
-      this.group
-        .append('g')
-        .attr('class', 'mouse-x')
-        .attr('transform', `translate(0,${axes.height})`)
-        .append('text')
-        .text('')
-    }
+    this.directionStrategy().createValueLabelGroup()
 
     this.mouseGroup
       .on('pointerdown', (event: PointerEvent) => this.onPointerdown(event))
@@ -367,10 +397,7 @@ export class MouseOver implements Visitor {
       // Keep tooltip y anchored to the current guide-line position.
       const baseY = mouse[1] + axes.margin.top
 
-      // Keep vertical mode above the line, but restore horizontal mode orientation.
-      const defaultPosition = this.isVerticalDirection()
-        ? TooltipPosition.Top
-        : TooltipPosition.Right
+      const defaultPosition = this.directionStrategy().defaultTooltipPosition
 
       // First render updates tooltip content so dimensions can be measured for edge-aware placement.
       axes.tooltip.update(htmlContent, defaultPosition, baseX, baseY)
