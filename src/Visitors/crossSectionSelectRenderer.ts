@@ -186,7 +186,7 @@ export class CrossSectionSelectRenderer {
       nodes.push({
         id: p.id,
         fx: p.x + 50,
-        y: p.y + Math.random() / 10,
+        y: p.y + Math.random() / 10, // NOSONAR(S2245) - No cryptographic use
         py: p.y,
         label: p.value ?? '',
         width: 100,
