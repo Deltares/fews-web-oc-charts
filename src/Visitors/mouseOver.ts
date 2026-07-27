@@ -285,23 +285,17 @@ export class MouseOver implements Visitor {
     const mouseYGroup = this.group.select('.mouse-y')
     const textSelection = mouseYGroup.select<SVGTextElement>('text').text(yText)
     const textNode = textSelection.node()
-    const textBBox = textNode?.getBBox()
     const textWidth = textNode?.getComputedTextLength() ?? 0
-    const textHeight = textBBox?.height ?? 12
 
     const leftOffset = 2
     const rightOffset = 2
     const useRightSide = textWidth > axes.width - leftOffset
     const x = useRightSide ? axes.width - rightOffset : leftOffset
 
-    const upperY = yPos - 2
-    const lowerY = yPos + 2
-    const canPlaceAbove = upperY - textHeight >= 0
-
     textSelection
       .attr('text-anchor', useRightSide ? 'end' : 'start')
-      .attr('dominant-baseline', canPlaceAbove ? 'auto' : 'hanging')
-    mouseYGroup.attr('transform', `translate(${x},${canPlaceAbove ? upperY : lowerY})`)
+      .attr('dominant-baseline', 'hanging')
+    mouseYGroup.attr('transform', `translate(${x},${yPos + 2})`)
   }
 
   updateTooltip(spanElements: HTMLSpanElement[], mouse: [number, number]) {
@@ -315,14 +309,16 @@ export class MouseOver implements Visitor {
         htmlContent.appendChild(document.createElement('br'))
       }
 
-      const isTouchPointer = this.lastPointerType === 'touch'
-      const baseX = mouse[0] + axes.margin.left
-      const baseY = isTouchPointer ? axes.margin.top + 14 : mouse[1] + axes.margin.top
-      const defaultPosition = isTouchPointer
-        ? TooltipPosition.Right
-        : this.direction === MouseOverDirection.Vertical
-          ? TooltipPosition.Top
-          : TooltipPosition.Right
+      const isVerticalDirection = this.direction === MouseOverDirection.Vertical
+
+      // In vertical direction, keep the tooltip on the left side of the chart.
+      const baseX = isVerticalDirection ? axes.margin.left + 16 : mouse[0] + axes.margin.left
+
+      // Keep tooltip y anchored to the current guide-line position.
+      const baseY = mouse[1] + axes.margin.top
+
+      // Render tooltip above the guide line so the arrow points down.
+      const defaultPosition = TooltipPosition.Top
 
       // First render updates tooltip content so dimensions can be measured for edge-aware placement.
       axes.tooltip.update(htmlContent, defaultPosition, baseX, baseY)
@@ -362,8 +358,6 @@ export class MouseOver implements Visitor {
       position = TooltipPosition.Left
     } else if (position === TooltipPosition.Left && x - tooltipWidth - gap - padding < 0) {
       position = TooltipPosition.Right
-    } else if (position === TooltipPosition.Top && y - tooltipHeight - gap - padding < 0) {
-      position = TooltipPosition.Bottom
     } else if (
       position === TooltipPosition.Bottom &&
       y + tooltipHeight + gap + padding > containerHeight
