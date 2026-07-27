@@ -183,16 +183,18 @@ export class CrossSectionSelectRenderer {
       .sort((a, b) => a.y - b.y)
 
     for (const p of sortedPoint) {
-      nodes.push({
-        id: p.id,
-        fx: p.x + 50,
-        y: p.y + Math.random() / 10, // NOSONAR(S2245) - No cryptographic use
-        py: p.y,
-        label: p.value ?? '',
-        width: 100,
-        height: 20,
-      })
-      nodes.push({ fx: p.x, fy: p.y, width: 4, height: 4 })
+      nodes.push(
+        {
+          id: p.id,
+          fx: p.x + 50,
+          y: p.y + Math.random() / 10, // NOSONAR(S2245) - No cryptographic use
+          py: p.y,
+          label: p.value ?? '',
+          width: 100,
+          height: 20,
+        },
+        { fx: p.x, fy: p.y, width: 4, height: 4 },
+      )
       links.push({ source: nodes[i + 1], target: nodes[i], label: p.value ?? '' })
       i = i + 2
     }
@@ -211,11 +213,9 @@ export class CrossSectionSelectRenderer {
 
     labelsUpdate.each(function (this: any) {
       const height = this.getBoundingClientRect().height + 2 * margin
-      heights.push(height)
-      heights.push(radius)
+      heights.push(height, radius)
       const width = this.getBoundingClientRect().width + height
-      widths.push(width)
-      widths.push(radius)
+      widths.push(width, radius)
     })
 
     return { widths, heights }
