@@ -22,6 +22,8 @@ export class MouseOver implements Visitor {
   private mouseGroup: d3.Selection<SVGElement, unknown, SVGElement, unknown>
   private customNumberFormatter: ((value: number, extent?: [number, number]) => string) | null
   private direction: MouseOverDirection
+  private isTouchLocked = false
+  private lastPointerType: string | null = null
 
   constructor(options: MouseOverOptions = {}) {
     this.setTrace(options.trace)
@@ -41,7 +43,7 @@ export class MouseOver implements Visitor {
   create(axes: CartesianAxes): void {
     this.mouseGroup = axes.canvas.select('.mouse')
     // Make sure the <g> mouse group picks up pointer events.
-    this.mouseGroup.attr('pointer-events', 'all')
+    this.mouseGroup.attr('pointer-events', 'all').style('touch-action', 'none')
 
     this.group = axes.canvas
       .insert('g', '.mouse')
@@ -74,17 +76,45 @@ export class MouseOver implements Visitor {
     }
 
     this.mouseGroup
+      .on('pointerdown', (event: PointerEvent) => this.onPointerdown(event))
       .on('pointerout', () => this.onPointerout())
       .on('pointerover', () => this.onPointerover())
-      .on('pointermove', (event) => {
+      .on('pointermove', (event: PointerEvent) => {
+        this.lastPointerType = event.pointerType
+        if (event.pointerType === 'touch' && !this.isTouchLocked) {
+          return
+        }
         // mouse moving over canvas
         const mouse = d3.pointer(event)
         this.update(mouse)
       })
   }
 
+  onPointerdown(event: PointerEvent): void {
+    this.lastPointerType = event.pointerType
+    if (event.pointerType !== 'touch') {
+      return
+    }
+
+    // Touch uses a tap-to-lock interaction so values remain readable during and after drag.
+    if (this.isTouchLocked) {
+      this.isTouchLocked = false
+      this.onPointerout()
+      return
+    }
+
+    this.isTouchLocked = true
+    this.onPointerover()
+    const mouse = d3.pointer(event)
+    this.update(mouse)
+  }
+
   // pointer event handlers
   onPointerout(): void {
+    if (this.isTouchLocked) {
+      return
+    }
+
     // on mouse out hide line, circles and text
     this.group.select('.mouse-line').style('opacity', '0')
 
@@ -216,14 +246,16 @@ export class MouseOver implements Visitor {
         htmlContent.appendChild(span)
         htmlContent.appendChild(document.createElement('br'))
       }
-      axes.tooltip.update(
-        htmlContent,
-        this.direction === MouseOverDirection.Vertical
+      const isTouchPointer = this.lastPointerType === 'touch'
+      const x = isTouchPointer ? axes.margin.left + axes.width - 8 : mouse[0] + axes.margin.left
+      const y = isTouchPointer ? axes.margin.top + 24 : mouse[1] + axes.margin.top
+      const tooltipPosition = isTouchPointer
+        ? TooltipPosition.Left
+        : this.direction === MouseOverDirection.Vertical
           ? TooltipPosition.Top
-          : TooltipPosition.Right,
-        mouse[0] + axes.margin.left,
-        mouse[1] + axes.margin.top,
-      )
+          : TooltipPosition.Right
+
+      axes.tooltip.update(htmlContent, tooltipPosition, x, y)
       if (axes.tooltip.isHidden) {
         axes.tooltip.show()
       }
@@ -271,6 +303,9 @@ export class MouseOver implements Visitor {
   }
 
   redraw(): void {
+    this.isTouchLocked = false
+    this.lastPointerType = null
+
     this.group.select('.mouse-line').attr('d', () => {
       if (this.direction === MouseOverDirection.Vertical) {
         return `M${this.axes.width},0 0,0`
