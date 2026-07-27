@@ -77,6 +77,63 @@ export class MouseOver implements Visitor {
       : mouse[0] + this.axes.margin.left
   }
 
+  private directionKeys(): { key: 'x' | 'y'; inverseKey: 'x' | 'y' } {
+    return this.isVerticalDirection()
+      ? { key: 'y', inverseKey: 'x' }
+      : { key: 'x', inverseKey: 'y' }
+  }
+
+  private pointerValue(mouse: [number, number], xScale: any, yScale: any): number | Date {
+    return this.isVerticalDirection() ? yScale.invert(mouse[1]) : xScale.invert(mouse[0])
+  }
+
+  private buildTooltipContent(spanElements: HTMLSpanElement[]): HTMLElement {
+    const htmlContent = document.createElement('div')
+    for (const span of spanElements) {
+      htmlContent.appendChild(span)
+      htmlContent.appendChild(document.createElement('br'))
+    }
+    return htmlContent
+  }
+
+  private setChartsPointerState(traces: string[]): void {
+    for (const chart of this.axes.charts) {
+      if (traces.includes(chart.id)) {
+        chart.onPointerOver()
+      } else {
+        chart.onPointerOut()
+      }
+    }
+  }
+
+  private handlePointerMove(event: PointerEvent): void {
+    this.lastPointerType = event.pointerType
+    if (event.pointerType === 'touch' && !this.isTouchLocked) {
+      return
+    }
+    if (event.pointerType === 'touch') {
+      event.preventDefault()
+    }
+    const mouse = d3.pointer(event)
+    this.scheduleUpdate(mouse)
+  }
+
+  private handleTouchPointerDown(event: PointerEvent): void {
+    event.preventDefault()
+
+    // Touch uses a tap-to-lock interaction so values remain readable during and after drag.
+    if (this.isTouchLocked) {
+      this.isTouchLocked = false
+      this.onPointerout()
+      return
+    }
+
+    this.isTouchLocked = true
+    this.onPointerover()
+    const mouse = d3.pointer(event)
+    this.scheduleUpdate(mouse)
+  }
+
   visit(axes: Axes): void {
     this.axes = axes as CartesianAxes
     this.create(axes as CartesianAxes)
@@ -114,18 +171,7 @@ export class MouseOver implements Visitor {
       .on('pointerdown', (event: PointerEvent) => this.onPointerdown(event))
       .on('pointerout', () => this.onPointerout())
       .on('pointerover', () => this.onPointerover())
-      .on('pointermove', (event: PointerEvent) => {
-        this.lastPointerType = event.pointerType
-        if (event.pointerType === 'touch' && !this.isTouchLocked) {
-          return
-        }
-        if (event.pointerType === 'touch') {
-          event.preventDefault()
-        }
-        // mouse moving over canvas
-        const mouse = d3.pointer(event)
-        this.scheduleUpdate(mouse)
-      })
+      .on('pointermove', (event: PointerEvent) => this.handlePointerMove(event))
   }
 
   private scheduleUpdate(mouse: [number, number]): void {
@@ -160,19 +206,7 @@ export class MouseOver implements Visitor {
       return
     }
 
-    event.preventDefault()
-
-    // Touch uses a tap-to-lock interaction so values remain readable during and after drag.
-    if (this.isTouchLocked) {
-      this.isTouchLocked = false
-      this.onPointerout()
-      return
-    }
-
-    this.isTouchLocked = true
-    this.onPointerover()
-    const mouse = d3.pointer(event)
-    this.scheduleUpdate(mouse)
+    this.handleTouchPointerDown(event)
   }
 
   // pointer event handlers
@@ -202,21 +236,13 @@ export class MouseOver implements Visitor {
     this.axes.tooltip.show()
     this.setLineVisibility(true)
     const traces = this.resolvedTraces()
-    for (const chart of this.axes.charts) {
-      if (traces.includes(chart.id)) {
-        chart.onPointerOver()
-      } else {
-        chart.onPointerOut()
-      }
-    }
+    this.setChartsPointerState(traces)
     this.setValueLabelVisibility(true)
   }
 
   updateChartIndicators(mouse: [number, number]): void {
     const traces = this.resolvedTraces()
-
-    const key = this.isVerticalDirection() ? 'y' : 'x'
-    const inverseKey = this.isVerticalDirection() ? 'x' : 'y'
+    const { key, inverseKey } = this.directionKeys()
 
     const spanElements: HTMLSpanElement[] = []
     const seen = new Set()
@@ -239,7 +265,7 @@ export class MouseOver implements Visitor {
         const extent = this.axes.chartsExtent(inverseKey, inverseAxisIndex.axisIndex, {})
         const precision = d3.precisionFixed((extent[1] - extent[0]) / 100)
 
-        const value = this.isVerticalDirection() ? yScale.invert(mouse[1]) : xScale.invert(mouse[0])
+        const value = this.pointerValue(mouse, xScale, yScale)
         const pointData = chart.onPointerMove(value, key, xScale, yScale)
 
         const spanElement: HTMLSpanElement | undefined = chart.mouseOverFormatterCartesian(
@@ -314,11 +340,7 @@ export class MouseOver implements Visitor {
     if (spanElements.length === 0) {
       axes.tooltip.hide()
     } else {
-      const htmlContent = document.createElement('div')
-      for (const span of spanElements) {
-        htmlContent.appendChild(span)
-        htmlContent.appendChild(document.createElement('br'))
-      }
+      const htmlContent = this.buildTooltipContent(spanElements)
 
       const baseX = this.tooltipBaseX(mouse)
 
