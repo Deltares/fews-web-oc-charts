@@ -20,6 +20,29 @@ type CrossSectionPoint = {
 
 type CrossSectionPointStyles = Record<string, CSSStyleDeclaration>
 
+type CrossSectionLabelNode = {
+  id?: string
+  fx?: number
+  fy?: number
+  x?: number
+  y?: number
+  py?: number
+  label?: string
+  width: number
+  height: number
+}
+
+type CrossSectionLabelLink = {
+  source: CrossSectionLabelNode
+  target: CrossSectionLabelNode
+  label: string
+}
+
+type CrossSectionLabelLayout = {
+  nodes: CrossSectionLabelNode[]
+  links: CrossSectionLabelLink[]
+}
+
 export class CrossSectionSelect<V extends number | Date> implements Visitor {
   private trace: string[] = []
   private group: any
@@ -265,31 +288,8 @@ export class CrossSectionSelect<V extends number | Date> implements Visitor {
   }
 
   updateLabels(points: any[], styles: Record<string, CSSStyleDeclaration>): void {
-    const nodes = []
-    const links = []
-    let i = 0
-    let j = 0
-    const sortedPoint = [...points].sort((a, b) => a.y - b.y)
-
-    for (const p of sortedPoint) {
-      if (p.y === undefined) continue
-      nodes.push({
-        id: p.id,
-        fx: p.x + 50,
-        y: p.y + Math.random() / 10,
-        py: p.y,
-        label: p.value,
-        width: 100,
-        height: 20,
-      })
-      // nodes.push({ id: p.id, fx: p.x + 50, x: p.x + 1000, y: (j - sortedPoint.length / 2) * 20 + centerY, py: p.y, label: p.value })
-      nodes.push({ fx: p.x, fy: p.y, width: 4, height: 4 })
-      links.push({ source: nodes[i + 1], target: nodes[i], label: p.value })
-      j = j + 1
-      i = i + 2
-    }
-
     const visibility = this.visible ? 'visible' : 'hidden'
+    const { nodes, links } = this.buildLabelLayout(points)
 
     const rectSelection = this.frontGroup
       .selectAll('.back')
@@ -384,6 +384,31 @@ export class CrossSectionSelect<V extends number | Date> implements Visitor {
     this.simulation.tick(50)
     tick()
     // this.simulation.restart()
+  }
+
+  private buildLabelLayout(points: any[]): CrossSectionLabelLayout {
+    const nodes: CrossSectionLabelNode[] = []
+    const links: CrossSectionLabelLink[] = []
+    let i = 0
+    const sortedPoint = [...points].sort((a, b) => a.y - b.y)
+
+    for (const p of sortedPoint) {
+      if (p.y === undefined) continue
+      nodes.push({
+        id: p.id,
+        fx: p.x + 50,
+        y: p.y + Math.random() / 10,
+        py: p.y,
+        label: p.value,
+        width: 100,
+        height: 20,
+      })
+      nodes.push({ fx: p.x, fy: p.y, width: 4, height: 4 })
+      links.push({ source: nodes[i + 1], target: nodes[i], label: p.value })
+      i = i + 2
+    }
+
+    return { nodes, links }
   }
 
   limitValue(): boolean {
