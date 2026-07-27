@@ -257,19 +257,11 @@ svg.wb-charts {
 }
 
 .mouse {
-  .overlay {
-    visibility: hidden;
-  }
-
   &-over {
     .mouse-line {
       stroke: var(--foreground-color);
       stroke-width: 1px;
       stroke-dasharray: 5, 2, 2, 2;
-    }
-
-    .mouse-per-line {
-      fill: var(--foreground-color);
     }
   }
 }
@@ -353,25 +345,6 @@ svg.wb-charts {
       margin-top: -5px;
       border-color: transparent var(--foreground-color-complement) transparent transparent;
     }
-  }
-}
-
-.touch-value-card {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  z-index: 2;
-  pointer-events: none;
-  white-space: nowrap;
-  border-radius: 6px;
-  padding: 6px 10px;
-  font-size: 0.95em;
-  background-color: var(--foreground-color-complement);
-  color: var(--text-color);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
-
-  &:empty {
-    display: none;
   }
 }
 
