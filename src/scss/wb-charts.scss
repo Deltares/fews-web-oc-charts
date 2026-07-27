@@ -163,9 +163,17 @@ svg.wb-charts {
 }
 
 .cross-section-select-handle {
-  stroke: var(--foreground-color);
-  fill: var(--foreground-color);
   cursor: pointer;
+
+  .cross-section-select-handle-visual {
+    stroke: var(--foreground-color);
+    fill: var(--foreground-color);
+  }
+
+  .cross-section-select-handle-hitbox {
+    fill: transparent;
+    stroke: transparent;
+  }
 }
 
 .current-time {
