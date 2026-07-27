@@ -10,6 +10,16 @@ type CrossSectionSelectOptions = {
   draggable?: boolean
 }
 
+type CrossSectionPoint = {
+  id: string
+  x?: number
+  y?: number
+  value?: string
+  d: any
+}
+
+type CrossSectionPointStyles = Record<string, CSSStyleDeclaration>
+
 export class CrossSectionSelect<V extends number | Date> implements Visitor {
   private trace: string[] = []
   private group: any
@@ -118,33 +128,50 @@ export class CrossSectionSelect<V extends number | Date> implements Visitor {
     const xPos = scale(this.value)
     this.visible = this.value >= domain[0] && this.value <= domain[1]
     this.updateLine(xPos)
-    // find values
-    const traces =
-      this.trace ||
-      axis.charts.map((chart) => {
-        return chart.id
-      })
-    let points = []
-    const styles: Record<string, CSSStyleDeclaration> = {}
-    for (const chart of axis.charts) {
-      if (traces.includes(chart.id) && chart.visible) {
-        points.push(this.findNearestPoint(chart, xPos))
-        const chartStyle = this.styleForChart(chart.id)
-        if (chartStyle) {
-          styles[chart.id] = chartStyle
-        }
-      }
-    }
-    this.currentData = points.map((p) => {
-      return {
-        id: p.id,
-        data: p.d,
-        value: p.value,
-      }
-    })
-    points = points.filter((p) => p.y !== undefined)
+    const traces = this.getTraces(axis)
+    const { points, styles } = this.collectPoints(axis, traces, xPos)
+    this.currentData = this.toCurrentData(points)
     this.updateLabels(points, styles)
     this.updateDataPoints(points, styles)
+  }
+
+  private getTraces(axis: CartesianAxes): string[] {
+    return this.trace.length > 0 ? this.trace : axis.charts.map((chart) => chart.id)
+  }
+
+  private collectPoints(
+    axis: CartesianAxes,
+    traces: string[],
+    xPos: number,
+  ): { points: CrossSectionPoint[]; styles: CrossSectionPointStyles } {
+    const points: CrossSectionPoint[] = []
+    const styles: CrossSectionPointStyles = {}
+
+    for (const chart of axis.charts) {
+      if (!traces.includes(chart.id) || !chart.visible) continue
+      points.push(this.findNearestPoint(chart, xPos))
+      const chartStyle = this.styleForChart(chart.id)
+      if (chartStyle) {
+        styles[chart.id] = chartStyle
+      }
+    }
+
+    return {
+      points: points.filter((point) => point.y !== undefined),
+      styles,
+    }
+  }
+
+  private toCurrentData(
+    points: CrossSectionPoint[],
+  ): Array<{ id: string; data: any; value?: string }> {
+    return points.map((point) => {
+      return {
+        id: point.id,
+        data: point.d,
+        value: point.value,
+      }
+    })
   }
 
   start(event: any): void {
