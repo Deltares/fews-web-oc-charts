@@ -17,9 +17,9 @@ interface MouseOverOptions {
 
 export class MouseOver implements Visitor {
   private trace: string[] | undefined
-  private group: d3.Selection<SVGElement, unknown, SVGElement, unknown>
-  private axes: CartesianAxes
-  private mouseGroup: d3.Selection<SVGElement, unknown, SVGElement, unknown>
+  private group!: d3.Selection<SVGGElement, unknown, null, unknown>
+  private axes!: CartesianAxes
+  private mouseGroup!: d3.Selection<SVGGElement, unknown, null, unknown>
   private customNumberFormatter: ((value: number, extent?: [number, number]) => string) | null
   private direction: MouseOverDirection
   private isTouchLocked = false
@@ -222,13 +222,21 @@ export class MouseOver implements Visitor {
     const seen = new Set()
     for (const chart of this.axes.charts) {
       if (traces.includes(chart.id) && chart.visible && !seen.has(chart.id)) {
-        const xIndex = chart.axisIndex.x.axisIndex
+        const xAxisIndex = chart.axisIndex.x
+        const yAxisIndex = chart.axisIndex.y
+        const inverseAxisIndex = chart.axisIndex[inverseKey]
+        if (!xAxisIndex || !yAxisIndex || !inverseAxisIndex) {
+          seen.add(chart.id)
+          continue
+        }
+
+        const xIndex = xAxisIndex.axisIndex
         const xScale = this.axes.xScales[xIndex]
 
-        const yIndex = chart.axisIndex.y.axisIndex
+        const yIndex = yAxisIndex.axisIndex
         const yScale = this.axes.yScales[yIndex]
 
-        const extent = this.axes.chartsExtent(inverseKey, chart.axisIndex[inverseKey].axisIndex, {})
+        const extent = this.axes.chartsExtent(inverseKey, inverseAxisIndex.axisIndex, {})
         const precision = d3.precisionFixed((extent[1] - extent[0]) / 100)
 
         const value = this.isVerticalDirection() ? yScale.invert(mouse[1]) : xScale.invert(mouse[0])
@@ -405,9 +413,10 @@ export class MouseOver implements Visitor {
       s.precision = d3.precisionFixed(xDomain[1] / 100)
 
       // Pass the x-domain as the extent for the formatting.
+      const customFormatter = this.customNumberFormatter
       const formatNumber =
-        this.customNumberFormatter !== null
-          ? (value: number) => this.customNumberFormatter(value, xDomain as [number, number])
+        customFormatter !== null
+          ? (value: number) => customFormatter(value, xDomain as [number, number])
           : d3.format(s.toString())
       return formatNumber(axes.xScales[0].invert(xPos))
     }
@@ -424,9 +433,10 @@ export class MouseOver implements Visitor {
       const yDomain = axes.yScales[0].domain()
       s.precision = d3.precisionFixed(yDomain[1] / 100)
 
+      const customFormatter = this.customNumberFormatter
       const formatNumber =
-        this.customNumberFormatter !== null
-          ? (value: number) => this.customNumberFormatter(value, yDomain as [number, number])
+        customFormatter !== null
+          ? (value: number) => customFormatter(value, yDomain as [number, number])
           : d3.format(s.toString())
 
       return formatNumber(axes.yScales[0].invert(yPos))
