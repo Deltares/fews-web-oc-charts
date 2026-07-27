@@ -24,6 +24,9 @@ export class MouseOver implements Visitor {
   private direction: MouseOverDirection
   private isTouchLocked = false
   private lastPointerType: string | null = null
+  private touchValueCard: HTMLDivElement | null = null
+  private pendingMouse: [number, number] | null = null
+  private frameId: number | null = null
 
   constructor(options: MouseOverOptions = {}) {
     this.setTrace(options.trace)
@@ -44,6 +47,7 @@ export class MouseOver implements Visitor {
     this.mouseGroup = axes.canvas.select('.mouse')
     // Make sure the <g> mouse group picks up pointer events.
     this.mouseGroup.attr('pointer-events', 'all').style('touch-action', 'none')
+    this.createTouchValueCard()
 
     this.group = axes.canvas
       .insert('g', '.mouse')
@@ -86,8 +90,63 @@ export class MouseOver implements Visitor {
         }
         // mouse moving over canvas
         const mouse = d3.pointer(event)
-        this.update(mouse)
+        this.scheduleUpdate(mouse)
       })
+  }
+
+  private createTouchValueCard(): void {
+    if (this.touchValueCard !== null) {
+      return
+    }
+
+    const card = document.createElement('div')
+    card.className = 'touch-value-card'
+    card.style.display = 'none'
+    this.axes.container.appendChild(card)
+    this.touchValueCard = card
+  }
+
+  private showTouchValueCard(htmlContent: HTMLElement): void {
+    if (this.touchValueCard === null) {
+      this.createTouchValueCard()
+    }
+    if (this.touchValueCard !== null) {
+      this.touchValueCard.style.display = 'block'
+      this.touchValueCard.replaceChildren(htmlContent)
+    }
+  }
+
+  private hideTouchValueCard(): void {
+    if (this.touchValueCard !== null) {
+      this.touchValueCard.style.display = 'none'
+      this.touchValueCard.replaceChildren()
+    }
+  }
+
+  private scheduleUpdate(mouse: [number, number]): void {
+    this.pendingMouse = mouse
+    if (this.frameId !== null) {
+      return
+    }
+
+    this.frameId = window.requestAnimationFrame(() => {
+      this.frameId = null
+      if (this.pendingMouse === null) {
+        return
+      }
+
+      const nextMouse = this.pendingMouse
+      this.pendingMouse = null
+      this.update(nextMouse)
+    })
+  }
+
+  private cancelScheduledUpdate(): void {
+    if (this.frameId !== null) {
+      window.cancelAnimationFrame(this.frameId)
+      this.frameId = null
+    }
+    this.pendingMouse = null
   }
 
   onPointerdown(event: PointerEvent): void {
@@ -106,7 +165,7 @@ export class MouseOver implements Visitor {
     this.isTouchLocked = true
     this.onPointerover()
     const mouse = d3.pointer(event)
-    this.update(mouse)
+    this.scheduleUpdate(mouse)
   }
 
   // pointer event handlers
@@ -114,6 +173,9 @@ export class MouseOver implements Visitor {
     if (this.isTouchLocked) {
       return
     }
+
+    this.cancelScheduledUpdate()
+    this.hideTouchValueCard()
 
     // on mouse out hide line, circles and text
     this.group.select('.mouse-line').style('opacity', '0')
@@ -131,8 +193,14 @@ export class MouseOver implements Visitor {
   }
 
   onPointerover(): void {
+    if (this.lastPointerType === 'touch' && !this.isTouchLocked) {
+      return
+    }
+
     // on mouse in show line, circles and text
-    this.axes.tooltip.show()
+    if (this.lastPointerType !== 'touch') {
+      this.axes.tooltip.show()
+    }
     this.group.select('.mouse-line').style('opacity', '1')
     const traces =
       this.trace !== undefined
@@ -216,11 +284,23 @@ export class MouseOver implements Visitor {
 
   updateXValue(xPos: number) {
     const axes = this.axes
-    this.group
-      .select('.mouse-x')
-      .attr('transform', `translate(${xPos + 2},${axes.height - 5})`)
-      .select('text')
-      .text(this.xText(axes, xPos))
+    const xText = this.xText(axes, xPos)
+    const mouseXGroup = this.group.select('.mouse-x')
+    const textSelection = mouseXGroup.select<SVGTextElement>('text').text(xText)
+    const textNode = textSelection.node()
+    const textWidth = textNode?.getComputedTextLength() ?? 0
+
+    const rightOffset = 2
+    const leftOffset = 2
+    const spaceOnRight = axes.width - xPos - rightOffset
+    const spaceOnLeft = xPos - leftOffset
+    const useLeftSide = textWidth > spaceOnRight && spaceOnLeft > spaceOnRight
+
+    textSelection.attr('text-anchor', useLeftSide ? 'end' : 'start')
+    mouseXGroup.attr(
+      'transform',
+      `translate(${useLeftSide ? xPos - leftOffset : xPos + rightOffset},${axes.height - 5})`,
+    )
   }
 
   updateYLine(yPos: number) {
@@ -229,16 +309,33 @@ export class MouseOver implements Visitor {
 
   updateYValue(yPos: number) {
     const axes = this.axes
-    this.group
-      .select('.mouse-y')
-      .attr('transform', `translate(2,${yPos - 2})`)
-      .select('text')
-      .text(this.yText(axes, yPos))
+    const yText = this.yText(axes, yPos)
+    const mouseYGroup = this.group.select('.mouse-y')
+    const textSelection = mouseYGroup.select<SVGTextElement>('text').text(yText)
+    const textNode = textSelection.node()
+    const textBBox = textNode?.getBBox()
+    const textWidth = textNode?.getComputedTextLength() ?? 0
+    const textHeight = textBBox?.height ?? 12
+
+    const leftOffset = 2
+    const rightOffset = 2
+    const useRightSide = textWidth > axes.width - leftOffset
+    const x = useRightSide ? axes.width - rightOffset : leftOffset
+
+    const upperY = yPos - 2
+    const lowerY = yPos + 2
+    const canPlaceAbove = upperY - textHeight >= 0
+
+    textSelection
+      .attr('text-anchor', useRightSide ? 'end' : 'start')
+      .attr('dominant-baseline', canPlaceAbove ? 'auto' : 'hanging')
+    mouseYGroup.attr('transform', `translate(${x},${canPlaceAbove ? upperY : lowerY})`)
   }
 
   updateTooltip(spanElements: HTMLSpanElement[], mouse: [number, number]) {
     const axes = this.axes
     if (spanElements.length === 0) {
+      this.hideTouchValueCard()
       axes.tooltip.hide()
     } else {
       const htmlContent = document.createElement('div')
@@ -246,20 +343,93 @@ export class MouseOver implements Visitor {
         htmlContent.appendChild(span)
         htmlContent.appendChild(document.createElement('br'))
       }
-      const isTouchPointer = this.lastPointerType === 'touch'
-      const x = isTouchPointer ? axes.margin.left + axes.width - 8 : mouse[0] + axes.margin.left
-      const y = isTouchPointer ? axes.margin.top + 24 : mouse[1] + axes.margin.top
-      const tooltipPosition = isTouchPointer
-        ? TooltipPosition.Left
-        : this.direction === MouseOverDirection.Vertical
-          ? TooltipPosition.Top
-          : TooltipPosition.Right
 
-      axes.tooltip.update(htmlContent, tooltipPosition, x, y)
+      const isTouchPointer = this.lastPointerType === 'touch'
+
+      if (isTouchPointer) {
+        this.showTouchValueCard(htmlContent)
+        axes.tooltip.hide()
+        return
+      }
+
+      this.hideTouchValueCard()
+
+      const baseX = mouse[0] + axes.margin.left
+      const baseY = mouse[1] + axes.margin.top
+      const defaultPosition =
+        this.direction === MouseOverDirection.Vertical ? TooltipPosition.Top : TooltipPosition.Right
+
+      // First render updates tooltip content so dimensions can be measured for edge-aware placement.
+      axes.tooltip.update(htmlContent, defaultPosition, baseX, baseY)
+      const placement = this.getEdgeAwareTooltipPlacement(baseX, baseY, defaultPosition)
+      axes.tooltip.update(htmlContent, placement.position, placement.x, placement.y)
       if (axes.tooltip.isHidden) {
         axes.tooltip.show()
       }
     }
+  }
+
+  private getEdgeAwareTooltipPlacement(
+    x: number,
+    y: number,
+    preferredPosition: TooltipPosition,
+  ): { x: number; y: number; position: TooltipPosition } {
+    const containerWidth = this.axes.container.clientWidth
+    const containerHeight = this.axes.container.clientHeight
+    const tooltipNode = this.axes.tooltip.tooltipText?.node() as HTMLElement | null
+    const rect = tooltipNode?.getBoundingClientRect()
+
+    const tooltipWidth = rect?.width ?? 160
+    const tooltipHeight = rect?.height ?? 48
+    const gap = 6
+    const padding = 8
+
+    const clamp = (value: number, min: number, max: number) => {
+      if (min > max) {
+        return min
+      }
+      return Math.max(min, Math.min(max, value))
+    }
+
+    let position = preferredPosition
+
+    if (position === TooltipPosition.Right && x + tooltipWidth + gap + padding > containerWidth) {
+      position = TooltipPosition.Left
+    } else if (position === TooltipPosition.Left && x - tooltipWidth - gap - padding < 0) {
+      position = TooltipPosition.Right
+    } else if (position === TooltipPosition.Top && y - tooltipHeight - gap - padding < 0) {
+      position = TooltipPosition.Bottom
+    } else if (
+      position === TooltipPosition.Bottom &&
+      y + tooltipHeight + gap + padding > containerHeight
+    ) {
+      position = TooltipPosition.Top
+    }
+
+    let adjustedX = x
+    let adjustedY = y
+
+    if (position === TooltipPosition.Top || position === TooltipPosition.Bottom) {
+      adjustedX = clamp(x, tooltipWidth / 2 + padding, containerWidth - tooltipWidth / 2 - padding)
+      if (position === TooltipPosition.Top) {
+        adjustedY = clamp(y, tooltipHeight + gap + padding, containerHeight - padding)
+      } else {
+        adjustedY = clamp(y, padding, containerHeight - tooltipHeight - gap - padding)
+      }
+    } else {
+      adjustedY = clamp(
+        y,
+        tooltipHeight / 2 + padding,
+        containerHeight - tooltipHeight / 2 - padding,
+      )
+      if (position === TooltipPosition.Right) {
+        adjustedX = clamp(x, padding, containerWidth - tooltipWidth - gap - padding)
+      } else {
+        adjustedX = clamp(x, tooltipWidth + gap + padding, containerWidth - padding)
+      }
+    }
+
+    return { x: adjustedX, y: adjustedY, position }
   }
 
   private xText(axes: CartesianAxes, xPos: number): string {
@@ -303,6 +473,8 @@ export class MouseOver implements Visitor {
   }
 
   redraw(): void {
+    this.cancelScheduledUpdate()
+    this.hideTouchValueCard()
     this.isTouchLocked = false
     this.lastPointerType = null
 
