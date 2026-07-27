@@ -1,8 +1,58 @@
 import * as d3 from 'd3'
 import { describe, expect, test } from 'vitest'
 import { CrossSectionSelect } from '../src/Visitors/crossSectionSelect'
+import {
+  determineCrossSectionLabel,
+  findCrossSectionPoint,
+} from '../src/Visitors/crossSectionSelectSelection'
 
 describe('CrossSectionSelect', () => {
+  test('determineCrossSectionLabel formats scalars and ranges', () => {
+    expect(determineCrossSectionLabel([0, 1], 20)).toBe('20.00')
+    expect(determineCrossSectionLabel([0, 1], [10, 20])).toBe('10.00–20.00')
+  })
+
+  test('findCrossSectionPoint backtracks to the previous non-null value', () => {
+    const xScale = d3.scaleLinear().domain([0, 10]).range([0, 100])
+    const yScale = d3.scaleLinear().domain([0, 100]).range([100, 0])
+
+    const chart = {
+      id: 'chart-1',
+      data: [
+        { x: 0, y: 10 },
+        { x: 5, y: 20 },
+        { x: 10, y: null },
+      ],
+      axisIndex: {
+        x: { axisIndex: 0 },
+        y: { axisIndex: 0 },
+      },
+      dataKeys: {
+        x: 'x',
+        y: 'y',
+      },
+      visible: true,
+    } as any
+
+    const point = findCrossSectionPoint({
+      axis: {
+        xScales: [xScale],
+        yScales: [yScale],
+        chartsExtent: () => [0, 1],
+      } as any,
+      chart,
+      xPos: 80,
+    })
+
+    expect(point).toMatchObject({
+      id: 'chart-1',
+      x: 50,
+      y: 80,
+      value: '20.00',
+      d: { x: 5, y: 20 },
+    })
+  })
+
   test('findNearestPoint backtracks to the previous non-null value', () => {
     const select = new CrossSectionSelect(0, () => {}, {})
     const xScale = d3.scaleLinear().domain([0, 10]).range([0, 100])

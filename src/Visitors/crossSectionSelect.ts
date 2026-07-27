@@ -8,6 +8,7 @@ import {
   type CrossSectionPoint,
   type CrossSectionPointStyles,
 } from './crossSectionSelectRenderer.js'
+import { determineCrossSectionLabel, findCrossSectionPoint } from './crossSectionSelectSelection.js'
 
 type CrossSectionSelectOptions = {
   x?: { axisIndex: number }
@@ -143,7 +144,7 @@ export class CrossSectionSelect<V extends number | Date> implements Visitor {
 
     for (const chart of axis.charts) {
       if (!traces.includes(chart.id) || !chart.visible) continue
-      points.push(this.findNearestPoint(chart, xPos))
+      points.push(findCrossSectionPoint({ axis, chart, xPos }))
       const chartStyle = this.styleForChart(chart.id)
       if (chartStyle) {
         styles[chart.id] = chartStyle
@@ -267,66 +268,10 @@ export class CrossSectionSelect<V extends number | Date> implements Visitor {
     chart: Chart,
     xPos: number,
   ): { id: string; x?: number; y?: number; value?: string; d: any } {
-    const axis = this.axis
-    if (!axis || chart.data.length < 2) {
-      return { id: chart.id, x: undefined, y: undefined, d: undefined }
-    }
-    const xIndex = chart.axisIndex?.x?.axisIndex
-    const yIndex = chart.axisIndex?.y?.axisIndex
-    if (xIndex === undefined || yIndex === undefined) {
-      return { id: chart.id, x: undefined, y: undefined, d: undefined }
-    }
-    const xScale = axis.xScales[xIndex]
-    const yScale = axis.yScales[yIndex]
-    const xDataKey = chart.dataKeys?.x
-    const yDataKey = chart.dataKeys?.y
-    if (!xDataKey || !yDataKey) {
-      return { id: chart.id, x: undefined, y: undefined, d: undefined }
-    }
-    const data = chart.data
-    const bisector = d3.bisector((datum: any) => datum[xDataKey])
-
-    const xValue = xScale.invert(xPos)
-    let idx = bisector.left(data, xValue)
-    if (idx < 0) return { id: chart.id, x: undefined, y: undefined, d: undefined }
-    idx = Math.min(idx, data.length - 1)
-    let yValue = data[idx][yDataKey]
-    // look back
-    if (yValue === null) {
-      for (let i = idx; i >= 0; i--) {
-        yValue = data[i][yDataKey]
-        if (yValue !== null) {
-          idx = i
-          break
-        }
-      }
-    }
-    const x = xScale(data[idx][xDataKey])
-    const y = yScale(yValue)
-    // labels
-    const yExtent = axis.chartsExtent('y', yIndex, {})
-    const d = data[idx]
-    if (yValue === null || yValue < yScale.domain()[0] || yValue > yScale.domain()[1]) {
-      return { id: chart.id, x: undefined, y: undefined, d }
-    }
-
-    const yLabel = this.determineLabel(yExtent, yValue)
-    return { id: chart.id, x, y, value: yLabel, d }
+    return findCrossSectionPoint({ axis: this.axis, chart, xPos })
   }
 
   determineLabel(yExtent: any[], yValue: any) {
-    const s = d3.formatSpecifier('f')
-    s.precision = d3.precisionFixed((yExtent[1] - yExtent[0]) / 100)
-    let yLabel
-    if (Array.isArray(yValue)) {
-      const labels: string[] = []
-      for (let j = 0; j < yValue.length; j++) {
-        labels[j] = d3.format(s.toString())(yValue[j])
-      }
-      yLabel = labels.join('–')
-    } else {
-      yLabel = d3.format(s.toString())(yValue)
-    }
-    return yLabel
+    return determineCrossSectionLabel(yExtent, yValue)
   }
 }
