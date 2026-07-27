@@ -47,6 +47,7 @@ export class MouseOver implements Visitor {
     this.mouseGroup = axes.canvas.select('.mouse')
     // Make sure the <g> mouse group picks up pointer events.
     this.mouseGroup.attr('pointer-events', 'all').style('touch-action', 'none')
+    this.mouseGroup.select('rect').style('touch-action', 'none')
     this.createTouchValueCard()
 
     this.group = axes.canvas
@@ -87,6 +88,9 @@ export class MouseOver implements Visitor {
         this.lastPointerType = event.pointerType
         if (event.pointerType === 'touch' && !this.isTouchLocked) {
           return
+        }
+        if (event.pointerType === 'touch') {
+          event.preventDefault()
         }
         // mouse moving over canvas
         const mouse = d3.pointer(event)
@@ -154,6 +158,8 @@ export class MouseOver implements Visitor {
     if (event.pointerType !== 'touch') {
       return
     }
+
+    event.preventDefault()
 
     // Touch uses a tap-to-lock interaction so values remain readable during and after drag.
     if (this.isTouchLocked) {
