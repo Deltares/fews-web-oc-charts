@@ -287,7 +287,7 @@ export class CrossSectionSelect<V extends number | Date> implements Visitor {
       .attr('transform', (d: any) => `translate( ${d.x}, ${d.y})`)
   }
 
-  updateLabels(points: any[], styles: Record<string, CSSStyleDeclaration>): void {
+  updateLabels(points: CrossSectionPoint[], styles: CrossSectionPointStyles): void {
     const visibility = this.visible ? 'visible' : 'hidden'
     const { nodes, links } = this.buildLabelLayout(points)
 
@@ -325,18 +325,7 @@ export class CrossSectionSelect<V extends number | Date> implements Visitor {
       .style('visibility', visibility)
       .classed('link', true)
 
-    const widths: number[] = [],
-      heights: number[] = []
-    const margin = 2
-    const radius = 2 * this.pointRadius
-    labelsUpdate.each(function (this: any) {
-      const height = this.getBoundingClientRect().height + 2 * margin
-      heights.push(height)
-      heights.push(radius)
-      const width = this.getBoundingClientRect().width + height
-      widths.push(width)
-      widths.push(radius)
-    })
+    const { widths, heights } = this.measureLabelBoxes(labelsUpdate)
 
     rectsUpdate
       .attr('rx', (d: any, j: number) => heights[2 * j] / 2)
@@ -358,21 +347,7 @@ export class CrossSectionSelect<V extends number | Date> implements Visitor {
 
     if (this.simulation !== undefined) this.simulation.stop()
 
-    const collisionForce = bboxCollide(function (d: any, j: number) {
-      let bbox
-      if (d.label !== undefined) {
-        bbox = [
-          [-heights[j] / 2, -heights[j] / 2],
-          [widths[j] - heights[j] / 2, heights[j] / 2],
-        ]
-      } else {
-        bbox = [
-          [-widths[j] / 2, -heights[j] / 2],
-          [widths[j] / 2, heights[j] / 2],
-        ]
-      }
-      return bbox
-    })
+    const collisionForce = this.createCollisionForce(widths, heights)
 
     this.simulation = d3
       .forceSimulation()
@@ -409,6 +384,42 @@ export class CrossSectionSelect<V extends number | Date> implements Visitor {
     }
 
     return { nodes, links }
+  }
+
+  private measureLabelBoxes(labelsUpdate: any): { widths: number[]; heights: number[] } {
+    const widths: number[] = []
+    const heights: number[] = []
+    const margin = 2
+    const radius = 2 * this.pointRadius
+
+    labelsUpdate.each(function (this: any) {
+      const height = this.getBoundingClientRect().height + 2 * margin
+      heights.push(height)
+      heights.push(radius)
+      const width = this.getBoundingClientRect().width + height
+      widths.push(width)
+      widths.push(radius)
+    })
+
+    return { widths, heights }
+  }
+
+  private createCollisionForce(widths: number[], heights: number[]) {
+    return bboxCollide(function (d: any, j: number) {
+      let bbox
+      if (d.label !== undefined) {
+        bbox = [
+          [-heights[j] / 2, -heights[j] / 2],
+          [widths[j] - heights[j] / 2, heights[j] / 2],
+        ]
+      } else {
+        bbox = [
+          [-widths[j] / 2, -heights[j] / 2],
+          [widths[j] / 2, heights[j] / 2],
+        ]
+      }
+      return bbox
+    })
   }
 
   limitValue(): boolean {
