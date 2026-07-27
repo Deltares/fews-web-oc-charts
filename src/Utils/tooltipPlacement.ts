@@ -42,8 +42,8 @@ export function calculateTooltipPlacement(input: TooltipPlacementInput): Tooltip
     position = TooltipPosition.Top
   }
 
-  let adjustedX = x
-  let adjustedY = y
+  let adjustedX
+  let adjustedY
 
   if (position === TooltipPosition.Top || position === TooltipPosition.Bottom) {
     adjustedX = clampValue(
