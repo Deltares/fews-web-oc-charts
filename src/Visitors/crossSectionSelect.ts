@@ -27,6 +27,7 @@ export class CrossSectionSelect<V extends number | Date> implements Visitor {
     draggable: false,
   }
   private visible: boolean
+  private readonly touchHitboxSize = 36
 
   // use shared Visitor constuctor (Visitor should be a abstract class)
   constructor(
@@ -62,12 +63,24 @@ export class CrossSectionSelect<V extends number | Date> implements Visitor {
     this.frontGroup = this.group.append('g')
     this.backGroup.append('line')
 
-    const handle = this.backGroup
+    const handle = this.backGroup.append('g').attr('class', 'cross-section-select-handle')
+
+    handle
       .append('polygon')
-      .attr('points', '0,0 -5,5 -5,8 5,8 5,5')
-      .attr('class', 'cross-section-select-handle')
+      .attr('points', '0,0 -6,6 -6,10 6,10 6,6')
+      .attr('class', 'cross-section-select-handle-visual')
+
+    // Keep the visual handle compact, but provide a larger transparent hitbox for touch.
+    handle
+      .append('rect')
+      .attr('class', 'cross-section-select-handle-hitbox')
+      .attr('x', -this.touchHitboxSize / 2)
+      .attr('y', -this.touchHitboxSize / 2)
+      .attr('width', this.touchHitboxSize)
+      .attr('height', this.touchHitboxSize)
 
     if (this.options.draggable) {
+      handle.style('touch-action', 'none')
       handle.call(
         d3
           .drag()
@@ -122,6 +135,7 @@ export class CrossSectionSelect<V extends number | Date> implements Visitor {
   }
 
   start(event): void {
+    event.sourceEvent?.preventDefault?.()
     const axisIndex = this.options.x.axisIndex
     const scale = this.axis.xScales[axisIndex]
     this.value = scale.invert(event.x)
@@ -137,6 +151,7 @@ export class CrossSectionSelect<V extends number | Date> implements Visitor {
   }
 
   drag(event): void {
+    event.sourceEvent?.preventDefault?.()
     const axisIndex = this.options.x.axisIndex
     const scale = this.axis.xScales[axisIndex]
     this.value = scale.invert(event.x)
@@ -176,7 +191,7 @@ export class CrossSectionSelect<V extends number | Date> implements Visitor {
       .style('visibility', visibility)
     // handle
     this.backGroup
-      .select('polygon')
+      .select('.cross-section-select-handle')
       .attr('transform', 'translate(' + xPos + ',' + this.axis.height + ')')
       .style('visibility', visibility)
   }
