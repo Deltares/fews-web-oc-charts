@@ -22,7 +22,7 @@ export class CrossSectionSelect<V extends number | Date> implements Visitor {
   currentData: any
   callback: (value: V) => void
   format: (n: number | { valueOf(): number } | Date) => string
-  private options: CrossSectionSelectOptions = {
+  private readonly options: CrossSectionSelectOptions = {
     x: { axisIndex: 0 },
     draggable: false,
   }
