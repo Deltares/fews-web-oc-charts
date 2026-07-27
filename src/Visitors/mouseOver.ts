@@ -37,6 +37,46 @@ export class MouseOver implements Visitor {
     this.trace = trace
   }
 
+  private isVerticalDirection(): boolean {
+    return this.direction === MouseOverDirection.Vertical
+  }
+
+  private resolvedTraces(): string[] {
+    return this.trace ?? this.axes.charts.map((chart) => chart.id)
+  }
+
+  private createMouseLinePath(width: number, height: number): string {
+    return this.isVerticalDirection() ? `M${width},0 0,0` : `M0,${height} 0,0`
+  }
+
+  private setLineVisibility(visible: boolean): void {
+    this.group.select('.mouse-line').style('opacity', visible ? '1' : '0')
+  }
+
+  private setValueLabelVisibility(visible: boolean): void {
+    if (this.isVerticalDirection()) {
+      this.group.select('.mouse-y text').style('fill-opacity', visible ? '1' : '0')
+    } else {
+      this.group.select('.mouse-x text').style('fill-opacity', visible ? '1' : '0')
+    }
+  }
+
+  private updateGuideLineAndValue(mouse: [number, number]): void {
+    if (this.isVerticalDirection()) {
+      this.updateYLine(mouse[1])
+      this.updateYValue(mouse[1])
+    } else {
+      this.updateXLine(mouse[0])
+      this.updateXValue(mouse[0])
+    }
+  }
+
+  private tooltipBaseX(mouse: [number, number]): number {
+    return this.isVerticalDirection()
+      ? this.axes.margin.left + 16
+      : mouse[0] + this.axes.margin.left
+  }
+
   visit(axes: Axes): void {
     this.axes = axes as CartesianAxes
     this.create(axes as CartesianAxes)
@@ -57,17 +97,9 @@ export class MouseOver implements Visitor {
       .append('path')
       .attr('class', 'mouse-line')
       .style('opacity', '0')
-      .attr('d', () => {
-        if (this.direction === MouseOverDirection.Vertical) {
-          // horizontal line
-          return `M${axes.width},0 0,0`
-        } else {
-          // vertical line
-          return `M0,${axes.height} 0,0`
-        }
-      })
+      .attr('d', () => this.createMouseLinePath(axes.width, axes.height))
 
-    if (this.direction === MouseOverDirection.Vertical) {
+    if (this.isVerticalDirection()) {
       this.group.append('g').attr('class', 'mouse-y').append('text').text('')
     } else {
       this.group
@@ -151,14 +183,9 @@ export class MouseOver implements Visitor {
 
     this.cancelScheduledUpdate()
 
-    // on mouse out hide line, circles and text
-    this.group.select('.mouse-line').style('opacity', '0')
-
-    if (this.direction === MouseOverDirection.Vertical) {
-      this.group.select('.mouse-y text').style('fill-opacity', '0')
-    } else {
-      this.group.select('.mouse-x text').style('fill-opacity', '0')
-    }
+    // on mouse out hide line and text
+    this.setLineVisibility(false)
+    this.setValueLabelVisibility(false)
 
     for (const chart of this.axes.charts) {
       chart.onPointerOut()
@@ -173,13 +200,8 @@ export class MouseOver implements Visitor {
 
     // on mouse in show line, circles and text
     this.axes.tooltip.show()
-    this.group.select('.mouse-line').style('opacity', '1')
-    const traces =
-      this.trace !== undefined
-        ? this.trace
-        : this.axes.charts.map((chart) => {
-            return chart.id
-          })
+    this.setLineVisibility(true)
+    const traces = this.resolvedTraces()
     for (const chart of this.axes.charts) {
       if (traces.includes(chart.id)) {
         chart.onPointerOver()
@@ -187,23 +209,14 @@ export class MouseOver implements Visitor {
         chart.onPointerOut()
       }
     }
-    if (this.direction === MouseOverDirection.Vertical) {
-      this.group.select('.mouse-y text').style('fill-opacity', '1')
-    } else {
-      this.group.select('.mouse-x text').style('fill-opacity', '1')
-    }
+    this.setValueLabelVisibility(true)
   }
 
   updateChartIndicators(mouse: [number, number]): void {
-    const traces =
-      this.trace !== undefined
-        ? this.trace
-        : this.axes.charts.map((chart) => {
-            return chart.id
-          })
+    const traces = this.resolvedTraces()
 
-    const key = this.direction === MouseOverDirection.Vertical ? 'y' : 'x'
-    const inverseKey = this.direction === MouseOverDirection.Vertical ? 'x' : 'y'
+    const key = this.isVerticalDirection() ? 'y' : 'x'
+    const inverseKey = this.isVerticalDirection() ? 'x' : 'y'
 
     const spanElements: HTMLSpanElement[] = []
     const seen = new Set()
@@ -218,10 +231,7 @@ export class MouseOver implements Visitor {
         const extent = this.axes.chartsExtent(inverseKey, chart.axisIndex[inverseKey].axisIndex, {})
         const precision = d3.precisionFixed((extent[1] - extent[0]) / 100)
 
-        const value =
-          this.direction === MouseOverDirection.Vertical
-            ? yScale.invert(mouse[1])
-            : xScale.invert(mouse[0])
+        const value = this.isVerticalDirection() ? yScale.invert(mouse[1]) : xScale.invert(mouse[0])
         const pointData = chart.onPointerMove(value, key, xScale, yScale)
 
         const spanElement: HTMLSpanElement | undefined = chart.mouseOverFormatterCartesian(
@@ -239,14 +249,7 @@ export class MouseOver implements Visitor {
   }
 
   update(mouse: [number, number]) {
-    if (this.direction === MouseOverDirection.Vertical) {
-      this.updateYLine(mouse[1])
-      this.updateYValue(mouse[1])
-    } else {
-      this.updateXLine(mouse[0])
-      this.updateXValue(mouse[0])
-    }
-
+    this.updateGuideLineAndValue(mouse)
     this.updateChartIndicators(mouse)
   }
 
@@ -309,16 +312,15 @@ export class MouseOver implements Visitor {
         htmlContent.appendChild(document.createElement('br'))
       }
 
-      const isVerticalDirection = this.direction === MouseOverDirection.Vertical
-
-      // In vertical direction, keep the tooltip on the left side of the chart.
-      const baseX = isVerticalDirection ? axes.margin.left + 16 : mouse[0] + axes.margin.left
+      const baseX = this.tooltipBaseX(mouse)
 
       // Keep tooltip y anchored to the current guide-line position.
       const baseY = mouse[1] + axes.margin.top
 
-      // Render tooltip above the guide line so the arrow points down.
-      const defaultPosition = TooltipPosition.Top
+      // Keep vertical mode above the line, but restore horizontal mode orientation.
+      const defaultPosition = this.isVerticalDirection()
+        ? TooltipPosition.Top
+        : TooltipPosition.Right
 
       // First render updates tooltip content so dimensions can be measured for edge-aware placement.
       axes.tooltip.update(htmlContent, defaultPosition, baseX, baseY)
@@ -436,13 +438,9 @@ export class MouseOver implements Visitor {
     this.isTouchLocked = false
     this.lastPointerType = null
 
-    this.group.select('.mouse-line').attr('d', () => {
-      if (this.direction === MouseOverDirection.Vertical) {
-        return `M${this.axes.width},0 0,0`
-      } else {
-        return `M0,${this.axes.height} 0,0`
-      }
-    })
+    this.group
+      .select('.mouse-line')
+      .attr('d', () => this.createMouseLinePath(this.axes.width, this.axes.height))
     for (const chart of this.axes.charts) {
       chart.onPointerOut()
     }
