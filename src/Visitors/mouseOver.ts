@@ -15,6 +15,13 @@ interface MouseOverOptions {
   direction?: MouseOverDirection
 }
 
+interface ActiveChartContext {
+  chart: CartesianAxes['charts'][number]
+  xScale: any
+  yScale: any
+  inverseAxisIndex: number
+}
+
 export class MouseOver implements Visitor {
   private trace: string[] | undefined
   private group!: d3.Selection<SVGGElement, unknown, null, unknown>
@@ -104,6 +111,50 @@ export class MouseOver implements Visitor {
         chart.onPointerOut()
       }
     }
+  }
+
+  private forEachActiveTraceChart(callback: (context: ActiveChartContext) => void): void {
+    const traces = this.resolvedTraces()
+    const { inverseKey } = this.directionKeys()
+    const seen = new Set<string>()
+
+    for (const chart of this.axes.charts) {
+      if (!traces.includes(chart.id) || !chart.visible || seen.has(chart.id)) {
+        seen.add(chart.id)
+        continue
+      }
+
+      const xAxisIndex = chart.axisIndex.x
+      const yAxisIndex = chart.axisIndex.y
+      const inverseAxis = chart.axisIndex[inverseKey]
+      if (!xAxisIndex || !yAxisIndex || !inverseAxis) {
+        seen.add(chart.id)
+        continue
+      }
+
+      const xScale = this.axes.xScales[xAxisIndex.axisIndex]
+      const yScale = this.axes.yScales[yAxisIndex.axisIndex]
+      callback({ chart, xScale, yScale, inverseAxisIndex: inverseAxis.axisIndex })
+      seen.add(chart.id)
+    }
+  }
+
+  private collectTooltipSpans(mouse: [number, number]): HTMLSpanElement[] {
+    const spans: HTMLSpanElement[] = []
+    const { key, inverseKey } = this.directionKeys()
+
+    this.forEachActiveTraceChart(({ chart, xScale, yScale, inverseAxisIndex }) => {
+      const extent = this.axes.chartsExtent(inverseKey, inverseAxisIndex, {})
+      const precision = d3.precisionFixed((extent[1] - extent[0]) / 100)
+      const value = this.pointerValue(mouse, xScale, yScale)
+      const pointData = chart.onPointerMove(value, key, xScale, yScale)
+      const spanElement = chart.mouseOverFormatterCartesian(inverseKey, pointData, precision)
+      if (spanElement) {
+        spans.push(spanElement)
+      }
+    })
+
+    return spans
   }
 
   private handlePointerMove(event: PointerEvent): void {
@@ -241,44 +292,7 @@ export class MouseOver implements Visitor {
   }
 
   updateChartIndicators(mouse: [number, number]): void {
-    const traces = this.resolvedTraces()
-    const { key, inverseKey } = this.directionKeys()
-
-    const spanElements: HTMLSpanElement[] = []
-    const seen = new Set()
-    for (const chart of this.axes.charts) {
-      if (traces.includes(chart.id) && chart.visible && !seen.has(chart.id)) {
-        const xAxisIndex = chart.axisIndex.x
-        const yAxisIndex = chart.axisIndex.y
-        const inverseAxisIndex = chart.axisIndex[inverseKey]
-        if (!xAxisIndex || !yAxisIndex || !inverseAxisIndex) {
-          seen.add(chart.id)
-          continue
-        }
-
-        const xIndex = xAxisIndex.axisIndex
-        const xScale = this.axes.xScales[xIndex]
-
-        const yIndex = yAxisIndex.axisIndex
-        const yScale = this.axes.yScales[yIndex]
-
-        const extent = this.axes.chartsExtent(inverseKey, inverseAxisIndex.axisIndex, {})
-        const precision = d3.precisionFixed((extent[1] - extent[0]) / 100)
-
-        const value = this.pointerValue(mouse, xScale, yScale)
-        const pointData = chart.onPointerMove(value, key, xScale, yScale)
-
-        const spanElement: HTMLSpanElement | undefined = chart.mouseOverFormatterCartesian(
-          inverseKey,
-          pointData,
-          precision,
-        )
-        if (spanElement) {
-          spanElements.push(spanElement)
-        }
-      }
-      seen.add(chart.id)
-    }
+    const spanElements = this.collectTooltipSpans(mouse)
     this.updateTooltip(spanElements, mouse)
   }
 
