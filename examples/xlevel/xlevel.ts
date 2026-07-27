@@ -44,8 +44,10 @@ const axis = new CartesianAxes(container, null, null, {
     },
   ],
   margin: {
-    left: 100,
-    right: 100,
+    top: 24,
+    right: 40,
+    bottom: 100,
+    left: 40,
   },
 })
 
