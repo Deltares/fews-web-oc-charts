@@ -3,44 +3,15 @@ import { Axes } from '../Axes/axes.js'
 import { CartesianAxes, Chart } from '../index.js'
 import { Visitor } from './visitor.js'
 import { defaultsDeep } from 'lodash-es'
-import { bboxCollide } from '../Utils/bboxCollide.js'
+import {
+  CrossSectionSelectRenderer,
+  type CrossSectionPoint,
+  type CrossSectionPointStyles,
+} from './crossSectionSelectRenderer.js'
 
 type CrossSectionSelectOptions = {
   x?: { axisIndex: number }
   draggable?: boolean
-}
-
-type CrossSectionPoint = {
-  id: string
-  x?: number
-  y?: number
-  value?: string
-  d: any
-}
-
-type CrossSectionPointStyles = Record<string, CSSStyleDeclaration>
-
-type CrossSectionLabelNode = {
-  id?: string
-  fx?: number
-  fy?: number
-  x?: number
-  y?: number
-  py?: number
-  label?: string
-  width: number
-  height: number
-}
-
-type CrossSectionLabelLink = {
-  source: CrossSectionLabelNode
-  target: CrossSectionLabelNode
-  label: string
-}
-
-type CrossSectionLabelLayout = {
-  nodes: CrossSectionLabelNode[]
-  links: CrossSectionLabelLink[]
 }
 
 export class CrossSectionSelect<V extends number | Date> implements Visitor {
@@ -49,8 +20,8 @@ export class CrossSectionSelect<V extends number | Date> implements Visitor {
   private backGroup: any
   private frontGroup: any
   private readonly pointRadius = 3
-  private simulation?: d3.Simulation<any, any>
   private axis?: CartesianAxes
+  private readonly renderer = new CrossSectionSelectRenderer()
   value: V
   currentData: any
   callback: (value: V) => void
@@ -245,180 +216,34 @@ export class CrossSectionSelect<V extends number | Date> implements Visitor {
   updateLine(xPos: number): void {
     const axis = this.axis
     if (!axis) return
-    const visibility = this.visible ? 'visible' : 'hidden'
-    // line
-    this.backGroup
-      .select('line')
-      .attr('y1', 0)
-      .attr('y2', axis.height)
-      .attr('transform', 'translate(' + xPos + ', 0)')
-      .style('visibility', visibility)
-    // text
-    const timeString = this.format(this.value)
-    this.backGroup
-      .select('.date-label')
-      .attr('x', xPos)
-      .text(timeString)
-      .style('visibility', visibility)
-    // handle
-    this.backGroup
-      .select('.cross-section-select-handle')
-      .attr('transform', 'translate(' + xPos + ',' + axis.height + ')')
-      .style('visibility', visibility)
+    this.renderer.updateLine({
+      backGroup: this.backGroup,
+      axisHeight: axis.height,
+      xPos,
+      visible: this.visible,
+      value: this.value,
+      format: this.format,
+    })
   }
 
   updateDataPoints(points: any[], styles: Record<string, CSSStyleDeclaration>): void {
-    const visibility = this.visible ? 'visible' : 'hidden'
-    this.frontGroup
-      .selectAll('.data-point-per-line')
-      .selectAll('circle')
-      .data(points)
-      .join('circle')
-      .filter((d: any) => d.y !== undefined)
-      .attr('data-point-id', (d: any) => d.id)
-      .attr('r', this.pointRadius)
-      .style('fill', (d: any) => {
-        const style = styles[d.id]
-        return style.getPropertyValue('stroke')
-      })
-      .style('visibility', visibility)
-      .style('stroke-width', '1px')
-      .style('opacity', '1')
-      .attr('transform', (d: any) => `translate( ${d.x}, ${d.y})`)
+    this.renderer.updateDataPoints({
+      frontGroup: this.frontGroup,
+      points,
+      styles,
+      pointRadius: this.pointRadius,
+      visible: this.visible,
+    })
   }
 
   updateLabels(points: CrossSectionPoint[], styles: CrossSectionPointStyles): void {
-    const visibility = this.visible ? 'visible' : 'hidden'
-    const { nodes, links } = this.buildLabelLayout(points)
-
-    const rectSelection = this.frontGroup
-      .selectAll('.back')
-      .data(nodes.filter((d: any) => d.label !== undefined))
-
-    const rectsUpdate = rectSelection
-      .join('rect')
-      .classed('back', true)
-      .attr('fill', 'rgb(0, 0 , 0)')
-      .attr('stroke', 'none')
-      .style('visibility', visibility)
-
-    const labelsSelection = this.frontGroup
-      .selectAll('.label')
-      .data(nodes.filter((d: any) => d.label !== undefined))
-
-    const labelsUpdate = labelsSelection
-      .join('text')
-      .classed('label', true)
-      .attr('dominant-baseline', 'middle')
-      .attr('fill', (d: any) => {
-        const style = styles[d.id]
-        return style.getPropertyValue('stroke')
-      })
-      .style('visibility', visibility)
-      .attr('stroke', 'none')
-      .text((d: any) => d.label)
-
-    const link = this.backGroup
-      .selectAll('.link')
-      .data(links)
-      .join('line')
-      .style('visibility', visibility)
-      .classed('link', true)
-
-    const { widths, heights } = this.measureLabelBoxes(labelsUpdate)
-
-    rectsUpdate
-      .attr('rx', (d: any, j: number) => heights[2 * j] / 2)
-      .attr('ry', (d: any, j: number) => heights[2 * j] / 2)
-      .attr('width', (d: any, j: number) => widths[2 * j])
-      .attr('height', (d: any, j: number) => heights[2 * j])
-
-    const tick = (): void => {
-      link
-        .attr('x1', (d: any) => d.source.x)
-        .attr('y1', (d: any) => d.source.y)
-        .attr('x2', (d: any) => d.target.x)
-        .attr('y2', (d: any) => d.target.y)
-      rectsUpdate
-        .attr('x', (d: any, j: number) => d.x - heights[2 * j] / 2)
-        .attr('y', (d: any, j: number) => d.y - heights[2 * j] / 2)
-      labelsUpdate.attr('x', (d: any) => d.x).attr('y', (d: any) => d.y)
-    }
-
-    if (this.simulation !== undefined) this.simulation.stop()
-
-    const collisionForce = this.createCollisionForce(widths, heights)
-
-    this.simulation = d3
-      .forceSimulation()
-      .alphaDecay(0.01)
-      .nodes(nodes)
-      .force('center', collisionForce)
-      .on('tick', tick)
-    this.simulation.stop()
-    this.simulation.tick(50)
-    tick()
-    // this.simulation.restart()
-  }
-
-  private buildLabelLayout(points: any[]): CrossSectionLabelLayout {
-    const nodes: CrossSectionLabelNode[] = []
-    const links: CrossSectionLabelLink[] = []
-    let i = 0
-    const sortedPoint = [...points].sort((a, b) => a.y - b.y)
-
-    for (const p of sortedPoint) {
-      if (p.y === undefined) continue
-      nodes.push({
-        id: p.id,
-        fx: p.x + 50,
-        y: p.y + Math.random() / 10,
-        py: p.y,
-        label: p.value,
-        width: 100,
-        height: 20,
-      })
-      nodes.push({ fx: p.x, fy: p.y, width: 4, height: 4 })
-      links.push({ source: nodes[i + 1], target: nodes[i], label: p.value })
-      i = i + 2
-    }
-
-    return { nodes, links }
-  }
-
-  private measureLabelBoxes(labelsUpdate: any): { widths: number[]; heights: number[] } {
-    const widths: number[] = []
-    const heights: number[] = []
-    const margin = 2
-    const radius = 2 * this.pointRadius
-
-    labelsUpdate.each(function (this: any) {
-      const height = this.getBoundingClientRect().height + 2 * margin
-      heights.push(height)
-      heights.push(radius)
-      const width = this.getBoundingClientRect().width + height
-      widths.push(width)
-      widths.push(radius)
-    })
-
-    return { widths, heights }
-  }
-
-  private createCollisionForce(widths: number[], heights: number[]) {
-    return bboxCollide(function (d: any, j: number) {
-      let bbox
-      if (d.label !== undefined) {
-        bbox = [
-          [-heights[j] / 2, -heights[j] / 2],
-          [widths[j] - heights[j] / 2, heights[j] / 2],
-        ]
-      } else {
-        bbox = [
-          [-widths[j] / 2, -heights[j] / 2],
-          [widths[j] / 2, heights[j] / 2],
-        ]
-      }
-      return bbox
+    this.renderer.updateLabels({
+      backGroup: this.backGroup,
+      frontGroup: this.frontGroup,
+      points,
+      styles,
+      pointRadius: this.pointRadius,
+      visible: this.visible,
     })
   }
 
