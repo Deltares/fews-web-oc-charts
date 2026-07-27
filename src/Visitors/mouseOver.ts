@@ -3,6 +3,7 @@ import { Axes } from '../Axes/axes.js'
 import { AxisType, CartesianAxes, TooltipPosition } from '../index.js'
 import { Visitor } from './visitor.js'
 import { dateFormatter } from '../Utils/date.js'
+import { calculateTooltipPlacement } from '../Utils/index.js'
 
 export enum MouseOverDirection {
   Horizontal = 'horizontal',
@@ -388,53 +389,16 @@ export class MouseOver implements Visitor {
 
     const tooltipWidth = rect?.width ?? 160
     const tooltipHeight = rect?.height ?? 48
-    const gap = 6
-    const padding = 8
 
-    const clamp = (value: number, min: number, max: number) => {
-      if (min > max) {
-        return min
-      }
-      return Math.max(min, Math.min(max, value))
-    }
-
-    let position = preferredPosition
-
-    if (position === TooltipPosition.Right && x + tooltipWidth + gap + padding > containerWidth) {
-      position = TooltipPosition.Left
-    } else if (position === TooltipPosition.Left && x - tooltipWidth - gap - padding < 0) {
-      position = TooltipPosition.Right
-    } else if (
-      position === TooltipPosition.Bottom &&
-      y + tooltipHeight + gap + padding > containerHeight
-    ) {
-      position = TooltipPosition.Top
-    }
-
-    let adjustedX = x
-    let adjustedY = y
-
-    if (position === TooltipPosition.Top || position === TooltipPosition.Bottom) {
-      adjustedX = clamp(x, tooltipWidth / 2 + padding, containerWidth - tooltipWidth / 2 - padding)
-      if (position === TooltipPosition.Top) {
-        adjustedY = clamp(y, tooltipHeight + gap + padding, containerHeight - padding)
-      } else {
-        adjustedY = clamp(y, padding, containerHeight - tooltipHeight - gap - padding)
-      }
-    } else {
-      adjustedY = clamp(
-        y,
-        tooltipHeight / 2 + padding,
-        containerHeight - tooltipHeight / 2 - padding,
-      )
-      if (position === TooltipPosition.Right) {
-        adjustedX = clamp(x, padding, containerWidth - tooltipWidth - gap - padding)
-      } else {
-        adjustedX = clamp(x, tooltipWidth + gap + padding, containerWidth - padding)
-      }
-    }
-
-    return { x: adjustedX, y: adjustedY, position }
+    return calculateTooltipPlacement({
+      x,
+      y,
+      preferredPosition,
+      containerWidth,
+      containerHeight,
+      tooltipWidth,
+      tooltipHeight,
+    })
   }
 
   private xText(axes: CartesianAxes, xPos: number): string {
