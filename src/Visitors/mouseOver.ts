@@ -80,7 +80,12 @@ export class MouseOver implements Visitor {
   }
 
   private tooltipBaseX(mouse: [number, number]): number {
-    return this.isVerticalDirection()
+    if (!this.isVerticalDirection()) {
+      return mouse[0] + this.axes.margin.left
+    }
+
+    // Keep touch interactions offset from the finger, but let mouse/pen follow x.
+    return this.lastPointerType === 'touch'
       ? this.axes.margin.left + 16
       : mouse[0] + this.axes.margin.left
   }
