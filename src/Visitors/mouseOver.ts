@@ -24,7 +24,6 @@ export class MouseOver implements Visitor {
   private direction: MouseOverDirection
   private isTouchLocked = false
   private lastPointerType: string | null = null
-  private touchValueCard: HTMLDivElement | null = null
   private pendingMouse: [number, number] | null = null
   private frameId: number | null = null
 
@@ -48,7 +47,6 @@ export class MouseOver implements Visitor {
     // Make sure the <g> mouse group picks up pointer events.
     this.mouseGroup.attr('pointer-events', 'all').style('touch-action', 'none')
     this.mouseGroup.select('rect').style('touch-action', 'none')
-    this.createTouchValueCard()
 
     this.group = axes.canvas
       .insert('g', '.mouse')
@@ -96,35 +94,6 @@ export class MouseOver implements Visitor {
         const mouse = d3.pointer(event)
         this.scheduleUpdate(mouse)
       })
-  }
-
-  private createTouchValueCard(): void {
-    if (this.touchValueCard !== null) {
-      return
-    }
-
-    const card = document.createElement('div')
-    card.className = 'touch-value-card'
-    card.style.display = 'none'
-    this.axes.container.appendChild(card)
-    this.touchValueCard = card
-  }
-
-  private showTouchValueCard(htmlContent: HTMLElement): void {
-    if (this.touchValueCard === null) {
-      this.createTouchValueCard()
-    }
-    if (this.touchValueCard !== null) {
-      this.touchValueCard.style.display = 'block'
-      this.touchValueCard.replaceChildren(htmlContent)
-    }
-  }
-
-  private hideTouchValueCard(): void {
-    if (this.touchValueCard !== null) {
-      this.touchValueCard.style.display = 'none'
-      this.touchValueCard.replaceChildren()
-    }
   }
 
   private scheduleUpdate(mouse: [number, number]): void {
@@ -181,7 +150,6 @@ export class MouseOver implements Visitor {
     }
 
     this.cancelScheduledUpdate()
-    this.hideTouchValueCard()
 
     // on mouse out hide line, circles and text
     this.group.select('.mouse-line').style('opacity', '0')
@@ -204,9 +172,7 @@ export class MouseOver implements Visitor {
     }
 
     // on mouse in show line, circles and text
-    if (this.lastPointerType !== 'touch') {
-      this.axes.tooltip.show()
-    }
+    this.axes.tooltip.show()
     this.group.select('.mouse-line').style('opacity', '1')
     const traces =
       this.trace !== undefined
@@ -341,7 +307,6 @@ export class MouseOver implements Visitor {
   updateTooltip(spanElements: HTMLSpanElement[], mouse: [number, number]) {
     const axes = this.axes
     if (spanElements.length === 0) {
-      this.hideTouchValueCard()
       axes.tooltip.hide()
     } else {
       const htmlContent = document.createElement('div')
@@ -351,19 +316,13 @@ export class MouseOver implements Visitor {
       }
 
       const isTouchPointer = this.lastPointerType === 'touch'
-
-      if (isTouchPointer) {
-        this.showTouchValueCard(htmlContent)
-        axes.tooltip.hide()
-        return
-      }
-
-      this.hideTouchValueCard()
-
       const baseX = mouse[0] + axes.margin.left
-      const baseY = mouse[1] + axes.margin.top
-      const defaultPosition =
-        this.direction === MouseOverDirection.Vertical ? TooltipPosition.Top : TooltipPosition.Right
+      const baseY = isTouchPointer ? axes.margin.top + 14 : mouse[1] + axes.margin.top
+      const defaultPosition = isTouchPointer
+        ? TooltipPosition.Right
+        : this.direction === MouseOverDirection.Vertical
+          ? TooltipPosition.Top
+          : TooltipPosition.Right
 
       // First render updates tooltip content so dimensions can be measured for edge-aware placement.
       axes.tooltip.update(htmlContent, defaultPosition, baseX, baseY)
@@ -480,7 +439,6 @@ export class MouseOver implements Visitor {
 
   redraw(): void {
     this.cancelScheduledUpdate()
-    this.hideTouchValueCard()
     this.isTouchLocked = false
     this.lastPointerType = null
 
