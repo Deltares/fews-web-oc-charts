@@ -3,7 +3,11 @@ import { Axes } from '../Axes/axes.js'
 import { AxisType, CartesianAxes, TooltipPosition } from '../index.js'
 import { Visitor } from './visitor.js'
 import { dateFormatter } from '../Utils/date.js'
-import { calculateTooltipPlacement } from '../Utils/index.js'
+import {
+  calculateTooltipPlacement,
+  getMouseOverDirectionStrategy,
+  MouseOverDirectionStrategy,
+} from '../Utils/index.js'
 
 export enum MouseOverDirection {
   Horizontal = 'horizontal',
@@ -21,18 +25,6 @@ interface ActiveChartContext {
   xScale: any
   yScale: any
   inverseAxisIndex: number
-}
-
-interface DirectionStrategy {
-  key: 'x' | 'y'
-  inverseKey: 'x' | 'y'
-  valueLabelSelector: '.mouse-x text' | '.mouse-y text'
-  createLinePath: (width: number, height: number) => string
-  updateGuideAndValue: (mouse: [number, number]) => void
-  pointerValue: (mouse: [number, number], xScale: any, yScale: any) => number | Date
-  tooltipBaseX: (mouse: [number, number]) => number
-  defaultTooltipPosition: TooltipPosition
-  createValueLabelGroup: () => void
 }
 
 export class MouseOver implements Visitor {
@@ -57,51 +49,8 @@ export class MouseOver implements Visitor {
     this.trace = trace
   }
 
-  private directionStrategy(): DirectionStrategy {
-    if (this.direction === MouseOverDirection.Vertical) {
-      return {
-        key: 'y',
-        inverseKey: 'x',
-        valueLabelSelector: '.mouse-y text',
-        createLinePath: (width: number) => `M${width},0 0,0`,
-        updateGuideAndValue: (mouse: [number, number]) => {
-          this.updateYLine(mouse[1])
-          this.updateYValue(mouse[1])
-        },
-        pointerValue: (mouse: [number, number], _xScale: any, yScale: any) =>
-          yScale.invert(mouse[1]),
-        tooltipBaseX: (mouse: [number, number]) =>
-          this.lastPointerType === 'touch'
-            ? this.axes.margin.left + 16
-            : mouse[0] + this.axes.margin.left,
-        defaultTooltipPosition: TooltipPosition.Top,
-        createValueLabelGroup: () => {
-          this.group.append('g').attr('class', 'mouse-y').append('text').text('')
-        },
-      }
-    }
-
-    return {
-      key: 'x',
-      inverseKey: 'y',
-      valueLabelSelector: '.mouse-x text',
-      createLinePath: (_width: number, height: number) => `M0,${height} 0,0`,
-      updateGuideAndValue: (mouse: [number, number]) => {
-        this.updateXLine(mouse[0])
-        this.updateXValue(mouse[0])
-      },
-      pointerValue: (mouse: [number, number], xScale: any, _yScale: any) => xScale.invert(mouse[0]),
-      tooltipBaseX: (mouse: [number, number]) => mouse[0] + this.axes.margin.left,
-      defaultTooltipPosition: TooltipPosition.Right,
-      createValueLabelGroup: () => {
-        this.group
-          .append('g')
-          .attr('class', 'mouse-x')
-          .attr('transform', `translate(0,${this.axes.height})`)
-          .append('text')
-          .text('')
-      },
-    }
+  private directionStrategy(): MouseOverDirectionStrategy {
+    return getMouseOverDirectionStrategy(this.direction)
   }
 
   private resolvedTraces(): string[] {
@@ -123,11 +72,17 @@ export class MouseOver implements Visitor {
   }
 
   private updateGuideLineAndValue(mouse: [number, number]): void {
-    this.directionStrategy().updateGuideAndValue(mouse)
+    if (this.direction === MouseOverDirection.Vertical) {
+      this.updateYLine(mouse[1])
+      this.updateYValue(mouse[1])
+    } else {
+      this.updateXLine(mouse[0])
+      this.updateXValue(mouse[0])
+    }
   }
 
   private tooltipBaseX(mouse: [number, number]): number {
-    return this.directionStrategy().tooltipBaseX(mouse)
+    return this.directionStrategy().tooltipBaseX(mouse, this.axes.margin.left, this.lastPointerType)
   }
 
   private directionKeys(): { key: 'x' | 'y'; inverseKey: 'x' | 'y' } {
@@ -252,7 +207,16 @@ export class MouseOver implements Visitor {
       .style('opacity', '0')
       .attr('d', () => this.createMouseLinePath(axes.width, axes.height))
 
-    this.directionStrategy().createValueLabelGroup()
+    if (this.direction === MouseOverDirection.Vertical) {
+      this.group.append('g').attr('class', 'mouse-y').append('text').text('')
+    } else {
+      this.group
+        .append('g')
+        .attr('class', 'mouse-x')
+        .attr('transform', `translate(0,${axes.height})`)
+        .append('text')
+        .text('')
+    }
 
     this.mouseGroup
       .on('pointerdown', (event: PointerEvent) => this.onPointerdown(event))
