@@ -63,7 +63,12 @@ export class CrossSectionSelect<V extends number | Date> implements Visitor {
     this.frontGroup = this.group.append('g')
     this.backGroup.append('line')
 
-    const handle = this.backGroup.append('g').attr('class', 'cross-section-select-handle')
+    const isDraggable = this.options.draggable === true
+    const handle = this.backGroup
+      .append('g')
+      .attr('class', 'cross-section-select-handle')
+      .classed('is-draggable', isDraggable)
+      .classed('is-disabled', !isDraggable)
 
     handle
       .append('polygon')
@@ -79,7 +84,7 @@ export class CrossSectionSelect<V extends number | Date> implements Visitor {
       .attr('width', this.touchHitboxSize)
       .attr('height', this.touchHitboxSize)
 
-    if (this.options.draggable) {
+    if (isDraggable) {
       handle.style('touch-action', 'none')
       handle.call(
         d3
