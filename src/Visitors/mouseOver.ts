@@ -33,8 +33,7 @@ export class MouseOver implements Visitor {
   private axes!: CartesianAxes
   private mouseGroup!: d3.Selection<SVGGElement, unknown, null, unknown>
   private readonly customNumberFormatter:
-    | ((value: number, extent?: [number, number]) => string)
-    | null
+    ((value: number, extent?: [number, number]) => string) | null
   private readonly direction: MouseOverDirection
   private isTouchLocked = false
   private lastPointerType: string | null = null

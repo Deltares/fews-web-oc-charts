@@ -28,8 +28,9 @@
     "dev": "vite --config vite-examples.config.ts",
     "build": "vite build --config vite-library.config.ts && tsc -p tsconfig.build.json",
     "build-examples": "vite build --config vite-examples.config.ts",
-    "lint": "eslint src/**/*.ts",
-    "lint:fix": "eslint src/**/*.ts --fix",
+    "lint": "npm run prettier",
+    "prettier": "prettier . --check",
+    "format": "prettier .  --write",
     "test": "vitest",
     "test:all-browsers": "vitest run --mode all-browsers",
     "sonar": "sonar-scanner -Dsonar.host.url=$SONAR_URL -Dsonar.login=$SONAR_TOKEN -Dsonar.projectKey=$SONAR_KEY -Dsonar.projectName='Delft-FEWS Web OC Charts'"
