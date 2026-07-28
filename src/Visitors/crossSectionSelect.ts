@@ -94,6 +94,7 @@ export class CrossSectionSelect<V extends number | Date> implements Visitor {
       .attr('y', -this.touchHitboxSize / 2)
       .attr('width', this.touchHitboxSize)
       .attr('height', this.touchHitboxSize)
+      .style('display', isDraggable ? 'block' : 'none')
 
     if (isDraggable) {
       handle.style('touch-action', 'none')
