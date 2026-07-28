@@ -16,7 +16,7 @@ type CrossSectionSelectOptions = {
 }
 
 export class CrossSectionSelect<V extends number | Date> implements Visitor {
-  private trace: string[] = []
+  private trace: 'all' | 'none' | string[] = 'all'
   private group: any
   private backGroup: any
   private frontGroup: any
@@ -39,7 +39,7 @@ export class CrossSectionSelect<V extends number | Date> implements Visitor {
     value: V,
     callback: (value: V) => void,
     options: CrossSectionSelectOptions,
-    trace?: string[],
+    trace?: 'all' | 'none' | string[],
   ) {
     this.value = value
     this.callback = callback
@@ -49,8 +49,8 @@ export class CrossSectionSelect<V extends number | Date> implements Visitor {
     this.visible = true
   }
 
-  setTrace(trace?: string[]) {
-    this.trace = trace || []
+  setTrace(trace?: 'all' | 'none' | string[]) {
+    this.trace = trace ?? 'all'
   }
 
   visit(axis: Axes): void {
@@ -131,7 +131,13 @@ export class CrossSectionSelect<V extends number | Date> implements Visitor {
   }
 
   private getTraces(axis: CartesianAxes): string[] {
-    return this.trace.length > 0 ? this.trace : axis.charts.map((chart) => chart.id)
+    if (this.trace === 'all') {
+      return axis.charts.map((chart) => chart.id)
+    }
+    if (this.trace === 'none') {
+      return []
+    }
+    return this.trace
   }
 
   private collectPoints(
