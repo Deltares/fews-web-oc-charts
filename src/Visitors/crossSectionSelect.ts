@@ -15,8 +15,10 @@ type CrossSectionSelectOptions = {
   draggable?: boolean
 }
 
+export type TraceFilter = 'all' | 'none' | string[]
+
 export class CrossSectionSelect<V extends number | Date> implements Visitor {
-  private trace: 'all' | 'none' | string[] = 'all'
+  private trace: TraceFilter = 'all'
   private group: any
   private backGroup: any
   private frontGroup: any
@@ -39,7 +41,7 @@ export class CrossSectionSelect<V extends number | Date> implements Visitor {
     value: V,
     callback: (value: V) => void,
     options: CrossSectionSelectOptions,
-    trace?: 'all' | 'none' | string[],
+    trace?: TraceFilter,
   ) {
     this.value = value
     this.callback = callback
@@ -49,7 +51,7 @@ export class CrossSectionSelect<V extends number | Date> implements Visitor {
     this.visible = true
   }
 
-  setTrace(trace?: 'all' | 'none' | string[]) {
+  setTrace(trace?: TraceFilter) {
     this.trace = trace ?? 'all'
   }
 
