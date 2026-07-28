@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite'
-import fs from 'fs'
-import path from 'path'
+import fs from 'node:fs'
+import path from 'node:path'
 
 // Find all example folders
 const examplesDir = path.resolve(__dirname, 'examples')
@@ -69,7 +69,7 @@ export default defineConfig({
     },
   ],
   build: {
-    rollupOptions: {
+    rolldownOptions: {
       input: inputEntries,
     },
   },

@@ -1,7 +1,5 @@
-import { resolve } from 'path'
+import { resolve } from 'node:path'
 import { defineConfig } from 'vite'
-
-import rollupPluginTypescript from '@rollup/plugin-typescript'
 
 export default defineConfig({
   build: {
@@ -11,16 +9,6 @@ export default defineConfig({
       formats: ['es'],
       name: 'fews-web-oc-charts',
       fileName: 'fews-web-oc-charts',
-    },
-    rollupOptions: {
-      plugins: [
-        rollupPluginTypescript({
-          allowImportingTsExtensions: false,
-          declaration: true,
-          declarationDir: resolveRelativePath('dist'),
-          rootDir: resolveRelativePath('src'),
-        }),
-      ],
     },
   },
 })
