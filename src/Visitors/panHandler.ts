@@ -8,9 +8,7 @@ import { isModifierKeyPress, ModifierKey } from '../Utils'
 type SelectionNoData<T extends SVGElement> = d3.Selection<T, undefined, null, undefined>
 
 type AxisScale =
-  | d3.ScaleLinear<number, number>
-  | d3.ScaleTime<number, number>
-  | d3.ScaleBand<string>
+  d3.ScaleLinear<number, number> | d3.ScaleTime<number, number> | d3.ScaleBand<string>
 
 function isScaleBand(scale: AxisScale): scale is d3.ScaleBand<string> {
   return 'paddingInner' in scale

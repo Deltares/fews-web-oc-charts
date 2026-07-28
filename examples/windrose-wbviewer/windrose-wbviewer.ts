@@ -534,7 +534,9 @@ function updateChartWindDirectionTime(windDirectionTimeSeriesM, windDirectionTim
   windDirectionTimeF.data = windDirectionTimeSeriesF
   windDirectionTimeAxis.redraw({ x: { autoScale: true } })
 
-  const mouseOverWindDirectionTime = new MouseOver({ trace: ['winddirection', 'winddirection-forecast'] })
+  const mouseOverWindDirectionTime = new MouseOver({
+    trace: ['winddirection', 'winddirection-forecast'],
+  })
   windDirectionTimeAxis.accept(new ZoomHandler())
   windDirectionTimeAxis.accept(mouseOverWindDirectionTime)
   windDirectionTimeAxis.accept(new CurrentTime({ x: { axisIndex: 0 } }))
