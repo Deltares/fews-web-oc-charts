@@ -59,11 +59,9 @@ export function rectCollide() {
               if (sx > 0) {
                 sy = 0
               }
-            } else {
+            } else if (sy > 0) {
               //y displacement smaller than x
-              if (sy > 0) {
-                sx = 0
-              }
+              sx = 0
             }
             if (dx < 0) {
               //change sign of sx - has collided on the right(?)
@@ -74,7 +72,7 @@ export function rectCollide() {
               sy = -sy
             }
             //magnitude of vector
-            const distance = Math.sqrt(sx * sx + sy * sy)
+            const distance = Math.hypot(sx, sy)
             //direction vector/unit vector - normalize each component by the magnitude to get the direction
             const vCollisionNorm = {
               x: sx / distance,
@@ -119,12 +117,17 @@ export function rectCollide() {
   }
 
   force.initialize = function (_) {
-    sizes = (nodes = _).map((d) => [d.width, d.height])
+    nodes = _
+    sizes = nodes.map((d) => [d.width, d.height])
     masses = sizes.map((d) => d[0] * d[1])
   }
 
   force.size = function (_) {
-    return arguments.length ? ((size = typeof _ === 'function' ? _ : constant(_)), force) : size
+    if (arguments.length) {
+      size = typeof _ === 'function' ? _ : constant(_)
+      return force
+    }
+    return size
   }
 
   force.strength = function (_) {
