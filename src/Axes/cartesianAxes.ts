@@ -239,7 +239,11 @@ export class CartesianAxes extends Axes {
     let updatedDomain =
       axisOptions.type === AxisType.degrees
         ? niceDomain(dataExtent, 16, AxisType.degrees)
-        : getNiceDomain({ defaultDomain, dataExtent, bufferRatio: 0.05 })
+        : getNiceDomain({
+            defaultDomain,
+            dataExtent: dataExtent as [number, number],
+            bufferRatio: 0.05,
+          })
     if (zoomOptions?.includeZero === true) {
       updatedDomain = d3.extent([...updatedDomain, 0])
     }
