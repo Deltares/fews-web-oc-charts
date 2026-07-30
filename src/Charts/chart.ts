@@ -386,7 +386,11 @@ export abstract class Chart {
 
     if (!this.isIndexValid(datum, idx, targetKey, value, isInverseNullFn)) return
 
-    if (method === 'middle' && this.isMiddleAlignmentInvalid(value, datum, idx, targetKey, isInverseNullFn)) return
+    if (
+      method === 'middle' &&
+      this.isMiddleAlignmentInvalid(value, datum, idx, targetKey, isInverseNullFn)
+    )
+      return
 
     return isDescending ? datum.length - 1 - idx : idx
   }
