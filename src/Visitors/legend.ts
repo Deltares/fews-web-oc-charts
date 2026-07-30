@@ -11,10 +11,10 @@ interface LegendEntry {
 
 export class Legend implements Visitor {
   private labels: LegendEntry[]
-  private svg: any
-  private group: any
+  private readonly svg: any
+  private readonly group: any
   private axis: CartesianAxes
-  private configuredLabels = false
+  private readonly configuredLabels = false
 
   constructor(labels: any, container?: HTMLElement) {
     if (labels) {

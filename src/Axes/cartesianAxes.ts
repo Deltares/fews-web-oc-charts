@@ -152,86 +152,102 @@ export class CartesianAxes extends Axes {
   }
 
   updateAxisScales(options: ZoomOptions, axisKey: keyof CartesianAxesOptions): void {
-    let scales: Array<any>
-    let initialExtents: Array<any>
-    if (axisKey === 'x') {
-      scales = this.xScales
-      initialExtents = this.xInitialExtent
-    } else {
-      scales = this.yScales
-      initialExtents = this.yInitialExtent
-    }
+    const scales = axisKey === 'x' ? this.xScales : this.yScales
+    const initialExtents = axisKey === 'x' ? this.xInitialExtent : this.yInitialExtent
     for (const axisIndex of [0, 1] as (0 | 1)[]) {
-      const scale = scales[axisIndex]
-      if (!scale) continue
-
-      const axisOptions = this.options[axisKey][axisIndex]
-
-      const setCurrentDomain = (domain: [number, number] | [Date, Date]) => {
-        this.setDomain(axisKey, axisIndex, domain)
-      }
-
-      const makeDomainNice = (dataExtent, defaultDomain) => {
-        let updatedDomain =
-          axisOptions.type === AxisType.degrees
-            ? niceDomain(dataExtent, 16, AxisType.degrees)
-            : getNiceDomain({ defaultDomain, dataExtent, bufferRatio: 0.05 })
-        if (zoomOptions?.includeZero === true) {
-          updatedDomain = d3.extent([...updatedDomain, 0])
-        }
-        if (defaultDomain !== undefined) {
-          updatedDomain[0] = Math.min(defaultDomain[0], updatedDomain[0])
-          updatedDomain[1] = Math.max(defaultDomain[1], updatedDomain[1])
-        }
-        setCurrentDomain(updatedDomain)
-      }
-
-      const axisScaleOptions: ScaleOptions = {
-        domain: axisOptions.domain,
-        nice: axisOptions.nice,
-        includeZero: axisOptions.includeZero,
-        symmetric: axisOptions.symmetric,
-      }
-      const zoomOptions = { ...{ autoScale: false }, ...axisScaleOptions, ...options }
-      if (zoomOptions?.domain) {
-        setCurrentDomain(zoomOptions.domain)
-      } else if (axisOptions.type === AxisType.band) {
-        const charts = this.charts.filter(
-          (chart) => chart.axisIndex[axisKey]?.axisIndex === axisIndex,
-        )
-        const extent = charts.flatMap((chart) => chart.data.map((d) => d[chart.dataKeys[axisKey]]))
-        setCurrentDomain(extent as [number, number] | [Date, Date])
-      } else if (zoomOptions.autoScale === true || zoomOptions.fullExtent === true) {
-        let defaultExtent
-        let dataExtent = new Array(2)
-        if (axisOptions?.defaultDomain !== undefined) {
-          defaultExtent = axisOptions?.defaultDomain
-        }
-        dataExtent = this.chartsExtent(axisKey, axisIndex, zoomOptions)
-        if (zoomOptions?.symmetric === true) {
-          const max = Math.max(Math.abs(dataExtent[0]), Math.abs(dataExtent[1]))
-          dataExtent[0] = -max
-          dataExtent[1] = max
-        }
-        if (zoomOptions?.includeZero === true) {
-          dataExtent = d3.extent([...dataExtent, 0])
-        }
-        if (zoomOptions?.nice === true) {
-          makeDomainNice(dataExtent, defaultExtent)
-        } else {
-          if (defaultExtent !== undefined) {
-            if (defaultExtent[0] < dataExtent[0] || defaultExtent[1] > dataExtent[1]) {
-              dataExtent = d3.extent([...defaultExtent, ...dataExtent])
-            }
-          }
-          setCurrentDomain(dataExtent as [number, number] | [Date, Date])
-        }
-      }
-      const domain = scale.domain()
-      if (initialExtents[axisIndex] === undefined && !isNaN(domain[0]) && !isNaN(domain[1])) {
-        initialExtents[axisIndex] = domain
-      }
+      if (!scales[axisIndex]) continue
+      this.updateSingleAxisScale(options, axisKey, axisIndex, initialExtents)
     }
+  }
+
+  private updateSingleAxisScale(
+    options: ZoomOptions,
+    axisKey: keyof CartesianAxesOptions,
+    axisIndex: 0 | 1,
+    initialExtents: Array<any>,
+  ): void {
+    const axisOptions = this.options[axisKey][axisIndex]
+    const axisScaleOptions: ScaleOptions = {
+      domain: axisOptions.domain,
+      nice: axisOptions.nice,
+      includeZero: axisOptions.includeZero,
+      symmetric: axisOptions.symmetric,
+    }
+    const zoomOptions = { autoScale: false, ...axisScaleOptions, ...options }
+
+    if (zoomOptions?.domain) {
+      this.setDomain(axisKey, axisIndex, zoomOptions.domain)
+    } else if (axisOptions.type === AxisType.band) {
+      const charts = this.charts.filter(
+        (chart) => chart.axisIndex[axisKey]?.axisIndex === axisIndex,
+      )
+      const extent = charts.flatMap((chart) => chart.data.map((d) => d[chart.dataKeys[axisKey]]))
+      this.setDomain(axisKey, axisIndex, extent as [number, number] | [Date, Date])
+    } else if (zoomOptions.autoScale === true || zoomOptions.fullExtent === true) {
+      this.applyAutoScaleDomain(axisKey, axisIndex, axisOptions, zoomOptions)
+    }
+
+    const scale = (axisKey === 'x' ? this.xScales : this.yScales)[axisIndex]
+    const domain = scale.domain()
+    if (
+      initialExtents[axisIndex] === undefined &&
+      !Number.isNaN(domain[0]) &&
+      !Number.isNaN(domain[1])
+    ) {
+      initialExtents[axisIndex] = domain
+    }
+  }
+
+  private applyAutoScaleDomain(
+    axisKey: keyof CartesianAxesOptions,
+    axisIndex: 0 | 1,
+    axisOptions: CartesianAxisOptions,
+    zoomOptions: ZoomOptions,
+  ): void {
+    const defaultExtent = axisOptions?.defaultDomain
+    let dataExtent = this.chartsExtent(axisKey, axisIndex, zoomOptions)
+
+    if (zoomOptions?.symmetric === true) {
+      const max = Math.max(Math.abs(dataExtent[0]), Math.abs(dataExtent[1]))
+      dataExtent = [-max, max]
+    }
+    if (zoomOptions?.includeZero === true) {
+      dataExtent = d3.extent([...dataExtent, 0])
+    }
+
+    if (zoomOptions?.nice === true) {
+      this.applyNiceDomain(axisKey, axisIndex, axisOptions, zoomOptions, dataExtent, defaultExtent)
+    } else {
+      if (
+        defaultExtent !== undefined &&
+        (defaultExtent[0] < dataExtent[0] || defaultExtent[1] > dataExtent[1])
+      ) {
+        dataExtent = d3.extent([...defaultExtent, ...dataExtent])
+      }
+      this.setDomain(axisKey, axisIndex, dataExtent as [number, number] | [Date, Date])
+    }
+  }
+
+  private applyNiceDomain(
+    axisKey: keyof CartesianAxesOptions,
+    axisIndex: 0 | 1,
+    axisOptions: CartesianAxisOptions,
+    zoomOptions: ZoomOptions,
+    dataExtent: any[],
+    defaultDomain: any,
+  ): void {
+    let updatedDomain =
+      axisOptions.type === AxisType.degrees
+        ? niceDomain(dataExtent, 16, AxisType.degrees)
+        : getNiceDomain({ defaultDomain, dataExtent, bufferRatio: 0.05 })
+    if (zoomOptions?.includeZero === true) {
+      updatedDomain = d3.extent([...updatedDomain, 0])
+    }
+    if (defaultDomain !== undefined) {
+      updatedDomain[0] = Math.min(defaultDomain[0], updatedDomain[0])
+      updatedDomain[1] = Math.max(defaultDomain[1], updatedDomain[1])
+    }
+    this.setDomain(axisKey, axisIndex, updatedDomain)
   }
 
   chartsExtent(
@@ -247,7 +263,7 @@ export class CartesianAxes extends Axes {
         chart.axisIndex[axisKey]?.axisIndex === +axisIndex
       ) {
         const chartExtent = chart.extent[chart.dataKeys[axisKey]]
-        extent = d3.extent(d3.merge([extent, [].concat(...chartExtent)]))
+        extent = d3.extent(d3.merge([extent, chartExtent.flat()]))
       }
     }
     return extent
@@ -366,53 +382,73 @@ export class CartesianAxes extends Axes {
   }
 
   updateLabels(): void {
-    const g = this.canvas.select('g.labels')
-    if (this.options.y) {
-      if (this.options.y[0]?.label) {
-        const label = g.select('.y0.label').text(this.options.y[0].label)
+    const labelGroup = this.canvas.select('g.labels')
+    this.updateYLabels(labelGroup)
+    this.updateXLabels(labelGroup)
+  }
 
-        if (this.options.y[0].labelOrientation === LabelOrientation.Vertical) {
-          const offset = this.options.y[0].labelOffset ?? 0
-          label.attr('x', -this.height / 2).attr('y', -30 - offset)
-        }
-      }
-      if (this.options.y[0]?.unit) {
-        g.select('.y0.unit').text(this.options.y[0].unit)
-      }
-      if (this.options.y[1]?.label) {
-        const label = g.select('.y1.label').text(this.options.y[1].label)
+  private updateYLabels(labelGroup: any): void {
+    if (!this.options.y) return
 
-        if (this.options.y[0].labelOrientation === LabelOrientation.Vertical) {
-          const offset = this.options.y[1].labelOffset ?? 0
-          label.attr('x', -this.height / 2).attr('y', this.width + 39 + offset)
-        } else {
-          label.attr('x', this.width)
-        }
-      }
-      if (this.options.y[1]?.unit) {
-        g.select('.y1.unit')
-          .attr('x', this.width + 10)
-          .text(this.options.y[1].unit)
+    const y0 = this.options.y[0]
+    const y1 = this.options.y[1]
+
+    if (y0?.label) {
+      const label = labelGroup.select('.y0.label').text(y0.label)
+      if (y0.labelOrientation === LabelOrientation.Vertical) {
+        const offset = y0.labelOffset ?? 0
+        label.attr('x', -this.height / 2).attr('y', -30 - offset)
       }
     }
-    if (this.options.x[0]?.label) {
-      const offset = this.options.x[0].labelOffset ?? 0
-      g.select('.x0.label')
+
+    if (y0?.unit) {
+      labelGroup.select('.y0.unit').text(y0.unit)
+    }
+
+    if (y1?.label) {
+      const label = labelGroup.select('.y1.label').text(y1.label)
+      if (y0?.labelOrientation === LabelOrientation.Vertical) {
+        const offset = y1.labelOffset ?? 0
+        label.attr('x', -this.height / 2).attr('y', this.width + 39 + offset)
+      } else {
+        label.attr('x', this.width)
+      }
+    }
+
+    if (y1?.unit) {
+      labelGroup
+        .select('.y1.unit')
+        .attr('x', this.width + 10)
+        .text(y1.unit)
+    }
+  }
+
+  private updateXLabels(labelGroup: any): void {
+    const x0 = this.options.x[0]
+    const x1 = this.options.x[1]
+
+    if (x0?.label) {
+      const offset = x0.labelOffset ?? 0
+      labelGroup
+        .select('.x0.label')
         .attr('x', this.width / 2)
         .attr('y', this.height + 30 + offset)
-        .text(this.options.x[0].label)
-    }
-    if (this.options.x[0]?.unit) {
-      g.select('.x0.unit')
-        .attr('x', this.width + 10)
-        .attr('y', this.height + 9)
-        .text(this.options.x[0].unit)
+        .text(x0.label)
     }
 
-    if (this.options.x[1]?.unit) {
-      g.select('.x1.unit')
+    if (x0?.unit) {
+      labelGroup
+        .select('.x0.unit')
         .attr('x', this.width + 10)
-        .text(this.options.x[1].unit)
+        .attr('y', this.height + 9)
+        .text(x0.unit)
+    }
+
+    if (x1?.unit) {
+      labelGroup
+        .select('.x1.unit')
+        .attr('x', this.width + 10)
+        .text(x1.unit)
     }
   }
 
@@ -561,72 +597,83 @@ export class CartesianAxes extends Axes {
 
   protected initLabels(): void {
     const labelGroup = this.layers.labels.attr('font-family', 'sans-serif')
+    this.initYLabels(labelGroup)
+    this.initXLabels(labelGroup)
+  }
 
-    if (this.options.y) {
-      if (this.options.y[0]?.label) {
-        const label = labelGroup
-          .append('text')
-          .attr('class', 'y0 label')
-          .text(this.options.y[0].label)
+  private initYLabels(labelGroup: any): void {
+    if (!this.options.y) return
 
-        if (this.options.y[0].labelOrientation === LabelOrientation.Vertical) {
-          const offset = this.options.y[0].labelOffset ?? 0
-          label
-            .attr('transform', 'rotate(-90)')
-            .attr('x', -this.height / 2)
-            .attr('y', -30 - offset)
-            .attr('text-anchor', 'middle')
-        } else {
-          label.attr('x', 0).attr('y', -9).attr('text-anchor', 'start')
-        }
-      }
-      if (this.options.y[0]?.unit) {
-        labelGroup
-          .append('text')
-          .attr('class', 'y0 unit')
-          .attr('x', -9)
-          .attr('y', -9)
-          .attr('text-anchor', 'end')
-          .text(this.options.y[0].unit)
-      }
-      if (this.options.y[1]?.label) {
-        const label = labelGroup
-          .append('text')
-          .attr('class', 'y1 label')
-          .text(this.options.y[1].label)
+    const y0 = this.options.y[0]
+    const y1 = this.options.y[1]
 
-        if (this.options.y[1].labelOrientation === LabelOrientation.Vertical) {
-          const offset = this.options.y[1].labelOffset ?? 0
-          label
-            .attr('transform', 'rotate(-90)')
-            .attr('x', -this.height / 2)
-            .attr('y', this.width + 39 + offset)
-            .attr('text-anchor', 'middle')
-        } else {
-          label.attr('x', this.width).attr('y', -9).attr('text-anchor', 'end')
-        }
-      }
-      if (this.options.y[1]?.unit) {
-        labelGroup
-          .append('text')
-          .attr('class', 'y1 unit')
-          .attr('x', this.width + 10)
-          .attr('y', -9)
-          .attr('text-anchor', 'start')
-          .text(this.options.y[1].unit)
+    if (y0?.label) {
+      const label = labelGroup.append('text').attr('class', 'y0 label').text(y0.label)
+
+      if (y0.labelOrientation === LabelOrientation.Vertical) {
+        const offset = y0.labelOffset ?? 0
+        label
+          .attr('transform', 'rotate(-90)')
+          .attr('x', -this.height / 2)
+          .attr('y', -30 - offset)
+          .attr('text-anchor', 'middle')
+      } else {
+        label.attr('x', 0).attr('y', -9).attr('text-anchor', 'start')
       }
     }
-    if (this.options.x[0]?.label) {
-      const offset = this.options.x[0].labelOffset ?? 0
+
+    if (y0?.unit) {
+      labelGroup
+        .append('text')
+        .attr('class', 'y0 unit')
+        .attr('x', -9)
+        .attr('y', -9)
+        .attr('text-anchor', 'end')
+        .text(y0.unit)
+    }
+
+    if (y1?.label) {
+      const label = labelGroup.append('text').attr('class', 'y1 label').text(y1.label)
+
+      if (y1.labelOrientation === LabelOrientation.Vertical) {
+        const offset = y1.labelOffset ?? 0
+        label
+          .attr('transform', 'rotate(-90)')
+          .attr('x', -this.height / 2)
+          .attr('y', this.width + 39 + offset)
+          .attr('text-anchor', 'middle')
+      } else {
+        label.attr('x', this.width).attr('y', -9).attr('text-anchor', 'end')
+      }
+    }
+
+    if (y1?.unit) {
+      labelGroup
+        .append('text')
+        .attr('class', 'y1 unit')
+        .attr('x', this.width + 10)
+        .attr('y', -9)
+        .attr('text-anchor', 'start')
+        .text(y1.unit)
+    }
+  }
+
+  private initXLabels(labelGroup: any): void {
+    const x0 = this.options.x[0]
+    const x1 = this.options.x[1]
+
+    if (x0?.label) {
+      const offset = x0.labelOffset ?? 0
       labelGroup
         .append('text')
         .attr('class', 'x0 label')
         .attr('x', this.width / 2)
         .attr('y', this.height + 30 + offset)
         .attr('text-anchor', 'middle')
-        .text(this.options.x[0].label)
+        .text(x0.label)
     }
-    if (this.options.x[0]?.unit) {
+
+    if (x0?.unit) {
       labelGroup
         .append('text')
         .attr('class', 'x0 unit')
@@ -634,17 +681,17 @@ export class CartesianAxes extends Axes {
         .attr('y', this.height + 9)
         .attr('dy', '0.71em')
         .attr('text-anchor', 'start')
-        .text(this.options.x[0].unit)
+        .text(x0.unit)
     }
 
-    if (this.options.x[1]?.unit) {
+    if (x1?.unit) {
       labelGroup
         .append('text')
         .attr('class', 'x1 unit')
         .attr('x', this.width + 10)
         .attr('y', -9)
         .attr('text-anchor', 'start')
-        .text(this.options.x[1].unit)
+        .text(x1.unit)
     }
   }
 }
