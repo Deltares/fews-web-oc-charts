@@ -15,19 +15,15 @@ export class XAxis extends Axis {
     spanScale: any,
     options: Partial<BaseAxisOptions>,
   ) {
-    if (options.orientation === undefined) {
-      options.orientation =
-        options.position !== undefined && options.position !== AxisPosition.AtZero
-          ? options.position
-          : AxisOrientation.Bottom
-    }
-    if (options.position === undefined) {
-      options.position = AxisOrientation.Bottom
-    }
+    options.orientation ??=
+      options.position !== undefined && options.position !== AxisPosition.AtZero
+        ? options.position
+        : AxisOrientation.Bottom
+    options.position ??= AxisOrientation.Bottom
     super(group, scale, spanScale, options)
   }
 
-  translateAxis(position): string {
+  translateAxis(position: AxisPosition): string {
     if (position === AxisPosition.AtZero) {
       return `translate(0,${this.spanScale(0)})`
     } else if (position === AxisPosition.Bottom) {

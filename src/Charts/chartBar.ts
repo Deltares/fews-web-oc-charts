@@ -95,9 +95,7 @@ export class ChartBar extends Chart {
           }
           axis.tooltip.update(
             this.toolTipFormatterCartesian(d),
-            this.options.tooltip.position !== undefined
-              ? this.options.tooltip.position
-              : TooltipPosition.Top,
+            this.options.tooltip?.position ?? TooltipPosition.Top,
             axis.margin.left + +rect.getAttribute('x') + +rect.getAttribute('width') / 2,
             axis.margin.top + +rect.getAttribute('y'),
           )

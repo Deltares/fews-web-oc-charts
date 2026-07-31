@@ -8,7 +8,7 @@ import { defaultsDeep } from 'lodash-es'
 import { symbolArrow } from '../Symbols/index.js'
 
 function mean(x: number[] | number) {
-  if (x instanceof Array) {
+  if (Array.isArray(x)) {
     return d3.mean(x)
   }
   return x
@@ -147,9 +147,7 @@ export class ChartArrow extends Chart {
           const pointer = d3.pointer(e, axis.container)
           axis.tooltip.update(
             this.toolTipFormatterPolar(d),
-            this.options.tooltip.position !== undefined
-              ? this.options.tooltip.position
-              : TooltipPosition.Top,
+            this.options.tooltip?.position ?? TooltipPosition.Top,
             pointer[0],
             pointer[1],
           )
