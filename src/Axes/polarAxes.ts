@@ -125,9 +125,9 @@ export class PolarAxes extends Axes {
     for (const chart of this.charts) {
       const chartRadialExtent = chart.extent[chart.dataKeys.radial]
       if (this.options.radial.type === AxisType.band) {
-        radialExtent = d3.merge([radialExtent, [].concat(...chartRadialExtent)])
+        radialExtent = d3.merge([radialExtent, chartRadialExtent.flat()])
       } else {
-        radialExtent = d3.extent(d3.merge([radialExtent, [].concat(...chartRadialExtent)]))
+        radialExtent = d3.extent(d3.merge([radialExtent, chartRadialExtent.flat()]))
       }
     }
     this.radialScale.domain(radialExtent)

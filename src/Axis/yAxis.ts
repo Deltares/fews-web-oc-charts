@@ -10,19 +10,15 @@ export class YAxis extends Axis {
     spanScale: any,
     options: Partial<BaseAxisOptions>,
   ) {
-    if (options.orientation === undefined) {
-      options.orientation =
-        options.position !== undefined && options.position !== AxisPosition.AtZero
-          ? options.position
-          : AxisOrientation.Left
-    }
-    if (options.position === undefined) {
-      options.position = AxisOrientation.Left
-    }
+    options.orientation ??=
+      options.position !== undefined && options.position !== AxisPosition.AtZero
+        ? options.position
+        : AxisOrientation.Left
+    options.position ??= AxisOrientation.Left
     super(group, scale, spanScale, options)
   }
 
-  translateAxis(position): string {
+  translateAxis(position: AxisPosition): string {
     if (position === AxisPosition.AtZero) {
       return `translate(${this.spanScale(0)},0)`
     } else if (position === AxisPosition.Right) {
