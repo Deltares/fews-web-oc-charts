@@ -38,20 +38,19 @@ export class Legend implements Visitor {
       this.updateLabels()
     }
     const entries = this.group.selectAll('g').data(this.labels)
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
-    const that = this
     let maxWidth = 1
 
     entries.exit().remove()
 
     const enter = entries.enter().append('g').attr('class', 'legend-entry')
 
-    const updateSelection = entries.merge(enter).each(function (d, _i) {
-      const legendElement = d3.select(this)
-      const chartsInGroup = that.axis.charts.filter((c) => c.id === d.selector)
+    const updateSelection = entries.merge(enter)
+    updateSelection.each((d, i) => {
+      const legendElement = d3.select(updateSelection.nodes()[i])
+      const chartsInGroup = this.axis.charts.filter((c) => c.id === d.selector)
       const symbol = legendElement.append('g')
-      that.createLegendSymbol(d.selector, d.legendId, symbol.node())
-      if (that.configuredLabels) {
+      this.createLegendSymbol(d.selector, d.legendId, symbol.node())
+      if (this.configuredLabels) {
         legendElement.style('cursor', 'pointer')
         legendElement.on('click', () => {
           const display = 'visible'
@@ -63,7 +62,7 @@ export class Legend implements Visitor {
           } else {
             legendElement.style('opacity', 1.0)
           }
-          that.axis.redraw()
+          this.axis.redraw()
         })
       }
       legendElement.append('text').text(d.label).attr('x', 25).attr('dominant-baseline', 'middle')
