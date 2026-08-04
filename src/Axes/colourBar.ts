@@ -41,7 +41,7 @@ function generateRandomId(length: number) {
   const numCharacters = characters.length
   let id = ''
   for (let i = 0; i < length; i++) {
-    id += characters.charAt(Math.floor(Math.random() * numCharacters))
+    id += characters.charAt(Math.floor(Math.random() * numCharacters)) // NOSONAR(S2245) - non cryptographic random string
   }
   return id
 }
@@ -130,9 +130,7 @@ export class ColourBar {
       // Refer to their IDs for each rectangle's fill colour
       fills = ids.map((id: string) => `url(#${id})`)
     } else {
-      fills = this.colourMap
-        .slice(0, this.colourMap.length - 1)
-        .map((val: ColourMapValue) => val.color)
+      fills = this.colourMap.slice(0, -1).map((val: ColourMapValue) => val.color)
     }
     return fills
   }
@@ -181,31 +179,46 @@ export class ColourBar {
    * @param fills colour values (or e.g. gradient references) for each segment
    */
   private createBarSegments(fills: string[]) {
-    // Bounds of the colour map should be monotonically increasing.
-    const startCoordinate = this.isHorizontal
-      ? (lowerValue: number, _upperValue: number) => this.scale(lowerValue)
-      : (_lowerValue: number, upperValue: number) => this.scale(upperValue)
-    const barSize = (lowerValue: number, upperValue: number) =>
-      Math.abs(this.scale(upperValue) - this.scale(lowerValue))
-
-    // Add rectangles for each segment of the colour bar.
     const barGroup = this.group.append('g')
     for (let i = 0; i < this.colourMap.length - 1; i++) {
-      const lowerValue = this.colourMap[i].lowerValue
-      const upperValue = this.colourMap[i + 1].lowerValue
-
-      const posCur = startCoordinate(lowerValue, upperValue)
-      const sizeCur = barSize(lowerValue, upperValue)
-      barGroup
-        .append('rect')
-        .attr('x', this.isHorizontal ? posCur : 0)
-        .attr('y', this.isHorizontal ? 0 : posCur)
-        .attr('width', this.isHorizontal ? sizeCur : this.sizeAcrossAxis)
-        .attr('height', this.isHorizontal ? this.sizeAcrossAxis : sizeCur)
-        .attr('stroke', 'none')
-        .attr('fill', fills[i])
-        .attr('shape-rendering', 'crispEdges')
+      const { lowerValue, upperValue } = this.getSegmentBounds(i)
+      const position = this.getSegmentStartCoordinate(lowerValue, upperValue)
+      const size = this.getSegmentSize(lowerValue, upperValue)
+      this.appendBarSegmentRect(barGroup, position, size, fills[i])
     }
+  }
+
+  private getSegmentBounds(index: number) {
+    return {
+      lowerValue: this.colourMap[index].lowerValue,
+      upperValue: this.colourMap[index + 1].lowerValue,
+    }
+  }
+
+  // Bounds of the colour map should be monotonically increasing.
+  private getSegmentStartCoordinate(lowerValue: number, upperValue: number) {
+    return this.isHorizontal ? this.scale(lowerValue) : this.scale(upperValue)
+  }
+
+  private getSegmentSize(lowerValue: number, upperValue: number) {
+    return Math.abs(this.scale(upperValue) - this.scale(lowerValue))
+  }
+
+  private appendBarSegmentRect(
+    barGroup: d3.Selection<SVGGElement, any, SVGElement, any>,
+    position: number,
+    size: number,
+    fill: string,
+  ) {
+    barGroup
+      .append('rect')
+      .attr('x', this.isHorizontal ? position : 0)
+      .attr('y', this.isHorizontal ? 0 : position)
+      .attr('width', this.isHorizontal ? size : this.sizeAcrossAxis)
+      .attr('height', this.isHorizontal ? this.sizeAcrossAxis : size)
+      .attr('stroke', 'none')
+      .attr('fill', fill)
+      .attr('shape-rendering', 'crispEdges')
   }
 
   /**

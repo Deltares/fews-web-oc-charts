@@ -100,9 +100,7 @@ export class ChartMarker extends Chart {
           const pointer = d3.pointer(e, axis.container)
           axis.tooltip.update(
             this.toolTipFormatterPolar(d),
-            this.options.tooltip.position !== undefined
-              ? this.options.tooltip.position
-              : TooltipPosition.Top,
+            this.options.tooltip?.position ?? TooltipPosition.Top,
             pointer[0],
             pointer[1],
           )
@@ -182,9 +180,7 @@ export class ChartMarker extends Chart {
           axis.tooltip.show()
           axis.tooltip.update(
             this.toolTipFormatterPolar(d),
-            this.options.tooltip.position !== undefined
-              ? this.options.tooltip.position
-              : TooltipPosition.Top,
+            this.options.tooltip?.position ?? TooltipPosition.Top,
             x,
             y,
           )

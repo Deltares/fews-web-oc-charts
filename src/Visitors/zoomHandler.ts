@@ -59,7 +59,7 @@ type BrushGroup = D3Selection<SVGElement, null>
 
 export class ZoomHandler implements Visitor {
   private brushStartPoint: [number, number]
-  private axes: CartesianAxes[]
+  private readonly axes: CartesianAxes[]
   private mode: SelectionMode
   private options: ZoomHandlerOptions
   private readonly MINMOVE = 25
@@ -156,7 +156,7 @@ export class ZoomHandler implements Visitor {
     const documentMouseUp = (event: MouseEvent): void => {
       // If this mouseup event is handled by the listener on the mouseRect, just
       // return.
-      const isWithinAxes = mouseRect.nodes().some((node: HTMLElement) => node === event.target)
+      const isWithinAxes = mouseRect.nodes().includes(event.target as HTMLElement)
       if (isWithinAxes) return
 
       this.endSelection(axis, mouseGroup, brushGroup, null)
@@ -393,7 +393,9 @@ export class ZoomHandler implements Visitor {
       // Skipping band scales as they do not have a numeric domain
       if (isBandScale) continue
 
-      const extent = d3.extent([point[index], this.brushStartPoint[index]].map(scale.invert))
+      const extent = d3.extent(
+        [point[index], this.brushStartPoint[index]].map((value) => scale.invert(value)),
+      )
       axis.setDomain(axisKey, axisIndex, extent as [number, number] | [Date, Date])
     }
   }
@@ -405,7 +407,7 @@ export class ZoomHandler implements Visitor {
     point: [number, number],
   ): void {
     if (!this.brushStartPoint) return
-    point = point !== null ? point : this.lastPoint
+    point = point ?? this.lastPoint
     window.removeEventListener('mousemove', this.onMouseMove)
     brushGroup.select('.select-rect').attr('visibility', 'hidden')
     const updateXScales = () => {

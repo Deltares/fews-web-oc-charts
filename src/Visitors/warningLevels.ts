@@ -17,14 +17,12 @@ export class WarningLevels implements Visitor {
   private scale: any
   private warningAxis: any
   private sections: any
-  private options: any
+  private readonly options: any
 
   constructor(escalationLevels, options: WarningLevelOptions) {
     this.escalationLevels = escalationLevels
     this.options = {
-      ...{
-        y: { axisIndex: 0 },
-      },
+      y: { axisIndex: 0 },
       ...options,
     }
   }

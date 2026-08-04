@@ -51,29 +51,29 @@ export interface PanHandlerOptions {
 }
 
 export class PanHandler implements Visitor {
-  private id: string
+  private readonly id: string
 
-  private allAxes: CartesianAxes[]
+  private readonly allAxes: CartesianAxes[]
   private enabled: boolean
 
   private isPanningEnabled: boolean
   private isPanning: boolean
 
-  private mouseButton: MouseButton
-  private modifierKey: ModifierKey
+  private readonly mouseButton: MouseButton
+  private readonly modifierKey: ModifierKey
 
-  private direction: PanningDirection
+  private readonly direction: PanningDirection
 
-  private changeHoveringCursor: boolean
-  private changePanningCursor: boolean
-  private hoveringCursor: string
-  private panningCursor: string
+  private readonly changeHoveringCursor: boolean
+  private readonly changePanningCursor: boolean
+  private readonly hoveringCursor: string
+  private readonly panningCursor: string
 
-  private keyDownCallback: (event: KeyboardEvent) => void
-  private keyUpCallback: (event: KeyboardEvent) => void
+  private readonly keyDownCallback: (event: KeyboardEvent) => void
+  private readonly keyUpCallback: (event: KeyboardEvent) => void
 
   constructor(options?: PanHandlerOptions) {
-    this.id = Math.random().toString(36).substring(2, 18)
+    this.id = Math.random().toString(36).substring(2, 18) // NOSONAR(S2245) - non cryptographic random string
 
     this.allAxes = []
     this.enabled = false
@@ -103,7 +103,7 @@ export class PanHandler implements Visitor {
 
   visit(axes: Axes): void {
     if (!(axes instanceof CartesianAxes)) {
-      throw new Error('Panning is only supported on Cartesian axes.')
+      throw new TypeError('Panning is only supported on Cartesian axes.')
     }
     this.allAxes.push(axes)
     if (this.enabled && this.modifierKey === ModifierKey.None) {
@@ -111,7 +111,9 @@ export class PanHandler implements Visitor {
     }
   }
 
-  redraw(): void {}
+  redraw(): void {
+    // No-op: panning handler does not need redraw lifecycle work.
+  }
 
   isEnabled(): boolean {
     return this.enabled

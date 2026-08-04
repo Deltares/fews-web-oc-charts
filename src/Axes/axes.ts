@@ -43,7 +43,7 @@ export abstract class Axes {
 
   tooltip: Tooltip
   observer: ResizeObserver
-  private themeObserver: MutationObserver
+  private readonly themeObserver: MutationObserver
 
   width: number
   height: number
@@ -64,7 +64,7 @@ export abstract class Axes {
   ) {
     this.container = container
     this.options = defaultsDeep(this.options, options, defaultOptions)
-    this.axesId = Math.random().toString(36).substring(2, 18)
+    this.axesId = Math.random().toString(36).substring(2, 18) // NOSONAR(S2245) - non cryptographic random string
 
     this.observer = new ResizeObserver((entries) => {
       if (entries[0].contentBoxSize) this.resize()
@@ -89,7 +89,7 @@ export abstract class Axes {
       currency: ['$', ''],
     })
 
-    this.margin = { ...{ top: 40, right: 40, bottom: 40, left: 40 }, ...options.margin }
+    this.margin = { top: 40, right: 40, bottom: 40, left: 40, ...options.margin }
     this.svg = d3
       .select(container)
       .append('svg')
@@ -117,8 +117,8 @@ export abstract class Axes {
   }
 
   setSize(height?: number, width?: number): void {
-    const containerWidth = width == null ? this.container.offsetWidth : width
-    const containerHeight = height == null ? this.container.offsetHeight : height
+    const containerWidth = width ?? this.container.offsetWidth
+    const containerHeight = height ?? this.container.offsetHeight
     this.height = containerHeight - this.margin.top - this.margin.bottom
     this.width = containerWidth - this.margin.left - this.margin.right
     if (this.height < 0 || this.width < 0) {

@@ -171,7 +171,7 @@ export abstract class Chart {
   }
 
   addTo(axis: Axes, axisIndex: AxisIndex, id?: string, style?: SvgPropertiesHyphen | string) {
-    this.id = id ? id : ''
+    this.id = id ?? ''
     if (typeof style === 'string') {
       this.cssSelector = style
     } else {
@@ -327,7 +327,7 @@ export abstract class Chart {
   }
 
   protected defaultToolTipText(data: any, key: string, decimals: number): string {
-    if (data instanceof Array) {
+    if (Array.isArray(data)) {
       if (data[0] != data[1]) {
         return key + ': ' + data[0].toFixed(decimals) + ' - ' + data[1].toFixed(decimals)
       } else {
@@ -344,7 +344,7 @@ export abstract class Chart {
   abstract plotterPolar(axis: PolarAxes, dataKeys: any)
 
   legendId(item: string) {
-    return this.legend.findIndex((x) => x === item)
+    return this.legend.indexOf(item)
   }
 
   abstract drawLegendSymbol(legendId?: string, asSvgElement?: boolean)
@@ -384,24 +384,41 @@ export abstract class Chart {
     let idx = bisector(datum, value)
     if (method === 'left') idx = idx - 1
 
-    // before first point
-    if (idx === 0 && datum[idx][targetKey] > value) return
-    // after last point
-    if (idx === datum.length - 1 && datum[idx][targetKey] < value) return
-    // current point null
-    if (!datum[idx] || isInverseNullFn(datum[idx])) return
+    if (!this.isIndexValid(datum, idx, targetKey, value, isInverseNullFn)) return
 
-    // check neighbors for middle alignment
-    if (method === 'middle') {
-      if (
-        (value < datum[idx][targetKey] && isInverseNullFn(datum[idx - 1])) ||
-        (value > datum[idx][targetKey] && isInverseNullFn(datum[idx + 1]))
-      ) {
-        return
-      }
-    }
+    if (
+      method === 'middle' &&
+      this.isMiddleAlignmentInvalid(value, datum, idx, targetKey, isInverseNullFn)
+    )
+      return
 
     return isDescending ? datum.length - 1 - idx : idx
+  }
+
+  private isIndexValid(
+    datum: any[],
+    idx: number,
+    targetKey: string,
+    value: number | Date,
+    isInverseNullFn: (d: any) => boolean,
+  ): boolean {
+    if (idx === 0 && datum[idx][targetKey] > value) return false
+    if (idx === datum.length - 1 && datum[idx][targetKey] < value) return false
+    if (!datum[idx] || isInverseNullFn(datum[idx])) return false
+    return true
+  }
+
+  private isMiddleAlignmentInvalid(
+    value: number | Date,
+    datum: any[],
+    idx: number,
+    targetKey: string,
+    isInverseNullFn: (d: any) => boolean,
+  ): boolean {
+    return (
+      (value < datum[idx][targetKey] && isInverseNullFn(datum[idx - 1])) ||
+      (value > datum[idx][targetKey] && isInverseNullFn(datum[idx + 1]))
+    )
   }
 
   protected selectGroup(axis: CartesianAxes | PolarAxes, cssClass: string) {
@@ -446,8 +463,8 @@ export abstract class Chart {
     return dataKeys
   }
 
-  get curveGenerator(): d3.CurveFactory {
-    if (this.options.curve === undefined) return
+  get curveGenerator(): d3.CurveFactory | undefined {
+    if (this.options.curve === undefined) return undefined
     let curve
     switch (this.options.curve) {
       case CurveType.Basis:
