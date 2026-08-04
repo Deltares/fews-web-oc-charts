@@ -64,7 +64,7 @@ export abstract class Axes {
   ) {
     this.container = container
     this.options = defaultsDeep(this.options, options, defaultOptions)
-    this.axesId = Math.random().toString(36).substring(2, 18)
+    this.axesId = Math.random().toString(36).substring(2, 18) // NOSONAR(S2245) - non cryptographic random string
 
     this.observer = new ResizeObserver((entries) => {
       if (entries[0].contentBoxSize) this.resize()

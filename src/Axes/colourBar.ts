@@ -39,19 +39,11 @@ type GroupSelection = d3.Selection<SVGElement, any, SVGElement, any>
 function generateRandomId(length: number) {
   const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
   const numCharacters = characters.length
-  const cryptoApi = globalThis.crypto
-
-  if (cryptoApi?.getRandomValues) {
-    const random = new Uint8Array(length)
-    cryptoApi.getRandomValues(random)
-    return Array.from(random, (value) => characters.charAt(value % numCharacters)).join('')
+  let id = ''
+  for (let i = 0; i < length; i++) {
+    id += characters.charAt(Math.floor(Math.random() * numCharacters)) // NOSONAR(S2245) - non cryptographic random string
   }
-
-  // Fallback for environments without Web Crypto support.
-  return `${Date.now().toString(36)}${performance.now().toString(36).replace('.', '')}`.slice(
-    0,
-    length,
-  )
+  return id
 }
 
 /**

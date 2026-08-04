@@ -73,7 +73,7 @@ export class PanHandler implements Visitor {
   private readonly keyUpCallback: (event: KeyboardEvent) => void
 
   constructor(options?: PanHandlerOptions) {
-    this.id = Math.random().toString(36).substring(2, 18)
+    this.id = Math.random().toString(36).substring(2, 18) // NOSONAR(S2245) - non cryptographic random string
 
     this.allAxes = []
     this.enabled = false
