@@ -22,12 +22,8 @@ export class ChartText extends Chart {
       .datum(mappedData)
       .attr('class', 'chart-text')
 
-    switch (this.options?.text?.position) {
-      case TextPosition.Bottom:
-        this.group.attr('transform', `translate(0, ${axis.height})`)
-        break
-      default:
-        break
+    if (this.options?.text?.position === TextPosition.Bottom) {
+      this.group.attr('transform', `translate(0, ${axis.height})`)
     }
 
     const rotation = this.options?.text?.angle ? ` rotate(${this.options.text.angle})` : ''
