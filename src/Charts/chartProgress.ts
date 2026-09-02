@@ -52,35 +52,7 @@ export class ChartProgress extends Chart {
       .attr('data-chart-element-id', (d) => {
         return d[rKey]
       })
-    if (this.options.tooltip !== undefined) {
-      const tooltip = this.options.tooltip
-
-      enter
-        .on('pointerover', (e: any, d) => {
-          if (tooltip.anchor !== undefined && tooltip.anchor !== TooltipAnchor.Pointer) {
-            console.error(
-              'Tooltip not implemented for anchor ',
-              tooltip.anchor,
-              ', using ',
-              TooltipAnchor.Pointer,
-              ' instead.',
-            )
-          }
-          const pointer = d3.pointer(e, axis.container)
-          const x = pointer[0]
-          const y = pointer[1]
-          axis.tooltip.show()
-          axis.tooltip.update(
-            this.toolTipFormatterPolar(d),
-            tooltip.position ?? TooltipPosition.Top,
-            x,
-            y,
-          )
-        })
-        .on('pointerout', () => {
-          axis.tooltip.hide()
-        })
-    }
+    this.addTooltipHandlers(enter, axis, true)
 
     if (colorKey) {
       enter

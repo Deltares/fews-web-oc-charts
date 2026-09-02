@@ -3,7 +3,6 @@ import type { AxisIndex } from '../Axes/axes.js'
 import { Chart } from './chart.js'
 import { CartesianAxes } from '../Axes/cartesianAxes.js'
 import { PolarAxes } from '../Axes/polarAxes.js'
-import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js'
 
 export class ChartRule extends Chart {
   plotterCartesian(axis: CartesianAxes, axisIndex: AxisIndex) {
@@ -30,33 +29,7 @@ export class ChartRule extends Chart {
       .attr('y1', (d) => yScale(d[yKey][0]))
       .attr('y2', (d) => yScale(d[yKey][1]))
 
-    if (this.options.tooltip !== undefined) {
-      const tooltip = this.options.tooltip
-
-      elements
-        .on('pointerover', (e: any, d) => {
-          if (tooltip.anchor !== undefined && tooltip.anchor !== TooltipAnchor.Pointer) {
-            console.error(
-              'Tooltip not implemented for anchor ',
-              tooltip.anchor,
-              ', using ',
-              TooltipAnchor.Pointer,
-              ' instead.',
-            )
-          }
-          axis.tooltip.show()
-          const pointer = d3.pointer(e, axis.container)
-          axis.tooltip.update(
-            this.toolTipFormatterPolar(d),
-            tooltip.position ?? TooltipPosition.Top,
-            pointer[0],
-            pointer[1],
-          )
-        })
-        .on('pointerout', () => {
-          axis.tooltip.hide()
-        })
-    }
+    this.addTooltipHandlers(elements, axis)
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

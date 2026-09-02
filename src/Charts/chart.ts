@@ -340,6 +340,39 @@ export abstract class Chart {
     }
   }
 
+  protected addTooltipHandlers(
+    elements: d3.Selection<any, any, any, any>,
+    axis: CartesianAxes | PolarAxes,
+    isPolar: boolean = false,
+  ) {
+    const tooltip = this.options.tooltip
+    if (tooltip === undefined) return
+
+    elements
+      .on('pointerover', (e: any, d) => {
+        if (tooltip.anchor !== undefined && tooltip.anchor !== TooltipAnchor.Pointer) {
+          console.error(
+            'Tooltip not implemented for anchor ',
+            tooltip.anchor,
+            ', using ',
+            TooltipAnchor.Pointer,
+            ' instead.',
+          )
+        }
+        axis.tooltip.show()
+        const pointer = d3.pointer(e, axis.container)
+        axis.tooltip.update(
+          isPolar ? this.toolTipFormatterPolar(d) : this.toolTipFormatterCartesian(d),
+          tooltip.position ?? TooltipPosition.Top,
+          pointer[0],
+          pointer[1],
+        )
+      })
+      .on('pointerout', () => {
+        axis.tooltip.hide()
+      })
+  }
+
   abstract plotterCartesian(axis: CartesianAxes, dataKeys: any)
   abstract plotterPolar(axis: PolarAxes, dataKeys: any)
 
