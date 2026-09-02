@@ -31,15 +31,14 @@ export class ChartRule extends Chart {
       .attr('y2', (d) => yScale(d[yKey][1]))
 
     if (this.options.tooltip !== undefined) {
+      const tooltip = this.options.tooltip
+
       elements
         .on('pointerover', (e: any, d) => {
-          if (
-            this.options.tooltip.anchor !== undefined &&
-            this.options.tooltip.anchor !== TooltipAnchor.Pointer
-          ) {
+          if (tooltip.anchor !== undefined && tooltip.anchor !== TooltipAnchor.Pointer) {
             console.error(
               'Tooltip not implemented for anchor ',
-              this.options.tooltip.anchor,
+              tooltip.anchor,
               ', using ',
               TooltipAnchor.Pointer,
               ' instead.',
@@ -49,9 +48,7 @@ export class ChartRule extends Chart {
           const pointer = d3.pointer(e, axis.container)
           axis.tooltip.update(
             this.toolTipFormatterPolar(d),
-            this.options.tooltip.position !== undefined
-              ? this.options.tooltip.position
-              : TooltipPosition.Top,
+            tooltip.position ?? TooltipPosition.Top,
             pointer[0],
             pointer[1],
           )

@@ -58,15 +58,14 @@ export class ChartRange extends Chart {
       })
 
     if (this.options.tooltip !== undefined) {
+      const tooltip = this.options.tooltip
+
       update
         .on('pointerover', (_e: any, d) => {
-          if (
-            this.options.tooltip.anchor !== undefined &&
-            this.options.tooltip.anchor !== TooltipAnchor.Center
-          ) {
+          if (tooltip.anchor !== undefined && tooltip.anchor !== TooltipAnchor.Center) {
             console.error(
               'Tooltip not implemented for anchor ',
-              this.options.tooltip.anchor,
+              tooltip.anchor,
               ', using ',
               TooltipAnchor.Center,
               ' instead.',
@@ -75,9 +74,7 @@ export class ChartRange extends Chart {
           axis.tooltip.show()
           axis.tooltip.update(
             this.toolTipFormatterCartesian(d),
-            this.options.tooltip.position !== undefined
-              ? this.options.tooltip.position
-              : TooltipPosition.Top,
+            this.options.tooltip?.position ?? TooltipPosition.Top,
             axis.margin.left + (xScale(d[xKey][1]) + xScale(d[xKey][0])) / 2,
             axis.margin.top + (yScale(d[yKey][1]) + yScale(d[yKey][0])) / 2,
           )
@@ -165,12 +162,14 @@ export class ChartRange extends Chart {
     const enter = elements.enter().append('path').attr('d', arcGenerator)
 
     if (this.options.tooltip !== undefined) {
+      const tooltip = this.options.tooltip
+
       enter
         .on('pointerover', (e: any, d: any) => {
           axis.tooltip.show()
           let x = 0
           let y = 0
-          if (this.options.tooltip.anchor === TooltipAnchor.Center) {
+          if (tooltip.anchor === TooltipAnchor.Center) {
             const start = angularPosition(d[tKey][0])
             const end = angularPosition(d[tKey][1])
             const centroid = d3.arc().centroid({
@@ -182,13 +181,10 @@ export class ChartRange extends Chart {
             x = axis.margin.left + axis.width / 2 + centroid[0]
             y = axis.margin.top + axis.height / 2 + centroid[1]
           } else {
-            if (
-              this.options.tooltip.anchor !== undefined &&
-              this.options.tooltip.anchor !== TooltipAnchor.Pointer
-            ) {
+            if (tooltip.anchor !== undefined && tooltip.anchor !== TooltipAnchor.Pointer) {
               console.error(
                 'Tooltip not implemented for anchor ',
-                this.options.tooltip.anchor,
+                tooltip.anchor,
                 ', using ',
                 TooltipAnchor.Pointer,
                 ' instead.',
@@ -200,9 +196,7 @@ export class ChartRange extends Chart {
           }
           axis.tooltip.update(
             this.toolTipFormatterPolar(d),
-            this.options.tooltip.position !== undefined
-              ? this.options.tooltip.position
-              : TooltipPosition.Top,
+            tooltip.position ?? TooltipPosition.Top,
             x,
             y,
           )
