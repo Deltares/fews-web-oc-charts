@@ -1,6 +1,5 @@
 import * as d3 from 'd3'
 import { CartesianAxes, PolarAxes } from '../index.js'
-import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js'
 import { Chart } from './chart.js'
 
 function mean(x: number[] | number) {
