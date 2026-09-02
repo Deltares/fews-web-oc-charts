@@ -76,7 +76,6 @@ export class BrushHandler implements Visitor {
       throw new Error('Brush has not been created yet.')
     }
 
-    // TODO: Add support for other brush modes
     if (this.options.brushMode === BrushMode.X && domains.x) {
       this.lastDomainUpdate = domains
 
