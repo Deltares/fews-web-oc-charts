@@ -53,15 +53,14 @@ export class ChartProgress extends Chart {
         return d[rKey]
       })
     if (this.options.tooltip !== undefined) {
+      const tooltip = this.options.tooltip
+
       enter
         .on('pointerover', (e: any, d) => {
-          if (
-            this.options.tooltip.anchor !== undefined &&
-            this.options.tooltip.anchor !== TooltipAnchor.Pointer
-          ) {
+          if (tooltip.anchor !== undefined && tooltip.anchor !== TooltipAnchor.Pointer) {
             console.error(
               'Tooltip not implemented for anchor ',
-              this.options.tooltip.anchor,
+              tooltip.anchor,
               ', using ',
               TooltipAnchor.Pointer,
               ' instead.',
@@ -73,9 +72,7 @@ export class ChartProgress extends Chart {
           axis.tooltip.show()
           axis.tooltip.update(
             this.toolTipFormatterPolar(d),
-            this.options.tooltip.position !== undefined
-              ? this.options.tooltip.position
-              : TooltipPosition.Top,
+            tooltip.position ?? TooltipPosition.Top,
             x,
             y,
           )
