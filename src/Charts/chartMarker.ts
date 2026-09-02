@@ -15,6 +15,38 @@ export class ChartMarker extends Chart {
     this.options = defaultsDeep(this.options, this.options, { symbol: DefaultSymbolOptions })
   }
 
+  protected addTooltipHandlers(
+    elements: d3.Selection<any, any, any, any>,
+    axis: CartesianAxes | PolarAxes,
+  ) {
+    const tooltip = this.options.tooltip
+    if (tooltip === undefined) return
+
+    elements
+      .on('pointerover', (e: any, d) => {
+        if (tooltip.anchor !== undefined && tooltip.anchor !== TooltipAnchor.Pointer) {
+          console.error(
+            'Tooltip not implemented for anchor ',
+            tooltip.anchor,
+            ', using ',
+            TooltipAnchor.Pointer,
+            ' instead.',
+          )
+        }
+        axis.tooltip.show()
+        const pointer = d3.pointer(e, axis.container)
+        axis.tooltip.update(
+          this.toolTipFormatterPolar(d),
+          tooltip.position ?? TooltipPosition.Top,
+          pointer[0],
+          pointer[1],
+        )
+      })
+      .on('pointerout', () => {
+        axis.tooltip.hide()
+      })
+  }
+
   plotterCartesian(axis: CartesianAxes, axisIndex: CartesianAxesIndex) {
     const xKey = this.dataKeys.x
     const yKey = this.dataKeys.y
@@ -81,34 +113,7 @@ export class ChartMarker extends Chart {
       .attr('marker-mid', `url(#${markerId})`)
       .attr('marker-end', `url(#${markerId})`)
 
-    if (this.options.tooltip !== undefined) {
-      update
-        .on('pointerover', (e: any, d) => {
-          if (
-            this.options.tooltip.anchor !== undefined &&
-            this.options.tooltip.anchor !== TooltipAnchor.Pointer
-          ) {
-            console.error(
-              'Tooltip not implemented for anchor ',
-              this.options.tooltip.anchor,
-              ', using ',
-              TooltipAnchor.Pointer,
-              ' instead.',
-            )
-          }
-          axis.tooltip.show()
-          const pointer = d3.pointer(e, axis.container)
-          axis.tooltip.update(
-            this.toolTipFormatterPolar(d),
-            this.options.tooltip?.position ?? TooltipPosition.Top,
-            pointer[0],
-            pointer[1],
-          )
-        })
-        .on('pointerout', () => {
-          axis.tooltip.hide()
-        })
-    }
+    this.addTooltipHandlers(update, axis)
   }
 
   plotterPolar(axis: PolarAxes, _: unknown) {
@@ -159,36 +164,7 @@ export class ChartMarker extends Chart {
       .attr('marker-mid', `url(#${markerId})`)
       .attr('marker-end', `url(#${markerId})`)
 
-    if (this.options.tooltip !== undefined) {
-      line
-        .on('pointerover', (e: any, d) => {
-          if (
-            this.options.tooltip.anchor !== undefined &&
-            this.options.tooltip.anchor !== TooltipAnchor.Pointer
-          ) {
-            console.error(
-              'Tooltip not implemented for anchor ',
-              this.options.tooltip.anchor,
-              ', using ',
-              TooltipAnchor.Pointer,
-              ' instead.',
-            )
-          }
-          const pointer = d3.pointer(e, axis.container)
-          const x = pointer[0]
-          const y = pointer[1]
-          axis.tooltip.show()
-          axis.tooltip.update(
-            this.toolTipFormatterPolar(d),
-            this.options.tooltip?.position ?? TooltipPosition.Top,
-            x,
-            y,
-          )
-        })
-        .on('pointerout', () => {
-          axis.tooltip.hide()
-        })
-    }
+    this.addTooltipHandlers(line, axis)
   }
 
   drawLegendSymbol(_legendId?: string, asSvgElement?: boolean) {
