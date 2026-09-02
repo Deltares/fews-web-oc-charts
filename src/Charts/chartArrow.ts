@@ -140,22 +140,7 @@ export class ChartArrow extends Chart {
     arrow.join('path').datum(this.data)
 
     // Add tooltip to the arrow
-    if (this.options.tooltip !== undefined) {
-      arrow
-        .on('pointerover', (e: any, d: ChartArrowData[]) => {
-          axis.tooltip.show()
-          const pointer = d3.pointer(e, axis.container)
-          axis.tooltip.update(
-            this.toolTipFormatterPolar(d),
-            this.options.tooltip?.position ?? TooltipPosition.Top,
-            pointer[0],
-            pointer[1],
-          )
-        })
-        .on('pointerout', () => {
-          axis.tooltip.hide()
-        })
-    }
+    this.addTooltipHandlers(arrow, axis, true)
 
     // Save the data for the next update
     this.previousData = this.data
