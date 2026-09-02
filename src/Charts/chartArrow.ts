@@ -1,7 +1,6 @@
 import * as d3 from 'd3'
 import { AxisIndex, CartesianAxes, PolarAxes } from '../index.js'
 import { Chart, ChartOptions, SymbolOptions } from './chart.js'
-import { TooltipPosition } from '../Tooltip/tooltip.js'
 import { aspectRatio } from '../Symbols/arrow.js'
 
 import { defaultsDeep } from 'lodash-es'
