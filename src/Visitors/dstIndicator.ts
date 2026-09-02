@@ -12,7 +12,7 @@ export class DstIndicator implements Visitor {
   private indicator: any
   private axis: CartesianAxes
   private dstDate: Date
-  private options: DstIndicatorOptions
+  private readonly options: DstIndicatorOptions
 
   // tslint:disable-next-line:no-empty
   constructor(options: DstIndicatorOptions) {

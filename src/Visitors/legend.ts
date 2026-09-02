@@ -14,7 +14,7 @@ export class Legend implements Visitor {
   private readonly svg: any
   private readonly group: any
   private axis: CartesianAxes
-  private configuredLabels = false
+  private readonly configuredLabels: boolean = false
 
   constructor(labels: any, container?: HTMLElement) {
     if (labels) {
