@@ -48,6 +48,10 @@ svg.wb-charts {
     stroke: var(--foreground-color);
   }
 
+  &.r-axis path {
+    stroke: none;
+  }
+
   .tick {
     line {
       stroke-width: 1px;
@@ -75,30 +79,13 @@ svg.wb-charts {
 
 .legend {
   font-size: 1em;
-}
 
-.axis {
-  path {
-    stroke-width: 1px;
-    stroke: var(--foreground-color);
-  }
-
-  &.r-axis path {
+  text {
     stroke: none;
-  }
-
-  .tick {
-    line {
-      stroke-width: 1px;
-      stroke: var(--foreground-color);
-    }
-
-    text {
-      stroke-width: 1px;
-      fill: var(--text-color);
-    }
+    fill: var(--text-color);
   }
 }
+
 .grid {
   fill: none;
   stroke-width: 1px;
@@ -232,13 +219,6 @@ svg.wb-charts {
   }
 }
 
-.legend {
-  text {
-    stroke: none;
-    fill: var(--text-color);
-  }
-}
-
 .chart-text {
   > text {
     stroke: none;
@@ -248,15 +228,7 @@ svg.wb-charts {
 
 .mouse {
   cursor: crosshair;
-}
 
-.mouse-x > text {
-  -webkit-user-select: none;
-  user-select: none;
-  fill: var(--text-color);
-}
-
-.mouse {
   &-over {
     .mouse-line {
       stroke: var(--foreground-color);
@@ -264,6 +236,12 @@ svg.wb-charts {
       stroke-dasharray: 5, 2, 2, 2;
     }
   }
+}
+
+.mouse-x > text {
+  -webkit-user-select: none;
+  user-select: none;
+  fill: var(--text-color);
 }
 
 .brush {
