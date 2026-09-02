@@ -25,7 +25,7 @@ export class DstIndicator implements Visitor {
     this.axis = axis as CartesianAxes
     if ('x' in this.options) {
       const axisIndex = this.options.x.axisIndex
-      if (this.axis.options.x[axisIndex] && this.axis.options.x[axisIndex].type === AxisType.time) {
+      if (this.axis.options.x[axisIndex]?.type === AxisType.time) {
         this.create(axis as CartesianAxes)
       } else {
         throw new Error(`x-axis [${axisIndex}] does not exist or is not of type 'time'`)
