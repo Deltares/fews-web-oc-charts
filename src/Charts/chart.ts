@@ -255,7 +255,7 @@ export abstract class Chart {
     const formatNumber = d3.format(s.toString())
 
     if (Array.isArray(data)) {
-      const labels = [...data].sort((a, b) => a - b).map(formatNumber)
+      const labels = [...data].sort((a, b) => a - b).map((value) => formatNumber(value))
       return labels.join('–')
     } else if (typeof data === 'number') {
       return formatNumber(data)
