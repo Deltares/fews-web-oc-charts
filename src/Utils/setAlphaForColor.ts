@@ -6,7 +6,7 @@
  */
 export function setAlphaForColor(color: string, alpha: number) {
   if (color.startsWith('rgba') || color.startsWith('hsla')) {
-    return color.replace(/[\d.]+\)/, `${alpha})`)
+    return color.replace(/(?:\d+|\d*\.\d+)\)/, `${alpha})`)
   }
   if (color.startsWith('#') && color.length === 9) {
     return (
