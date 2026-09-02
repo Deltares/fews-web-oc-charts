@@ -35,12 +35,12 @@ export type BrushHandlerEventType = 'update:x-brush-domain'
 export type BrushDomainChangeCallback = (event: BrushDomainChangeEvent) => void
 
 export class BrushHandler implements Visitor {
-  private labels: {
+  private readonly labels: {
     x?: d3.Selection<SVGTextElement, unknown, SVGGElement, unknown>
     y?: d3.Selection<SVGTextElement, unknown, SVGGElement, unknown>
   }
   private axis: CartesianAxes | null = null
-  private options: BrushHandlerOptions
+  private readonly options: BrushHandlerOptions
   private brush: d3.BrushBehavior<unknown> | null = null
   private brushGroup: d3.Selection<SVGGElement, unknown, SVGGElement, unknown> | null = null
   private lastDomainUpdate: Domains = {}

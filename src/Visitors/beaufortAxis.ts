@@ -18,7 +18,7 @@ export interface BeaufortAxisOptions {
 export class BeaufortAxis implements Visitor {
   private group: any
   private axis: CartesianAxes
-  private options: any
+  private readonly options: any
   private isVertical = true
 
   constructor(options: BeaufortAxisOptions) {

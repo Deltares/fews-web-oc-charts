@@ -26,15 +26,15 @@ export interface DataFieldOptions {
 }
 
 export class DataField implements Visitor {
-  private container: D3Selection<SVGElement, SVGElement>
+  private readonly container: D3Selection<SVGElement, SVGElement>
   private group: any
-  private options: DataFieldOptions
+  private readonly options: DataFieldOptions
   private axis: Axes
   private text: any
   private value: any
   private selectors: string[]
   private units: UnitOptions[] = []
-  private formatter: any
+  private readonly formatter: any
   private clickCount = 0
 
   constructor(

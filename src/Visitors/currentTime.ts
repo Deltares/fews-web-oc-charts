@@ -13,7 +13,7 @@ export class CurrentTime implements Visitor {
   private line: any
   private indicator: any
   private axis: CartesianAxes
-  private options: CurrentTimeOptions
+  private readonly options: CurrentTimeOptions
   private datetime: Date
   static readonly REFRESH_INTERVAL: number = 10000
 
