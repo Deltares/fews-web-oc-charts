@@ -14,11 +14,10 @@ export class CurrentTime implements Visitor {
   private indicator: any
   private axis: CartesianAxes
   private readonly options: CurrentTimeOptions
-  private datetime: Date
+  private datetime: Date | null = null
   static readonly REFRESH_INTERVAL: number = 10000
 
-  constructor(options?) {
-    this.datetime = null
+  constructor(options?: CurrentTimeOptions) {
     this.options = options
   }
 
