@@ -4,7 +4,7 @@ import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js'
 import { Chart } from './chart.js'
 
 function mean(x: number[] | number) {
-  if (x instanceof Array) {
+  if (Array.isArray(x)) {
     return d3.mean(x)
   }
   return x
