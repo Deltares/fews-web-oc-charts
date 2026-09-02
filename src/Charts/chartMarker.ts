@@ -147,7 +147,7 @@ export class ChartMarker extends Chart {
         .attr('refX', size / 2)
         .attr('refY', size / 2)
         .append('path')
-        .attr('d', d3.symbol(d3.symbols[symbolId], size))
+        .attr('d', d3.symbol(d3.symbolsFill[symbolId], size))
         .attr('transform', `translate(${size / 2}, ${size / 2})`)
     }
 
@@ -177,7 +177,7 @@ export class ChartMarker extends Chart {
     const innerGroup = outerGroup.append('g').attr('transform', 'translate(10, 0)')
     innerGroup
       .append('path')
-      .attr('d', d3.symbol(d3.symbols[this.options.symbol.id], this.options.symbol.size))
+      .attr('d', d3.symbol(d3.symbolsFill[this.options.symbol.id], this.options.symbol.size))
     this.applyStyle(source, innerGroup, props)
     if (asSvgElement) return innerGroup.node()
     return svg.node()
