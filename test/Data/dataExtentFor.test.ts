@@ -21,7 +21,7 @@ describe('dataExtentFor', () => {
   test('scalar x valued data with NaN', () => {
     const data = [
       {
-        x: NaN,
+        x: Number.NaN,
       },
       {
         x: -1,
