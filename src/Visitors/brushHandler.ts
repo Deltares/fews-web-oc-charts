@@ -53,7 +53,7 @@ export class BrushHandler implements Visitor {
 
   visit(axes: Axes): void {
     if (!(axes instanceof CartesianAxes)) {
-      throw new Error('Brush handler is only supported on Cartesian axes.')
+      throw new TypeError('Brush handler is only supported on Cartesian axes.')
     }
 
     this.axis = axes
