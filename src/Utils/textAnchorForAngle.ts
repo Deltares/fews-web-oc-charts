@@ -1,7 +1,7 @@
 import { AxisOrientation } from '../Axis/axisOrientation.js'
 import { normalizeAngle } from './normalizeAngle.js'
 
-export function textAnchorForAngle(angle, orientation) {
+export function textAnchorForAngle(angle: number, orientation: AxisOrientation) {
   let rotate
   switch (orientation) {
     case AxisOrientation.Top:
