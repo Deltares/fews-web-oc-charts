@@ -2,8 +2,9 @@ import * as d3 from 'd3'
 import { AxisType, CartesianAxes, PolarAxes } from '../index.js'
 import type { CartesianAxesIndex } from '../Axes/cartesianAxes.js'
 import type { AxisIndex } from '../Axes/axes.js'
-import { Chart, AUTO_SCALE } from './chart.js'
+import { Chart, AUTO_SCALE, ChartOptions } from './chart.js'
 import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js'
+import type { DataPoint } from '../Data/types.js'
 
 export class ChartMatrix extends Chart {
   static readonly GROUP_CLASS: 'chart-matrix'
@@ -36,11 +37,13 @@ export class ChartMatrix extends Chart {
 
     const colorScale = d3.scaleLinear().domain([0, 1])
     if (this.options.colorScale === AUTO_SCALE) {
-      colorScale.domain(
-        d3.extent(this.data, function (d: any): number {
-          return d[colorKey]
-        }),
-      )
+      const colorValues = this.data
+        .map((d) => d[colorKey])
+        .filter((value): value is number => typeof value === 'number')
+      const colorExtent = d3.extent(colorValues)
+      if (colorExtent[0] !== undefined && colorExtent[1] !== undefined) {
+        colorScale.domain(colorExtent)
+      }
     }
 
     const colorMap = this.getColorMap(colorScale)
@@ -48,11 +51,11 @@ export class ChartMatrix extends Chart {
     d3.transition().duration(this.options.transitionTime)
 
     const elements = this.group
-      .selectAll('rect')
+      .selectAll<SVGRectElement, DataPoint>('rect')
       .data(isBandScale ? data : mappedData)
       .join('rect')
       .attr('display', (d) => {
-        return d[valueKey] === null ? 'none' : undefined
+        return d[valueKey] === null ? 'none' : null
       })
       .attr('x', isBandScale ? (d) => x0(d[xKey]) : xRect)
       .attr('y', (d) => y0(d[yKey]))
@@ -60,28 +63,34 @@ export class ChartMatrix extends Chart {
       .attr('height', y0.bandwidth())
       .attr('stroke-width', 0)
       .attr('shape-rendering', 'crispEdges')
-      .attr('fill', (d) => (d[colorKey] !== null ? colorMap(d[colorKey]) : 'none'))
+      .attr('fill', (d) => {
+        const value = d[colorKey]
+        return typeof value === 'number' || value instanceof Date ? colorMap(value) : 'none'
+      })
     if (this.options.tooltip !== undefined) {
       const tooltip = this.options.tooltip
 
       elements
-        .on('pointerover', (_e: any, d: any) => {
+        .on('pointerover', (_e: Event, d: DataPoint) => {
           if (tooltip.anchor !== undefined && tooltip.anchor !== TooltipAnchor.Top) {
             console.error(
               'Tooltip not implemented for anchor ',
-              this.options.tooltip.anchor,
+              tooltip.anchor,
               ', using ',
               TooltipAnchor.Top,
               ' instead.',
             )
           }
           axis.tooltip.show()
-          axis.tooltip.update(
-            this.toolTipFormatterCartesian(d),
-            tooltip.position ?? TooltipPosition.Top,
-            axis.margin.left + x0(d[xKey]) + x0.bandwidth() / 2,
-            axis.margin.top + y0(d[yKey]),
-          )
+          const content = this.toolTipFormatterCartesian(d)
+          if (content !== undefined) {
+            axis.tooltip.update(
+              content,
+              tooltip.position ?? TooltipPosition.Top,
+              axis.margin.left + x0(d[xKey]) + x0.bandwidth() / 2,
+              axis.margin.top + y0(d[yKey]),
+            )
+          }
         })
         .on('pointerout', () => {
           axis.tooltip.hide()
@@ -89,18 +98,21 @@ export class ChartMatrix extends Chart {
     }
 
     if (this.options.text !== undefined) {
-      const textSelection = this.group.selectAll('text').data(data).join('text')
+      const textSelection = this.group
+        .selectAll<SVGTextElement, DataPoint>('text')
+        .data(data)
+        .join('text')
 
       textSelection
         .attr('x', (d) => x0(d[xKey]) + x0.bandwidth() / 2)
         .attr('y', (d) => y0(d[yKey]) + y0.bandwidth() / 2)
-        .attr('dx', this.options.text.dx)
-        .attr('dy', this.options.text.dy)
+        .attr('dx', this.options.text.dx ?? 0)
+        .attr('dy', this.options.text.dy ?? 0)
         .text((d) => {
-          return this.options.text.formatter(d)
+          return this.options.text?.formatter?.(d) ?? ''
         })
 
-      for (const [key, value] of Object.entries(this.options.text.attributes)) {
+      for (const [key, value] of Object.entries(this.options.text.attributes ?? {})) {
         textSelection.attr(key, value)
       }
     }
@@ -127,17 +139,17 @@ export class ChartMatrix extends Chart {
     return svg.node()
   }
 
-  getColorMap(scale?: any): (x: number | Date) => string {
+  getColorMap(scale?: d3.ScaleContinuousNumeric<number, number>): (x: number | Date) => string {
     if (this.options.color?.map) {
       return this.options.color?.map
     } else {
-      return (value: any) => {
-        return d3.scaleSequential(d3.interpolateWarm)(scale(value))
+      return (value: number | Date) => {
+        return d3.scaleSequential(d3.interpolateWarm)(scale?.(value) ?? 0)
       }
     }
   }
 
-  setPadding(scale: any, options) {
+  setPadding(scale: d3.ScaleBand<string>, options?: ChartOptions['x']) {
     if (options?.paddingOuter) {
       scale.paddingOuter(options.paddingOuter)
     }
