@@ -282,16 +282,8 @@ export abstract class Chart {
     const xKey = this.dataKeys.x
     const yKey = this.dataKeys.y
     const html = document.createElement('div')
-    if (this.options.x.includeInTooltip) {
-      const spanElement = document.createElement('span')
-      spanElement.innerText = this.defaultToolTipText(d[xKey], xKey, 2)
-      html.appendChild(spanElement)
-    }
-    if (this.options.y.includeInTooltip) {
-      const spanElement = document.createElement('span')
-      spanElement.innerText = this.defaultToolTipText(d[yKey], yKey, 2)
-      html.appendChild(spanElement)
-    }
+    this.appendTooltipSpan(html, this.options.x.includeInTooltip, d[xKey], xKey, 2)
+    this.appendTooltipSpan(html, this.options.y.includeInTooltip, d[yKey], yKey, 2)
     return html
   }
 
@@ -319,16 +311,8 @@ export abstract class Chart {
     const tKey = this.dataKeys.angular
     const rKey = this.dataKeys.radial
     const html = document.createElement('div')
-    if (this.options.angular.includeInTooltip) {
-      const spanElement = document.createElement('span')
-      spanElement.innerText = this.defaultToolTipText(d[tKey], tKey, 0)
-      html.appendChild(spanElement)
-    }
-    if (this.options.radial.includeInTooltip) {
-      const spanElement = document.createElement('span')
-      spanElement.innerText = this.defaultToolTipText(d[rKey], rKey, 0)
-      html.appendChild(spanElement)
-    }
+    this.appendTooltipSpan(html, this.options.angular.includeInTooltip, d[tKey], tKey, 0)
+    this.appendTooltipSpan(html, this.options.radial.includeInTooltip, d[rKey], rKey, 0)
     return html
   }
 
@@ -344,6 +328,19 @@ export abstract class Chart {
     } else {
       return key + ': ' + data
     }
+  }
+
+  protected appendTooltipSpan(
+    html: HTMLElement,
+    includeInTooltip: boolean | undefined,
+    data: any,
+    key: string,
+    decimals: number,
+  ) {
+    if (!includeInTooltip) return
+    const spanElement = document.createElement('span')
+    spanElement.innerText = this.defaultToolTipText(data, key, decimals)
+    html.appendChild(spanElement)
   }
 
   protected addTooltipHandlers(
