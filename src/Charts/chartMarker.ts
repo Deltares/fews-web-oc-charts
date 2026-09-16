@@ -2,7 +2,10 @@ import * as d3 from 'd3'
 import { defaultsDeep } from 'lodash-es'
 import { CartesianAxes, CartesianAxesIndex, PolarAxes } from '../index.js'
 import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js'
+import type { AxisIndex } from '../Axes/axes.js'
 import { Chart, SymbolOptions } from './chart.js'
+import type { ChartOptions } from './chart.js'
+import type { DataPoint } from '../Data/types.js'
 
 const DefaultSymbolOptions: SymbolOptions = {
   id: 0,
@@ -10,7 +13,7 @@ const DefaultSymbolOptions: SymbolOptions = {
   skip: 1,
 }
 export class ChartMarker extends Chart {
-  constructor(data: any, options: any) {
+  constructor(data: DataPoint[], options: ChartOptions) {
     super(data, options)
     this.options = defaultsDeep(this.options, this.options, { symbol: DefaultSymbolOptions })
   }
@@ -116,7 +119,7 @@ export class ChartMarker extends Chart {
     this.addTooltipHandlers(update, axis)
   }
 
-  plotterPolar(axis: PolarAxes, _: unknown) {
+  plotterPolar(axis: PolarAxes, _: AxisIndex) {
     const rKey = this.dataKeys.radial
     const tKey = this.dataKeys.angular
     const lineGenerator = d3

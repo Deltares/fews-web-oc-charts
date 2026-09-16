@@ -1,6 +1,7 @@
 import * as d3 from 'd3'
 import { SvgPropertiesHyphen } from 'csstype'
 import { Axes, AxisIndex } from '../Axes/axes.js'
+import type { CartesianAxesIndex } from '../Axes/cartesianAxes.js'
 import { CartesianAxes, PolarAxes } from '../index.js'
 import { defaultsDeep, isNull, merge } from 'lodash-es'
 import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js'
@@ -22,9 +23,9 @@ interface ChartOptionItem {
 }
 
 interface ColorOptionItem {
-  scale?: any
-  range?: any
-  map?: any
+  scale?: d3.ScaleContinuousNumeric<number, number>
+  range?: string[]
+  map?: (value: number | Date) => string
 }
 
 export interface SymbolOptions {
@@ -85,13 +86,17 @@ const chartKeys: (keyof ChartOptionsForKeys)[] = ['x', 'x1', 'y', 'radial', 'ang
 export interface ChartOptions extends ChartOptionsForKeys {
   transitionTime?: number
   color?: ColorOptionItem
-  colorScale?: any
+  colorScale?: number
   symbol?: SymbolOptions
   curve?: CurveType
   text?: TextOptions
   tooltip?: TooltipOptions
   mouseover?: MouseOverOptions
 }
+
+type ResolvedChartOptions = ChartOptions &
+  Required<Pick<ChartOptionsForKeys, 'x' | 'y' | 'radial' | 'angular'>> &
+  Required<Pick<ChartOptions, 'transitionTime'>>
 
 export interface DataKeys {
   x?: string
@@ -104,21 +109,21 @@ export interface DataKeys {
 }
 
 export abstract class Chart {
-  protected _data: DataPoint[]
-  protected datum: any
-  protected _extent: any
+  protected _data!: DataPoint[]
+  protected datum: DataPoint[] = []
+  protected _extent: Record<string, Array<number | Date | null | undefined>> = {}
   protected _isVisible: boolean = true
-  protected highlight: d3.Selection<SVGGElement, any, SVGGElement, any>
-  group: d3.Selection<SVGGElement, any, SVGGElement, any>
-  colorMap: any
-  id: string
-  options: ChartOptions
-  axisIndex: AxisIndex
-  style: SvgPropertiesHyphen
-  cssSelector: string
-  legend: any[] = []
+  protected highlight!: d3.Selection<SVGGElement, unknown, null, unknown>
+  group!: d3.Selection<SVGGElement, unknown, null, unknown>
+  colorMap: d3.ScaleSequential<string>
+  id!: string
+  options: ResolvedChartOptions
+  axisIndex!: AxisIndex
+  style?: SvgPropertiesHyphen
+  cssSelector?: string
+  legend: string[] = []
 
-  constructor(data: any, options: ChartOptions) {
+  constructor(data: DataPoint[], options: ChartOptions) {
     this.data = data
     this.options = defaultsDeep({}, options, {
       radial: { includeInTooltip: true, includeInAutoScale: true },
@@ -131,24 +136,24 @@ export abstract class Chart {
     this.colorMap = d3.scaleSequential(d3.interpolateWarm)
   }
 
-  set data(d: any) {
+  set data(d: DataPoint[]) {
     this._data = d
     this.extent = undefined
   }
 
-  get data() {
+  get data(): DataPoint[] {
     return this._data
   }
 
-  set extent(extent: Record<string, number[] | Date[] | null[]>) {
-    this._extent = extent
+  set extent(extent: Record<string, Array<number | Date | null | undefined>> | undefined) {
+    this._extent = extent ?? {}
   }
 
-  get extent(): Record<string, number[] | Date[] | null[]> {
+  get extent(): Record<string, Array<number | Date | null | undefined>> {
     if (!this._extent) this._extent = {}
-    for (const key in this.dataKeys) {
+    for (const key of chartKeys) {
       const path = this.dataKeys[key]
-      if (this._extent[path] === undefined) {
+      if (path !== undefined && this._extent[path] === undefined) {
         this._extent[path] = dataExtentFor(this._data, path, this.options[key]?.extentFilter)
       }
     }
@@ -178,17 +183,17 @@ export abstract class Chart {
       this.style = style
     }
     this.axisIndex = axisIndex
-    if (axisIndex.x && axisIndex.x.axisIndex === undefined) {
-      this.axisIndex.x.axisIndex = 0
+    if (axisIndex.x?.axisIndex === undefined && axisIndex.x !== undefined) {
+      axisIndex.x.axisIndex = 0
     }
-    if (axisIndex.y && axisIndex.y.axisIndex === undefined) {
-      this.axisIndex.y.axisIndex = 0
+    if (axisIndex.y?.axisIndex === undefined && axisIndex.y !== undefined) {
+      axisIndex.y.axisIndex = 0
     }
-    if (axisIndex.radial && axisIndex.radial.axisIndex === undefined) {
-      this.axisIndex.radial.axisIndex = 0
+    if (axisIndex.radial?.axisIndex === undefined && axisIndex.radial !== undefined) {
+      axisIndex.radial.axisIndex = 0
     }
-    if (axisIndex.angular && axisIndex.angular.axisIndex === undefined) {
-      this.axisIndex.angular.axisIndex = 0
+    if (axisIndex.angular?.axisIndex === undefined && axisIndex.angular !== undefined) {
+      axisIndex.angular.axisIndex = 0
     }
     axis.charts.push(this)
     return this
@@ -196,8 +201,8 @@ export abstract class Chart {
 
   setOptions(options: ChartOptions) {
     for (const key of chartKeys) {
-      if (key in options && options[key].extentFilter !== undefined) {
-        this._extent[key] = undefined
+      if (options[key]?.extentFilter !== undefined) {
+        delete this._extent[key]
       }
     }
     merge(this.options, options)
@@ -209,7 +214,7 @@ export abstract class Chart {
 
   plotter(axis: Axes, axisIndex: AxisIndex) {
     if (axis instanceof CartesianAxes) {
-      this.plotterCartesian(axis, axisIndex)
+      this.plotterCartesian(axis, axisIndex as CartesianAxesIndex)
     } else if (axis instanceof PolarAxes) {
       this.plotterPolar(axis, axisIndex)
     }
@@ -238,10 +243,10 @@ export abstract class Chart {
         color = setAlphaForColor(color, 1)
       }
       const value = d.point
-      if (value[key] !== undefined) {
+      if (value[key] !== undefined && value[key] !== null) {
         const label = this.mouseOverTextFormatter(value[key], precision)
         const spanElement = document.createElement('span')
-        spanElement.style.color = color
+        spanElement.style.color = color ?? ''
         spanElement.innerText = label
         return spanElement
       }
@@ -262,6 +267,7 @@ export abstract class Chart {
     } else if (data instanceof Date) {
       return data.toISOString()
     }
+    return ''
   }
 
   protected mouseOverTextFormatter(d: DataValue, precision: number): string {
@@ -272,7 +278,7 @@ export abstract class Chart {
     }
   }
 
-  protected defaultToolTipFormatterCartesian(d): HTMLElement {
+  protected defaultToolTipFormatterCartesian(d: DataPoint): HTMLElement {
     const xKey = this.dataKeys.x
     const yKey = this.dataKeys.y
     const html = document.createElement('div')
@@ -289,27 +295,27 @@ export abstract class Chart {
     return html
   }
 
-  protected toolTipFormatterCartesian(d): HTMLElement {
+  protected toolTipFormatterCartesian(d: DataPoint): HTMLElement | undefined {
     if (this.options.tooltip === undefined) {
       return
     } else if (this.options.tooltip.toolTipFormatter === undefined) {
       return this.defaultToolTipFormatterCartesian(d)
     } else {
-      return this.options.tooltip.toolTipFormatter(d)
+      return this.options.tooltip.toolTipFormatter(d as DataPointXY)
     }
   }
 
-  protected toolTipFormatterPolar(d): HTMLElement {
+  protected toolTipFormatterPolar(d: DataPoint): HTMLElement | undefined {
     if (this.options.tooltip === undefined) {
       return
     } else if (this.options.tooltip.toolTipFormatter === undefined) {
       return this.defaultToolTipFormatterPolar(d)
     } else {
-      return this.options.tooltip.toolTipFormatter(d)
+      return this.options.tooltip.toolTipFormatter(d as DataPointXY)
     }
   }
 
-  protected defaultToolTipFormatterPolar(d): HTMLElement {
+  protected defaultToolTipFormatterPolar(d: DataPoint): HTMLElement {
     const tKey = this.dataKeys.angular
     const rKey = this.dataKeys.radial
     const html = document.createElement('div')
@@ -361,34 +367,37 @@ export abstract class Chart {
         }
         axis.tooltip.show()
         const pointer = d3.pointer(e, axis.container)
-        axis.tooltip.update(
-          isPolar ? this.toolTipFormatterPolar(d) : this.toolTipFormatterCartesian(d),
-          tooltip.position ?? TooltipPosition.Top,
-          pointer[0],
-          pointer[1],
-        )
+        const content = isPolar ? this.toolTipFormatterPolar(d) : this.toolTipFormatterCartesian(d)
+        if (content !== undefined) {
+          axis.tooltip.update(
+            content,
+            tooltip.position ?? TooltipPosition.Top,
+            pointer[0],
+            pointer[1],
+          )
+        }
       })
       .on('pointerout', () => {
         axis.tooltip.hide()
       })
   }
 
-  abstract plotterCartesian(axis: CartesianAxes, dataKeys: any)
-  abstract plotterPolar(axis: PolarAxes, dataKeys: any)
+  abstract plotterCartesian(axis: CartesianAxes, dataKeys: CartesianAxesIndex): void
+  abstract plotterPolar(axis: PolarAxes, dataKeys: AxisIndex): void
 
   legendId(item: string) {
     return this.legend.indexOf(item)
   }
 
-  abstract drawLegendSymbol(legendId?: string, asSvgElement?: boolean)
+  abstract drawLegendSymbol(legendId?: string, asSvgElement?: boolean): SVGElement | null
 
   public onPointerOver() {}
 
   public onPointerMove(
     _value: number | Date,
     _key: 'x' | 'y',
-    _xScale,
-    _yScale,
+    _xScale: d3.ScaleContinuousNumeric<number, number>,
+    _yScale: d3.ScaleContinuousNumeric<number, number>,
   ): void | { point: DataPointXY; style: SvgPropertiesHyphen } {}
 
   public onPointerOut() {}
@@ -405,16 +414,22 @@ export abstract class Chart {
     const targetKey = key === 'x' ? xKey : yKey
     const inverseKey = key === 'x' ? yKey : xKey
 
-    const isDescending = this.datum[this.datum.length - 1][targetKey] < this.datum[0][targetKey]
+    const firstValue = this.datum[0][targetKey]
+    const lastValue = this.datum[this.datum.length - 1][targetKey]
+    if (firstValue === null || lastValue === null) return
+    const isDescending = lastValue < firstValue
     const datum = isDescending ? [...this.datum].reverse() : this.datum
 
-    let isInverseNullFn = (d) => isNull(d[inverseKey])
+    let isInverseNullFn = (d: DataPoint) => isNull(d[inverseKey])
     if (Array.isArray(datum[0][inverseKey])) {
-      isInverseNullFn = (d) => isNull(d[inverseKey][0])
+      isInverseNullFn = (d: DataPoint) => {
+        const inverseValue = d[inverseKey]
+        return isNull(Array.isArray(inverseValue) ? inverseValue[0] : inverseValue)
+      }
     }
 
-    const bisector = d3.bisector((d) => d[targetKey])[method === 'middle' ? 'center' : 'left']
-    let idx = bisector(datum, value)
+    const bisector = d3.bisector<DataPoint, number | Date>((d) => d[targetKey] as number | Date)
+    let idx = method === 'middle' ? bisector.center(datum, value) : bisector.left(datum, value)
     if (method === 'left') idx = idx - 1
 
     if (!this.isIndexValid(datum, idx, targetKey, value, isInverseNullFn)) return
@@ -429,34 +444,40 @@ export abstract class Chart {
   }
 
   private isIndexValid(
-    datum: any[],
+    datum: DataPoint[],
     idx: number,
     targetKey: string,
     value: number | Date,
-    isInverseNullFn: (d: any) => boolean,
+    isInverseNullFn: (d: DataPoint) => boolean,
   ): boolean {
-    if (idx === 0 && datum[idx][targetKey] > value) return false
-    if (idx === datum.length - 1 && datum[idx][targetKey] < value) return false
-    if (!datum[idx] || isInverseNullFn(datum[idx])) return false
+    const current = datum[idx]
+    if (!current || current[targetKey] === null) return false
+    if (idx === 0 && current[targetKey] > value) return false
+    if (idx === datum.length - 1 && current[targetKey] < value) return false
+    if (isInverseNullFn(current)) return false
     return true
   }
 
   private isMiddleAlignmentInvalid(
     value: number | Date,
-    datum: any[],
+    datum: DataPoint[],
     idx: number,
     targetKey: string,
-    isInverseNullFn: (d: any) => boolean,
+    isInverseNullFn: (d: DataPoint) => boolean,
   ): boolean {
+    const current = datum[idx]
+    const previous = datum[idx - 1]
+    const next = datum[idx + 1]
+    if (!current || !previous || !next || current[targetKey] === null) return true
     return (
-      (value < datum[idx][targetKey] && isInverseNullFn(datum[idx - 1])) ||
-      (value > datum[idx][targetKey] && isInverseNullFn(datum[idx + 1]))
+      (value < current[targetKey] && isInverseNullFn(previous)) ||
+      (value > current[targetKey] && isInverseNullFn(next))
     )
   }
 
   protected selectGroup(axis: CartesianAxes | PolarAxes, cssClass: string) {
     if (this.group === undefined || this.group.empty()) {
-      this.group = axis.chartGroup.append('g')
+      this.group = axis.chartGroup.append<SVGGElement>('g')
       if (axis instanceof PolarAxes) {
         const direction = -axis.direction
         const intercept = 90 - (180 * axis.intercept) / Math.PI
@@ -488,10 +509,11 @@ export abstract class Chart {
     return this.highlight
   }
 
-  get dataKeys() {
-    const dataKeys: DataKeys = {}
-    for (const key in this.axisIndex) {
-      dataKeys[key] = this.axisIndex[key].key ? this.axisIndex[key].key : key
+  get dataKeys(): Record<string, string> {
+    const dataKeys: Record<string, string> = {}
+    for (const key of Object.keys(this.axisIndex) as (keyof AxisIndex)[]) {
+      const axisIndex = this.axisIndex[key]
+      if (axisIndex !== undefined) dataKeys[key] = axisIndex.key ? axisIndex.key : key
     }
     return dataKeys
   }
@@ -521,8 +543,8 @@ export abstract class Chart {
   protected mapDataCartesian(domain: any) {
     const xKey = this.dataKeys.x
 
-    const bisectData = d3.bisector(function (d) {
-      return d[xKey]
+    const bisectData = d3.bisector<DataPoint, number | Date>(function (d) {
+      return d[xKey] as number | Date
     })
     let i0 = bisectData.right(this.data, domain[0])
     let i1 = bisectData.left(this.data, domain[1])
@@ -543,7 +565,8 @@ export abstract class Chart {
       }
     } else {
       for (const key of props) {
-        if (this.style[key]) element.style(key, this.style[key])
+        const value = (this.style as Record<string, string | undefined>)[key]
+        if (value) element.style(key, value)
       }
     }
   }

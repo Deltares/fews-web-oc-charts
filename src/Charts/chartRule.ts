@@ -1,15 +1,15 @@
 import * as d3 from 'd3'
-import type { AxisIndex } from '../Axes/axes.js'
 import type { DataPoint } from '../Data/types.js'
 import { Chart } from './chart.js'
 import { CartesianAxes } from '../Axes/cartesianAxes.js'
+import { CartesianAxesIndex } from '../Axes/cartesianAxes.js'
 import { PolarAxes } from '../Axes/polarAxes.js'
 
 export class ChartRule extends Chart {
-  plotterCartesian(axis: CartesianAxes, axisIndex: AxisIndex) {
+  plotterCartesian(axis: CartesianAxes, axisIndex: CartesianAxesIndex) {
     const xKey = this.dataKeys.x
     const yKey = this.dataKeys.y
-    if (xKey === undefined || yKey === undefined) {
+    if (xKey === undefined || yKey === undefined || axisIndex === undefined) {
       throw new Error('ChartRule requires both x and y data keys')
     }
     const xAxisIndex = axisIndex.x?.axisIndex ?? 0
@@ -31,10 +31,11 @@ export class ChartRule extends Chart {
       return [value[0], value[1]]
     }
 
-    this.group = this.selectGroup(axis, 'chart-marker').datum(mappedData)
+    this.group = this.selectGroup(axis, 'chart-marker')
+    this.group.datum(mappedData)
     const elements = this.group
       .selectAll<SVGLineElement, DataPoint>('line')
-      .data((d: DataPoint[]) => d)
+      .data((d) => d as DataPoint[])
 
     // exit selection
     elements.exit().remove()

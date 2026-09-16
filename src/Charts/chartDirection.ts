@@ -1,7 +1,8 @@
 import * as d3 from 'd3'
 import { defaultsDeep } from 'lodash-es'
 import { CartesianAxes, PolarAxes } from '../index.js'
-import { SymbolOptions } from './chart.js'
+import { ChartOptions, SymbolOptions } from './chart.js'
+import type { DataPoint } from '../Data/types.js'
 import { ChartMarker } from './chartMarker.js'
 
 import { symbolArrow } from '../Symbols/index.js'
@@ -19,9 +20,9 @@ const DefaultSymbolOptions: SymbolOptions = {
   skip: 0,
 }
 export class ChartDirection extends ChartMarker {
-  private previousData: any[] = []
+  private previousData: DataPoint[] = []
 
-  constructor(data: any, options: any) {
+  constructor(data: DataPoint[], options: ChartOptions) {
     super(data, defaultsDeep({}, options, { symbol: DefaultSymbolOptions }))
   }
 

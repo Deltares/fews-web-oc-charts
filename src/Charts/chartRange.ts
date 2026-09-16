@@ -3,6 +3,7 @@ import { AxisIndex } from '../Axes/axes.js'
 import { CartesianAxes, PolarAxes } from '../index.js'
 import { Chart, AUTO_SCALE } from './chart.js'
 import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js'
+import type { DataPoint } from '../Data/types.js'
 
 function mean(x: number[] | number) {
   if (Array.isArray(x)) {
@@ -12,7 +13,7 @@ function mean(x: number[] | number) {
 }
 
 export class ChartRange extends Chart {
-  private previousData: any[] = []
+  private previousData: DataPoint[] = []
 
   plotterCartesian(axis: CartesianAxes, axisIndex: AxisIndex) {
     const xKey = this.dataKeys.x

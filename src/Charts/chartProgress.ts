@@ -1,6 +1,7 @@
 import * as d3 from 'd3'
 import { CartesianAxes, PolarAxes } from '../index.js'
 import { Chart } from './chart.js'
+import type { DataPoint } from '../Data/types.js'
 
 function mean(x: number[] | number) {
   if (Array.isArray(x)) {
@@ -10,7 +11,7 @@ function mean(x: number[] | number) {
 }
 
 export class ChartProgress extends Chart {
-  private previousData: any[] = []
+  private previousData: DataPoint[] = []
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   plotterCartesian(axis: CartesianAxes, dataKeys: any) {
