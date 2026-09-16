@@ -17,6 +17,8 @@ import { niceDomain } from './niceDomain.js'
 
 export type CartesianAxesIndex = { x: { axisIndex: number }; y: { axisIndex: number } }
 
+export type CartesianAxisKey = 'x' | 'y'
+
 export interface CartesianAxesOptions extends AxesOptions {
   x: CartesianAxisOptions[]
   y: CartesianAxisOptions[]
@@ -151,7 +153,7 @@ export class CartesianAxes extends Axes {
     }
   }
 
-  updateAxisScales(options: ZoomOptions, axisKey: keyof CartesianAxesOptions): void {
+  updateAxisScales(options: ZoomOptions, axisKey: CartesianAxisKey): void {
     const scales = axisKey === 'x' ? this.xScales : this.yScales
     const initialExtents = axisKey === 'x' ? this.xInitialExtent : this.yInitialExtent
     for (const axisIndex of [0, 1] as (0 | 1)[]) {
@@ -162,11 +164,13 @@ export class CartesianAxes extends Axes {
 
   private updateSingleAxisScale(
     options: ZoomOptions,
-    axisKey: keyof CartesianAxesOptions,
+    axisKey: CartesianAxisKey,
     axisIndex: 0 | 1,
     initialExtents: Array<any>,
   ): void {
     const axisOptions = this.options[axisKey][axisIndex]
+    if (!axisOptions) return
+
     const axisScaleOptions: ScaleOptions = {
       domain: axisOptions.domain,
       nice: axisOptions.nice,
@@ -181,7 +185,11 @@ export class CartesianAxes extends Axes {
       const charts = this.charts.filter(
         (chart) => chart.axisIndex[axisKey]?.axisIndex === axisIndex,
       )
-      const extent = charts.flatMap((chart) => chart.data.map((d) => d[chart.dataKeys[axisKey]]))
+      const extent = charts.flatMap((chart) => {
+        const key = chart.dataKeys[axisKey]
+        if (!key) return []
+        return chart.data.map((d: Record<string, any>) => d[key])
+      })
       this.setDomain(axisKey, axisIndex, extent as [number, number] | [Date, Date])
     } else if (zoomOptions.autoScale === true || zoomOptions.fullExtent === true) {
       this.applyAutoScaleDomain(axisKey, axisIndex, axisOptions, zoomOptions)
@@ -199,7 +207,7 @@ export class CartesianAxes extends Axes {
   }
 
   private applyAutoScaleDomain(
-    axisKey: keyof CartesianAxesOptions,
+    axisKey: CartesianAxisKey,
     axisIndex: 0 | 1,
     axisOptions: CartesianAxisOptions,
     zoomOptions: ZoomOptions,
@@ -222,51 +230,55 @@ export class CartesianAxes extends Axes {
         defaultExtent !== undefined &&
         (defaultExtent[0] < dataExtent[0] || defaultExtent[1] > dataExtent[1])
       ) {
-        dataExtent = d3.extent([...defaultExtent, ...dataExtent])
+        dataExtent = d3.extent([...defaultExtent, ...dataExtent]) as [number, number]
       }
       this.setDomain(axisKey, axisIndex, dataExtent as [number, number] | [Date, Date])
     }
   }
 
   private applyNiceDomain(
-    axisKey: keyof CartesianAxesOptions,
+    axisKey: CartesianAxisKey,
     axisIndex: 0 | 1,
     axisOptions: CartesianAxisOptions,
     zoomOptions: ZoomOptions,
     dataExtent: any[],
     defaultDomain: any,
   ): void {
-    let updatedDomain =
+    let updatedDomain: [number, number] | [Date, Date] | undefined =
       axisOptions.type === AxisType.degrees
-        ? niceDomain(dataExtent, 16, AxisType.degrees)
+        ? niceDomain(dataExtent as [number, number], 16, AxisType.degrees)
         : getNiceDomain({
             defaultDomain,
             dataExtent: dataExtent as [number, number],
             bufferRatio: 0.05,
           })
+
+    if (updatedDomain === undefined) return
     if (zoomOptions?.includeZero === true) {
-      updatedDomain = d3.extent([...updatedDomain, 0])
+      updatedDomain = d3.extent([...updatedDomain, 0]) as [number, number]
     }
     if (defaultDomain !== undefined) {
-      updatedDomain[0] = Math.min(defaultDomain[0], updatedDomain[0])
-      updatedDomain[1] = Math.max(defaultDomain[1], updatedDomain[1])
+      const numericDefaultDomain = defaultDomain as [number, number]
+      const numericUpdatedDomain = [...updatedDomain] as [number, number]
+      numericUpdatedDomain[0] = Math.min(numericDefaultDomain[0], numericUpdatedDomain[0])
+      numericUpdatedDomain[1] = Math.max(numericDefaultDomain[1], numericUpdatedDomain[1])
+      updatedDomain = numericUpdatedDomain
     }
     this.setDomain(axisKey, axisIndex, updatedDomain)
   }
 
-  chartsExtent(
-    axisKey: keyof CartesianAxesOptions,
-    axisIndex: number,
-    options: ZoomOptions,
-  ): any[] {
+  chartsExtent(axisKey: CartesianAxisKey, axisIndex: number, options: ZoomOptions): any[] {
     let extent = new Array(2)
     const visibleCharts = this.charts.filter((chart) => chart.visible)
     for (const chart of visibleCharts) {
+      const chartOptions = chart.options[axisKey]
+      const chartKey = chart.dataKeys[axisKey]
       if (
-        (options.fullExtent || chart.options[axisKey].includeInAutoScale) &&
+        chartKey &&
+        (options.fullExtent || chartOptions?.includeInAutoScale) &&
         chart.axisIndex[axisKey]?.axisIndex === +axisIndex
       ) {
-        const chartExtent = chart.extent[chart.dataKeys[axisKey]]
+        const chartExtent = chart.extent[chartKey]
         extent = d3.extent(d3.merge([extent, chartExtent.flat()]))
       }
     }
@@ -456,14 +468,14 @@ export class CartesianAxes extends Axes {
     }
   }
 
-  getScale(axisKey: keyof CartesianAxesOptions, axisIndex: 0 | 1): any {
+  getScale(axisKey: CartesianAxisKey, axisIndex: 0 | 1): any {
     const scales = axisKey === 'x' ? this.xScales : this.yScales
     const scale = scales[axisIndex]
     return scale
   }
 
   setDomain(
-    axisKey: keyof CartesianAxesOptions,
+    axisKey: CartesianAxisKey,
     axisIndex: 0 | 1,
     newDomain: [number, number] | [Date, Date],
   ): void {
@@ -529,9 +541,9 @@ export class CartesianAxes extends Axes {
     this.setRangeY(this.options.y)
   }
 
-  protected setRangeX(options): void {
+  protected setRangeX(options: CartesianAxisOptions[]): void {
     for (const [key, scale] of this.xScales.entries()) {
-      if (options[key].reverse) {
+      if (options[key]?.reverse) {
         scale.range([this.width, 0])
       } else {
         scale.range([0, this.width])
@@ -539,9 +551,9 @@ export class CartesianAxes extends Axes {
     }
   }
 
-  protected setRangeY(options): void {
+  protected setRangeY(options: CartesianAxisOptions[]): void {
     for (const [key, scale] of this.yScales.entries()) {
-      if (options[key].reverse) {
+      if (options[key]?.reverse) {
         scale.range([0, this.height])
       } else {
         scale.range([this.height, 0])
