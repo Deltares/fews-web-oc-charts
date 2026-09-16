@@ -1,20 +1,27 @@
 import * as d3 from 'd3'
 import { CartesianAxes, PolarAxes } from '../index.js'
-import { Chart, SymbolOptions, TextPosition } from './chart.js'
+import type { DataPoint } from '../Data/types.js'
+import type { AxisIndex } from '../Axes/axes.js'
+import { Chart, ChartOptions, SymbolOptions, TextPosition } from './chart.js'
 
 export class ChartText extends Chart {
   symbol!: SymbolOptions
 
-  constructor(data: any, options: any) {
+  constructor(data: DataPoint[], options: ChartOptions) {
     super(data, options)
   }
 
-  plotterCartesian(axis: CartesianAxes, axisIndex: any) {
+  plotterCartesian(axis: CartesianAxes, axisIndex: AxisIndex) {
     const xKey = this.dataKeys.x
     const yKey = this.dataKeys.y
     const valueKey = this.dataKeys.value
-    const xScale = axis.xScales[axisIndex.x.axisIndex]
-    const yScale = axisIndex.y ? axis.yScales[axisIndex.y.axisIndex] : () => undefined
+
+    if (!xKey || !yKey || !valueKey) {
+      return
+    }
+
+    const xScale = axis.xScales[axisIndex.x?.axisIndex ?? 0]
+    const yScale = axisIndex.y ? axis.yScales[axisIndex.y.axisIndex] : () => 0
 
     const mappedData = this.mapDataCartesian(xScale.domain())
 
@@ -30,11 +37,15 @@ export class ChartText extends Chart {
 
     const elements = this.group
       .selectAll('text')
-      .data(this.data)
+      .data(this.data as DataPoint[])
       .join('text')
       .attr('dominant-baseline', 'middle')
-      .attr('transform', (d) => `translate(${xScale(d[xKey])}, ${yScale(d[yKey]) ?? 0})${rotation}`)
-      .text((d) => d[valueKey])
+      .attr('transform', (d: DataPoint) => {
+        const xValue = d[xKey]
+        const yValue = d[yKey]
+        return `translate(${xScale(xValue)}, ${yScale(yValue) ?? 0})${rotation}`
+      })
+      .text((d: DataPoint) => String(d[valueKey] ?? ''))
 
     if (this.options?.text?.attributes) {
       for (const [key, value] of Object.entries(this.options.text.attributes)) {
@@ -53,7 +64,12 @@ export class ChartText extends Chart {
     const source = this.group.select('path').node() as Element
     const svg = d3.create('svg').append('svg').attr('width', 20).attr('height', 20)
     const group = svg.append('g').attr('transform', 'translate(10 10)')
-    const element = group.append('text').attr('text-anchor', 'middle').text('+1.0')
+    const element = group.append('text').attr('text-anchor', 'middle').text('+1.0') as d3.Selection<
+      SVGTextElement,
+      unknown,
+      null,
+      unknown
+    >
     this.applyStyle(source, element, props)
     if (asSvgElement) return element.node()
     return svg.node()
