@@ -455,7 +455,7 @@ export abstract class Chart {
   }
 
   protected selectGroup(axis: CartesianAxes | PolarAxes, cssClass: string) {
-    if (this.group === undefined) {
+    if (this.group === undefined || this.group.empty()) {
       this.group = axis.chartGroup.append('g')
       if (axis instanceof PolarAxes) {
         const direction = -axis.direction
