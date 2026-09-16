@@ -3,7 +3,7 @@ import { AxisType, CartesianAxes, PolarAxes } from '../index.js'
 import type { CartesianAxesIndex } from '../Axes/cartesianAxes.js'
 import type { AxisIndex } from '../Axes/axes.js'
 import { Chart, AUTO_SCALE } from './chart.js'
-import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js'
+import { TooltipAnchor } from '../Tooltip/tooltip.js'
 import type { DataPoint } from '../Data/types.js'
 
 export class ChartMatrix extends Chart {
@@ -67,35 +67,13 @@ export class ChartMatrix extends Chart {
         const value = d[colorKey]
         return typeof value === 'number' || value instanceof Date ? colorMap(value) : 'none'
       })
-    if (this.options.tooltip !== undefined) {
-      const tooltip = this.options.tooltip
-
-      elements
-        .on('pointerover', (_e: Event, d: DataPoint) => {
-          if (tooltip.anchor !== undefined && tooltip.anchor !== TooltipAnchor.Top) {
-            console.error(
-              'Tooltip not implemented for anchor ',
-              tooltip.anchor,
-              ', using ',
-              TooltipAnchor.Top,
-              ' instead.',
-            )
-          }
-          axis.tooltip.show()
-          const content = this.toolTipFormatterCartesian(d)
-          if (content !== undefined) {
-            axis.tooltip.update(
-              content,
-              tooltip.position ?? TooltipPosition.Top,
-              axis.margin.left + x0(d[xKey]) + x0.bandwidth() / 2,
-              axis.margin.top + y0(d[yKey]),
-            )
-          }
-        })
-        .on('pointerout', () => {
-          axis.tooltip.hide()
-        })
-    }
+    this.addTooltipHandlers(elements, axis, {
+      expectedAnchor: TooltipAnchor.Top,
+      positionFn: (_e: Event, d: DataPoint) => [
+        axis.margin.left + x0(d[xKey]) + x0.bandwidth() / 2,
+        axis.margin.top + y0(d[yKey]),
+      ],
+    })
 
     if (this.options.text !== undefined) {
       const textSelection = this.group

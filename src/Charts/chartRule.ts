@@ -1,4 +1,3 @@
-import * as d3 from 'd3'
 import type { DataPoint } from '../Data/types.js'
 import { Chart } from './chart.js'
 import { CartesianAxes } from '../Axes/cartesianAxes.js'

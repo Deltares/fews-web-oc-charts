@@ -3,7 +3,6 @@ import { CartesianAxes, PolarAxes } from '../index.js'
 import type { CartesianAxesIndex } from '../Axes/cartesianAxes.js'
 import type { AxisIndex } from '../Axes/axes.js'
 import { Chart } from './chart.js'
-import { TooltipPosition } from '../Tooltip/tooltip.js'
 import type { DataPoint, DataPointXY } from '../Data/types.js'
 import type { SvgPropertiesHyphen } from 'csstype'
 
@@ -78,25 +77,7 @@ export class ChartLine extends Chart {
     }
     const update = this.group.select('path').datum(mappedData).join('path').attr('d', lineGenerator)
 
-    if (this.options.tooltip !== undefined) {
-      update
-        .on('pointerover', (e: PointerEvent, d: DataPoint[]) => {
-          axis.tooltip.show()
-          const pointer = d3.pointer(e, axis.container)
-          const content = this.toolTipFormatterCartesian(d as unknown as DataPoint)
-          if (content !== undefined) {
-            axis.tooltip.update(
-              content,
-              this.options.tooltip?.position ?? TooltipPosition.Top,
-              pointer[0],
-              pointer[1],
-            )
-          }
-        })
-        .on('pointerout', () => {
-          axis.tooltip.hide()
-        })
-    }
+    this.addTooltipHandlers(update, axis)
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -122,25 +103,7 @@ export class ChartLine extends Chart {
     const path = (lineGenerator as unknown as (data: DataPoint[]) => string | null)(this.data)
     line.transition(t).attr('d', path)
     line.join('path').datum(this.data)
-    if (this.options.tooltip !== undefined) {
-      line
-        .on('pointerover', (e: Event, d: unknown) => {
-          axis.tooltip.show()
-          const pointer = d3.pointer(e, axis.container)
-          const content = this.toolTipFormatterPolar(d as DataPoint)
-          if (content !== undefined) {
-            axis.tooltip.update(
-              content,
-              this.options.tooltip?.position ?? TooltipPosition.Top,
-              pointer[0],
-              pointer[1],
-            )
-          }
-        })
-        .on('pointerout', () => {
-          axis.tooltip.hide()
-        })
-    }
+    this.addTooltipHandlers(line, axis, { isPolar: true })
   }
 
   drawLegendSymbol(_legendId?: string, asSvgElement?: boolean) {
