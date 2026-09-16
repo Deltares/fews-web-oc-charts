@@ -349,32 +349,36 @@ export abstract class Chart {
   protected addTooltipHandlers(
     elements: d3.Selection<any, any, any, any>,
     axis: CartesianAxes | PolarAxes,
-    isPolar: boolean = false,
+    options: {
+      isPolar?: boolean
+      expectedAnchor?: TooltipAnchor | null
+      positionFn?: (event: any, d: any) => [number, number]
+    } = {},
   ) {
     const tooltip = this.options.tooltip
     if (tooltip === undefined) return
+    const { isPolar = false, expectedAnchor = TooltipAnchor.Pointer, positionFn } = options
 
     elements
-      .on('pointerover', (e: any, d) => {
-        if (tooltip.anchor !== undefined && tooltip.anchor !== TooltipAnchor.Pointer) {
+      .on('pointerover', (e: any, d: any) => {
+        if (
+          expectedAnchor !== null &&
+          tooltip.anchor !== undefined &&
+          tooltip.anchor !== expectedAnchor
+        ) {
           console.error(
             'Tooltip not implemented for anchor ',
             tooltip.anchor,
             ', using ',
-            TooltipAnchor.Pointer,
+            expectedAnchor,
             ' instead.',
           )
         }
         axis.tooltip.show()
-        const pointer = d3.pointer(e, axis.container)
+        const [x, y] = positionFn ? positionFn(e, d) : d3.pointer(e, axis.container)
         const content = isPolar ? this.toolTipFormatterPolar(d) : this.toolTipFormatterCartesian(d)
         if (content !== undefined) {
-          axis.tooltip.update(
-            content,
-            tooltip.position ?? TooltipPosition.Top,
-            pointer[0],
-            pointer[1],
-          )
+          axis.tooltip.update(content, tooltip.position ?? TooltipPosition.Top, x, y)
         }
       })
       .on('pointerout', () => {

@@ -71,7 +71,7 @@ export class ChartProgress extends Chart {
       .append('path')
       .attr('d', arcGenerator)
       .attr('data-chart-element-id', (d) => String(d[rKey] ?? ''))
-    this.addTooltipHandlers(enter, axis, true)
+    this.addTooltipHandlers(enter, axis, { isPolar: true })
 
     if (colorKey) {
       enter

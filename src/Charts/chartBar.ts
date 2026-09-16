@@ -1,7 +1,7 @@
 import * as d3 from 'd3'
 import { AxisIndex } from '../Axes/axes.js'
 import { CartesianAxes, CartesianAxesIndex, PolarAxes } from '../index.js'
-import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js'
+import { TooltipAnchor } from '../Tooltip/tooltip.js'
 import { Chart, AUTO_SCALE } from './chart.js'
 import type { DataPoint, DataPointXY } from '../Data/types.js'
 import type { SvgPropertiesHyphen } from 'csstype'
@@ -93,37 +93,18 @@ export class ChartBar extends Chart {
         return typeof value === 'number' || value instanceof Date ? colorMap(value) : 'none'
       })
 
-    if (this.options.tooltip !== undefined) {
-      const tooltip = this.options.tooltip
-      bar
-        .on('pointerover', (event: Event, d) => {
-          const rect = event.target as SVGRectElement
-          axis.tooltip.show()
-          if (tooltip.anchor !== undefined && tooltip.anchor !== TooltipAnchor.Bottom) {
-            console.error(
-              'Tooltip not implemented for anchor ',
-              tooltip.anchor,
-              ', using ',
-              TooltipAnchor.Bottom,
-              ' instead.',
-            )
-          }
-          const content = this.toolTipFormatterCartesian(d)
-          if (content !== undefined) {
-            axis.tooltip.update(
-              content,
-              tooltip.position ?? TooltipPosition.Top,
-              axis.margin.left +
-                Number(rect.getAttribute('x') ?? 0) +
-                Number(rect.getAttribute('width') ?? 0) / 2,
-              axis.margin.top + Number(rect.getAttribute('y') ?? 0),
-            )
-          }
-        })
-        .on('pointerout', () => {
-          axis.tooltip.hide()
-        })
-    }
+    this.addTooltipHandlers(bar, axis, {
+      expectedAnchor: TooltipAnchor.Bottom,
+      positionFn: (event: Event) => {
+        const rect = event.target as SVGRectElement
+        return [
+          axis.margin.left +
+            Number(rect.getAttribute('x') ?? 0) +
+            Number(rect.getAttribute('width') ?? 0) / 2,
+          axis.margin.top + Number(rect.getAttribute('y') ?? 0),
+        ]
+      },
+    })
 
     bar.data(mappedData).order().attr('x', xRect)
 

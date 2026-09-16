@@ -3,7 +3,7 @@ import { CartesianAxes, PolarAxes } from '../index.js'
 import type { CartesianAxesIndex } from '../Axes/cartesianAxes.js'
 import type { AxisIndex } from '../Axes/axes.js'
 import { Chart, AUTO_SCALE } from './chart.js'
-import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js'
+import { TooltipAnchor } from '../Tooltip/tooltip.js'
 import type { DataPoint } from '../Data/types.js'
 
 export class ChartHistogram extends Chart {
@@ -60,35 +60,16 @@ export class ChartHistogram extends Chart {
       })
       .attr('width', x1.bandwidth())
 
-    if (this.options.tooltip !== undefined) {
-      const tooltip = this.options.tooltip
-      update
-        .on('pointerover', (_e: Event, d: DataPoint) => {
-          if (tooltip.anchor !== undefined && tooltip.anchor !== TooltipAnchor.Top) {
-            console.error(
-              'Tooltip not implemented for anchor ',
-              tooltip.anchor,
-              ', using ',
-              TooltipAnchor.Top,
-              ' instead.',
-            )
-          }
-          axis.tooltip.show()
-          const content = this.toolTipFormatterCartesian(d)
-          if (content !== undefined) {
-            const xPosition = x1(d[xKey] as unknown as string) ?? 0
-            axis.tooltip.update(
-              content,
-              tooltip.position ?? TooltipPosition.Top,
-              axis.margin.left + xPosition + x1.bandwidth() / 2,
-              axis.margin.top + Math.min(yScale(d[yKey]), yScale(0)),
-            )
-          }
-        })
-        .on('pointerout', () => {
-          axis.tooltip.hide()
-        })
-    }
+    this.addTooltipHandlers(update, axis, {
+      expectedAnchor: TooltipAnchor.Top,
+      positionFn: (_e: Event, d: DataPoint) => {
+        const xPosition = x1(d[xKey] as unknown as string) ?? 0
+        return [
+          axis.margin.left + xPosition + x1.bandwidth() / 2,
+          axis.margin.top + Math.min(yScale(d[yKey]), yScale(0)),
+        ]
+      },
+    })
     update.style('fill', (d) => {
       const value = d[colorKey]
       return typeof value === 'number' ? colorMap(colorScale(value)) : 'none'

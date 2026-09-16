@@ -151,7 +151,7 @@ export class ChartArrow extends Chart {
     arrow.join('path').datum(arrowData)
 
     // Add tooltip to the arrow
-    this.addTooltipHandlers(arrow, axis, true)
+    this.addTooltipHandlers(arrow, axis, { isPolar: true })
 
     // Save the data for the next update
     this.previousData = arrowData.map((dataPoint) => ({ ...dataPoint }))

@@ -1,7 +1,6 @@
 import * as d3 from 'd3'
 import { defaultsDeep } from 'lodash-es'
 import { CartesianAxes, CartesianAxesIndex, PolarAxes } from '../index.js'
-import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js'
 import type { AxisIndex } from '../Axes/axes.js'
 import { Chart, SymbolOptions } from './chart.js'
 import type { ChartOptions } from './chart.js'
@@ -24,41 +23,6 @@ export class ChartMarker extends Chart {
       ...DefaultSymbolOptions,
       ...this.options.symbol,
     } as Required<SymbolOptions>
-  }
-
-  protected addTooltipHandlers(
-    elements: d3.Selection<any, any, any, any>,
-    axis: CartesianAxes | PolarAxes,
-  ) {
-    const tooltip = this.options.tooltip
-    if (tooltip === undefined) return
-
-    elements
-      .on('pointerover', (e: any, d) => {
-        if (tooltip.anchor !== undefined && tooltip.anchor !== TooltipAnchor.Pointer) {
-          console.error(
-            'Tooltip not implemented for anchor ',
-            tooltip.anchor,
-            ', using ',
-            TooltipAnchor.Pointer,
-            ' instead.',
-          )
-        }
-        axis.tooltip.show()
-        const pointer = d3.pointer(e, axis.container)
-        const content = this.toolTipFormatterPolar(d)
-        if (content !== undefined) {
-          axis.tooltip.update(
-            content,
-            tooltip.position ?? TooltipPosition.Top,
-            pointer[0],
-            pointer[1],
-          )
-        }
-      })
-      .on('pointerout', () => {
-        axis.tooltip.hide()
-      })
   }
 
   plotterCartesian(axis: CartesianAxes, axisIndex: CartesianAxesIndex) {
@@ -125,7 +89,7 @@ export class ChartMarker extends Chart {
       .attr('marker-mid', `url(#${markerId})`)
       .attr('marker-end', `url(#${markerId})`)
 
-    this.addTooltipHandlers(update, axis)
+    this.addTooltipHandlers(update, axis, { isPolar: true })
   }
 
   plotterPolar(axis: PolarAxes, _: AxisIndex) {
@@ -176,7 +140,7 @@ export class ChartMarker extends Chart {
       .attr('marker-mid', `url(#${markerId})`)
       .attr('marker-end', `url(#${markerId})`)
 
-    this.addTooltipHandlers(line, axis)
+    this.addTooltipHandlers(line, axis, { isPolar: true })
   }
 
   drawLegendSymbol(_legendId?: string, asSvgElement?: boolean) {
