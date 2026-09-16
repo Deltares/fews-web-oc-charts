@@ -3,6 +3,6 @@
  * @param angle - The angle to normalize.
  * @returns The normalized angle.
  */
-export function normalizeAngle(angle) {
+export function normalizeAngle(angle: number) {
   return angle - 360 * Math.floor(angle / 360)
 }

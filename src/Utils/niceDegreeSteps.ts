@@ -4,7 +4,7 @@
  * @returns The nice degree step.
  */
 //
-export function niceDegreeSteps(step) {
+export function niceDegreeSteps(step: number) {
   if (step >= 100) {
     return 90
   } else if (step >= 50) {
