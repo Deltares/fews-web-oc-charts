@@ -9,9 +9,9 @@ import { ChartMarker } from './chartMarker.js'
 
 import { symbolArrow } from '../Symbols/index.js'
 
-function mean(x: number[] | number) {
+function mean(x: number[] | number): number {
   if (Array.isArray(x)) {
-    return d3.mean(x)
+    return d3.mean(x) ?? 0
   }
   return x
 }
@@ -37,19 +37,18 @@ export class ChartDirection extends ChartMarker {
 
     const mappedData = this.mapDataCartesian(xScale.domain())
     let skip = 1
-    if (mappedData.length > 2 && this.options.symbol.skip === 0) {
+    const { skip: configuredSkip, size } = this.symbolOptions
+    if (mappedData.length > 2 && configuredSkip === 0) {
       skip = Math.ceil(
-        (1 / (xScale(mappedData[1][xKey]) - xScale(mappedData[0][xKey]))) *
-          Math.sqrt(this.options.symbol.size) *
-          2,
+        (1 / (xScale(mappedData[1][xKey]) - xScale(mappedData[0][xKey]))) * Math.sqrt(size) * 2,
       )
     }
 
-    this.group = this.selectGroup(axis, 'chart-marker').datum(mappedData)
+    const group = this.selectGroup(axis, 'chart-marker').datum(mappedData)
 
-    const elements = this.group
-      .selectAll<SVGGElement, any>('g')
-      .data((d) => d.filter((e, i) => ((i + 1) % skip === 0 ? e : undefined)))
+    const elements = group
+      .selectAll<SVGGElement, DataPoint>('g')
+      .data((d: DataPoint[]) => d.filter((_e, i) => (i + 1) % skip === 0))
 
     // exit selection
     elements.exit().remove()
@@ -58,24 +57,24 @@ export class ChartDirection extends ChartMarker {
     elements
       .enter()
       .append('g')
-      .attr('transform', (d: any, _i: number) => {
+      .attr('transform', (d: DataPoint, _i: number) => {
         return 'translate(' + xScale(d[xKey]) + ',' + yScale(d[yKey]) + ')'
       })
       .append('path')
-      .attr('d', d3.symbol().type(symbolArrow).size(this.options.symbol.size))
-      .attr('transform', (d: any, _i: number) => {
-        return `rotate(${d[dKey] - 180})`
+      .attr('d', d3.symbol().type(symbolArrow).size(size))
+      .attr('transform', (d: DataPoint, _i: number) => {
+        return `rotate(${(d[dKey] as number) - 180})`
       })
     this.addTooltipHandlers(elements, axis)
 
     elements
-      .attr('transform', (d: any, _i: number) => {
+      .attr('transform', (d: DataPoint, _i: number) => {
         return 'translate(' + xScale(d[xKey]) + ',' + yScale(d[yKey]) + ')'
       })
       .select('path')
-      .attr('d', d3.symbol().type(symbolArrow).size(this.options.symbol.size))
-      .attr('transform', (d: any, _i: number) => {
-        return `rotate(${d[dKey] - 180})`
+      .attr('d', d3.symbol().type(symbolArrow).size(size))
+      .attr('transform', (d: DataPoint, _i: number) => {
+        return `rotate(${(d[dKey] as number) - 180})`
       })
   }
 
@@ -85,21 +84,24 @@ export class ChartDirection extends ChartMarker {
     const rKey = this.dataKeys.radial
     const tKey = this.dataKeys.angular
 
-    const elements = this.group.selectAll<SVGPathElement, any>('path').data(this.data)
+    const { size } = this.symbolOptions
+    const elements = this.group.selectAll<SVGPathElement, DataPoint>('path').data(this.data)
 
-    function arcTransform(p) {
+    function arcTransform(p: DataPoint[]) {
       // We only use 'd', but list d,i,a as params just to show can have them as params.
       // Code only really uses d and t.
-      return function (d, i, _a) {
-        const old = p[i]
-        if (mean(old[tKey]) - mean(d[tKey]) > 180) {
-          old[tKey] = old[tKey] - 360
-        } else if (mean(old[tKey]) - mean(d[tKey]) < -180) {
-          old[tKey] = old[tKey] + 360
+      return function (d: DataPoint, i: number) {
+        const old = p[i] ?? d
+        let oldAngle = old[tKey] as number
+        const angle = d[tKey] as number
+        if (mean(oldAngle) - mean(angle) > 180) {
+          oldAngle -= 360
+        } else if (mean(oldAngle) - mean(angle) < -180) {
+          oldAngle += 360
         }
-        const tInterpolate = d3.interpolate(old[tKey], d[tKey])
-        const rInterpolate = d3.interpolate(old[rKey], d[rKey])
-        return function (x) {
+        const tInterpolate = d3.interpolate(oldAngle, angle)
+        const rInterpolate = d3.interpolate(old[rKey] as number, d[rKey] as number)
+        return function (x: number) {
           const theta = axis.angularScale(tInterpolate(x))
           const radius = axis.radialScale(rInterpolate(x))
           return (
@@ -123,12 +125,12 @@ export class ChartDirection extends ChartMarker {
     elements
       .enter()
       .append('path')
-      .attr('transform', (d: any, _i: number) => {
+      .attr('transform', (d: DataPoint, _i: number) => {
         const r: number = axis.radialScale(d[rKey])
         const t: number = axis.angularScale(d[tKey])
         return 'translate(' + -r * Math.sin(-t) + ',' + -r * Math.cos(-t) + ')'
       })
-      .attr('d', d3.symbol().type(symbolArrow).size(this.options.symbol.size))
+      .attr('d', d3.symbol().type(symbolArrow).size(size))
       .merge(elements)
     this.addTooltipHandlers(elements, axis)
 
@@ -136,7 +138,7 @@ export class ChartDirection extends ChartMarker {
 
     elements.transition(transition).attrTween('transform', arcTransform(this.previousData))
 
-    this.previousData = this.data
+    this.previousData = this.data.map((dataPoint) => ({ ...dataPoint }))
   }
 
   drawLegendSymbol(legendId?: string, asSvgElement?: boolean) {
@@ -146,7 +148,7 @@ export class ChartDirection extends ChartMarker {
     const group = svg.append('g').attr('transform', 'translate(10, 0)')
     const element = group
       .append('path')
-      .attr('d', d3.symbol().type(symbolArrow).size(this.options.symbol.size))
+      .attr('d', d3.symbol().type(symbolArrow).size(this.symbolOptions.size))
     this.applyStyle(source, element, props)
     if (asSvgElement) return group.node()
     return svg.node()
