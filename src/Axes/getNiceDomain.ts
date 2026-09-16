@@ -4,7 +4,8 @@ interface DomainOptions {
   bufferRatio?: number
 }
 
-const valueSteps = [1, 2, 2.5, 5, 10] // keep the 10 at the end
+const maxNormalizedValueStep = 10
+const valueSteps = [1, 2, 2.5, 5, maxNormalizedValueStep]
 
 export function getNiceDomain(options: DomainOptions): [number, number] {
   const { defaultDomain, dataExtent, bufferRatio = 0.1 } = options
@@ -28,8 +29,7 @@ export function getNiceDomain(options: DomainOptions): [number, number] {
   const roughStep = bufferBase * bufferRatio
   const stepPower = Math.pow(10, -Math.floor(Math.log10(Math.abs(roughStep))))
   const normalizedStep = roughStep * stepPower
-  const goodNormalizedStep =
-    valueSteps.find((n) => n >= normalizedStep) ?? valueSteps[valueSteps.length - 1]
+  const goodNormalizedStep = valueSteps.find((n) => n >= normalizedStep) ?? maxNormalizedValueStep
   const step = goodNormalizedStep / stepPower
 
   const minCandidate = minExceeds ? (Math.floor(dataMin / step) - 1) * step : defaultMin
