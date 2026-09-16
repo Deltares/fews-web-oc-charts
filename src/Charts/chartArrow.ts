@@ -1,14 +1,16 @@
 import * as d3 from 'd3'
 import { AxisIndex, CartesianAxes, PolarAxes } from '../index.js'
 import { Chart, ChartOptions, SymbolOptions } from './chart.js'
+import type { DataPoint } from '../Data/types.js'
+import type { CartesianAxesIndex } from '../Axes/cartesianAxes.js'
 import { aspectRatio } from '../Symbols/arrow.js'
 
 import { defaultsDeep } from 'lodash-es'
 import { symbolArrow } from '../Symbols/index.js'
 
-function mean(x: number[] | number) {
+function mean(x: number[] | number): number {
   if (Array.isArray(x)) {
-    return d3.mean(x)
+    return d3.mean(x) ?? 0
   }
   return x
 }
@@ -17,43 +19,50 @@ const DefaultSymbolOptions: Partial<SymbolOptions> = {
   size: 10,
 }
 
-export interface ChartArrowData {
+export interface ChartArrowData extends DataPoint {
   [key: string]: [number, number]
 }
 
 export class ChartArrow extends Chart {
   private previousData: ChartArrowData[] = []
+  private readonly symbolOptions: Required<SymbolOptions>
 
   constructor(data: ChartArrowData[], options: ChartOptions) {
     // Assumes data to be of the format {this.dataKeys.radial: [number, number], this.dataKeys.angular: [number, number]}[]
     super(data, options)
     this.options = defaultsDeep(this.options, this.options, { symbol: DefaultSymbolOptions })
+    this.symbolOptions = {
+      id: 0,
+      size: 10,
+      skip: 0,
+      ...this.options.symbol,
+    }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  defaultToolTipFormatterCartesian(d): HTMLElement {
+  defaultToolTipFormatterCartesian(_d: DataPoint): HTMLElement {
     throw new Error('defaultToolTipFormatterCartesian is not implemented for ChartArrow')
   }
 
-  defaultToolTipFormatterPolar(d: ChartArrowData[]): HTMLElement {
+  defaultToolTipFormatterPolar(d: DataPoint): HTMLElement {
+    const points = d as unknown as ChartArrowData[]
     const tKey = this.dataKeys.angular
     const rKey = this.dataKeys.radial
     const html = document.createElement('div')
     if (this.options.angular.includeInTooltip) {
       const spanElement = document.createElement('span')
-      spanElement.innerText = this.defaultToolTipText([d[0][tKey][0], d[0][tKey][1]], tKey, 0)
+      spanElement.innerText = this.defaultToolTipText(points[0][tKey], tKey, 0)
       html.appendChild(spanElement)
     }
     if (this.options.radial.includeInTooltip) {
       const spanElement = document.createElement('span')
-      spanElement.innerText = this.defaultToolTipText([d[0][rKey][0], d[0][rKey][1]], rKey, 0)
+      spanElement.innerText = this.defaultToolTipText(points[0][rKey], rKey, 0)
       html.appendChild(spanElement)
     }
     return html
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  plotterCartesian(axis: CartesianAxes, axisIndex: AxisIndex) {
+  plotterCartesian(axis: CartesianAxes, axisIndex: CartesianAxesIndex) {
     throw new Error('plotterCartesian is not implemented for ChartArrow')
   }
 
@@ -61,7 +70,7 @@ export class ChartArrow extends Chart {
   plotterPolar(axis: PolarAxes, axisIndex: AxisIndex) {
     const rKey = this.dataKeys.radial
     const tKey = this.dataKeys.angular
-    const arrowHeadSize = this.options.symbol.size
+    const arrowHeadSize = this.symbolOptions.size
 
     // Define functions that draw the arrow initially, and that translate the arrow to the correct position.
     function arrowGenerator(d: ChartArrowData) {
@@ -89,24 +98,26 @@ export class ChartArrow extends Chart {
     function arcTransform(p: ChartArrowData[]) {
       // We only use 'd', but list d,i,a as params just to show can have them as params.
       // Code only really uses d.
-      return function (d, i, _a) {
+      return function (d: unknown, i: number, _a: unknown) {
+        const points = d as ChartArrowData[]
         if (p.length === 0) {
-          return function (_x) {
+          return function (_x: number) {
             return 'translate()'
           }
         }
-        const old = p[i]
+        const old = p[i] ?? points[i]
+        const current = points[i]
         // ensure angles stay in range -180 to 180
-        if (mean(old[tKey][0]) - mean(d[i][tKey][0]) > 180) {
+        if (mean(old[tKey][0]) - mean(current[tKey][0]) > 180) {
           old[tKey][0] = old[tKey][0] - 360
-        } else if (mean(old[tKey][0]) - mean(d[i][tKey][0]) < -180) {
+        } else if (mean(old[tKey][0]) - mean(current[tKey][0]) < -180) {
           old[tKey][0] = old[tKey][0] + 360
         }
-        const tInterpolate1 = d3.interpolate(old[tKey][0], d[i][tKey][0])
-        const tInterpolate2 = d3.interpolate(old[tKey][1], d[i][tKey][1])
-        const rInterpolate1 = d3.interpolate(old[rKey][0], d[i][rKey][0])
-        const rInterpolate2 = d3.interpolate(old[rKey][1], d[i][rKey][1])
-        return function (x) {
+        const tInterpolate1 = d3.interpolate(old[tKey][0], current[tKey][0])
+        const tInterpolate2 = d3.interpolate(old[tKey][1], current[tKey][1])
+        const rInterpolate1 = d3.interpolate(old[rKey][0], current[rKey][0])
+        const rInterpolate2 = d3.interpolate(old[rKey][1], current[rKey][1])
+        return function (x: number) {
           const theta1 = axis.angularScale(tInterpolate1(x))
           const theta2 = axis.angularScale(tInterpolate2(x))
           const radius1 = axis.radialScale(rInterpolate1(x))
@@ -127,22 +138,23 @@ export class ChartArrow extends Chart {
     if (this.group.select('path').size() === 0) {
       this.group.append('path')
     }
-    const arrow = this.group.select('path').data(this.data)
+    const arrowData = this.data as ChartArrowData[]
+    const arrow = this.group.select('path').data(arrowData)
 
     const t = d3.transition().duration(this.options.transitionTime).ease(d3.easeLinear)
 
     // Draw the arrow and translate it to the correct position.
     arrow.transition(t).attr('d', (d, i) => {
-      return arrowGenerator(this.data[i])
+      return arrowGenerator(arrowData[i] ?? d)
     })
     arrow.transition(t).attrTween('transform', arcTransform(this.previousData))
-    arrow.join('path').datum(this.data)
+    arrow.join('path').datum(arrowData)
 
     // Add tooltip to the arrow
     this.addTooltipHandlers(arrow, axis, true)
 
     // Save the data for the next update
-    this.previousData = this.data
+    this.previousData = arrowData.map((dataPoint) => ({ ...dataPoint }))
   }
 
   drawLegendSymbol(legendId?: string, asSvgElement?: boolean) {
@@ -155,7 +167,7 @@ export class ChartArrow extends Chart {
     // "bare" SVG element.
     const innerGroup = outerGroup.append('g')
 
-    const lineEndX = (Math.sqrt(this.options.symbol.size * aspectRatio) / 3) * 2
+    const lineEndX = (Math.sqrt(this.symbolOptions.size * aspectRatio) / 3) * 2
     const line = innerGroup
       .append('line')
       .attr('x1', 0)
@@ -165,7 +177,7 @@ export class ChartArrow extends Chart {
 
     const arrowhead = innerGroup
       .append('path')
-      .attr('d', d3.symbol().type(symbolArrow).size(this.options.symbol.size))
+      .attr('d', d3.symbol().type(symbolArrow).size(this.symbolOptions.size))
       .attr('transform', `translate(${lineEndX}, 0) rotate(90)`)
 
     this.applyStyle(source, line, props)
