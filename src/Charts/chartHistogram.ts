@@ -2,7 +2,7 @@ import * as d3 from 'd3'
 import { CartesianAxes, PolarAxes } from '../index.js'
 import type { CartesianAxesIndex } from '../Axes/cartesianAxes.js'
 import type { AxisIndex } from '../Axes/axes.js'
-import { Chart, AUTO_SCALE, ChartOptions } from './chart.js'
+import { Chart, AUTO_SCALE } from './chart.js'
 import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js'
 import type { DataPoint } from '../Data/types.js'
 
@@ -127,14 +127,5 @@ export class ChartHistogram extends Chart {
     this.applyStyle(source, element, props)
     if (asSvgElement) return element.node()
     return svg.node()
-  }
-
-  setPadding(scale: d3.ScaleBand<string>, options?: ChartOptions['x']) {
-    if (options?.paddingOuter) {
-      scale.paddingOuter(options.paddingOuter)
-    }
-    if (options?.paddingInner) {
-      scale.paddingInner(options.paddingInner)
-    }
   }
 }
