@@ -67,7 +67,7 @@ export class ChartBar extends Chart {
       )
       const x1 = d3.scaleBand().domain(filterKeys).range([0, x0.bandwidth()])
       this.setPadding(x1, this.options.x1)
-      xRect = (d: DataPoint) => x0(d[xKey] as unknown as string) + x1(d[x1Key] as unknown as string)
+      xRect = (d: DataPoint) => x0(d[xKey]) + x1(d[x1Key] as unknown as string)
       widthRect = () => x1.bandwidth()
       mappedData = this.data
     }
@@ -82,11 +82,11 @@ export class ChartBar extends Chart {
       .attr('data-legend-id', (d) => this.legendId(d[x1Key] as unknown as string))
       .attr('x', xRect)
       .attr('y', (d) => {
-        return d[yKey] === null ? yScale(0) : Math.min(yScale(d[yKey] as number), yScale(0))
+        return d[yKey] === null ? yScale(0) : Math.min(yScale(d[yKey]), yScale(0))
       })
       .attr('width', widthRect)
       .attr('height', function (d) {
-        return d[yKey] === null ? 0 : Math.abs(yScale(0) - yScale(d[yKey] as number))
+        return d[yKey] === null ? 0 : Math.abs(yScale(0) - yScale(d[yKey]))
       })
       .attr('fill', (d) => {
         const value = d[colorKey]
@@ -135,7 +135,7 @@ export class ChartBar extends Chart {
 
       textSelection
         .attr('x', (d, i) => xRect(d, i) + widthRect(d, i) / 2)
-        .attr('y', (d) => Math.min(yScale(d[yKey] as number), yScale(0)))
+        .attr('y', (d) => Math.min(yScale(d[yKey]), yScale(0)))
         .attr('dx', this.options.text.dx ?? 0)
         .attr('dy', this.options.text.dy ?? 0)
         .text((d) => {
@@ -169,7 +169,7 @@ export class ChartBar extends Chart {
       return this.options.color?.map
     } else {
       return (value: number | Date) => {
-        return d3.scaleSequential(d3.interpolateWarm)(scale?.(value as number) ?? 0)
+        return d3.scaleSequential(d3.interpolateWarm)(scale?.(value) ?? 0)
       }
     }
   }
