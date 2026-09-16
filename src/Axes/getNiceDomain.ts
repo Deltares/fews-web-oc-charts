@@ -28,7 +28,8 @@ export function getNiceDomain(options: DomainOptions): [number, number] {
   const roughStep = bufferBase * bufferRatio
   const stepPower = Math.pow(10, -Math.floor(Math.log10(Math.abs(roughStep))))
   const normalizedStep = roughStep * stepPower
-  const goodNormalizedStep = valueSteps.find((n) => n >= normalizedStep)
+  const goodNormalizedStep =
+    valueSteps.find((n) => n >= normalizedStep) ?? valueSteps[valueSteps.length - 1]
   const step = goodNormalizedStep / stepPower
 
   const minCandidate = minExceeds ? (Math.floor(dataMin / step) - 1) * step : defaultMin
