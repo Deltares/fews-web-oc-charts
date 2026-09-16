@@ -182,8 +182,7 @@ export class ChartMarker extends Chart {
   drawLegendSymbol(_legendId?: string, asSvgElement?: boolean) {
     const props = ['fill', 'stroke']
     const source = this.group.select('path').node() as Element
-    const svg = d3.create('svg').append('svg').attr('width', 20).attr('height', 20)
-    const outerGroup = svg.append('g').attr('transform', 'translate(0, 10)')
+    const { svg, group: outerGroup } = this.createLegendSymbolCanvas()
     // Make sure the marker is aligned horizontally even when returning the
     // "bare" SVG element.
     const innerGroup = outerGroup.append('g').attr('transform', 'translate(10, 0)')
@@ -191,8 +190,7 @@ export class ChartMarker extends Chart {
       .append('path')
       .attr('d', d3.symbol(d3.symbolsFill[this.symbolOptions.id], this.symbolOptions.size))
     this.applyStyle(source, innerGroup, props)
-    if (asSvgElement) return innerGroup.node()
-    return svg.node()
+    return this.finalizeLegendSymbol(svg, innerGroup, asSvgElement)
   }
 
   public onPointerOver() {

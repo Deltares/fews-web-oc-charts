@@ -116,8 +116,7 @@ export class ChartHistogram extends Chart {
   drawLegendSymbol(legendId?: string, asSvgElement?: boolean) {
     const props = ['fill']
     const source = this.group.select('rect').node() as Element
-    const svg = d3.create('svg').attr('width', 20).attr('height', 20)
-    const group = svg.append('g').attr('transform', 'translate(0, 10)')
+    const { svg, group } = this.createLegendSymbolCanvas()
     const element = group.append('g')
     element.append('rect').attr('x', 0).attr('y', -8).attr('width', 5).attr('height', 18)
     this.applyStyle(source, element, props)
@@ -125,7 +124,6 @@ export class ChartHistogram extends Chart {
     this.applyStyle(source, element, props)
     element.append('rect').attr('x', 10).attr('y', -5).attr('width', 5).attr('height', 15)
     this.applyStyle(source, element, props)
-    if (asSvgElement) return element.node()
-    return svg.node()
+    return this.finalizeLegendSymbol(svg, element, asSvgElement)
   }
 }

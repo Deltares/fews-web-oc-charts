@@ -62,8 +62,7 @@ export class ChartText extends Chart {
   drawLegendSymbol(legendId?: string, asSvgElement?: boolean) {
     const props = ['stroke', 'fill']
     const source = this.group.select('path').node() as Element
-    const svg = d3.create('svg').append('svg').attr('width', 20).attr('height', 20)
-    const group = svg.append('g').attr('transform', 'translate(10 10)')
+    const { svg, group } = this.createLegendSymbolCanvas('translate(10 10)')
     const element = group.append('text').attr('text-anchor', 'middle').text('+1.0') as d3.Selection<
       SVGTextElement,
       unknown,
@@ -71,7 +70,6 @@ export class ChartText extends Chart {
       unknown
     >
     this.applyStyle(source, element, props)
-    if (asSvgElement) return element.node()
-    return svg.node()
+    return this.finalizeLegendSymbol(svg, element, asSvgElement)
   }
 }

@@ -591,4 +591,18 @@ export abstract class Chart {
       scale.paddingInner(options.paddingInner)
     }
   }
+
+  protected createLegendSymbolCanvas(transform: string = 'translate(0, 10)') {
+    const svg = d3.create('svg').attr('width', 20).attr('height', 20)
+    const group = svg.append('g').attr('transform', transform)
+    return { svg, group }
+  }
+
+  protected finalizeLegendSymbol<E extends SVGGraphicsElement>(
+    svg: d3.Selection<SVGSVGElement, any, any, any>,
+    element: d3.Selection<E, any, any, any>,
+    asSvgElement?: boolean,
+  ): SVGElement | null {
+    return asSvgElement ? element.node() : svg.node()
+  }
 }
