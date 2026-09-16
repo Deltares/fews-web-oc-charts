@@ -4,6 +4,7 @@ import { Chart } from './chart.js'
 import { CartesianAxes } from '../Axes/cartesianAxes.js'
 import { CartesianAxesIndex } from '../Axes/cartesianAxes.js'
 import { PolarAxes } from '../Axes/polarAxes.js'
+import type { AxisIndex } from '../Axes/axes.js'
 
 export class ChartRule extends Chart {
   plotterCartesian(axis: CartesianAxes, axisIndex: CartesianAxesIndex) {
@@ -54,7 +55,7 @@ export class ChartRule extends Chart {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  plotterPolar(axis: PolarAxes, dataKeys: any) {
+  plotterPolar(axis: PolarAxes, dataKeys: AxisIndex) {
     console.error('plotterPolar is not implemented for ChartRule')
   }
 

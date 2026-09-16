@@ -1,12 +1,14 @@
 import * as d3 from 'd3'
 import { AxisType, CartesianAxes, PolarAxes } from '../index.js'
+import type { CartesianAxesIndex } from '../Axes/cartesianAxes.js'
+import type { AxisIndex } from '../Axes/axes.js'
 import { Chart, AUTO_SCALE } from './chart.js'
 import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js'
 
 export class ChartMatrix extends Chart {
   static readonly GROUP_CLASS: 'chart-matrix'
 
-  plotterCartesian(axis: CartesianAxes, axisIndex: any) {
+  plotterCartesian(axis: CartesianAxes, axisIndex: CartesianAxesIndex) {
     const xKey = this.dataKeys.x
     const yKey = this.dataKeys.y
     const colorKey = this.dataKeys.color
@@ -105,7 +107,7 @@ export class ChartMatrix extends Chart {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  plotterPolar(axis: PolarAxes, dataKeys: any) {
+  plotterPolar(axis: PolarAxes, dataKeys: AxisIndex) {
     throw new Error('plotterPolar is not implemented for ChartMatrix')
   }
 

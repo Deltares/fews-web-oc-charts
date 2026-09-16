@@ -1,44 +1,50 @@
 import * as d3 from 'd3'
 import { CartesianAxes, PolarAxes } from '../index.js'
+import type { CartesianAxesIndex } from '../Axes/cartesianAxes.js'
+import type { AxisIndex } from '../Axes/axes.js'
 import { Chart } from './chart.js'
 import { TooltipPosition } from '../Tooltip/tooltip.js'
+import type { DataPoint, DataPointXY } from '../Data/types.js'
+import type { SvgPropertiesHyphen } from 'csstype'
 
 export class ChartLine extends Chart {
-  defaultToolTipFormatterCartesian(d): HTMLElement {
+  defaultToolTipFormatterCartesian(d: DataPoint): HTMLElement {
+    const points = d as unknown as DataPoint[]
     const xKey = this.dataKeys.x
     const yKey = this.dataKeys.y
     const html = document.createElement('div')
     if (this.options.x.includeInTooltip) {
       const spanElement = document.createElement('span')
-      spanElement.innerText = this.defaultToolTipText([d[0][xKey], d[1][xKey]], xKey, 2)
+      spanElement.innerText = this.defaultToolTipText([points[0][xKey], points[1][xKey]], xKey, 2)
       html.appendChild(spanElement)
     }
     if (this.options.y.includeInTooltip) {
       const spanElement = document.createElement('span')
-      spanElement.innerText = this.defaultToolTipText([d[0][yKey], d[1][yKey]], yKey, 2)
+      spanElement.innerText = this.defaultToolTipText([points[0][yKey], points[1][yKey]], yKey, 2)
       html.appendChild(spanElement)
     }
     return html
   }
 
-  defaultToolTipFormatterPolar(d): HTMLElement {
+  defaultToolTipFormatterPolar(d: DataPoint): HTMLElement {
+    const points = d as unknown as DataPoint[]
     const tKey = this.dataKeys.angular
     const rKey = this.dataKeys.radial
     const html = document.createElement('div')
     if (this.options.angular.includeInTooltip) {
       const spanElement = document.createElement('span')
-      spanElement.innerText = this.defaultToolTipText([d[0][tKey], d[1][tKey]], tKey, 0)
+      spanElement.innerText = this.defaultToolTipText([points[0][tKey], points[1][tKey]], tKey, 0)
       html.appendChild(spanElement)
     }
     if (this.options.radial.includeInTooltip) {
       const spanElement = document.createElement('span')
-      spanElement.innerText = this.defaultToolTipText([d[0][rKey], d[1][rKey]], rKey, 0)
+      spanElement.innerText = this.defaultToolTipText([points[0][rKey], points[1][rKey]], rKey, 0)
       html.appendChild(spanElement)
     }
     return html
   }
 
-  plotterCartesian(axis: CartesianAxes, axisIndex: any) {
+  plotterCartesian(axis: CartesianAxes, axisIndex: CartesianAxesIndex) {
     const xKey = this.dataKeys.x
     const yKey = this.dataKeys.y
     const xScale = axis.xScales[axisIndex.x.axisIndex]
@@ -51,14 +57,14 @@ export class ChartLine extends Chart {
     this.highlight.select('circle').attr('r', 3).style('opacity', 0).style('stroke-width', '1px')
 
     const lineGenerator = d3
-      .line()
-      .x(function (d: any) {
+      .line<DataPoint>()
+      .x(function (d) {
         return xScale(d[xKey])
       })
-      .y(function (d: any) {
+      .y(function (d) {
         return yScale(d[yKey])
       })
-      .defined(function (d: any) {
+      .defined(function (d) {
         return d[yKey] != null
       })
     const curve = this.curveGenerator
@@ -74,15 +80,18 @@ export class ChartLine extends Chart {
 
     if (this.options.tooltip !== undefined) {
       update
-        .on('pointerover', (e: any, d: any) => {
+        .on('pointerover', (e: PointerEvent, d: DataPoint[]) => {
           axis.tooltip.show()
           const pointer = d3.pointer(e, axis.container)
-          axis.tooltip.update(
-            this.toolTipFormatterCartesian(d),
-            this.options.tooltip?.position ?? TooltipPosition.Top,
-            pointer[0],
-            pointer[1],
-          )
+          const content = this.toolTipFormatterCartesian(d as unknown as DataPoint)
+          if (content !== undefined) {
+            axis.tooltip.update(
+              content,
+              this.options.tooltip?.position ?? TooltipPosition.Top,
+              pointer[0],
+              pointer[1],
+            )
+          }
         })
         .on('pointerout', () => {
           axis.tooltip.hide()
@@ -91,15 +100,15 @@ export class ChartLine extends Chart {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  plotterPolar(axis: PolarAxes, axisIndex: any) {
+  plotterPolar(axis: PolarAxes, axisIndex: AxisIndex) {
     const rKey = this.dataKeys.radial
     const tKey = this.dataKeys.angular
     const lineGenerator = d3
-      .lineRadial()
-      .angle(function (d: any) {
+      .lineRadial<DataPoint>()
+      .angle(function (d) {
         return axis.angularScale(d[tKey])
       })
-      .radius(function (d: any) {
+      .radius(function (d) {
         return axis.radialScale(d[rKey])
       })
     this.group = this.selectGroup(axis, 'chart-line')
@@ -110,19 +119,23 @@ export class ChartLine extends Chart {
 
     const t = d3.transition().duration(this.options.transitionTime).ease(d3.easeLinear)
 
-    line.transition(t).attr('d', lineGenerator(this.data))
+    const path = (lineGenerator as unknown as (data: DataPoint[]) => string | null)(this.data)
+    line.transition(t).attr('d', path)
     line.join('path').datum(this.data)
     if (this.options.tooltip !== undefined) {
       line
-        .on('pointerover', (e: any, d: any) => {
+        .on('pointerover', (e: Event, d: unknown) => {
           axis.tooltip.show()
           const pointer = d3.pointer(e, axis.container)
-          axis.tooltip.update(
-            this.toolTipFormatterPolar(d),
-            this.options.tooltip?.position ?? TooltipPosition.Top,
-            pointer[0],
-            pointer[1],
-          )
+          const content = this.toolTipFormatterPolar(d as DataPoint)
+          if (content !== undefined) {
+            axis.tooltip.update(
+              content,
+              this.options.tooltip?.position ?? TooltipPosition.Top,
+              pointer[0],
+              pointer[1],
+            )
+          }
         })
         .on('pointerout', () => {
           axis.tooltip.hide()
@@ -147,8 +160,8 @@ export class ChartLine extends Chart {
       .style('opacity', 1)
       .style('fill', () => {
         const element = this.group.select('path')
-        if (element.node() === null) return
-        return window.getComputedStyle(element.node() as Element).getPropertyValue('stroke')
+        if (element.node() === null) return ''
+        return window.getComputedStyle(element.node() as Element).getPropertyValue('stroke') ?? ''
       })
       .attr('transform', null)
   }
@@ -157,9 +170,14 @@ export class ChartLine extends Chart {
     this.highlight.select('circle').style('opacity', 0)
   }
 
-  public onPointerMove(value: number | Date, key: 'x' | 'y', xScale, yScale) {
+  public onPointerMove(
+    value: number | Date,
+    key: 'x' | 'y',
+    xScale: d3.ScaleContinuousNumeric<number, number>,
+    yScale: d3.ScaleContinuousNumeric<number, number>,
+  ): void | { point: DataPointXY; style: SvgPropertiesHyphen } {
     const index = this.findIndex(value, key, this.options.tooltip?.alignment ?? 'middle')
-    const point = this.datum[index]
+    const point = index === undefined ? undefined : this.datum[index]
     if (point === undefined) {
       this.highlight.select('circle').style('opacity', 0)
       return
@@ -173,15 +191,15 @@ export class ChartLine extends Chart {
     this.highlight
       .select('circle')
       .attr('transform', () => {
-        return `translate(${xScale(point.x)}, ${yScale(point.y)})`
+        return `translate(${xScale(point.x as number)}, ${yScale(point.y as number)})`
       })
       .style('opacity', 1)
-      .style('fill', color)
+      .style('fill', color ?? '')
 
     if (color === null) {
-      return { point, style: {} }
+      return { point: point as DataPointXY, style: {} }
     } else {
-      return { point, style: { color } }
+      return { point: point as DataPointXY, style: { color } }
     }
   }
 }

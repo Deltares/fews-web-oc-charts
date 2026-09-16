@@ -3,6 +3,7 @@ import { CartesianAxes, PolarAxes } from '../index.js'
 import type { DataPoint } from '../Data/types.js'
 import { Chart, ChartOptions, SymbolOptions, TextPosition } from './chart.js'
 import type { CartesianAxesIndex } from '../Axes/cartesianAxes.js'
+import type { AxisIndex } from '../Axes/axes.js'
 
 export class ChartText extends Chart {
   symbol!: SymbolOptions
@@ -54,7 +55,7 @@ export class ChartText extends Chart {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  plotterPolar(axis: PolarAxes, dataKeys: any) {
+  plotterPolar(axis: PolarAxes, dataKeys: AxisIndex) {
     throw new Error('Polar axis are not supported by ChartText')
   }
 

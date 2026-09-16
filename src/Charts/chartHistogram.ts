@@ -1,10 +1,12 @@
 import * as d3 from 'd3'
 import { CartesianAxes, PolarAxes } from '../index.js'
+import type { CartesianAxesIndex } from '../Axes/cartesianAxes.js'
+import type { AxisIndex } from '../Axes/axes.js'
 import { Chart, AUTO_SCALE } from './chart.js'
 import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js'
 
 export class ChartHistogram extends Chart {
-  plotterCartesian(axis: CartesianAxes, axisIndex: any) {
+  plotterCartesian(axis: CartesianAxes, axisIndex: CartesianAxesIndex) {
     const xKey = this.dataKeys.x
     const yKey = this.dataKeys.y
     const colorKey = this.dataKeys.color
@@ -101,7 +103,7 @@ export class ChartHistogram extends Chart {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  plotterPolar(axis: PolarAxes, dataKeys: any) {
+  plotterPolar(axis: PolarAxes, dataKeys: AxisIndex) {
     throw new Error('plotterPolar is not implemented for ChartHistogram')
   }
 
