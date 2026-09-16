@@ -144,13 +144,11 @@ export class ChartDirection extends ChartMarker {
   drawLegendSymbol(legendId?: string, asSvgElement?: boolean) {
     const props = ['fill', 'stroke']
     const source = this.group.select('path').node() as Element
-    const svg = d3.create('svg').append('svg').attr('width', 20).attr('height', 20)
-    const group = svg.append('g').attr('transform', 'translate(10, 0)')
+    const { svg, group } = this.createLegendSymbolCanvas('translate(10, 0)')
     const element = group
       .append('path')
       .attr('d', d3.symbol().type(symbolArrow).size(this.symbolOptions.size))
     this.applyStyle(source, element, props)
-    if (asSvgElement) return group.node()
-    return svg.node()
+    return this.finalizeLegendSymbol(svg, group, asSvgElement)
   }
 }

@@ -125,8 +125,7 @@ export class ChartProgress extends Chart {
   drawLegendSymbol(legendId?: string, asSvgElement?: boolean) {
     const props = ['fill']
     const source = this.group.select('path').node() as Element
-    const svg = d3.create('svg').attr('width', 20).attr('height', 20)
-    const group = svg.append('g').attr('transform', 'translate(10 0)')
+    const { svg, group } = this.createLegendSymbolCanvas('translate(10 0)')
     const element = group
       .append('rect')
       .attr('x', 0)
@@ -134,7 +133,6 @@ export class ChartProgress extends Chart {
       .attr('width', 20)
       .attr('height', 10)
     this.applyStyle(source, element, props)
-    if (asSvgElement) return element.node()
-    return svg.node()
+    return this.finalizeLegendSymbol(svg, element, asSvgElement)
   }
 }

@@ -62,11 +62,9 @@ export class ChartRule extends Chart {
   drawLegendSymbol(legendId?: string, asSvgElement?: boolean) {
     const props = ['stroke', 'stroke-width']
     const source = this.group.select('line').node() as Element
-    const svg = d3.create('svg').attr('width', 20).attr('height', 20)
-    const group = svg.append('g').attr('transform', 'translate(0, 10)')
+    const { svg, group } = this.createLegendSymbolCanvas()
     const element = group.append('line').attr('x1', 10).attr('x2', 10).attr('y1', -8).attr('y2', 8)
     this.applyStyle(source, element, props)
-    if (asSvgElement) return element.node()
-    return svg.node()
+    return this.finalizeLegendSymbol(svg, element, asSvgElement)
   }
 }

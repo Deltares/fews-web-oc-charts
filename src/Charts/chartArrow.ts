@@ -160,8 +160,7 @@ export class ChartArrow extends Chart {
   drawLegendSymbol(legendId?: string, asSvgElement?: boolean) {
     const props = ['stroke', 'stroke-width', 'stroke-dasharray', 'fill']
     const source = this.group.select('path').node() as Element
-    const svg = d3.create('svg').attr('width', 20).attr('height', 20)
-    const outerGroup = svg.append('g').attr('transform', 'translate(0, 10)')
+    const { svg, group: outerGroup } = this.createLegendSymbolCanvas()
 
     // Make sure the marker is aligned horizontally even when returning the
     // "bare" SVG element.
@@ -182,7 +181,6 @@ export class ChartArrow extends Chart {
 
     this.applyStyle(source, line, props)
     this.applyStyle(source, arrowhead, props)
-    if (asSvgElement) return innerGroup.node()
-    return svg.node()
+    return this.finalizeLegendSymbol(svg, innerGroup, asSvgElement)
   }
 }
