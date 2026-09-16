@@ -1,5 +1,6 @@
 import * as d3 from 'd3'
 import type { AxisIndex } from '../Axes/axes.js'
+import type { DataPoint } from '../Data/types.js'
 import { Chart } from './chart.js'
 import { CartesianAxes } from '../Axes/cartesianAxes.js'
 import { PolarAxes } from '../Axes/polarAxes.js'
@@ -8,13 +9,32 @@ export class ChartRule extends Chart {
   plotterCartesian(axis: CartesianAxes, axisIndex: AxisIndex) {
     const xKey = this.dataKeys.x
     const yKey = this.dataKeys.y
-    const xScale = axis.xScales[axisIndex.x.axisIndex]
-    const yScale = axis.yScales[axisIndex.y.axisIndex]
+    if (xKey === undefined || yKey === undefined) {
+      throw new Error('ChartRule requires both x and y data keys')
+    }
+    const xAxisIndex = axisIndex.x?.axisIndex ?? 0
+    const yAxisIndex = axisIndex.y?.axisIndex ?? 0
+    const xScale = axis.xScales[xAxisIndex]
+    const yScale = axis.yScales[yAxisIndex]
 
     const mappedData = this.mapDataCartesian(xScale.domain())
+    const getRange = (dataPoint: DataPoint): [number, number] => {
+      const value = dataPoint[yKey]
+      if (
+        !Array.isArray(value) ||
+        value.length < 2 ||
+        typeof value[0] !== 'number' ||
+        typeof value[1] !== 'number'
+      ) {
+        throw new Error('ChartRule requires y data to be a numeric range')
+      }
+      return [value[0], value[1]]
+    }
 
     this.group = this.selectGroup(axis, 'chart-marker').datum(mappedData)
-    const elements = this.group.selectAll<SVGLineElement, any>('line').data((d) => d)
+    const elements = this.group
+      .selectAll<SVGLineElement, DataPoint>('line')
+      .data((d: DataPoint[]) => d)
 
     // exit selection
     elements.exit().remove()
@@ -26,8 +46,8 @@ export class ChartRule extends Chart {
       .merge(elements)
       .attr('x1', (d) => xScale(d[xKey]))
       .attr('x2', (d) => xScale(d[xKey]))
-      .attr('y1', (d) => yScale(d[yKey][0]))
-      .attr('y2', (d) => yScale(d[yKey][1]))
+      .attr('y1', (d) => yScale(getRange(d)[0]))
+      .attr('y2', (d) => yScale(getRange(d)[1]))
 
     this.addTooltipHandlers(elements, axis)
   }
