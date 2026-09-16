@@ -153,19 +153,11 @@ export class ChartLine extends Chart {
   }
 
   public onPointerOver() {
-    this.highlight
-      .select('circle')
-      .style('opacity', 1)
-      .style('fill', () => {
-        const element = this.group.select('path')
-        if (element.node() === null) return ''
-        return window.getComputedStyle(element.node() as Element).getPropertyValue('stroke') ?? ''
-      })
-      .attr('transform', null)
+    this.showHighlight('circle', 'fill', 'path', 'stroke', { resetTransform: true })
   }
 
   public onPointerOut() {
-    this.highlight.select('circle').style('opacity', 0)
+    this.hideHighlight('circle')
   }
 
   public onPointerMove(
