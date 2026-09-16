@@ -1,7 +1,7 @@
 export const aspectRatio = 2.5
 
 export default {
-  draw: function (context, size: number) {
+  draw: function (context: CanvasPath, size: number): void {
     let y = Math.sqrt(size * aspectRatio)
     const x = y / aspectRatio
     y = y / 3
