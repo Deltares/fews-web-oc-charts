@@ -20,7 +20,7 @@ export class DstIndicator extends BaseVisitor<CartesianAxes> {
     }) as DstIndicatorOptions
   }
 
-  protected validate(): void {
+  protected validate = (): void => {
     if ('x' in this.options) {
       const axisIndex = this.options.x.axisIndex
       if (this.axis.options.x[axisIndex]?.type === AxisType.time) {

@@ -10,11 +10,11 @@ export abstract class BaseVisitor<TAxis extends Axes = Axes> implements Visitor 
 
   visit(axis: Axes): void {
     this.axis = axis as TAxis
-    this.validate()
+    this.validate?.()
     this.create(this.axis)
   }
 
-  protected validate(): void {}
+  protected validate?: () => void
 
   abstract create(axis: TAxis): void
 
