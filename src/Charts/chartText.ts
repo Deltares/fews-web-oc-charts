@@ -1,8 +1,8 @@
 import * as d3 from 'd3'
 import { CartesianAxes, PolarAxes } from '../index.js'
 import type { DataPoint } from '../Data/types.js'
-import type { AxisIndex } from '../Axes/axes.js'
 import { Chart, ChartOptions, SymbolOptions, TextPosition } from './chart.js'
+import type { CartesianAxesIndex } from '../Axes/cartesianAxes.js'
 
 export class ChartText extends Chart {
   symbol!: SymbolOptions
@@ -11,10 +11,10 @@ export class ChartText extends Chart {
     super(data, options)
   }
 
-  plotterCartesian(axis: CartesianAxes, axisIndex: AxisIndex) {
+  plotterCartesian(axis: CartesianAxes, axisIndex: CartesianAxesIndex) {
     const xKey = this.dataKeys.x
     const yKey = this.dataKeys.y
-    const valueKey = this.dataKeys.value
+    const valueKey = this.dataKeys.value ?? ''
 
     if (!xKey || !yKey || !valueKey) {
       return
@@ -26,8 +26,7 @@ export class ChartText extends Chart {
     const mappedData = this.mapDataCartesian(xScale.domain())
 
     this.group = this.selectGroup(axis, 'chart-marker')
-      .datum(mappedData)
-      .attr('class', 'chart-text')
+    this.group.datum(mappedData).attr('class', 'chart-text')
 
     if (this.options?.text?.position === TextPosition.Bottom) {
       this.group.attr('transform', `translate(0, ${axis.height})`)
@@ -37,7 +36,7 @@ export class ChartText extends Chart {
 
     const elements = this.group
       .selectAll('text')
-      .data(this.data as DataPoint[])
+      .data(this.data)
       .join('text')
       .attr('dominant-baseline', 'middle')
       .attr('transform', (d: DataPoint) => {

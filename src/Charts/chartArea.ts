@@ -1,13 +1,14 @@
 import * as d3 from 'd3'
 import { isNull } from 'lodash-es'
-import { CartesianAxes, PolarAxes } from '../index.js'
+import { CartesianAxes, CartesianAxesIndex, PolarAxes } from '../index.js'
 import { AxisIndex } from '../Axes/axes.js'
 import { Chart, AUTO_SCALE, CurveType, PointAlignment } from './chart.js'
+import type { DataPoint } from '../Data/types.js'
 
 export class ChartArea extends Chart {
-  private _areaGenerator: any
+  private _areaGenerator!: d3.Area<DataPoint>
 
-  plotterCartesian(axis: CartesianAxes, axisIndex: AxisIndex) {
+  plotterCartesian(axis: CartesianAxes, axisIndex: CartesianAxesIndex) {
     const xKey = this.dataKeys.x
     const yKey = this.dataKeys.y
     const colorKey = this.dataKeys.color
@@ -100,7 +101,7 @@ export class ChartArea extends Chart {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  plotterPolar(axis: PolarAxes, dataKeys: any) {
+  plotterPolar(axis: PolarAxes, dataKeys: AxisIndex) {
     console.error('plotterPolar is not implemented for ChartArea')
   }
 

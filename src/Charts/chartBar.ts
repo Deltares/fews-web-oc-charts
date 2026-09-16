@@ -1,15 +1,16 @@
 import * as d3 from 'd3'
 import { AxisIndex } from '../Axes/axes.js'
-import { CartesianAxes, PolarAxes } from '../index.js'
+import { CartesianAxes, CartesianAxesIndex, PolarAxes } from '../index.js'
 import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js'
-import { Chart, AUTO_SCALE } from './chart.js'
+import { Chart, AUTO_SCALE, ChartOptions } from './chart.js'
+import type { DataPoint } from '../Data/types.js'
 
 export class ChartBar extends Chart {
   static readonly GROUP_CLASS: 'chart-bar'
-  private _xRect
-  private _widthRect
+  private _xRect!: (data: DataPoint, index: number) => number
+  private _widthRect!: (data: DataPoint, index: number) => number
 
-  plotterCartesian(axis: CartesianAxes, axisIndex: AxisIndex) {
+  plotterCartesian(axis: CartesianAxes, axisIndex: CartesianAxesIndex) {
     const xKey = this.dataKeys.x
     const yKey = this.dataKeys.y
     const x1Key = this.dataKeys.x1
@@ -125,7 +126,7 @@ export class ChartBar extends Chart {
     }
   }
 
-  plotterPolar(_axis: PolarAxes, _dataKeys: any) {
+  plotterPolar(_axis: PolarAxes, _dataKeys: AxisIndex) {
     throw new Error('plotterPolar is not implemented for ChartBar')
   }
 
@@ -141,17 +142,17 @@ export class ChartBar extends Chart {
     return svg.node()
   }
 
-  getColorMap(scale?: any): (_x: number | Date) => string {
+  getColorMap(scale?: d3.ScaleContinuousNumeric<number, number>): (_x: number | Date) => string {
     if (this.options.color?.map) {
       return this.options.color?.map
     } else {
-      return (value: any) => {
-        return d3.scaleSequential(d3.interpolateWarm)(scale(value))
+      return (value: number | Date) => {
+        return d3.scaleSequential(d3.interpolateWarm)(scale?.(value as number) ?? 0)
       }
     }
   }
 
-  setPadding(scale: any, options) {
+  setPadding(scale: d3.ScaleBand<string>, options?: ChartOptions['x']) {
     if (options?.paddingOuter) {
       scale.paddingOuter(options.paddingOuter)
     }
