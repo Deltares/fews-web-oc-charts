@@ -25,10 +25,10 @@ export interface ColourBarOptions {
   title?: string
   type: string
   ticks?: number
-  tickValues?: [number] | [Date]
+  tickValues?: number[] | Date[]
 }
 
-type GroupSelection = d3.Selection<SVGElement, any, SVGElement, any>
+type GroupSelection = d3.Selection<SVGGElement, unknown, any, unknown>
 
 /**
  * Generates a random (hopefully unique) ID
@@ -123,7 +123,7 @@ export class ColourBar {
    * These can be either gradients or solid colours.
    */
   private createFills() {
-    let fills = []
+    let fills: string[]
     if (this.options.useGradients) {
       // Add colour map gradients with unique IDs to <defs> element in this group.
       const ids = this.addColourMapGradients()
@@ -268,7 +268,7 @@ export class ColourBar {
       .attr('transform', gridTranslation)
     const grid = this.isHorizontal ? d3.axisTop(scale) : d3.axisLeft(scale)
 
-    grid.tickValues(axis.tickValues())
+    grid.tickValues(axis.tickValues() ?? [])
     grid.tickSize(this.sizeAcrossAxis)
     gridGroup.call(grid)
     gridGroup.select('path').remove()
