@@ -27,9 +27,7 @@ function createColourBarGroup(
     .attr('height', isHorizontal ? 60 : 500)
     .append('g')
     .attr('transform', 'translate(50, 20)')
-  // Note: the d3 selection type that ColourBar accepts is not correctly
-  //       specified, so we need this cast. See issue #136.
-  return group as unknown as d3.Selection<SVGGElement, unknown, SVGSVGElement, unknown>
+  return group
 }
 
 // Create non-interpolated linear color bar from an SVGGElement.
@@ -61,9 +59,7 @@ new ColourBar(selectionNonLinearNonInterpolated, colormapNonLinear, 400, 20, {
   position: 'top',
   useGradients: false,
   // It is possible to explicitly specify tick values.
-  // Note: the type of tickValues is incorrectly specified, so we need to cast
-  //       it. See issue #136.
-  tickValues: colormapNonLinear.map((entry) => entry.lowerValue) as [number],
+  tickValues: colormapNonLinear.map((entry) => entry.lowerValue),
 })
 
 // Create interpolated non-linear color bar from a d3 selection.
@@ -72,9 +68,7 @@ new ColourBar(selectionNonLinearInterpolated, colormapNonLinear, 400, 20, {
   type: 'nonlinear',
   position: 'top',
   useGradients: true,
-  // Note: the type of tickValues is incorrectly specified, so we need to cast
-  //       it. See issue #136.
-  tickValues: [0, 5, 10, 15] as unknown as [number],
+  tickValues: [0, 5, 10, 15],
 })
 
 // Create vertical color bar with ticks on the left from a d3 selection.
