@@ -62,11 +62,15 @@ export class DataField implements Visitor {
 
       this.value = this.group.append('text').attr('class', 'data-field-value')
 
-      this.selectors = Array.isArray(this.options.selector)
-        ? this.options.selector.filter((selector): selector is string => selector !== undefined)
-        : this.options.selector
-          ? [this.options.selector]
-          : []
+      if (Array.isArray(this.options.selector)) {
+        this.selectors = this.options.selector.filter(
+          (selector): selector is string => selector !== undefined,
+        )
+      } else if (this.options.selector) {
+        this.selectors = [this.options.selector]
+      } else {
+        this.selectors = []
+      }
       this.units = this.options.valueField?.units ?? []
 
       if (this.units.length > 1) {
