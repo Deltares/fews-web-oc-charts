@@ -533,6 +533,48 @@ export abstract class Chart {
     this.highlight.select(highlightSelector).style('opacity', 0)
   }
 
+  protected pointOnPointerOver() {
+    this.showHighlight('circle', 'fill', 'path', 'stroke', { resetTransform: true })
+  }
+
+  protected pointOnPointerOut() {
+    this.hideHighlight('circle')
+  }
+
+  protected pointOnPointerMove(
+    value: number | Date,
+    key: 'x' | 'y',
+    xScale: d3.ScaleContinuousNumeric<number, number>,
+    yScale: d3.ScaleContinuousNumeric<number, number>,
+  ): void | { point: DataPointXY; style: SvgPropertiesHyphen } {
+    const index = this.findIndex(value, key, this.options.tooltip?.alignment ?? 'middle')
+    const point = index === undefined ? undefined : this.datum[index]
+    if (point === undefined) {
+      this.hideHighlight('circle')
+      return
+    }
+
+    const element = this.group.select('path')
+    const color =
+      element.node() === null
+        ? null
+        : window.getComputedStyle(element.node() as Element).getPropertyValue('stroke')
+
+    this.highlight
+      .select('circle')
+      .attr('transform', () => {
+        return `translate(${xScale(point.x as number)}, ${yScale(point.y as number)})`
+      })
+      .style('opacity', 1)
+      .style('fill', color ?? '')
+
+    if (color === null) {
+      return { point: point as DataPointXY, style: {} }
+    } else {
+      return { point: point as DataPointXY, style: { color } }
+    }
+  }
+
   protected selectOrAppend<E extends Element>(
     tag: string,
   ): d3.Selection<E, unknown, null, undefined> {
