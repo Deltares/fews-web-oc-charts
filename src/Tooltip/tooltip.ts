@@ -19,11 +19,9 @@ export enum TooltipAnchor {
 export class Tooltip {
   tooltip: any = null
   tooltipText: any = null
-  container: HTMLElement
   isHidden = true
 
-  constructor(container) {
-    this.container = container
+  constructor(private readonly container: HTMLElement) {
     this.createTooltip()
   }
 
