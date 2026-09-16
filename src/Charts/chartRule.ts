@@ -1,7 +1,6 @@
 import type { DataPoint } from '../Data/types.js'
 import { Chart } from './chart.js'
-import { CartesianAxes } from '../Axes/cartesianAxes.js'
-import { CartesianAxesIndex } from '../Axes/cartesianAxes.js'
+import { CartesianAxes, CartesianAxesIndex } from '../Axes/cartesianAxes.js'
 import { PolarAxes } from '../Axes/polarAxes.js'
 import type { AxisIndex } from '../Axes/axes.js'
 
