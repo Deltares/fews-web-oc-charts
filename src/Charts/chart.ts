@@ -531,9 +531,9 @@ export abstract class Chart {
     return this.data.slice(i0, i1)
   }
 
-  protected applyStyle(
+  protected applyStyle<E extends SVGGraphicsElement>(
     source: Element,
-    element: d3.Selection<SVGElement, unknown, SVGElement, unknown>,
+    element: d3.Selection<E, any, any, any>,
     props: string[],
   ) {
     if (this.style === undefined) {
