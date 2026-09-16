@@ -26,4 +26,9 @@ describe('niceDomain', () => {
     const result = niceDomain(domain, 25, AxisType.value)
     expect(result).toEqual([-2.5, 3.5])
   })
+
+  test('should cap degree steps at 90 degrees', () => {
+    const result = niceDomain([0, 2_000], 2, AxisType.degrees)
+    expect(result).toEqual([0, 2_160])
+  })
 })
