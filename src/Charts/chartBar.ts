@@ -3,7 +3,8 @@ import { AxisIndex } from '../Axes/axes.js'
 import { CartesianAxes, CartesianAxesIndex, PolarAxes } from '../index.js'
 import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js'
 import { Chart, AUTO_SCALE, ChartOptions } from './chart.js'
-import type { DataPoint } from '../Data/types.js'
+import type { DataPoint, DataPointXY } from '../Data/types.js'
+import type { SvgPropertiesHyphen } from 'csstype'
 
 export class ChartBar extends Chart {
   static readonly GROUP_CLASS: 'chart-bar'
@@ -29,32 +30,44 @@ export class ChartBar extends Chart {
 
     const colorScale = d3.scaleLinear().domain([0, 1])
     if (this.options.colorScale === AUTO_SCALE) {
-      colorScale.domain(
-        d3.extent(this.data, function (d: any): number {
-          return d[colorKey]
-        }),
-      )
+      const colorValues = this.data
+        .map((d) => d[colorKey])
+        .filter((value): value is number => typeof value === 'number')
+      const colorExtent = d3.extent(colorValues)
+      if (colorExtent[0] !== undefined && colorExtent[1] !== undefined) {
+        colorScale.domain(colorExtent)
+      }
     }
 
     const colorMap = this.getColorMap(colorScale)
     this.group = this.selectGroup(axis, ChartBar.GROUP_CLASS)
 
-    let xRect = (_d: unknown, i: number) => {
+    let xRect = (_d: DataPoint, i: number) => {
       return i === 0 ? 0 : xScale(mappedData[i - 1][xKey])
     }
-    let widthRect = (_d: unknown, i: number) => {
+    let widthRect = (_d: DataPoint, i: number) => {
       return i === 0
         ? xScale(mappedData[i][xKey])
         : xScale(mappedData[i][xKey]) - xScale(mappedData[i - 1][xKey])
     }
 
     if (x1Key) {
-      const filterKeys: string[] = Array.from(new Set(this.data.map((item) => item[x1Key])))
+      const filterKeys: string[] = this.data
+        .flatMap((item) => {
+          const value = item[x1Key]
+          return typeof value === 'string' ? [value] : []
+        })
+        .filter((value, index, values) => values.indexOf(value) === index)
       this.legend = filterKeys
-      x0.domain(this.data.map((d) => d[xKey]))
+      x0.domain(
+        this.data.flatMap((d) => {
+          const value = d[xKey]
+          return typeof value === 'string' ? [value] : []
+        }),
+      )
       const x1 = d3.scaleBand().domain(filterKeys).range([0, x0.bandwidth()])
       this.setPadding(x1, this.options.x1)
-      xRect = (d) => x0(d[xKey]) + x1(d[x1Key])
+      xRect = (d: DataPoint) => x0(d[xKey] as unknown as string) + x1(d[x1Key] as unknown as string)
       widthRect = () => x1.bandwidth()
       mappedData = this.data
     }
@@ -63,43 +76,49 @@ export class ChartBar extends Chart {
     this._widthRect = widthRect
 
     const bar = this.group
-      .selectAll('rect')
+      .selectAll<SVGRectElement, DataPoint>('rect')
       .data(mappedData)
       .join('rect')
-      .attr('data-legend-id', (d) => this.legendId(d[x1Key]))
+      .attr('data-legend-id', (d) => this.legendId(d[x1Key] as unknown as string))
       .attr('x', xRect)
-      .attr('y', (d: any) => {
-        return d[yKey] === null ? yScale(0) : Math.min(yScale(d[yKey]), yScale(0))
+      .attr('y', (d) => {
+        return d[yKey] === null ? yScale(0) : Math.min(yScale(d[yKey] as number), yScale(0))
       })
       .attr('width', widthRect)
-      .attr('height', function (d: any) {
-        return d[yKey] === null ? 0 : Math.abs(yScale(0) - yScale(d[yKey]))
+      .attr('height', function (d) {
+        return d[yKey] === null ? 0 : Math.abs(yScale(0) - yScale(d[yKey] as number))
       })
-      .attr('fill', (d) => (d[colorKey] !== null ? colorMap(d[colorKey]) : 'none'))
+      .attr('fill', (d) => {
+        const value = d[colorKey]
+        return typeof value === 'number' || value instanceof Date ? colorMap(value) : 'none'
+      })
 
     if (this.options.tooltip !== undefined) {
+      const tooltip = this.options.tooltip
       bar
         .on('pointerover', (event: Event, d) => {
           const rect = event.target as SVGRectElement
           axis.tooltip.show()
-          if (
-            this.options.tooltip.anchor !== undefined &&
-            this.options.tooltip.anchor !== TooltipAnchor.Bottom
-          ) {
+          if (tooltip.anchor !== undefined && tooltip.anchor !== TooltipAnchor.Bottom) {
             console.error(
               'Tooltip not implemented for anchor ',
-              this.options.tooltip.anchor,
+              tooltip.anchor,
               ', using ',
               TooltipAnchor.Bottom,
               ' instead.',
             )
           }
-          axis.tooltip.update(
-            this.toolTipFormatterCartesian(d),
-            this.options.tooltip?.position ?? TooltipPosition.Top,
-            axis.margin.left + +rect.getAttribute('x') + +rect.getAttribute('width') / 2,
-            axis.margin.top + +rect.getAttribute('y'),
-          )
+          const content = this.toolTipFormatterCartesian(d)
+          if (content !== undefined) {
+            axis.tooltip.update(
+              content,
+              tooltip.position ?? TooltipPosition.Top,
+              axis.margin.left +
+                Number(rect.getAttribute('x') ?? 0) +
+                Number(rect.getAttribute('width') ?? 0) / 2,
+              axis.margin.top + Number(rect.getAttribute('y') ?? 0),
+            )
+          }
         })
         .on('pointerout', () => {
           axis.tooltip.hide()
@@ -109,18 +128,21 @@ export class ChartBar extends Chart {
     bar.data(mappedData).order().attr('x', xRect)
 
     if (this.options.text !== undefined) {
-      const textSelection = this.group.selectAll('text').data(mappedData).join('text')
+      const textSelection = this.group
+        .selectAll<SVGTextElement, DataPoint>('text')
+        .data(mappedData)
+        .join('text')
 
       textSelection
         .attr('x', (d, i) => xRect(d, i) + widthRect(d, i) / 2)
-        .attr('y', (d) => Math.min(yScale(d[yKey]), yScale(0)))
-        .attr('dx', this.options.text.dx)
-        .attr('dy', this.options.text.dy)
+        .attr('y', (d) => Math.min(yScale(d[yKey] as number), yScale(0)))
+        .attr('dx', this.options.text.dx ?? 0)
+        .attr('dy', this.options.text.dy ?? 0)
         .text((d) => {
-          return this.options.text.formatter(d)
+          return this.options.text?.formatter?.(d) ?? ''
         })
 
-      for (const [key, value] of Object.entries(this.options.text.attributes)) {
+      for (const [key, value] of Object.entries(this.options.text.attributes ?? {})) {
         textSelection.attr(key, value)
       }
     }
@@ -167,7 +189,7 @@ export class ChartBar extends Chart {
       .style('opacity', 1)
       .style('fill', () => {
         const element = this.group.select('rect')
-        if (element.node() === null) return
+        if (element.node() === null) return ''
         return window.getComputedStyle(element.node() as Element).getPropertyValue('fill')
       })
       .style('stroke', 'currentColor')
@@ -177,28 +199,34 @@ export class ChartBar extends Chart {
     this.highlight.select('rect').style('opacity', 0)
   }
 
-  public onPointerMove(value: number | Date, key: 'x' | 'y', _xScale, yScale) {
+  public onPointerMove(
+    value: number | Date,
+    key: 'x' | 'y',
+    _xScale: d3.ScaleContinuousNumeric<number, number>,
+    yScale: d3.ScaleContinuousNumeric<number, number>,
+  ): void | { point: DataPointXY; style: SvgPropertiesHyphen } {
     const index = this.findIndex(value, key)
-    const point = this.datum[index]
-    if (point === undefined) {
+    if (index === undefined) {
       this.highlight.select('rect').style('opacity', 0)
       return
     }
+    const point = this.datum[index]
+    if (point === undefined) return
 
     this.highlight
       .select('rect')
       .style('opacity', 1)
-      .attr('y', Math.min(yScale(point.y), yScale(0)))
-      .attr('height', Math.abs(yScale(0) - yScale(point.y)))
-      .attr('x', (d) => this._xRect(d, index))
-      .attr('width', (d) => this._widthRect(d, index))
+      .attr('y', Math.min(yScale(point.y as number), yScale(0)))
+      .attr('height', Math.abs(yScale(0) - yScale(point.y as number)))
+      .attr('x', (d) => this._xRect(d as DataPoint, index))
+      .attr('width', (d) => this._widthRect(d as DataPoint, index))
 
     const element = this.group.select('rect')
     if (element.node() === null) {
-      return { point, style: {} }
+      return { point: point as DataPointXY, style: {} }
     } else {
       const color = window.getComputedStyle(element.node() as Element).getPropertyValue('fill')
-      return { point, style: { color } }
+      return { point: point as DataPointXY, style: { color } }
     }
   }
 }
