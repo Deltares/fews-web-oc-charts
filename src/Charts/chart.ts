@@ -570,4 +570,25 @@ export abstract class Chart {
       }
     }
   }
+
+  protected getColorMap(
+    scale?: d3.ScaleContinuousNumeric<number, number>,
+  ): (value: number | Date) => string {
+    if (this.options.color?.map) {
+      return this.options.color?.map
+    } else {
+      return (value: number | Date) => {
+        return d3.scaleSequential(d3.interpolateWarm)(scale?.(value) ?? 0)
+      }
+    }
+  }
+
+  protected setPadding(scale: d3.ScaleBand<string>, options?: ChartOptionItem) {
+    if (options?.paddingOuter) {
+      scale.paddingOuter(options.paddingOuter)
+    }
+    if (options?.paddingInner) {
+      scale.paddingInner(options.paddingInner)
+    }
+  }
 }

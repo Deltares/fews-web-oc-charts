@@ -2,7 +2,7 @@ import * as d3 from 'd3'
 import { AxisType, CartesianAxes, PolarAxes } from '../index.js'
 import type { CartesianAxesIndex } from '../Axes/cartesianAxes.js'
 import type { AxisIndex } from '../Axes/axes.js'
-import { Chart, AUTO_SCALE, ChartOptions } from './chart.js'
+import { Chart, AUTO_SCALE } from './chart.js'
 import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js'
 import type { DataPoint } from '../Data/types.js'
 
@@ -139,22 +139,4 @@ export class ChartMatrix extends Chart {
     return svg.node()
   }
 
-  getColorMap(scale?: d3.ScaleContinuousNumeric<number, number>): (x: number | Date) => string {
-    if (this.options.color?.map) {
-      return this.options.color?.map
-    } else {
-      return (value: number | Date) => {
-        return d3.scaleSequential(d3.interpolateWarm)(scale?.(value) ?? 0)
-      }
-    }
-  }
-
-  setPadding(scale: d3.ScaleBand<string>, options?: ChartOptions['x']) {
-    if (options?.paddingOuter) {
-      scale.paddingOuter(options.paddingOuter)
-    }
-    if (options?.paddingInner) {
-      scale.paddingInner(options.paddingInner)
-    }
-  }
 }

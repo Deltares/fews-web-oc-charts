@@ -2,7 +2,7 @@ import * as d3 from 'd3'
 import { AxisIndex } from '../Axes/axes.js'
 import { CartesianAxes, CartesianAxesIndex, PolarAxes } from '../index.js'
 import { TooltipAnchor, TooltipPosition } from '../Tooltip/tooltip.js'
-import { Chart, AUTO_SCALE, ChartOptions } from './chart.js'
+import { Chart, AUTO_SCALE } from './chart.js'
 import type { DataPoint, DataPointXY } from '../Data/types.js'
 import type { SvgPropertiesHyphen } from 'csstype'
 
@@ -162,25 +162,6 @@ export class ChartBar extends Chart {
     this.applyStyle(source, element, props)
     if (asSvgElement) return element.node()
     return svg.node()
-  }
-
-  getColorMap(scale?: d3.ScaleContinuousNumeric<number, number>): (_x: number | Date) => string {
-    if (this.options.color?.map) {
-      return this.options.color?.map
-    } else {
-      return (value: number | Date) => {
-        return d3.scaleSequential(d3.interpolateWarm)(scale?.(value) ?? 0)
-      }
-    }
-  }
-
-  setPadding(scale: d3.ScaleBand<string>, options?: ChartOptions['x']) {
-    if (options?.paddingOuter) {
-      scale.paddingOuter(options.paddingOuter)
-    }
-    if (options?.paddingInner) {
-      scale.paddingInner(options.paddingInner)
-    }
   }
 
   public onPointerOver() {
