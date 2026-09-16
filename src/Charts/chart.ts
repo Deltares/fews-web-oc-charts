@@ -405,6 +405,71 @@ export abstract class Chart {
 
   public onPointerOut() {}
 
+  protected selectGroup(axis: CartesianAxes | PolarAxes, cssClass: string) {
+    if (this.group === undefined || this.group.empty()) {
+      this.group = axis.chartGroup.append<SVGGElement>('g')
+      if (axis instanceof PolarAxes) {
+        const direction = -axis.direction
+        const intercept = 90 - (180 * axis.intercept) / Math.PI
+        this.group.attr('transform', 'rotate(' + intercept + ')scale(' + direction + ' ,1)')
+      }
+      this.group.attr('data-chart-id', this.id)
+      if (this.cssSelector) {
+        if (this.cssSelector.lastIndexOf('#', 0) === 0)
+          this.group.attr('id', this.cssSelector.substring(1))
+        if (this.cssSelector.lastIndexOf('.', 0) === 0) {
+          this.group.attr('class', cssClass + ' ' + this.cssSelector.substring(1))
+        } else {
+          this.group.attr('class', cssClass)
+        }
+      } else if (this.style) {
+        Object.entries(this.style).forEach(([prop, val]) => this.group.style(prop, val))
+      }
+    }
+    return this.group
+  }
+
+  protected selectHighlight(axis: CartesianAxes, SVGElementName: string) {
+    if (this.highlight === undefined) {
+      const front = axis.canvas.select<SVGGElement>('.front')
+      this.highlight = front.append('g').attr('clip-path', 'url(#' + axis.clipPathId + ')')
+      this.highlight.attr('data-chart-id', this.id)
+      this.highlight.append(SVGElementName)
+    }
+    return this.highlight
+  }
+
+  protected showHighlight(
+    highlightSelector: string,
+    highlightStyleProp: string,
+    sourceSelector: string,
+    sourceStyleProp: string = highlightStyleProp,
+    options: { resetTransform?: boolean; requireSource?: boolean } = {},
+  ) {
+    const source = this.group.select(sourceSelector).node() as Element | null
+    if (source === null && options.requireSource) return
+    const value =
+      source === null ? '' : window.getComputedStyle(source).getPropertyValue(sourceStyleProp)
+    const selection = this.highlight
+      .select(highlightSelector)
+      .style('opacity', 1)
+      .style(highlightStyleProp, value)
+    if (options.resetTransform) selection.attr('transform', null)
+    return selection
+  }
+
+  protected hideHighlight(highlightSelector: string) {
+    this.highlight.select(highlightSelector).style('opacity', 0)
+  }
+
+  protected pointOnPointerOver() {
+    this.showHighlight('circle', 'fill', 'path', 'stroke', { resetTransform: true })
+  }
+
+  protected pointOnPointerOut() {
+    this.hideHighlight('circle')
+  }
+
   protected findIndex(
     value: number | Date,
     key: 'x' | 'y',
@@ -477,71 +542,6 @@ export abstract class Chart {
       (value < current[targetKey] && isInverseNullFn(previous)) ||
       (value > current[targetKey] && isInverseNullFn(next))
     )
-  }
-
-  protected selectGroup(axis: CartesianAxes | PolarAxes, cssClass: string) {
-    if (this.group === undefined || this.group.empty()) {
-      this.group = axis.chartGroup.append<SVGGElement>('g')
-      if (axis instanceof PolarAxes) {
-        const direction = -axis.direction
-        const intercept = 90 - (180 * axis.intercept) / Math.PI
-        this.group.attr('transform', 'rotate(' + intercept + ')scale(' + direction + ' ,1)')
-      }
-      this.group.attr('data-chart-id', this.id)
-      if (this.cssSelector) {
-        if (this.cssSelector.lastIndexOf('#', 0) === 0)
-          this.group.attr('id', this.cssSelector.substring(1))
-        if (this.cssSelector.lastIndexOf('.', 0) === 0) {
-          this.group.attr('class', cssClass + ' ' + this.cssSelector.substring(1))
-        } else {
-          this.group.attr('class', cssClass)
-        }
-      } else if (this.style) {
-        Object.entries(this.style).forEach(([prop, val]) => this.group.style(prop, val))
-      }
-    }
-    return this.group
-  }
-
-  protected selectHighlight(axis: CartesianAxes, SVGElementName: string) {
-    if (this.highlight === undefined) {
-      const front = axis.canvas.select<SVGGElement>('.front')
-      this.highlight = front.append('g').attr('clip-path', 'url(#' + axis.clipPathId + ')')
-      this.highlight.attr('data-chart-id', this.id)
-      this.highlight.append(SVGElementName)
-    }
-    return this.highlight
-  }
-
-  protected showHighlight(
-    highlightSelector: string,
-    highlightStyleProp: string,
-    sourceSelector: string,
-    sourceStyleProp: string = highlightStyleProp,
-    options: { resetTransform?: boolean; requireSource?: boolean } = {},
-  ) {
-    const source = this.group.select(sourceSelector).node() as Element | null
-    if (source === null && options.requireSource) return
-    const value =
-      source === null ? '' : window.getComputedStyle(source).getPropertyValue(sourceStyleProp)
-    const selection = this.highlight
-      .select(highlightSelector)
-      .style('opacity', 1)
-      .style(highlightStyleProp, value)
-    if (options.resetTransform) selection.attr('transform', null)
-    return selection
-  }
-
-  protected hideHighlight(highlightSelector: string) {
-    this.highlight.select(highlightSelector).style('opacity', 0)
-  }
-
-  protected pointOnPointerOver() {
-    this.showHighlight('circle', 'fill', 'path', 'stroke', { resetTransform: true })
-  }
-
-  protected pointOnPointerOut() {
-    this.hideHighlight('circle')
   }
 
   protected pointOnPointerMove(
