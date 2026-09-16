@@ -17,8 +17,8 @@ export enum TooltipAnchor {
 }
 
 export class Tooltip {
-  tooltip: any = null
-  tooltipText: any = null
+  tooltip!: d3.Selection<HTMLDivElement, unknown, null, undefined>
+  tooltipText!: d3.Selection<HTMLDivElement, unknown, null, undefined>
   isHidden = true
 
   constructor(private readonly container: HTMLElement) {
@@ -41,7 +41,7 @@ export class Tooltip {
 
   update(htmlElement: HTMLElement, position: TooltipPosition, x: number, y: number) {
     this.tooltip.style('left', x + 'px').style('top', y + 'px')
-    this.tooltipText.attr('class', `tooltiptext ${position}`).node().replaceChildren(htmlElement)
+    this.tooltipText.attr('class', `tooltiptext ${position}`).node()?.replaceChildren(htmlElement)
   }
 
   hide() {
