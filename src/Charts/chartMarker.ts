@@ -25,6 +25,26 @@ export class ChartMarker extends Chart {
     } as Required<SymbolOptions>
   }
 
+  private ensureMarkerDef(axis: CartesianAxes | PolarAxes, id: number, size: number): string {
+    const markerId = `marker-${id}-${size}-${axis.axesId}`
+    const markerSymbol = axis.defs.select(`#${markerId}`)
+    if (markerSymbol.empty()) {
+      axis.defs
+        .append('marker')
+        .attr('id', markerId)
+        .attr('fill', 'context-fill')
+        .attr('stroke', 'context-stroke')
+        .attr('markerWidth', size)
+        .attr('markerHeight', size)
+        .attr('refX', size / 2)
+        .attr('refY', size / 2)
+        .append('path')
+        .attr('d', d3.symbol(d3.symbolsFill[id], size))
+        .attr('transform', `translate(${size / 2}, ${size / 2})`)
+    }
+    return markerId
+  }
+
   plotterCartesian(axis: CartesianAxes, axisIndex: CartesianAxesIndex) {
     const xKey = this.dataKeys.x
     const yKey = this.dataKeys.y
@@ -61,22 +81,7 @@ export class ChartMarker extends Chart {
       this.group.append('path')
     }
 
-    const markerId = `marker-${id}-${size}-${axis.axesId}`
-    const markerSymbol = axis.defs.select(`#${markerId}`)
-    if (markerSymbol.empty()) {
-      axis.defs
-        .append('marker')
-        .attr('id', markerId)
-        .attr('fill', 'context-fill')
-        .attr('stroke', 'context-stroke')
-        .attr('markerWidth', size)
-        .attr('markerHeight', size)
-        .attr('refX', size / 2)
-        .attr('refY', size / 2)
-        .append('path')
-        .attr('d', d3.symbol(d3.symbolsFill[id], size))
-        .attr('transform', `translate(${size / 2}, ${size / 2})`)
-    }
+    const markerId = this.ensureMarkerDef(axis, id, size)
 
     const update = this.group
       .select('path')
@@ -109,22 +114,7 @@ export class ChartMarker extends Chart {
     }
 
     const { size, id } = this.symbolOptions
-    const markerId = `marker-${id}-${size}-${axis.axesId}`
-    const markerSymbol = axis.defs.select(`#${markerId}`)
-    if (markerSymbol.empty()) {
-      axis.defs
-        .append('marker')
-        .attr('id', markerId)
-        .attr('fill', 'context-fill')
-        .attr('stroke', 'context-stroke')
-        .attr('markerWidth', size)
-        .attr('markerHeight', size)
-        .attr('refX', size / 2)
-        .attr('refY', size / 2)
-        .append('path')
-        .attr('d', d3.symbol(d3.symbolsFill[id], size))
-        .attr('transform', `translate(${size / 2}, ${size / 2})`)
-    }
+    const markerId = this.ensureMarkerDef(axis, id, size)
 
     const line = this.group.select('path')
     const t = d3.transition().duration(this.options.transitionTime).ease(d3.easeLinear)
