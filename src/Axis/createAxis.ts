@@ -1,7 +1,10 @@
 import * as d3 from 'd3'
 import { AxisOrientation } from './axisOrientation.js'
 
-export function createAxis(orientation: AxisOrientation, scale) {
+export function createAxis<Domain extends d3.AxisDomain>(
+  orientation: AxisOrientation,
+  scale: d3.AxisScale<Domain>,
+): d3.Axis<Domain> {
   switch (orientation) {
     case 'bottom':
       return d3.axisBottom(scale).ticks(5)
