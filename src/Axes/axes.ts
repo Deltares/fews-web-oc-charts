@@ -4,7 +4,6 @@ import { Visitor } from '../Visitors/visitor.js'
 import { defaultsDeep, merge } from 'lodash-es'
 import { Tooltip } from '../Tooltip/tooltip.js'
 import { AxisOptions } from '../Axis/axisOptions.js'
-import { D3Selection } from '../Utils'
 
 export interface Margin {
   top?: number
@@ -36,17 +35,17 @@ export interface AxisIndex {
 
 export abstract class Axes {
   container: HTMLElement
-  svg: D3Selection<SVGSVGElement>
-  chartGroup: D3Selection<SVGGElement>
-  canvas: D3Selection<SVGGElement>
-  defs: D3Selection<SVGDefsElement>
+  svg: d3.Selection<SVGSVGElement, unknown, null, unknown>
+  chartGroup!: d3.Selection<SVGGElement, unknown, null, unknown>
+  canvas: d3.Selection<SVGGElement, unknown, null, unknown>
+  defs: d3.Selection<SVGDefsElement, unknown, null, unknown>
 
   tooltip: Tooltip
   observer: ResizeObserver
   private readonly themeObserver: MutationObserver
 
-  width: number
-  height: number
+  width = 0
+  height = 0
   margin: { top: number; right: number; bottom: number; left: number }
   axesId: string
 
@@ -116,7 +115,7 @@ export abstract class Axes {
     merge(this.options, options)
   }
 
-  setSize(height?: number, width?: number): void {
+  setSize(height?: number | null, width?: number | null): void {
     const containerWidth = width ?? this.container.offsetWidth
     const containerHeight = height ?? this.container.offsetHeight
     this.height = containerHeight - this.margin.top - this.margin.bottom
@@ -150,7 +149,7 @@ export abstract class Axes {
     let i: number
     for (i = 0; i < this.charts.length; i++) {
       if (this.charts[i].id === id) {
-        this.charts[i].group = null
+        this.charts[i].group.remove()
         break
       }
     }
@@ -175,8 +174,8 @@ export abstract class Axes {
     v.visit(this)
   }
 
-  get extent(): any {
-    const _extent = {}
+  get extent() {
+    const _extent: Record<string, any> = {}
     for (const chart of this.charts) {
       const chartExtent = chart.extent
       for (const path in chartExtent) {
