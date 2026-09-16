@@ -108,6 +108,8 @@ export interface DataKeys {
   value?: string
 }
 
+type NewType = Record<string, Array<number | Date | null | undefined>>
+
 export abstract class Chart {
   protected _data!: DataPoint[]
   protected datum: DataPoint[] = []
@@ -145,7 +147,7 @@ export abstract class Chart {
     return this._data
   }
 
-  set extent(extent: Record<string, Array<number | Date | null | undefined>> | undefined) {
+  set extent(extent: NewType | undefined) {
     this._extent = extent ?? {}
   }
 
@@ -452,7 +454,7 @@ export abstract class Chart {
     isInverseNullFn: (d: DataPoint) => boolean,
   ): boolean {
     const current = datum[idx]
-    if (!current || current[targetKey] === null) return false
+    if (current?.[targetKey] === null) return false
     if (idx === 0 && current[targetKey] > value) return false
     if (idx === datum.length - 1 && current[targetKey] < value) return false
     if (isInverseNullFn(current)) return false
