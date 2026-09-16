@@ -533,6 +533,27 @@ export abstract class Chart {
     this.highlight.select(highlightSelector).style('opacity', 0)
   }
 
+  protected selectOrAppend<E extends Element>(
+    tag: string,
+  ): d3.Selection<E, unknown, null, undefined> {
+    const selection = this.group.select<E>(tag)
+    return selection.empty() ? this.group.append<E>(tag) : selection
+  }
+
+  protected getAutoScaleColorScale(colorKey: string): d3.ScaleLinear<number, number> {
+    const colorScale = d3.scaleLinear().domain([0, 1])
+    if (this.options.colorScale === AUTO_SCALE) {
+      const colorValues = this.data
+        .map((d) => d[colorKey])
+        .filter((value): value is number => typeof value === 'number')
+      const colorExtent = d3.extent(colorValues)
+      if (colorExtent[0] !== undefined && colorExtent[1] !== undefined) {
+        colorScale.domain(colorExtent)
+      }
+    }
+    return colorScale
+  }
+
   get dataKeys(): Record<string, string> {
     const dataKeys: Record<string, string> = {}
     for (const key of Object.keys(this.axisIndex) as (keyof AxisIndex)[]) {

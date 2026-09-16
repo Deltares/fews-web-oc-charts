@@ -2,7 +2,7 @@ import * as d3 from 'd3'
 import { CartesianAxes, PolarAxes } from '../index.js'
 import type { CartesianAxesIndex } from '../Axes/cartesianAxes.js'
 import type { AxisIndex } from '../Axes/axes.js'
-import { Chart, AUTO_SCALE } from './chart.js'
+import { Chart } from './chart.js'
 import { TooltipAnchor } from '../Tooltip/tooltip.js'
 import type { DataPoint } from '../Data/types.js'
 
@@ -25,16 +25,7 @@ export class ChartHistogram extends Chart {
 
     this.setPadding(x1, this.options.x)
 
-    const colorScale = d3.scaleLinear().domain([0, 1])
-    if (this.options.colorScale === AUTO_SCALE) {
-      const colorValues = this.data
-        .map((d) => d[colorKey])
-        .filter((value): value is number => typeof value === 'number')
-      const colorExtent = d3.extent(colorValues)
-      if (colorExtent[0] !== undefined && colorExtent[1] !== undefined) {
-        colorScale.domain(colorExtent)
-      }
-    }
+    const colorScale = this.getAutoScaleColorScale(colorKey)
 
     const colorMap = this.colorMap
     this.group = this.selectGroup(axis, 'chart-range')
