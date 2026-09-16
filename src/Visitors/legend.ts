@@ -91,7 +91,9 @@ export class Legend implements Visitor {
     const charts = this.axis.charts.filter((c) => c.id === chartId)
     for (const chart of charts) {
       const svgElement = chart.drawLegendSymbol(legendId, true)
-      node.appendChild(svgElement)
+      if (svgElement) {
+        node.appendChild(svgElement)
+      }
     }
   }
 
