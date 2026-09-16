@@ -4,8 +4,7 @@ import { CartesianAxes, CartesianAxesIndex, PolarAxes } from '../index.js'
 import type { AxisIndex } from '../Axes/axes.js'
 import { Chart, SymbolOptions } from './chart.js'
 import type { ChartOptions } from './chart.js'
-import type { DataPoint } from '../Data/types.js'
-import type { DataPointXY } from '../Data/types.js'
+import type { DataPoint, DataPointXY } from '../Data/types.js'
 import type { SvgPropertiesHyphen } from 'csstype'
 
 const DefaultSymbolOptions: SymbolOptions = {
