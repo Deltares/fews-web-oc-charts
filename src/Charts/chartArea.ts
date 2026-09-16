@@ -47,15 +47,17 @@ export class ChartArea extends Chart {
 
     const colorScale = d3.scaleLinear().domain([0, 1])
     if (this.options.colorScale === AUTO_SCALE) {
-      colorScale.domain(
-        d3.extent(this.data, function (d: any): number {
-          return d[colorKey]
-        }),
-      )
+      const colorValues = this.data
+        .map((d) => d[colorKey])
+        .filter((value): value is number => typeof value === 'number')
+      const colorExtent = d3.extent(colorValues)
+      if (colorExtent[0] !== undefined && colorExtent[1] !== undefined) {
+        colorScale.domain(colorExtent)
+      }
     }
 
-    const bisectX = d3.bisector(function (d) {
-      return d[xKey]
+    const bisectX = d3.bisector<DataPoint, number>(function (d) {
+      return d[xKey] as number
     })
     let i0 = bisectX.right(this.data, xScale.domain()[0])
     let i1 = bisectX.left(this.data, xScale.domain()[1])
@@ -69,19 +71,24 @@ export class ChartArea extends Chart {
       this.group.append('path')
     }
 
-    const areaGenerator = d3.area().x(function (d: any) {
+    const areaGenerator = d3.area<DataPoint>().x(function (d) {
       return xScale(d[xKey])
     })
 
     // If y value is an array then use it as y0 and y1, toherwise use y as y1 and 0 as y0
     if (this.data !== undefined && this.data.length > 0 && Array.isArray(this.data[0][yKey])) {
       areaGenerator
-        .defined((d) => !isNull(d[yKey][0]) && !isNull(d[yKey][1]))
-        .y0(function (d: any) {
-          return yScale(d[yKey][0])
+        .defined((d) => {
+          const value = d[yKey]
+          return Array.isArray(value) && !isNull(value[0]) && !isNull(value[1])
         })
-        .y1(function (d: any) {
-          return yScale(d[yKey][1])
+        .y0((d) => {
+          const value = d[yKey]
+          return yScale(Array.isArray(value) ? value[0] : 0)
+        })
+        .y1((d) => {
+          const value = d[yKey]
+          return yScale(Array.isArray(value) ? value[1] : 0)
         })
     } else {
       areaGenerator
@@ -132,7 +139,12 @@ export class ChartArea extends Chart {
     this.highlight.select('path').style('opacity', 0)
   }
 
-  public onPointerMove(value: number | Date, key: 'x' | 'y', _xScale, _yScale) {
+  public onPointerMove(
+    value: number | Date,
+    key: 'x' | 'y',
+    _xScale: d3.ScaleContinuousNumeric<number, number>,
+    _yScale: d3.ScaleContinuousNumeric<number, number>,
+  ) {
     let alignment: PointAlignment = this.options.tooltip?.alignment ?? 'middle'
     if (this.options.curve === CurveType.StepBefore || this.options.curve === CurveType.StepAfter) {
       alignment = 'right'
@@ -141,6 +153,7 @@ export class ChartArea extends Chart {
     const index = this.findIndex(value, key, alignment)
     if (index === undefined) {
       this.highlight.select('path').style('opacity', 0)
+      return
     }
 
     const p1 = this.datum[index - 1]

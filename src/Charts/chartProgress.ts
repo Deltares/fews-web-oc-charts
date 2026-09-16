@@ -2,6 +2,8 @@ import * as d3 from 'd3'
 import { CartesianAxes, PolarAxes } from '../index.js'
 import { Chart } from './chart.js'
 import type { DataPoint } from '../Data/types.js'
+import type { AxisIndex } from '../Axes/axes.js'
+import type { CartesianAxesIndex } from '../Axes/cartesianAxes.js'
 
 function mean(x: number[] | number) {
   if (Array.isArray(x)) {
@@ -14,12 +16,12 @@ export class ChartProgress extends Chart {
   private previousData: DataPoint[] = []
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  plotterCartesian(axis: CartesianAxes, dataKeys: any) {
+  plotterCartesian(axis: CartesianAxes, dataKeys: CartesianAxesIndex) {
     throw new Error('Not implemented')
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  plotterPolar(axis: PolarAxes, dataKeys: any) {
+  plotterPolar(axis: PolarAxes, dataKeys: AxisIndex) {
     const tKey = this.dataKeys.angular
     const rKey = this.dataKeys.radial
     const colorKey = this.dataKeys.color
