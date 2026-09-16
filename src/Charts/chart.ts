@@ -509,6 +509,29 @@ export abstract class Chart {
     return this.highlight
   }
 
+  protected showHighlight(
+    highlightSelector: string,
+    highlightStyleProp: string,
+    sourceSelector: string,
+    sourceStyleProp: string = highlightStyleProp,
+    options: { resetTransform?: boolean; requireSource?: boolean } = {},
+  ) {
+    const source = this.group.select(sourceSelector).node() as Element | null
+    if (source === null && options.requireSource) return
+    const value =
+      source === null ? '' : window.getComputedStyle(source).getPropertyValue(sourceStyleProp)
+    const selection = this.highlight
+      .select(highlightSelector)
+      .style('opacity', 1)
+      .style(highlightStyleProp, value)
+    if (options.resetTransform) selection.attr('transform', null)
+    return selection
+  }
+
+  protected hideHighlight(highlightSelector: string) {
+    this.highlight.select(highlightSelector).style('opacity', 0)
+  }
+
   get dataKeys(): Record<string, string> {
     const dataKeys: Record<string, string> = {}
     for (const key of Object.keys(this.axisIndex) as (keyof AxisIndex)[]) {

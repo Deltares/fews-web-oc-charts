@@ -127,14 +127,14 @@ export class ChartArea extends Chart {
   }
 
   public onPointerOver() {
-    const element = this.group.select('path')
-    if (element.node() === null) return
-    const color = window.getComputedStyle(element.node() as Element).getPropertyValue('fill')
-    this.highlight.select('path').style('opacity', 1).style('fill', color).attr('transform', null)
+    this.showHighlight('path', 'fill', 'path', undefined, {
+      resetTransform: true,
+      requireSource: true,
+    })
   }
 
   public onPointerOut() {
-    this.highlight.select('path').style('opacity', 0)
+    this.hideHighlight('path')
   }
 
   public onPointerMove(

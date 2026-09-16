@@ -163,19 +163,11 @@ export class ChartBar extends Chart {
   }
 
   public onPointerOver() {
-    this.highlight
-      .select('rect')
-      .style('opacity', 1)
-      .style('fill', () => {
-        const element = this.group.select('rect')
-        if (element.node() === null) return ''
-        return window.getComputedStyle(element.node() as Element).getPropertyValue('fill')
-      })
-      .style('stroke', 'currentColor')
+    this.showHighlight('rect', 'fill', 'rect')?.style('stroke', 'currentColor')
   }
 
   public onPointerOut() {
-    this.highlight.select('rect').style('opacity', 0)
+    this.hideHighlight('rect')
   }
 
   public onPointerMove(
