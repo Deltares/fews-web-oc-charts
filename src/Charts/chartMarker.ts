@@ -6,6 +6,8 @@ import type { AxisIndex } from '../Axes/axes.js'
 import { Chart, SymbolOptions } from './chart.js'
 import type { ChartOptions } from './chart.js'
 import type { DataPoint } from '../Data/types.js'
+import type { DataPointXY } from '../Data/types.js'
+import type { SvgPropertiesHyphen } from 'csstype'
 
 const DefaultSymbolOptions: SymbolOptions = {
   id: 0,
@@ -13,9 +15,15 @@ const DefaultSymbolOptions: SymbolOptions = {
   skip: 1,
 }
 export class ChartMarker extends Chart {
+  protected symbolOptions!: Required<SymbolOptions>
+
   constructor(data: DataPoint[], options: ChartOptions) {
     super(data, options)
     this.options = defaultsDeep(this.options, this.options, { symbol: DefaultSymbolOptions })
+    this.symbolOptions = {
+      ...DefaultSymbolOptions,
+      ...this.options.symbol,
+    } as Required<SymbolOptions>
   }
 
   protected addTooltipHandlers(
@@ -38,12 +46,15 @@ export class ChartMarker extends Chart {
         }
         axis.tooltip.show()
         const pointer = d3.pointer(e, axis.container)
-        axis.tooltip.update(
-          this.toolTipFormatterPolar(d),
-          tooltip.position ?? TooltipPosition.Top,
-          pointer[0],
-          pointer[1],
-        )
+        const content = this.toolTipFormatterPolar(d)
+        if (content !== undefined) {
+          axis.tooltip.update(
+            content,
+            tooltip.position ?? TooltipPosition.Top,
+            pointer[0],
+            pointer[1],
+          )
+        }
       })
       .on('pointerout', () => {
         axis.tooltip.hide()
@@ -56,7 +67,7 @@ export class ChartMarker extends Chart {
     const xScale = axis.xScales[axisIndex.x.axisIndex]
     const yScale = axis.yScales[axisIndex.y.axisIndex]
 
-    const skip = this.options.symbol.skip
+    const { skip, size, id } = this.symbolOptions
     const mappedData = this.mapDataCartesian(xScale.domain()).filter((d, i) => {
       return i % skip === 0 && d[yKey] !== null
     })
@@ -86,9 +97,7 @@ export class ChartMarker extends Chart {
       this.group.append('path')
     }
 
-    const size = this.options.symbol.size
-    const symbolId = this.options.symbol.id
-    const markerId = `marker-${symbolId}-${size}-${axis.axesId}`
+    const markerId = `marker-${id}-${size}-${axis.axesId}`
     const markerSymbol = axis.defs.select(`#${markerId}`)
     if (markerSymbol.empty()) {
       axis.defs
@@ -101,7 +110,7 @@ export class ChartMarker extends Chart {
         .attr('refX', size / 2)
         .attr('refY', size / 2)
         .append('path')
-        .attr('d', d3.symbol(d3.symbolsFill[symbolId], size))
+        .attr('d', d3.symbol(d3.symbolsFill[id], size))
         .attr('transform', `translate(${size / 2}, ${size / 2})`)
     }
 
@@ -109,7 +118,7 @@ export class ChartMarker extends Chart {
       .select('path')
       .datum(mappedData)
       .join('path')
-      .attr('d', lineGenerator)
+      .attr('d', (lineGenerator as unknown as (data: DataPoint[]) => string | null)(mappedData))
       .attr('fill-opacity', 0)
       .attr('stroke-opacity', 0)
       .attr('marker-start', `url(#${markerId})`)
@@ -135,9 +144,8 @@ export class ChartMarker extends Chart {
       this.group.append('path')
     }
 
-    const size = this.options.symbol.size
-    const symbolId = this.options.symbol.id
-    const markerId = `marker-${symbolId}-${size}-${axis.axesId}`
+    const { size, id } = this.symbolOptions
+    const markerId = `marker-${id}-${size}-${axis.axesId}`
     const markerSymbol = axis.defs.select(`#${markerId}`)
     if (markerSymbol.empty()) {
       axis.defs
@@ -150,14 +158,15 @@ export class ChartMarker extends Chart {
         .attr('refX', size / 2)
         .attr('refY', size / 2)
         .append('path')
-        .attr('d', d3.symbol(d3.symbolsFill[symbolId], size))
+        .attr('d', d3.symbol(d3.symbolsFill[id], size))
         .attr('transform', `translate(${size / 2}, ${size / 2})`)
     }
 
     const line = this.group.select('path')
     const t = d3.transition().duration(this.options.transitionTime).ease(d3.easeLinear)
 
-    line.transition(t).attr('d', lineGenerator(this.data))
+    const path = (lineGenerator as unknown as (data: DataPoint[]) => string | null)(this.data)
+    line.transition(t).attr('d', path)
     line
       .join('path')
       .datum(this.data)
@@ -180,7 +189,7 @@ export class ChartMarker extends Chart {
     const innerGroup = outerGroup.append('g').attr('transform', 'translate(10, 0)')
     innerGroup
       .append('path')
-      .attr('d', d3.symbol(d3.symbolsFill[this.options.symbol.id], this.options.symbol.size))
+      .attr('d', d3.symbol(d3.symbolsFill[this.symbolOptions.id], this.symbolOptions.size))
     this.applyStyle(source, innerGroup, props)
     if (asSvgElement) return innerGroup.node()
     return svg.node()
@@ -192,7 +201,7 @@ export class ChartMarker extends Chart {
       .style('opacity', 1)
       .style('fill', () => {
         const element = this.group.select('path')
-        if (element.node() === null) return
+        if (element.node() === null) return ''
         return window.getComputedStyle(element.node() as Element).getPropertyValue('stroke')
       })
       .attr('transform', null)
@@ -202,9 +211,14 @@ export class ChartMarker extends Chart {
     this.highlight.select('circle').style('opacity', 0)
   }
 
-  public onPointerMove(value: number | Date, key: 'x' | 'y', xScale, yScale) {
+  public onPointerMove(
+    value: number | Date,
+    key: 'x' | 'y',
+    xScale: d3.ScaleContinuousNumeric<number, number>,
+    yScale: d3.ScaleContinuousNumeric<number, number>,
+  ): void | { point: DataPointXY; style: SvgPropertiesHyphen } {
     const index = this.findIndex(value, key, this.options.tooltip?.alignment ?? 'middle')
-    const point = this.datum[index]
+    const point = index === undefined ? undefined : this.datum[index]
     if (point === undefined) {
       this.highlight.select('rect').style('opacity', 0)
       return
@@ -219,15 +233,15 @@ export class ChartMarker extends Chart {
     this.highlight
       .select('circle')
       .attr('transform', () => {
-        return `translate(${xScale(point.x)}, ${yScale(point.y)})`
+        return `translate(${xScale(point.x as number)}, ${yScale(point.y as number)})`
       })
       .style('opacity', 1)
-      .style('fill', color)
+      .style('fill', color ?? '')
 
     if (color === null) {
-      return { point, style: {} }
+      return { point: point as DataPointXY, style: {} }
     } else {
-      return { point, style: { color } }
+      return { point: point as DataPointXY, style: { color } }
     }
   }
 }
