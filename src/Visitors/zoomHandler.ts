@@ -1,6 +1,6 @@
 import * as d3 from 'd3'
 import type { Axes } from '../Axes/axes.js'
-import { CartesianAxes, CartesianAxesOptions, matchesModifierKey, ModifierKey } from '../index.js'
+import { CartesianAxes, CartesianAxisKey, matchesModifierKey, ModifierKey } from '../index.js'
 import type { Visitor } from './visitor.js'
 
 export type ZoomHandlerEventType = 'zoom' | 'reset-zoom'
@@ -86,7 +86,7 @@ export class ZoomHandler implements Visitor {
   addEventListener(event: 'reset-zoom', callback: ResetZoomCallback): void
   addEventListener(event: ZoomHandlerEventType, callback: ZoomCallback | ResetZoomCallback): void {
     if (event === 'zoom') {
-      this.zoomCallbacks.push(callback as ZoomCallback)
+      this.zoomCallbacks.push(callback)
     } else {
       this.resetZoomCallbacks.push(callback as ResetZoomCallback)
     }
@@ -99,9 +99,7 @@ export class ZoomHandler implements Visitor {
     callback: ZoomCallback | ResetZoomCallback,
   ): void {
     if (event === 'zoom') {
-      this.zoomCallbacks = this.zoomCallbacks.filter(
-        (entry) => entry !== (callback as ZoomCallback),
-      )
+      this.zoomCallbacks = this.zoomCallbacks.filter((entry) => entry !== callback)
     } else {
       this.resetZoomCallbacks = this.resetZoomCallbacks.filter(
         (entry) => entry !== (callback as ResetZoomCallback),
@@ -154,7 +152,7 @@ export class ZoomHandler implements Visitor {
     const documentMouseUp = (event: MouseEvent): void => {
       // If this mouseup event is handled by the listener on the mouseRect, just
       // return.
-      const isWithinAxes = mouseRect.nodes().includes(event.target as HTMLElement)
+      const isWithinAxes = mouseRect.nodes().includes(event.target)
       if (isWithinAxes) return
 
       this.endSelection(axis, mouseGroup, brushGroup, null)
@@ -220,7 +218,7 @@ export class ZoomHandler implements Visitor {
 
   private updateZoomAxisScales(
     axis: CartesianAxes,
-    axisKey: keyof CartesianAxesOptions,
+    axisKey: CartesianAxisKey,
     coord: number,
     factor: number,
   ): void {
@@ -381,7 +379,7 @@ export class ZoomHandler implements Visitor {
 
   private updateAxisScales(
     axis: CartesianAxes,
-    axisKey: keyof CartesianAxesOptions,
+    axisKey: CartesianAxisKey,
     point: [number, number],
     index: number,
   ): void {
