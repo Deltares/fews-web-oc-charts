@@ -1,8 +1,7 @@
 import * as d3 from 'd3'
 import { isNull } from 'lodash-es'
-import { Axes } from '../Axes/axes.js'
 import { CartesianAxes } from '../index.js'
-import { Visitor } from './visitor.js'
+import { BaseVisitor } from './visitor.js'
 
 export interface WarningLevelOptions {
   y?: {
@@ -22,25 +21,20 @@ export interface EscalationLevel {
   events: WarningLevelEvent[]
 }
 
-export class WarningLevels implements Visitor {
+export class WarningLevels extends BaseVisitor<CartesianAxes> {
   public escalationLevels: EscalationLevel[]
-  private axis!: CartesianAxes
   private scale!: d3.ScaleLinear<number, number>
   private warningAxis: any
   private sections!: d3.Selection<SVGGElement, unknown, null, unknown>
   private readonly options: any
 
   constructor(escalationLevels: EscalationLevel[], options: WarningLevelOptions) {
+    super()
     this.escalationLevels = escalationLevels
     this.options = {
       y: { axisIndex: 0 },
       ...options,
     }
-  }
-
-  visit(axis: Axes): void {
-    this.axis = axis as CartesianAxes
-    this.create(axis as CartesianAxes)
   }
 
   create(axis: CartesianAxes): void {

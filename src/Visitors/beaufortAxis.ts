@@ -1,8 +1,7 @@
 import * as d3 from 'd3'
-import { Axes } from '../Axes/axes.js'
 import { CartesianAxes } from '../index.js'
 import { scaleBeaufort } from '../Scale/index.js'
-import { Visitor } from './visitor.js'
+import { BaseVisitor } from './visitor.js'
 import { Property } from 'csstype'
 
 export interface BeaufortAxisOptions {
@@ -15,19 +14,14 @@ export interface BeaufortAxisOptions {
   colors: Record<string, Property.Color>
 }
 
-export class BeaufortAxis implements Visitor {
-  private group: any
-  private axis: CartesianAxes
+export class BeaufortAxis extends BaseVisitor<CartesianAxes> {
+  private group!: d3.Selection<SVGGElement, unknown, null, unknown>
   private readonly options: any
   private isVertical = true
 
   constructor(options: BeaufortAxisOptions) {
+    super()
     this.options = options
-  }
-
-  visit(axis: Axes): void {
-    this.axis = axis as CartesianAxes
-    this.create(axis as CartesianAxes)
   }
 
   create(axis: CartesianAxes): void {
@@ -70,15 +64,15 @@ export class BeaufortAxis implements Visitor {
       return v === 0 ? '' : d3.format('.0f')(v)
     })
 
-    const adjustTextLabels = (selection) => {
+    const adjustTextLabels = (selection: d3.Selection<SVGGElement, unknown, null, unknown>) => {
       const text = selection.selectAll('.tick text')
-      const values = text.data().map((x) => scale(x))
+      const values = text.data().map((x) => scale(x as number))
       if (this.isVertical) {
         values.push(0)
       } else {
         values.push(this.axis.width)
       }
-      const offset = (i) => {
+      const offset = (i: number) => {
         return (values[i + 1] - values[i]) / 2
       }
       text.attr('transform', (d, i) => {
@@ -91,7 +85,7 @@ export class BeaufortAxis implements Visitor {
 
     const isVertical = this.isVertical
     const colors = this.options.colors === undefined ? {} : this.options.colors
-    ticks.selectAll('.tick').each(function (d, _i) {
+    ticks.selectAll<SVGGElement, number>('.tick').each(function (this: SVGGElement, d, _i) {
       if (d3.select(this).select('rect').size() === 0) {
         d3.select(this).append('rect')
       }

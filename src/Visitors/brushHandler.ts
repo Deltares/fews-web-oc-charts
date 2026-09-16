@@ -36,13 +36,13 @@ export type BrushDomainChangeCallback = (event: BrushDomainChangeEvent) => void
 
 export class BrushHandler implements Visitor {
   private readonly labels: {
-    x?: d3.Selection<SVGTextElement, unknown, SVGGElement, unknown>
-    y?: d3.Selection<SVGTextElement, unknown, SVGGElement, unknown>
+    x?: d3.Selection<SVGTextElement, unknown, null, undefined>
+    y?: d3.Selection<SVGTextElement, unknown, null, undefined>
   }
   private axis: CartesianAxes | null = null
   private readonly options: BrushHandlerOptions
-  private brush: d3.BrushBehavior<unknown> | null = null
-  private brushGroup: d3.Selection<SVGGElement, unknown, SVGGElement, unknown> | null = null
+  private brush: d3.BrushBehavior<any> | null = null
+  private brushGroup: d3.Selection<SVGGElement, unknown, null, unknown> | null = null
   private lastDomainUpdate: Domains = {}
   private domainChangeCallbacks: BrushDomainChangeCallback[] = []
 
@@ -88,8 +88,10 @@ export class BrushHandler implements Visitor {
         domain[1] = Math.min(domain[1], xScale.range()[1])
 
         // Requires a timeout to ensure the brush is updated correctly
+        const brushGroup = this.brushGroup
+        const brush = this.brush
         setTimeout(() => {
-          this.brushGroup.call(this.brush.move.bind(this.brush), domain as d3.BrushSelection)
+          brushGroup.call(brush.move, domain as d3.BrushSelection)
         })
       }
     }
@@ -98,7 +100,7 @@ export class BrushHandler implements Visitor {
   private createHandler(axes: CartesianAxes) {
     this.createLabels(axes)
 
-    const brushed = ({ selection, sourceEvent }) => {
+    const brushed = ({ selection, sourceEvent }: d3.D3BrushEvent<unknown>) => {
       if (!selection) return
 
       const updateLabelsForAxis = (axisKey: 'x' | 'y', range: [number, number]) => {
@@ -138,22 +140,28 @@ export class BrushHandler implements Visitor {
       }
 
       if (this.options.brushMode === BrushMode.X) {
-        updateForAxis('x', selection)
+        updateForAxis('x', selection as [number, number])
       }
 
       if (this.options.brushMode === BrushMode.Y) {
-        updateForAxis('y', selection.toReversed())
+        updateForAxis('y', (selection as [number, number]).toReversed() as [number, number])
       }
 
       if (this.options.brushMode === BrushMode.XY) {
         updateForAxis(
           'x',
-          selection.map((s: number[]) => s[0]),
+          (selection as [[number, number], [number, number]]).map((s) => s[0]) as [number, number],
         )
-        updateForAxis('y', selection.map((s: number[]) => s[1]).toReversed())
+        updateForAxis(
+          'y',
+          (selection as [[number, number], [number, number]]).map((s) => s[1]).toReversed() as [
+            number,
+            number,
+          ],
+        )
       }
     }
-    const brushended = ({ selection }) => {
+    const brushended = ({ selection }: d3.D3BrushEvent<unknown>) => {
       if (selection) return
 
       this.hideLabels()
@@ -175,14 +183,16 @@ export class BrushHandler implements Visitor {
   private createLabels(axes: CartesianAxes) {
     const labelG = axes.canvas.append('g').attr('class', 'brush-labels')
 
-    const addLabel = (x: number, y: number, textAnchor: string) => {
-      return labelG
+    const addLabel = (x: number, y: number, textAnchor: string): SVGTextElement => {
+      const node = labelG
         .append('text')
         .attr('x', x)
         .attr('y', y)
         .attr('text-anchor', textAnchor)
         .attr('fill', 'none')
         .node()
+      if (!node) throw new Error('Unable to create brush label.')
+      return node
     }
 
     if (this.options.brushMode === BrushMode.X || this.options.brushMode === BrushMode.XY) {

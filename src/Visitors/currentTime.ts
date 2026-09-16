@@ -2,37 +2,35 @@ import * as d3 from 'd3'
 import { Axes } from '../Axes/axes.js'
 import { CartesianAxes } from '../index.js'
 import { dateFormatter } from '../Utils/date.js'
-import { Visitor } from './visitor.js'
+import { BaseVisitor } from './visitor.js'
 
 type CurrentTimeOptions = Partial<Record<'x' | 'y', { axisIndex: number }>>
 
-export class CurrentTime implements Visitor {
+export class CurrentTime extends BaseVisitor<CartesianAxes> {
   private group: any
   private line: any
   private indicator: any
-  private axis: CartesianAxes
   private readonly options: CurrentTimeOptions
   private datetime: Date | null = null
   static readonly REFRESH_INTERVAL: number = 10000
 
   constructor(options?: CurrentTimeOptions) {
-    this.options = options
+    super()
+    this.options = options ?? {}
   }
 
   setDateTime(dt: Date): void {
     this.datetime = dt
   }
 
-  visit(axis: Axes) {
-    this.axis = axis as CartesianAxes
-    this.create(axis as CartesianAxes)
-    this.redraw()
+  visit(axis: Axes): void {
+    super.visit(axis)
     d3.interval(() => {
       this.redraw()
     }, CurrentTime.REFRESH_INTERVAL)
   }
 
-  create(axis: CartesianAxes) {
+  create(axis: CartesianAxes): void {
     const front = axis.canvas.select('.front')
     this.group = front.append('g').attr('class', 'current-time')
     this.line = this.group.append('line').attr('class', 'current-time')
@@ -66,7 +64,7 @@ export class CurrentTime implements Visitor {
         this.indicator.append('text')
       }
       this.indicator.attr('transform', 'translate(' + x + ',' + this.axis.height + ')')
-      const axisIndex = this.options.x.axisIndex
+      const axisIndex = this.options.x?.axisIndex ?? 0
       this.indicator
         .select('text')
         .attr('x', 5)
