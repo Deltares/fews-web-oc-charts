@@ -4,9 +4,7 @@ import { CartesianAxes } from '../index.js'
 import { dateFormatter } from '../Utils/date.js'
 import { Visitor } from './visitor.js'
 
-type CurrentTimeOptions = {
-  [key in 'x' | 'y']: { axisIndex: number }
-}
+type CurrentTimeOptions = Partial<Record<'x' | 'y', { axisIndex: number }>>
 
 export class CurrentTime implements Visitor {
   private group: any
