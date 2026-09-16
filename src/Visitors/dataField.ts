@@ -2,7 +2,6 @@ import { Axes } from '../Axes/axes.js'
 import { Visitor } from './visitor.js'
 import * as d3 from 'd3'
 import { defaultsDeep } from 'lodash-es'
-import { D3Selection } from '../index.js'
 
 export interface UnitOptions {
   unit?: string
@@ -26,19 +25,19 @@ export interface DataFieldOptions {
 }
 
 export class DataField implements Visitor {
-  private readonly container: D3Selection<SVGElement, SVGElement>
+  private readonly container: d3.Selection<SVGElement, unknown, SVGElement, unknown>
   private group: any
   private readonly options: DataFieldOptions
-  private axis: Axes
+  private axis!: Axes
   private text: any
   private value: any
-  private selectors: string[]
+  private selectors!: string[]
   private units: UnitOptions[] = []
   private readonly formatter: any
   private clickCount = 0
 
   constructor(
-    container: D3Selection<SVGElement, SVGElement>,
+    container: d3.Selection<SVGElement, unknown, SVGElement, unknown>,
     options: DataFieldOptions,
     formatter?: any,
   ) {
@@ -59,13 +58,15 @@ export class DataField implements Visitor {
       this.text = this.group
         .append('text')
         .attr('class', 'data-field-label')
-        .text(this.options.labelField.text)
+        .text(this.options.labelField?.text)
 
       this.value = this.group.append('text').attr('class', 'data-field-value')
 
       this.selectors = Array.isArray(this.options.selector)
-        ? this.options.selector
-        : [this.options.selector]
+        ? this.options.selector.filter((selector): selector is string => selector !== undefined)
+        : this.options.selector
+          ? [this.options.selector]
+          : []
       this.units = this.options.valueField?.units ?? []
 
       if (this.units.length > 1) {
@@ -120,7 +121,7 @@ export class DataField implements Visitor {
   valueFormatter = (d: unknown, _i: number, isLast?: boolean) => {
     const value = this.getValue(d)
     const units = this.getUnit()
-    const separator = this.options.valueField.hyphen ?? ''
+    const separator = this.options.valueField?.hyphen ?? ''
     const symbol = isLast ? (units?.unit ?? '') : separator
     if (value === null) {
       return '-' + symbol
@@ -159,7 +160,7 @@ export class DataField implements Visitor {
     return this.units[idx]
   }
 
-  getValue(d) {
+  getValue(d: any) {
     return d[0] !== undefined ? d[0].y : null
   }
 }

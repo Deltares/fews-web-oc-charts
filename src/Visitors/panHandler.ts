@@ -56,8 +56,8 @@ export class PanHandler implements Visitor {
   private readonly allAxes: CartesianAxes[]
   private enabled: boolean
 
-  private isPanningEnabled: boolean
-  private isPanning: boolean
+  private isPanningEnabled = false
+  private isPanning = false
 
   private readonly mouseButton: MouseButton
   private readonly modifierKey: ModifierKey
@@ -156,7 +156,10 @@ export class PanHandler implements Visitor {
     const mouseRect = getLayerRect(axes, 'mouse')
     if (this.changeHoveringCursor) {
       // Change cursor to "hovering" cursor.
-      mouseRect.node().style.cursor = this.hoveringCursor
+      const node = mouseRect.node()
+      if (node) {
+        node.style.cursor = this.hoveringCursor
+      }
     }
     // Add mousedown listener (with a unique ID) to start panning.
     mouseRect.on(this.mouseDownHandlerId, (event) => this.onMouseDown(event))
@@ -168,7 +171,10 @@ export class PanHandler implements Visitor {
       // Change cursor to default cursor if we are not panning. If we are
       // currently panning, the cursor will be changed back in the mouseup
       // listener.
-      mouseRect.node().style.cursor = ''
+      const node = mouseRect.node()
+      if (node) {
+        node.style.cursor = ''
+      }
     }
     // Disable mousedown listener.
     mouseRect.on(this.mouseDownHandlerId, null)

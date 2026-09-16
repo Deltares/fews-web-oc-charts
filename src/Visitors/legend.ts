@@ -10,10 +10,10 @@ interface LegendEntry {
 }
 
 export class Legend implements Visitor {
-  private labels: LegendEntry[]
-  private readonly svg: any
-  private readonly group: any
-  private axis: CartesianAxes
+  private labels: LegendEntry[] = []
+  private readonly svg: d3.Selection<SVGSVGElement, unknown, null, undefined>
+  private readonly group: d3.Selection<SVGGElement, unknown, null, undefined>
+  private axis!: CartesianAxes
   private readonly configuredLabels: boolean = false
 
   constructor(labels: any, container?: HTMLElement) {
@@ -21,7 +21,10 @@ export class Legend implements Visitor {
       this.labels = labels
       this.configuredLabels = true
     }
-    this.svg = d3.select(container).append('svg').attr('class', 'legend')
+    this.svg = d3
+      .select(container ?? document.body)
+      .append('svg')
+      .attr('class', 'legend')
     this.group = this.svg.append('g')
   }
 
@@ -37,7 +40,7 @@ export class Legend implements Visitor {
     if (!this.configuredLabels) {
       this.updateLabels()
     }
-    const entries = this.group.selectAll('g').data(this.labels)
+    const entries = this.group.selectAll<SVGGElement, LegendEntry>('g').data(this.labels)
     let maxWidth = 1
 
     entries.exit().remove()
@@ -46,10 +49,18 @@ export class Legend implements Visitor {
 
     const updateSelection = entries.merge(enter)
     updateSelection.each((d, i) => {
-      const legendElement = d3.select(updateSelection.nodes()[i])
+      const node = updateSelection.nodes()[i]
+      if (!node) return
+      const legendElement = d3.select(node)
       const chartsInGroup = this.axis.charts.filter((c) => c.id === d.selector)
       const symbol = legendElement.append('g')
-      this.createLegendSymbol(d.selector, d.legendId, symbol.node())
+      const symbolNode = symbol.node()
+      if (!symbolNode) return
+      this.createLegendSymbol(
+        d.selector,
+        d.legendId === undefined ? '' : String(d.legendId),
+        symbolNode,
+      )
       if (this.configuredLabels) {
         legendElement.style('cursor', 'pointer')
         legendElement.on('click', () => {
@@ -66,7 +77,10 @@ export class Legend implements Visitor {
         })
       }
       legendElement.append('text').text(d.label).attr('x', 25).attr('dominant-baseline', 'middle')
-      maxWidth = Math.max(maxWidth, legendElement.node().getBoundingClientRect().width)
+      const legendNode = legendElement.node()
+      if (legendNode) {
+        maxWidth = Math.max(maxWidth, legendNode.getBoundingClientRect().width)
+      }
     })
     // update
 
@@ -100,7 +114,10 @@ export class Legend implements Visitor {
     }
   }
 
-  updateLabelPositions(selection, maxWidth) {
+  updateLabelPositions(
+    selection: d3.Selection<SVGGElement, LegendEntry, SVGGElement, unknown>,
+    maxWidth: number,
+  ) {
     if (this.labels.length > 0) {
       const { columns, rows } = this.optimalColumnsRows(
         this.axis.width,
@@ -111,7 +128,7 @@ export class Legend implements Visitor {
       const y = 15
       const dy = 25
       this.svg.attr('height', rows * dy)
-      selection.attr('transform', function (d, i) {
+      selection.attr('transform', function (_d, i) {
         const column = Math.floor(i / rows)
         const row = i % rows
         return 'translate(' + column * dx + ',' + (y + row * dy) + ')'

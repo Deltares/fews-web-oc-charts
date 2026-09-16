@@ -1,17 +1,15 @@
 import * as d3 from 'd3'
-import { Axes } from '../Axes/axes.js'
 import { CartesianAxes } from '../index.js'
-import { Visitor } from './visitor.js'
+import { BaseVisitor } from './visitor.js'
 import { defaultsDeep } from 'lodash-es'
 
 type LevelSelectOptions = {
   y: { axisIndex: number }
 }
 
-export class LevelSelect implements Visitor {
+export class LevelSelect extends BaseVisitor<CartesianAxes> {
   group: any
   line: any
-  axis: CartesianAxes
   value: number
   callback: Function
   format: any
@@ -19,20 +17,15 @@ export class LevelSelect implements Visitor {
     y: { axisIndex: 0 },
   }
 
-  // use shared Visitor constuctor (Visitor should be a abstract class)
   constructor(value: number, callback: (v: number) => unknown, options?: LevelSelectOptions) {
+    super()
     this.value = value
     this.callback = callback
     this.format = d3.format('.2f')
     this.options = defaultsDeep(this.options, options)
   }
 
-  visit(axis: Axes) {
-    this.axis = axis as CartesianAxes
-    this.create(axis as CartesianAxes)
-  }
-
-  create(axis: CartesianAxes) {
+  create(axis: CartesianAxes): void {
     if (!this.group) {
       this.group = axis.canvas.append('g').attr('class', 'level-select')
       this.group.append('line')
@@ -74,7 +67,7 @@ export class LevelSelect implements Visitor {
     this.group.select('polygon').attr('transform', 'translate( 0, ' + y + ')')
   }
 
-  start(event) {
+  start(event: d3.D3DragEvent<SVGPolygonElement, unknown, unknown>) {
     const axisIndex = this.options.y.axisIndex
     const scale = this.axis.yScales[axisIndex]
     this.value = scale.invert(event.y)
@@ -88,7 +81,7 @@ export class LevelSelect implements Visitor {
     this.redraw()
   }
 
-  drag(event) {
+  drag(event: d3.D3DragEvent<SVGPolygonElement, unknown, unknown>) {
     const axisIndex = this.options.y.axisIndex
     const scale = this.axis.yScales[axisIndex]
     this.value = scale.invert(event.y)
@@ -96,7 +89,7 @@ export class LevelSelect implements Visitor {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  end(event) {
+  end(event: d3.D3DragEvent<SVGPolygonElement, unknown, unknown>) {
     this.group.select('text').remove()
     if (typeof this.callback === 'function') {
       this.callback(this.value)

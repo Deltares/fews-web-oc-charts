@@ -1,12 +1,6 @@
 import * as d3 from 'd3'
 import type { Axes } from '../Axes/axes.js'
-import {
-  CartesianAxes,
-  CartesianAxesOptions,
-  D3Selection,
-  matchesModifierKey,
-  ModifierKey,
-} from '../index.js'
+import { CartesianAxes, CartesianAxesOptions, matchesModifierKey, ModifierKey } from '../index.js'
 import type { Visitor } from './visitor.js'
 
 export type ZoomHandlerEventType = 'zoom' | 'reset-zoom'
@@ -55,19 +49,19 @@ function isWheelMode(arg: any): arg is WheelMode {
   return arg in WheelMode
 }
 
-type BrushGroup = D3Selection<SVGElement, null>
+type BrushGroup = d3.Selection<SVGGElement, unknown, null, unknown>
 
 export class ZoomHandler implements Visitor {
-  private brushStartPoint: [number, number]
+  private brushStartPoint!: [number, number]
   private readonly axes: CartesianAxes[]
-  private mode: SelectionMode
+  private mode!: SelectionMode
   private options: ZoomHandlerOptions
   private readonly MINMOVE = 25
-  private lastPoint: [number, number]
+  private lastPoint: [number, number] | null = null
 
   private zoomCallbacks: ZoomCallback[] = []
   private resetZoomCallbacks: ResetZoomCallback[] = []
-  private onMouseMove: (event: MouseEvent) => void
+  private onMouseMove!: (event: MouseEvent) => void
 
   constructor(wheelMode?: WheelMode, scrollModifierKey?: ModifierKey)
   constructor(options?: Partial<ZoomHandlerOptions>)
@@ -92,9 +86,9 @@ export class ZoomHandler implements Visitor {
   addEventListener(event: 'reset-zoom', callback: ResetZoomCallback): void
   addEventListener(event: ZoomHandlerEventType, callback: ZoomCallback | ResetZoomCallback): void {
     if (event === 'zoom') {
-      this.zoomCallbacks.push(callback)
+      this.zoomCallbacks.push(callback as ZoomCallback)
     } else {
-      this.resetZoomCallbacks.push(callback)
+      this.resetZoomCallbacks.push(callback as ResetZoomCallback)
     }
   }
 
@@ -105,9 +99,13 @@ export class ZoomHandler implements Visitor {
     callback: ZoomCallback | ResetZoomCallback,
   ): void {
     if (event === 'zoom') {
-      this.zoomCallbacks = this.zoomCallbacks.filter((entry) => entry !== callback)
+      this.zoomCallbacks = this.zoomCallbacks.filter(
+        (entry) => entry !== (callback as ZoomCallback),
+      )
     } else {
-      this.resetZoomCallbacks = this.resetZoomCallbacks.filter((entry) => entry !== callback)
+      this.resetZoomCallbacks = this.resetZoomCallbacks.filter(
+        (entry) => entry !== (callback as ResetZoomCallback),
+      )
     }
   }
 
@@ -230,7 +228,8 @@ export class ZoomHandler implements Visitor {
       const scale = axis.getScale(axisKey, axisIndex)
       if (!scale) continue
 
-      const axisOptions = axis.options[axisKey][axisIndex]
+      const axisOptionsList = axis.options[axisKey] as Array<{ type?: string }>
+      const axisOptions = axisOptionsList[axisIndex]
       const isBandScale = axisOptions?.type === 'band'
       // Skipping band scales as they do not have a numeric domain
       if (isBandScale) continue
@@ -277,7 +276,9 @@ export class ZoomHandler implements Visitor {
       axis.update()
       axis.zoom()
     })
-    this.zoomCallbacks.forEach((callback) => callback({ targetAxes: this.axes, mode }))
+    if (mode !== null) {
+      this.zoomCallbacks.forEach((callback) => callback({ targetAxes: this.axes, mode }))
+    }
   }
 
   initSelection(
@@ -388,7 +389,8 @@ export class ZoomHandler implements Visitor {
       const scale = axis.getScale(axisKey, axisIndex)
       if (!scale) continue
 
-      const axisOptions = axis.options[axisKey][axisIndex]
+      const axisOptionsList = axis.options[axisKey] as Array<{ type?: string }>
+      const axisOptions = axisOptionsList[axisIndex]
       const isBandScale = axisOptions?.type === 'band'
       // Skipping band scales as they do not have a numeric domain
       if (isBandScale) continue
@@ -404,10 +406,10 @@ export class ZoomHandler implements Visitor {
     axis: CartesianAxes,
     mouseGroup: any,
     brushGroup: BrushGroup,
-    point: [number, number],
+    point: [number, number] | null,
   ): void {
     if (!this.brushStartPoint) return
-    point = point ?? this.lastPoint
+    point = point ?? this.lastPoint ?? [0, 0]
     window.removeEventListener('mousemove', this.onMouseMove)
     brushGroup.select('.select-rect').attr('visibility', 'hidden')
     const updateXScales = () => {

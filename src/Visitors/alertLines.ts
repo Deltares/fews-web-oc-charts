@@ -1,6 +1,5 @@
-import { Axes } from '../Axes/axes.js'
 import { CartesianAxes } from '../index.js'
-import { Visitor } from './visitor.js'
+import { BaseVisitor } from './visitor.js'
 
 export interface AlertLineOptions {
   x1: number | Date
@@ -12,22 +11,17 @@ export interface AlertLineOptions {
   color: string
 }
 
-export class AlertLines implements Visitor {
+export class AlertLines extends BaseVisitor<CartesianAxes> {
   public options: AlertLineOptions[]
-  private group: d3.Selection<SVGGElement, unknown, null, unknown>
-  private axis: CartesianAxes
+  private group!: d3.Selection<SVGGElement, unknown, null, unknown>
 
   constructor(options?: AlertLineOptions[]) {
+    super()
     if (options) {
       this.options = options
     } else {
       this.options = []
     }
-  }
-
-  visit(axis: Axes): void {
-    this.axis = axis as CartesianAxes
-    this.create(axis as CartesianAxes)
   }
 
   create(axis: CartesianAxes): void {
