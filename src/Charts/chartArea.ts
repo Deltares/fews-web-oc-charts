@@ -2,7 +2,7 @@ import * as d3 from 'd3'
 import { isNull } from 'lodash-es'
 import { CartesianAxes, CartesianAxesIndex, PolarAxes } from '../index.js'
 import { AxisIndex } from '../Axes/axes.js'
-import { Chart, AUTO_SCALE, CurveType, PointAlignment } from './chart.js'
+import { Chart, CurveType, PointAlignment } from './chart.js'
 import type { DataPoint } from '../Data/types.js'
 
 export class ChartArea extends Chart {
@@ -11,7 +11,6 @@ export class ChartArea extends Chart {
   plotterCartesian(axis: CartesianAxes, axisIndex: CartesianAxesIndex) {
     const xKey = this.dataKeys.x
     const yKey = this.dataKeys.y
-    const colorKey = this.dataKeys.color
     const xScale = axis.xScales[axisIndex.x.axisIndex]
     const yScale = axis.yScales[axisIndex.y.axisIndex]
 
@@ -45,17 +44,6 @@ export class ChartArea extends Chart {
       selection.style('fill', 'currentColor')
     }
 
-    const colorScale = d3.scaleLinear().domain([0, 1])
-    if (this.options.colorScale === AUTO_SCALE) {
-      const colorValues = this.data
-        .map((d) => d[colorKey])
-        .filter((value): value is number => typeof value === 'number')
-      const colorExtent = d3.extent(colorValues)
-      if (colorExtent[0] !== undefined && colorExtent[1] !== undefined) {
-        colorScale.domain(colorExtent)
-      }
-    }
-
     const bisectX = d3.bisector<DataPoint, number>(function (d) {
       return d[xKey] as number
     })
@@ -67,9 +55,7 @@ export class ChartArea extends Chart {
     this.datum = this.data
 
     this.group = this.selectGroup(axis, 'chart-area')
-    if (this.group.select('path').size() === 0) {
-      this.group.append('path')
-    }
+    this.selectOrAppend('path')
 
     const areaGenerator = d3.area<DataPoint>().x(function (d) {
       return xScale(d[xKey])

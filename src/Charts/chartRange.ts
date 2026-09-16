@@ -1,7 +1,7 @@
 import * as d3 from 'd3'
 import { AxisIndex } from '../Axes/axes.js'
 import { CartesianAxes, CartesianAxesIndex, PolarAxes } from '../index.js'
-import { Chart, AUTO_SCALE } from './chart.js'
+import { Chart } from './chart.js'
 import { TooltipAnchor } from '../Tooltip/tooltip.js'
 import type { DataPoint } from '../Data/types.js'
 
@@ -35,16 +35,7 @@ export class ChartRange extends Chart {
     const yScale = axis.yScales[axisIndex.y.axisIndex]
     const colorKey = this.dataKeys.color
 
-    const colorScale = d3.scaleLinear().domain([0, 1])
-    if (this.options.colorScale === AUTO_SCALE) {
-      const colorValues = this.data
-        .map((d) => d[colorKey])
-        .filter((value): value is number => typeof value === 'number')
-      const colorExtent = d3.extent(colorValues)
-      if (colorExtent[0] !== undefined && colorExtent[1] !== undefined) {
-        colorScale.domain(colorExtent)
-      }
-    }
+    const colorScale = this.getAutoScaleColorScale(colorKey)
 
     const colorMap = this.colorMap
 
@@ -124,16 +115,7 @@ export class ChartRange extends Chart {
     const tKey = this.dataKeys.angular
     const colorKey = this.dataKeys.color
 
-    const colorScale = d3.scaleLinear().domain([0, 1])
-    if (this.options.colorScale === AUTO_SCALE) {
-      const colorValues = this.data
-        .map((d) => d[colorKey])
-        .filter((value): value is number => typeof value === 'number')
-      const colorExtent = d3.extent(colorValues)
-      if (colorExtent[0] !== undefined && colorExtent[1] !== undefined) {
-        colorScale.domain(colorExtent)
-      }
-    }
+    const colorScale = this.getAutoScaleColorScale(colorKey)
     const colorMap = this.colorMap
 
     const t = d3.transition().duration(this.options.transitionTime).ease(d3.easeLinear)

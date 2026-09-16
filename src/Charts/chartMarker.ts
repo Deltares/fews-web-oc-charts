@@ -76,9 +76,7 @@ export class ChartMarker extends Chart {
     }
 
     this.group = this.selectGroup(axis, 'chart-marker')
-    if (this.group.select('path').size() === 0) {
-      this.group.append('path')
-    }
+    this.selectOrAppend('path')
 
     const markerId = this.ensureMarkerDef(axis, id, size)
 
@@ -108,9 +106,7 @@ export class ChartMarker extends Chart {
         return axis.radialScale(d[rKey])
       })
     this.group = this.selectGroup(axis, 'chart-marker')
-    if (this.group.select('path').size() === 0) {
-      this.group.append('path')
-    }
+    this.selectOrAppend('path')
 
     const { size, id } = this.symbolOptions
     const markerId = this.ensureMarkerDef(axis, id, size)

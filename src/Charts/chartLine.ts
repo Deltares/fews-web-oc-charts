@@ -80,9 +80,7 @@ export class ChartLine extends Chart {
     }
 
     this.group = this.selectGroup(axis, 'chart-line')
-    if (this.group.select('path').size() === 0) {
-      this.group.append('path')
-    }
+    this.selectOrAppend('path')
     const update = this.group.select('path').datum(mappedData).join('path').attr('d', lineGenerator)
 
     this.addTooltipHandlers(update, axis)
@@ -101,9 +99,7 @@ export class ChartLine extends Chart {
         return axis.radialScale(d[rKey])
       })
     this.group = this.selectGroup(axis, 'chart-line')
-    if (this.group.select('path').size() === 0) {
-      this.group.append('path')
-    }
+    this.selectOrAppend('path')
     const line = this.group.select('path')
 
     const t = d3.transition().duration(this.options.transitionTime).ease(d3.easeLinear)

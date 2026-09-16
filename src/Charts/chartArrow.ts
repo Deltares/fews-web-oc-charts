@@ -135,9 +135,7 @@ export class ChartArrow extends Chart {
 
     // Add the data to the element group
     this.group = this.selectGroup(axis, 'chart-arrow')
-    if (this.group.select('path').size() === 0) {
-      this.group.append('path')
-    }
+    this.selectOrAppend('path')
     const arrowData = this.data as ChartArrowData[]
     const arrow = this.group.select('path').data(arrowData)
 
