@@ -20,12 +20,12 @@ function getBrowserInstances(mode: string): BrowserInstanceConfig[] {
 export default defineConfig((configEnv) => {
   return {
     test: {
+      api: 5174,
       browser: {
         enabled: true,
         screenshotFailures: false,
         provider: playwright(),
         headless: true,
-        api: 5174,
         instances: getBrowserInstances(configEnv.mode),
       },
     },
