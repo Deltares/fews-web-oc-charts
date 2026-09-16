@@ -65,12 +65,10 @@ export function bboxCollide<NodeType extends Node = Node>(
 
   if (typeof bbox !== 'function') {
     bbox = constant(
-      bbox === null
-        ? [
-            [0, 0],
-            [1, 1],
-          ]
-        : bbox,
+      bbox ?? [
+        [0, 0],
+        [1, 1],
+      ],
     )
   }
   const bboxAccessor = bbox
