@@ -120,11 +120,11 @@ export class ChartLine extends Chart {
   }
 
   public onPointerOver() {
-    this.showHighlight('circle', 'fill', 'path', 'stroke', { resetTransform: true })
+    this.pointOnPointerOver()
   }
 
   public onPointerOut() {
-    this.hideHighlight('circle')
+    this.pointOnPointerOut()
   }
 
   public onPointerMove(
@@ -133,30 +133,6 @@ export class ChartLine extends Chart {
     xScale: d3.ScaleContinuousNumeric<number, number>,
     yScale: d3.ScaleContinuousNumeric<number, number>,
   ): void | { point: DataPointXY; style: SvgPropertiesHyphen } {
-    const index = this.findIndex(value, key, this.options.tooltip?.alignment ?? 'middle')
-    const point = index === undefined ? undefined : this.datum[index]
-    if (point === undefined) {
-      this.highlight.select('circle').style('opacity', 0)
-      return
-    }
-    const element = this.group.select('path')
-    const color =
-      element.node() === null
-        ? null
-        : window.getComputedStyle(element.node() as Element).getPropertyValue('stroke')
-
-    this.highlight
-      .select('circle')
-      .attr('transform', () => {
-        return `translate(${xScale(point.x as number)}, ${yScale(point.y as number)})`
-      })
-      .style('opacity', 1)
-      .style('fill', color ?? '')
-
-    if (color === null) {
-      return { point: point as DataPointXY, style: {} }
-    } else {
-      return { point: point as DataPointXY, style: { color } }
-    }
+    return this.pointOnPointerMove(value, key, xScale, yScale)
   }
 }
