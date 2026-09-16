@@ -47,24 +47,26 @@ export class ChartRange extends Chart {
     const t = d3.transition().duration(this.options.transitionTime).ease(d3.easeLinear)
     // exit
     elements.exit().remove()
+
+    const applyRectAttrs = <
+      T extends { attr: (name: string, value: (d: DataPoint) => number) => T },
+    >(
+      selection: T,
+    ): T =>
+      selection
+        .attr('x', (d) => xScale(numericRange(d, xKey)[0]))
+        .attr('y', (d) => yScale(numericRange(d, yKey)[1]))
+        .attr('width', (d) => {
+          const range = numericRange(d, xKey)
+          return xScale(range[1]) - xScale(range[0])
+        })
+        .attr('height', (d) => {
+          const range = numericRange(d, yKey)
+          return yScale(range[0]) - yScale(range[1])
+        })
+
     // update + enter
-    const update = elements
-      .enter()
-      .append('rect')
-      .attr('x', (d) => {
-        return xScale(numericRange(d, xKey)[0])
-      })
-      .attr('y', (d) => {
-        return yScale(numericRange(d, yKey)[1])
-      })
-      .attr('width', (d) => {
-        const range = numericRange(d, xKey)
-        return xScale(range[1]) - xScale(range[0])
-      })
-      .attr('height', (d) => {
-        const range = numericRange(d, yKey)
-        return yScale(range[0]) - yScale(range[1])
-      })
+    const update = applyRectAttrs(elements.enter().append('rect'))
 
     this.addTooltipHandlers(update, axis, {
       expectedAnchor: TooltipAnchor.Center,
@@ -85,22 +87,7 @@ export class ChartRange extends Chart {
       })
     }
 
-    const enter = elements
-      .transition(t)
-      .attr('x', (d) => {
-        return xScale(numericRange(d, xKey)[0])
-      })
-      .attr('y', (d) => {
-        return yScale(numericRange(d, yKey)[1])
-      })
-      .attr('width', (d) => {
-        const range = numericRange(d, xKey)
-        return xScale(range[1]) - xScale(range[0])
-      })
-      .attr('height', (d) => {
-        const range = numericRange(d, yKey)
-        return yScale(range[0]) - yScale(range[1])
-      })
+    const enter = applyRectAttrs(elements.transition(t))
 
     if (colorKey) {
       enter.style('fill', (d: any) => {
