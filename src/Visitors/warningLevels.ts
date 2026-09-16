@@ -10,16 +10,27 @@ export interface WarningLevelOptions {
   }
 }
 
+export interface WarningLevelEvent {
+  date: Date
+  value: number | null
+}
+
+export interface EscalationLevel {
+  id: string
+  color: string
+  c: string
+  events: WarningLevelEvent[]
+}
+
 export class WarningLevels implements Visitor {
-  public escalationLevels: any[]
-  private group: any
-  private axis: CartesianAxes
-  private scale: any
+  public escalationLevels: EscalationLevel[]
+  private axis!: CartesianAxes
+  private scale!: d3.ScaleLinear<number, number>
   private warningAxis: any
-  private sections: any
+  private sections!: d3.Selection<SVGGElement, unknown, null, unknown>
   private readonly options: any
 
-  constructor(escalationLevels, options: WarningLevelOptions) {
+  constructor(escalationLevels: EscalationLevel[], options: WarningLevelOptions) {
     this.escalationLevels = escalationLevels
     this.options = {
       y: { axisIndex: 0 },
@@ -33,30 +44,18 @@ export class WarningLevels implements Visitor {
   }
 
   create(axis: CartesianAxes): void {
-    const scale = (this.scale = d3.scaleLinear())
+    this.scale = d3.scaleLinear()
     this.scale
       .domain(axis.yScales[this.options.y.axisIndex].domain())
       .range(axis.yScales[this.options.y.axisIndex].range())
     const escalationLevels = this.escalationLevels
 
-    const tickValues = escalationLevels
-      .filter((el) => {
-        const domain = scale.domain()
-        return !isNull(el.val) && el.val >= domain[0] && el.val <= domain[1]
-      })
-      .map((el) => {
-        return el.val
-      })
-
     this.warningAxis = d3
       .axisRight(this.scale)
-      .tickValues(tickValues)
-      .tickFormat((d, _i) => {
-        const level = escalationLevels.find((l) => l.val === d)
-        return level.id
-      })
+      .tickValues([])
+      .tickFormat(() => '')
 
-    this.group = axis.canvas
+    axis.canvas
       .append('g')
       .attr('class', 'axis y2-axis')
       .attr('transform', 'translate(' + axis.width + ' ,0)')
@@ -78,7 +77,7 @@ export class WarningLevels implements Visitor {
     const scaleX = this.axis.xScales[0].copy()
     const domainY = scaleY.domain()
 
-    const bisector = d3.bisector((data: any) => data.date)
+    const bisector = d3.bisector((data: { date: Date }) => data.date)
 
     const escalationLevels = this.escalationLevels ?? []
     const tickLevels = escalationLevels
@@ -87,8 +86,8 @@ export class WarningLevels implements Visitor {
         const idx = bisector.left(el.events, scaleX.domain()[1])
         return { id: el.id, val: el.events[Math.max(0, idx - 1)].value }
       })
-      .filter((el) => {
-        return !isNull(el.val) && el.val >= domainY[0] && el.val <= domainY[1]
+      .filter((el): el is { id: string; val: number } => {
+        return el.val != null && el.val >= domainY[0] && el.val <= domainY[1]
       })
     const tickValues = tickLevels.map((el) => {
       return el.val
@@ -97,7 +96,7 @@ export class WarningLevels implements Visitor {
     this.warningAxis
       .scale(scaleY)
       .tickValues(tickValues)
-      .tickFormat((d, i) => {
+      .tickFormat((d: d3.NumberValue, i: number) => {
         return tickLevels[i].id
       })
 
@@ -106,12 +105,12 @@ export class WarningLevels implements Visitor {
       .attr('transform', 'translate(' + this.axis.width + ' ,0)')
       .call(this.warningAxis)
 
-    function generateAreaGenerator(d, i) {
+    function generateAreaGenerator(d: EscalationLevel, i: number) {
       const areaGen = d3
-        .area()
+        .area<WarningLevelEvent>()
         .curve(d3.curveStepAfter)
-        .defined((e: any) => !isNull(e.value))
-        .x((e: any) => scaleX(e.date))
+        .defined((e) => !isNull(e.value))
+        .x((e) => scaleX(e.date))
 
       if (d.c === '<') {
         if (i === 0) {
@@ -123,10 +122,10 @@ export class WarningLevels implements Visitor {
         }
 
         // set upper bound to value of this threshold
-        areaGen.y1((e: any) => scaleY(e.value))
+        areaGen.y1((e) => scaleY(e.value))
       } else if (d.c === '>') {
         // set lower bound to value of this threshold
-        areaGen.y0((e: any) => scaleY(e.value))
+        areaGen.y0((e) => scaleY(e.value))
 
         if (i === escalationLevels.length - 1) {
           // set upper bound to top of chart
@@ -139,7 +138,9 @@ export class WarningLevels implements Visitor {
       return areaGen
     }
 
-    const areas = this.sections.selectAll('path').data(escalationLevels)
+    const areas = this.sections
+      .selectAll<SVGPathElement, EscalationLevel>('path')
+      .data(escalationLevels)
 
     areas.exit().remove()
     areas
