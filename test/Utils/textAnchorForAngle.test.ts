@@ -5,6 +5,12 @@ import { textAnchorForAngle } from '../../src/Utils/textAnchorForAngle.js'
 describe('anchor for axis orientation top', () => {
   const orientation = AxisOrientation.Top
 
+  test('normalizes wrapped angles around the midpoint', () => {
+    expect(textAnchorForAngle(360, orientation)).toBe('middle')
+    expect(textAnchorForAngle(540, orientation)).toBe('middle')
+    expect(textAnchorForAngle(-180, orientation)).toBe('middle')
+  })
+
   test('anchor for default', () => {
     const step = textAnchorForAngle(0, orientation)
     expect(step).toBe('middle')

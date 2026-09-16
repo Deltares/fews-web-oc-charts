@@ -1,29 +1,23 @@
 import { AxisOrientation } from '../Axis/axisOrientation.js'
 import { normalizeAngle } from './normalizeAngle.js'
 
-export function textAnchorForAngle(angle: number, orientation: AxisOrientation) {
-  let rotate
-  switch (orientation) {
-    case AxisOrientation.Top:
-      rotate = 180
-      break
-    case AxisOrientation.Right:
-      rotate = -90
-      break
-    case AxisOrientation.Bottom:
-      rotate = 0
-      break
-    case AxisOrientation.Left:
-    default:
-      rotate = 90
-  }
-  const normalizedAngle = normalizeAngle(angle - rotate)
-  if (normalizedAngle === 0) {
+const rotationByOrientation: Record<AxisOrientation, number> = {
+  [AxisOrientation.Top]: 180,
+  [AxisOrientation.Right]: -90,
+  [AxisOrientation.Bottom]: 0,
+  [AxisOrientation.Left]: 90,
+}
+
+export function textAnchorForAngle(
+  angle: number,
+  orientation: AxisOrientation,
+): 'start' | 'middle' | 'end' {
+  const rotation = rotationByOrientation[orientation]
+  const normalizedAngle = normalizeAngle(angle - rotation)
+
+  if (normalizedAngle === 0 || normalizedAngle === 180) {
     return 'middle'
-  } else if (normalizedAngle < 180) {
-    return 'start'
-  } else if (normalizedAngle > 180) {
-    return 'end'
   }
-  return 'middle'
+
+  return normalizedAngle < 180 ? 'start' : 'end'
 }
