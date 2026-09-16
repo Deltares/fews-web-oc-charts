@@ -215,7 +215,7 @@ export class PolarAxes extends Axes {
         const m = DateTime.fromJSDate(d).setZone(angularOptions.timeZone)
         return new Date(d.getTime() - m.offset * 60000)
       })
-      angularTicks = offsetValues.map((d) => Number(d))
+      angularTicks = offsetValues.map(Number)
     } else {
       const domain = angularOptions.domain as [number, number]
       let step = d3.tickIncrement(domain[0], domain[1], 8)
@@ -301,7 +301,7 @@ export class PolarAxes extends Axes {
       }
     }.bind(this)
 
-    const labelFormat = angularOptions.format ?? ((d: number | Date) => String(d))
+    const labelFormat = angularOptions.format ?? String
 
     angularAxis
       .selectAll('.tick')
