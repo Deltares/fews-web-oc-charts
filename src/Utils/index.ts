@@ -1,7 +1,6 @@
 export * from './date.js'
 export * from './legendHelper.js'
 export * from './niceDegreeSteps.js'
-export * from './elementTypes.js'
 export * from './modifierKey.js'
 export * from './mouseOverDirection.js'
 export * from './tooltipPlacement.js'
