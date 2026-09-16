@@ -12,16 +12,20 @@ export class ChartLine extends Chart {
     const xKey = this.dataKeys.x
     const yKey = this.dataKeys.y
     const html = document.createElement('div')
-    if (this.options.x.includeInTooltip) {
-      const spanElement = document.createElement('span')
-      spanElement.innerText = this.defaultToolTipText([points[0][xKey], points[1][xKey]], xKey, 2)
-      html.appendChild(spanElement)
-    }
-    if (this.options.y.includeInTooltip) {
-      const spanElement = document.createElement('span')
-      spanElement.innerText = this.defaultToolTipText([points[0][yKey], points[1][yKey]], yKey, 2)
-      html.appendChild(spanElement)
-    }
+    this.appendTooltipSpan(
+      html,
+      this.options.x.includeInTooltip,
+      [points[0][xKey], points[1][xKey]],
+      xKey,
+      2,
+    )
+    this.appendTooltipSpan(
+      html,
+      this.options.y.includeInTooltip,
+      [points[0][yKey], points[1][yKey]],
+      yKey,
+      2,
+    )
     return html
   }
 
@@ -30,16 +34,20 @@ export class ChartLine extends Chart {
     const tKey = this.dataKeys.angular
     const rKey = this.dataKeys.radial
     const html = document.createElement('div')
-    if (this.options.angular.includeInTooltip) {
-      const spanElement = document.createElement('span')
-      spanElement.innerText = this.defaultToolTipText([points[0][tKey], points[1][tKey]], tKey, 0)
-      html.appendChild(spanElement)
-    }
-    if (this.options.radial.includeInTooltip) {
-      const spanElement = document.createElement('span')
-      spanElement.innerText = this.defaultToolTipText([points[0][rKey], points[1][rKey]], rKey, 0)
-      html.appendChild(spanElement)
-    }
+    this.appendTooltipSpan(
+      html,
+      this.options.angular.includeInTooltip,
+      [points[0][tKey], points[1][tKey]],
+      tKey,
+      0,
+    )
+    this.appendTooltipSpan(
+      html,
+      this.options.radial.includeInTooltip,
+      [points[0][rKey], points[1][rKey]],
+      rKey,
+      0,
+    )
     return html
   }
 
