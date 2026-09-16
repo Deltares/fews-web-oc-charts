@@ -4,10 +4,10 @@ const valueSteps = [1, 2, 2.5, 5, 10] // keep the 10 at the end
 const degreeSteps = [1, 5, 15, 30, 45, 60, 90] // keep the 10 at the end
 
 export function niceDomain(
-  domain: any,
+  domain: [number, number] | undefined,
   count: number,
   axisType = AxisType.value,
-): [number, number] {
+): [number, number] | undefined {
   if (axisType === AxisType.band) return domain
   if (domain === undefined) return
   // Minimal increment to avoid round extreme values to be on the edge of the chart
@@ -28,14 +28,15 @@ export function niceDomain(
 
   // First approximation
   const roughStep = range / (count - 1)
-  let step = 1
+  let step: number
   // Normalize rough step to find the normalized one that fits best
   if (axisType === AxisType.degrees) {
-    step = degreeSteps.find((n) => n >= roughStep)
+    step = degreeSteps.find((n) => n >= roughStep) ?? degreeSteps[degreeSteps.length - 1]
   } else {
     const stepPower = Math.pow(10, -Math.floor(Math.log10(Math.abs(roughStep))))
     const normalizedStep = roughStep * stepPower
-    const goodNormalizedStep = valueSteps.find((n) => n >= normalizedStep)
+    const goodNormalizedStep =
+      valueSteps.find((n) => n >= normalizedStep) ?? valueSteps[valueSteps.length - 1]
     step = goodNormalizedStep / stepPower
   }
 
