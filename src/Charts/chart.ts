@@ -582,6 +582,20 @@ export abstract class Chart {
     return selection.empty() ? this.group.append<E>(tag) : selection
   }
 
+  protected drawStepBarsLegendSymbol(asSvgElement?: boolean): SVGElement | null {
+    const props = ['fill']
+    const source = this.group.select('rect').node() as Element
+    const { svg, group } = this.createLegendSymbolCanvas()
+    const element = group.append('g')
+    element.append('rect').attr('x', 0).attr('y', -8).attr('width', 5).attr('height', 18)
+    this.applyStyle(source, element, props)
+    element.append('rect').attr('x', 5).attr('y', -6).attr('width', 5).attr('height', 16)
+    this.applyStyle(source, element, props)
+    element.append('rect').attr('x', 10).attr('y', -5).attr('width', 5).attr('height', 15)
+    this.applyStyle(source, element, props)
+    return this.finalizeLegendSymbol(svg, element, asSvgElement)
+  }
+
   protected getAutoScaleColorScale(colorKey: string): d3.ScaleLinear<number, number> {
     const colorScale = d3.scaleLinear().domain([0, 1])
     if (this.options.colorScale === AUTO_SCALE) {
