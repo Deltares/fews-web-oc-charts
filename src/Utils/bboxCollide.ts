@@ -1,26 +1,65 @@
-import { quadtree } from 'd3-quadtree'
+import { quadtree, type QuadtreeInternalNode, type QuadtreeLeaf } from 'd3-quadtree'
 
-function x(d): number {
+type BoundingBox = number[][]
+
+interface Node {
+  x: number
+  y: number
+  vx: number
+  vy: number
+  index: number
+}
+
+interface CornerNode {
+  node: Node
+  x: number
+  y: number
+  vx: number
+  vy: number
+}
+
+type Quad = (QuadtreeInternalNode<CornerNode> | QuadtreeLeaf<CornerNode>) & { bb?: BoundingBox }
+
+type BoundingBoxAccessor<NodeType extends Node> = (
+  node: NodeType,
+  index: number,
+  nodes: NodeType[],
+) => BoundingBox
+
+interface BBoxForce<NodeType extends Node> {
+  (alpha: number): void
+  initialize(nodes: NodeType[]): void
+  iterations(): number
+  iterations(value: number): BBoxForce<NodeType>
+  strength(): number
+  strength(value: number): BBoxForce<NodeType>
+  bbox(): BoundingBox | BoundingBoxAccessor<NodeType>
+  bbox(value: BoundingBox | BoundingBoxAccessor<NodeType>): BBoxForce<NodeType>
+}
+
+function x(d: CornerNode): number {
   return d.x + d.vx
 }
 
-function y(d): number {
+function y(d: CornerNode): number {
   return d.y + d.vy
 }
 
-function constant(c) {
-  return function () {
+function constant(c: BoundingBox): () => BoundingBox {
+  return function (): BoundingBox {
     return c
   }
 }
 
-function bbLength(bb: number[][], heightWidth: number): number {
+function bbLength(bb: BoundingBox, heightWidth: number): number {
   return bb[1][heightWidth] - bb[0][heightWidth]
 }
 
-export function bboxCollide(bbox) {
-  let nodes,
-    boundingBoxes,
+export function bboxCollide<NodeType extends Node = Node>(
+  bbox: BoundingBox | BoundingBoxAccessor<NodeType>,
+): BBoxForce<NodeType> {
+  let nodes: NodeType[] = [],
+    boundingBoxes: BoundingBox[],
     strength = 0.05,
     iterations = 1
 
@@ -34,9 +73,10 @@ export function bboxCollide(bbox) {
         : bbox,
     )
   }
+  const bboxAccessor = bbox
 
-  function constructCornerNodes() {
-    const cornerNodes = []
+  function constructCornerNodes(): CornerNode[] {
+    const cornerNodes: CornerNode[] = []
     nodes.forEach(function (d, j) {
       cornerNodes.push(
         {
@@ -80,12 +120,21 @@ export function bboxCollide(bbox) {
   }
 
   function force() {
-    let i, tree, node, xi, yi, bbi, nx1, ny1, nx2, ny2
+    let i: number,
+      tree,
+      node: NodeType,
+      xi: number,
+      yi: number,
+      bbi: BoundingBox,
+      nx1: number,
+      ny1: number,
+      nx2: number,
+      ny2: number
 
     const cornerNodes = constructCornerNodes()
     const cn = cornerNodes.length
 
-    let nodeI
+    let nodeI: number
     for (let k = 0; k < iterations; ++k) {
       tree = quadtree(cornerNodes, x, y).visitAfter(prepareCorners)
 
@@ -103,7 +152,7 @@ export function bboxCollide(bbox) {
       }
     }
 
-    function applyCollision(data) {
+    function applyCollision(data: CornerNode) {
       if (data.node.index === nodeI) return
 
       const bWidth = bbLength(bbi, 0)
@@ -152,8 +201,8 @@ export function bboxCollide(bbox) {
       }
     }
 
-    function apply(quad, x0, y0, x1, y1) {
-      const data = quad.data
+    function apply(quad: Quad, x0: number, y0: number, x1: number, y1: number): void | boolean {
+      const data = 'data' in quad ? quad.data : undefined
       if (data) {
         applyCollision(data)
         return
@@ -162,10 +211,10 @@ export function bboxCollide(bbox) {
     }
   }
 
-  function prepareCorners(quad) {
-    if (quad.data) {
+  function prepareCorners(quad: Quad): void {
+    if ('data' in quad) {
       quad.bb = boundingBoxes[quad.data.node.index]
-      return quad.bb
+      return
     }
 
     quad.bb = [
@@ -173,43 +222,46 @@ export function bboxCollide(bbox) {
       [0, 0],
     ]
     for (let i = 0; i < 4; ++i) {
-      if (quad[i] && quad[i].bb[0][0] < quad.bb[0][0]) {
-        quad.bb[0][0] = quad[i].bb[0][0]
+      const child = quad[i] as Quad
+      if (child?.bb && child.bb[0][0] < quad.bb[0][0]) {
+        quad.bb[0][0] = child.bb[0][0]
       }
-      if (quad[i] && quad[i].bb[0][1] < quad.bb[0][1]) {
-        quad.bb[0][1] = quad[i].bb[0][1]
+      if (child?.bb && child.bb[0][1] < quad.bb[0][1]) {
+        quad.bb[0][1] = child.bb[0][1]
       }
-      if (quad[i] && quad[i].bb[1][0] > quad.bb[1][0]) {
-        quad.bb[1][0] = quad[i].bb[1][0]
+      if (child?.bb && child.bb[1][0] > quad.bb[1][0]) {
+        quad.bb[1][0] = child.bb[1][0]
       }
-      if (quad[i] && quad[i].bb[1][1] > quad.bb[1][1]) {
-        quad.bb[1][1] = quad[i].bb[1][1]
+      if (child?.bb && child.bb[1][1] > quad.bb[1][1]) {
+        quad.bb[1][1] = child.bb[1][1]
       }
     }
   }
 
-  force.initialize = function (_) {
-    let i
-    nodes = _
+  force.initialize = function (newNodes: NodeType[]): void {
+    let i: number
+    nodes = newNodes
     const n = nodes.length
     boundingBoxes = new Array(n)
-    for (i = 0; i < n; ++i) boundingBoxes[i] = bbox(nodes[i], i, nodes)
+    for (i = 0; i < n; ++i) {
+      boundingBoxes[i] = bboxAccessor(nodes[i], i, nodes)
+    }
   }
 
-  force.iterations = function (_) {
-    return arguments.length ? ((iterations = +_), force) : iterations
+  force.iterations = function (value?: number) {
+    return value === undefined ? iterations : ((iterations = +value), force)
   }
 
-  force.strength = function (_) {
-    return arguments.length ? ((strength = +_), force) : strength
+  force.strength = function (value?: number) {
+    return value === undefined ? strength : ((strength = +value), force)
   }
 
-  force.bbox = function (_) {
-    if (arguments.length) {
-      return ((bbox = typeof _ === 'function' ? _ : constant(+_)), force)
+  force.bbox = function (value?: BoundingBox | BoundingBoxAccessor<NodeType>) {
+    if (value !== undefined) {
+      return ((bbox = typeof value === 'function' ? value : constant(value)), force)
     }
     return bbox
   }
 
-  return force
+  return force as BBoxForce<NodeType>
 }
