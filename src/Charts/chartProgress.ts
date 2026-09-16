@@ -73,24 +73,13 @@ export class ChartProgress extends Chart {
       .attr('data-chart-element-id', (d) => String(d[rKey] ?? ''))
     this.addTooltipHandlers(enter, axis, { isPolar: true })
 
-    if (colorKey) {
-      enter
-        .style('fill', (d) => colorMap[numericValue(d, colorKey) % colorMap.length] ?? colorMap[0])
-        .style(
-          'stroke',
-          (d) => colorMap[numericValue(d, colorKey) % colorMap.length] ?? colorMap[0],
-        )
-    }
-
     const update = elements.transition(t).call(arcTween, this.previousData)
 
     if (colorKey) {
-      update
-        .style('fill', (d) => colorMap[numericValue(d, colorKey) % colorMap.length] ?? colorMap[0])
-        .style(
-          'stroke',
-          (d) => colorMap[numericValue(d, colorKey) % colorMap.length] ?? colorMap[0],
-        )
+      const getColor = (d: DataPoint) =>
+        colorMap[numericValue(d, colorKey) % colorMap.length] ?? colorMap[0]
+      enter.style('fill', getColor).style('stroke', getColor)
+      update.style('fill', getColor).style('stroke', getColor)
     }
 
     this.previousData = this.data.map((dataPoint) => ({ ...dataPoint }))

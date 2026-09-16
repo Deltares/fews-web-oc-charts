@@ -35,16 +35,23 @@ export class ChartHistogram extends Chart {
 
     // remove
     elements.exit().remove()
+
+    const applyRectShape = <
+      T extends { attr: (name: string, value: (d: DataPoint) => number) => T },
+    >(
+      selection: T,
+    ): T =>
+      selection
+        .attr('y', (d) => (d[yKey] === null ? yScale(0) : Math.min(yScale(d[yKey]), yScale(0))))
+        .attr('height', (d) => (d[yKey] === null ? 0 : Math.abs(yScale(0) - yScale(d[yKey]))))
+
+    const getFill = (d: DataPoint) => {
+      const value = d[colorKey]
+      return typeof value === 'number' ? colorMap(colorScale(value)) : 'none'
+    }
+
     // enter + update
-    const update = elements
-      .enter()
-      .append('rect')
-      .attr('y', (d) => {
-        return d[yKey] === null ? yScale(0) : Math.min(yScale(d[yKey]), yScale(0))
-      })
-      .attr('height', (d) => {
-        return d[yKey] === null ? 0 : Math.abs(yScale(0) - yScale(d[yKey]))
-      })
+    const update = applyRectShape(elements.enter().append('rect'))
       .merge(elements)
       .attr('x', (d) => {
         return x1(d[xKey] as unknown as string) ?? 0
@@ -61,23 +68,9 @@ export class ChartHistogram extends Chart {
         ]
       },
     })
-    update.style('fill', (d) => {
-      const value = d[colorKey]
-      return typeof value === 'number' ? colorMap(colorScale(value)) : 'none'
-    })
+    update.style('fill', getFill)
 
-    elements
-      .transition(t)
-      .style('fill', (d) => {
-        const value = d[colorKey]
-        return typeof value === 'number' ? colorMap(colorScale(value)) : 'none'
-      })
-      .attr('y', (d) => {
-        return d[yKey] === null ? yScale(0) : Math.min(yScale(d[yKey]), yScale(0))
-      })
-      .attr('height', (d) => {
-        return d[yKey] === null ? 0 : Math.abs(yScale(0) - yScale(d[yKey]))
-      })
+    applyRectShape(elements.transition(t)).style('fill', getFill)
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

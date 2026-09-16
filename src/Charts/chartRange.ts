@@ -174,19 +174,15 @@ export class ChartRange extends Chart {
     })
 
     if (colorKey) {
-      enter.style('fill', (d: DataPoint) => {
+      const getFill = (d: DataPoint) => {
         const value = d[colorKey]
         return typeof value === 'number' ? colorMap(colorScale(value)) : 'none'
-      })
-    }
-
-    const update = elements.transition(t).call(arcTween, this.previousData)
-
-    if (colorKey) {
-      update.style('fill', (d: DataPoint) => {
-        const value = d[colorKey]
-        return typeof value === 'number' ? colorMap(colorScale(value)) : 'none'
-      })
+      }
+      enter.style('fill', getFill)
+      const update = elements.transition(t).call(arcTween, this.previousData)
+      update.style('fill', getFill)
+    } else {
+      elements.transition(t).call(arcTween, this.previousData)
     }
 
     this.previousData = this.data.map((dataPoint) => ({ ...dataPoint }))
