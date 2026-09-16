@@ -410,40 +410,41 @@ export abstract class Chart {
     key: 'x' | 'y',
     method?: PointAlignment,
   ): number | undefined {
-    if (!this.datum || this.datum.length === 0) return
-
     const xKey = this.dataKeys.x
     const yKey = this.dataKeys.y
     const targetKey = key === 'x' ? xKey : yKey
     const inverseKey = key === 'x' ? yKey : xKey
 
-    const firstValue = this.datum[0][targetKey]
-    const lastValue = this.datum[this.datum.length - 1][targetKey]
-    if (firstValue === null || lastValue === null) return
-    const isDescending = lastValue < firstValue
-    const datum = isDescending ? [...this.datum].reverse() : this.datum
+    const firstDatum = this.datum.at(0)
+    const lastDatum = this.datum.at(-1)
+    if (firstDatum === undefined || lastDatum === undefined) return
 
-    let isInverseNullFn = (d: DataPoint) => isNull(d[inverseKey])
-    if (Array.isArray(datum[0][inverseKey])) {
-      isInverseNullFn = (d: DataPoint) => {
-        const inverseValue = d[inverseKey]
-        return isNull(Array.isArray(inverseValue) ? inverseValue[0] : inverseValue)
-      }
+    const firstValue = firstDatum[targetKey]
+    const lastValue = lastDatum[targetKey]
+    if (firstValue === null || lastValue === null) return
+
+    const isDescending = lastValue < firstValue
+    const searchDatum = isDescending ? this.datum.toReversed() : this.datum
+
+    const isInverseNull = (d: DataPoint) => {
+      const inverseValue = d[inverseKey]
+      return isNull(Array.isArray(inverseValue) ? inverseValue[0] : inverseValue)
     }
 
     const bisector = d3.bisector<DataPoint, number | Date>((d) => d[targetKey] as number | Date)
-    let idx = method === 'middle' ? bisector.center(datum, value) : bisector.left(datum, value)
+    let idx =
+      method === 'middle' ? bisector.center(searchDatum, value) : bisector.left(searchDatum, value)
     if (method === 'left') idx = idx - 1
 
-    if (!this.isIndexValid(datum, idx, targetKey, value, isInverseNullFn)) return
+    if (!this.isIndexValid(searchDatum, idx, targetKey, value, isInverseNull)) return
 
     if (
       method === 'middle' &&
-      this.isMiddleAlignmentInvalid(value, datum, idx, targetKey, isInverseNullFn)
+      this.isMiddleAlignmentInvalid(value, searchDatum, idx, targetKey, isInverseNull)
     )
       return
 
-    return isDescending ? datum.length - 1 - idx : idx
+    return isDescending ? searchDatum.length - 1 - idx : idx
   }
 
   private isIndexValid(
