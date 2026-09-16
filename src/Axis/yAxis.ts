@@ -7,7 +7,7 @@ export class YAxis extends Axis {
   constructor(
     group: d3.Selection<SVGGElement, unknown, null, unknown>,
     scale: any,
-    spanScale: any,
+    spanScale: d3.ScaleContinuousNumeric<number, number, never>,
     options: Partial<BaseAxisOptions>,
   ) {
     options.orientation ??=
