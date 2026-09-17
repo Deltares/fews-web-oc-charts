@@ -3,7 +3,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 // Find all example folders
-const examplesDir = path.resolve(__dirname, 'examples')
+const examplesDir = path.resolve(import.meta.dirname, 'examples')
 const exampleFolders = fs
   .readdirSync(examplesDir)
   .filter(
@@ -33,7 +33,7 @@ const indexHtmlContent = `
 const isDev = process.env.NODE_ENV === 'development'
 
 // Ensure the dist directory exists
-const distDir = isDev ? path.resolve(__dirname, 'dist') : __dirname
+const distDir = isDev ? path.resolve(import.meta.dirname, 'dist') : import.meta.dirname
 
 if (isDev && !fs.existsSync(distDir)) {
   fs.mkdirSync(distDir)
@@ -75,8 +75,8 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@lib': path.resolve(__dirname, './src'),
-      '@shared': path.resolve(__dirname, './examples/shared'),
+      '@lib': path.resolve(import.meta.dirname, './src'),
+      '@shared': path.resolve(import.meta.dirname, './examples/shared'),
     },
   },
 })
