@@ -14,5 +14,5 @@ export default defineConfig({
 })
 
 function resolveRelativePath(relative: string): string {
-  return resolve(__dirname, relative)
+  return resolve(import.meta.dirname, relative)
 }
