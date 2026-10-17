@@ -1,0 +1,14 @@
+name: Phase 0 spike
+
+on: [push]
+
+jobs:
+  spike:
+    runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.0-noble
+    steps:
+      - uses: actions/checkout@v5
+      - run: npm ci --ignore-scripts
+      - run: npx vitest run test/Spike
+      - run: npm run spike:benchmark
