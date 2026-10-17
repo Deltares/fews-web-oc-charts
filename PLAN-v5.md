@@ -11,7 +11,7 @@
 | Distribution           | Core ESM API **plus an HTML5 Web Component** (`<fews-chart>`, see 3.13)                                                          |
 | Web Component          | Tag prefix **`fews-`**; v5.0 configured via **`el.config` property only** (no child config elements)                             |
 | v4 compatibility layer | **Full v4 public API**, delivered in the **last phase** of the roadmap (see 3.14)                                                |
-| Browser support        | **Baseline Widely Available** (moving target; at time of writing ≈ Chrome/Edge 124, Firefox 125, Safari/iOS 17.4). No polyfills. |
+| Browser support        | **Baseline Widely Available** as of each release date; freeze the exact minimum browser versions for v5.0.0 in the support manifest, build targets and CI matrix. No polyfills. |
 
 ## 1. Analysis of the current library (v4.7)
 
@@ -49,8 +49,9 @@ legend; domain-change events.
 4. **Named, shareable state** – scales, pointer and selection are first-class objects that
    can be shared between plots → synchronisation is free.
 5. **d3 for the math, not the scheduling** – keep `d3-scale`, `d3-shape`, `d3-axis`,
-   `d3-zoom`, `d3-brush`, `d3-time-format`, `d3-array`, `d3-quadtree/d3-delaunay`, but
-   import sub-packages only.
+   `d3-zoom`, `d3-brush`, `d3-array`, `d3-time`, `d3-format` and `d3-quadtree`, but
+   import sub-packages only. Time formatting uses `Intl`; hit testing uses `d3-quadtree`
+   (not `d3-delaunay`).
 6. **Explicit lifecycle** – `plot.destroy()` releases observers, listeners, buffers.
 7. **Options stay editable** – construction is not a configuration boundary. Typed
    updates and explicit unsetting work consistently without recreation or `redraw()`
@@ -184,9 +185,32 @@ plot.update({ theme: undefined })               // restore inherited/default the
 - `createSeries({ x, y, … })` / `createTable(columns)`:
   - x stored as `Float64Array` (epoch ms for time), y as `Float64Array`/`Float32Array`
     (opt-in precision), missing = `NaN`.
+  - x values must be finite and sorted in nondecreasing order. Duplicate x values are
+    supported and retain stable input order; y values must be finite or `NaN` (missing).
+    Date inputs must be valid; time columns expressed as epoch milliseconds must also
+    fall within the valid JavaScript `Date` range. Ingestion validates equal column
+    lengths and reports the offending column/index without partially creating or
+    mutating a store.
   - **Ensemble** = `createEnsemble({ x, members: Float32Array[] | matrix })`: one shared
     x column, member matrix (row-major `members × time`), optional member metadata.
 - Growable **ring buffer** with `capacity`, `maxPoints`, `maxAge` retention.
+- Mutation ordering and duplicate semantics:
+  - `append(rows)` requires rows sorted nondecreasing and the first new x to be greater
+    than or equal to the current last x. `prepend(rows)` requires rows sorted
+    nondecreasing and the last new x to be less than or equal to the current first x.
+    Equal boundary timestamps are legal; append places incoming equal-time samples
+    after the existing group, while prepend places them before it, preserving input
+    order within each group. Validate the complete mutation before changing buffers
+    or indexes; reject out-of-order input rather than silently sorting it.
+  - `upsert({ from, to, rows })` atomically replaces the closed x-range `[from, to]`:
+    remove every existing sample in that range, then insert the sorted rows (which must
+    lie within the range), preserving duplicate timestamps and their input order.
+    Require finite bounds and `from <= to`. `maxPoints` retains the newest samples;
+    time-based `maxAge` retains samples with `x >= newestX - maxAge`, including all
+    duplicates at the cutoff. Retention is applied after a successful mutation.
+  - x-only hit testing exposes all samples at the selected timestamp in stable order;
+    xy hit testing selects the nearest screen-space sample and breaks exact-distance
+    ties by stable source order.
 - **Block min/max index** (e.g. 256-sample blocks, segment tree) → O(log n) extent for any
   x-window and fast autoscale while zoomed/panned.
 - **LOD / decimation**: M4 / min-max-per-pixel-column decimation on render, retaining
@@ -200,8 +224,13 @@ plot.update({ theme: undefined })               // restore inherited/default the
   Bands, member summaries and tooltips reuse these store-owned results across plots.
 - Adapters: `fromObjects(array, { x: 't', y: 'value' })`, `fromFewsPiTimeSeries(json)`
   (flag/comment columns preserved), and accepting the v4 `DataPoint[]` for migration.
-- Mutations: `append`, `prepend`, `upsert(range)`, `replace`, `clear`; each bumps
+- Mutations: `append`, `prepend`, `upsert({ from, to, rows })`, `replace`, `clear`; each bumps
   `version` and reports the affected x-range so renderers can patch incrementally.
+- Data acceptance tests cover equal-length validation; invalid/non-finite x values;
+  unsorted ingestion and mutations; duplicate timestamps and stable ordering; inclusive
+  upsert boundaries and rejection of rows outside the replacement range; atomic
+  rollback on validation failure; duplicate-aware hit testing; and retention at exact
+  `maxAge`/`maxPoints` boundaries, including duplicate timestamps.
 
 #### 3.2.1 Data ownership & D3 boundary contract
 
@@ -279,24 +308,40 @@ Luxon is currently used for: zone offsets in time-tick generation (`Axis.updateT
 `PolarAxes`), multi-level tick formatting (`generateMultiFormat`), `dateFormatter` with
 format tokens, and DST transition search (`DstIndicator`). Replacement:
 
-- `zoneOffset(tz, epochMs)`: offset via cached `Intl.DateTimeFormat(…, { timeZone,
-hourCycle: 'h23', year…second })` + `formatToParts`; memoised per (tz, hour bucket).
-  Fast path for `UTC` and fixed-offset zones (`Etc/GMT±n`, `+01:00`).
-- `zonedTicks(scale, tz, count)`: shift domain by offset → `d3.utcTicks` → shift back
-  (same algorithm as today), with correct handling around DST gaps/overlaps.
-- `zonedInterval(d3Interval, tz)`: floor/ceil/offset in a zone for day/week/month
-  boundaries (used by ticks, grid, DST indicator, `follow` windows).
+- `zoneOffset(tz, epochMs)`: derive the offset from cached `Intl.DateTimeFormat` parts
+  (`timeZone`, `hourCycle: 'h23'`, numeric date/time parts). Normalize midnight
+  consistently. Cache formatter instances by zone/locale/options; offset-result caches
+  must use exact instants or transition-safe spans, never fixed-hour buckets that can
+  cross an offset transition.
+- `zonedTicks(scale, tz, count)`: choose calendar intervals in local civil time and
+resolve each local boundary to its corresponding instant. Do not shift a whole domain
+using one offset: a domain can cross an offset transition. Omit nonexistent local
+boundaries in a spring-forward gap; emit both distinct instants for an ambiguous
+fall-back boundary, ordered by instant. When two emitted ticks have the same local
+label, include an offset/disambiguator in the label.
+- `zonedInterval(d3Interval, tz)`: floor/ceil/offset in local civil time for day/week/
+month boundaries (used by ticks, grid, DST indicator, `follow` windows), with the
+same skipped/repeated-time rules as `zonedTicks`.
 - Formatting: cached `Intl.DateTimeFormat` instances keyed by (locale, tz, options);
   multi-format picks an option set (`{hour, minute}`, `{weekday, day}`, `{month, day}`,
-  `{month: 'long'}`, `{year}`) instead of luxon format strings. Custom formats via
-  a small token formatter built on `formatToParts` (`yyyy-MM-dd HH:mm` etc.) for
-  backwards-compatible `dateFormatter`.
+  `{month: 'long'}`, `{year}`) instead of luxon format strings. `dateFormatter` supports
+  a documented token subset (`yyyy`, `yy`, `MM`, `MMM`, `MMMM`, `dd`, `d`, `HH`, `H`,
+  `hh`, `h`, `mm`, `m`, `ss`, `s`, `SSS`, `EEE`, `EEEE`, `ZZZ`) implemented using
+  `formatToParts`. Unsupported tokens throw a descriptive error; migration guidance
+  covers replacing other Luxon-only format strings with a caller-supplied formatter.
 - `findTransitions(tz, start, end)`: detect offset change per day then binary search to
-  the minute → DST indicator.
+the minute → DST indicator.
 - Durations (`'48h'`, `'P3D'`, ms) parsed by a tiny helper for `follow` windows.
+  Numeric/millisecond and hour durations are elapsed time; ISO day durations such as
+  `P3D` are local calendar days in the scale's time zone, so they need not equal 72
+  elapsed hours across a DST transition. Unsupported duration units are rejected.
 - Future: switch internals to `Temporal` when broadly available, same public API.
 - Test matrix: Europe/Amsterdam, America/Mexico_City (DST abolished 2022),
-  Australia/Lord_Howe (30 min DST), Asia/Kolkata (+5:30), UTC; compare against v4 output.
+  Australia/Lord_Howe (30 min DST), Asia/Kolkata (+5:30), UTC. Assert offsets and tick
+  instants around both sides of transitions, skipped/repeated local times, day/week/
+  month boundaries, and format tokens. Compare against Luxon/v4 where compatibility is
+  intended; use explicit expected civil-time results for DST cases where v4 behavior is
+  not the contract.
 
 ### 3.4 Layout engine (`layout/`)
 
@@ -864,6 +909,12 @@ plot.destroy()
   v4 stays on a `v4` maintenance branch (bug fixes only) with npm dist-tag `v4`;
   v5 pre-releases as `5.0.0-alpha.x` / `beta.x` under dist-tag `next`.
 - ESM only, `sideEffects` limited to the element registration file.
+- For each release, record a dated Baseline snapshot and freeze the exact minimum
+  versions for Chrome, Edge, Firefox and Safari/iOS in one support manifest. Generate
+  or verify the Vite target, `browserslist`, README support table and Playwright minimum-
+  version matrix from that same manifest; do not let the moving Baseline target change
+  a published release's support contract. Test both the declared minimum versions and
+  current stable versions of Chromium, Firefox and WebKit in CI. No polyfills.
 - Entry points via `exports`: `.` (core), `./element` (Web Component), `./vue`,
   `./compat` (v4 API shim, last phase), `./style.css` (default theme tokens).
 - Dependencies: d3 sub-packages only (`d3-scale`, `d3-shape`, `d3-axis`, `d3-array`,
@@ -884,6 +935,16 @@ plot.destroy()
   fixtures, core API, `<fews-chart>` and Vue custom-legend variants), perf benchmarks (`vitest bench`)
   with budgets in CI, memory snapshots via Playwright CDP (create/destroy 1000 elements
   → no growth).
+- Deterministic visual fixtures are established in phase 0: pin the Playwright browser
+  builds and OS image, use a fixed viewport and DPR, serve pinned test fonts, wait for
+  `document.fonts.ready`, and disable animations/transitions. Keep separate baselines
+  per browser engine; do not require cross-engine pixel identity. Phase 1 comparisons
+  allow at most 0.1% changed pixels with per-channel delta greater than 2; any
+  fixture-specific exception is documented and reviewed.
+- Performance budgets run on a dedicated, non-shared CI runner with recorded CPU/OS
+  and pinned browser build. For latency targets, perform 10 warm-up runs and 30 measured
+  runs; enforce the stated target against p95, not a single best run. For the 60-fps
+  scenario, enforce p95 frame time <= 16.7 ms during a fixed 10-second interaction.
 - Bundle-size budget in CI (size-limit): core + series + zoom/crosshair < 45 kB gz;
   `element` entry adds < 8 kB gz.
 
@@ -926,8 +987,8 @@ Additional acceptance checks for the ownership contract:
 
 | Phase                         | Content                                                                                                                                                                                                  | Exit criterion                                                                                            |
 | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| 0. Spike (1–2 wk)             | Own reactive core prototype + scheduler, columnar series, M4 decimation, SVG line renderer; ownership/D3 boundary contract (3.2.1), wrapped-ring and shared-binding probes; `Intl` zone-offset prototype; benchmark vs. v4 | ≥5× gain on pan with 1M points in SVG; core ownership/memory checks in §6 pass; zone offsets match luxon on test matrix |
-| 1. Core                       | Reactive core hardened (scopes, diagnostics), runtime option update/unset/setConfig contract (3.1.1), `time/` module (luxon replacement), plot container, layout engine, named scales, axes (value/time/band/degrees), coordinate systems, theme tokens, destroy | Static basic-line/secondary-axis/time-axes examples pixel-equal to v4; core option contract tests pass |
+| 0. Spike (1–2 wk)             | Own reactive core prototype + scheduler, columnar series, M4 decimation, SVG line renderer; ownership/D3 boundary contract (3.2.1), wrapped-ring and shared-binding probes; `Intl` zone-offset prototype; deterministic visual/performance harness; benchmark vs. v4 | ≥5× gain on pan with 1M points on the same pinned runner/browser and equivalent output; core ownership/memory checks in §6 pass; offsets and documented DST tick semantics pass the time-zone matrix |
+| 1. Core                       | Reactive core hardened (scopes, diagnostics), runtime option update/unset/setConfig contract (3.1.1), `time/` module (luxon replacement), plot container, layout engine, named scales, axes (value/time/band/degrees), coordinate systems, theme tokens, destroy | Static basic-line/secondary-axis/time-axes examples pass deterministic per-engine visual regression at the §5 threshold, with no unexplained diffs; core option contract tests pass |
 | 2. Marks                      | `series` (line+markers+area), band, bar, histogram, rule, text, heatmap, arrows/direction, progress; SVG first, canvas opt-in                                                                            | All static examples ported                                                                                |
 | 3. Interaction                | Pointer hub, zoom, pan, brush, crosshair, tooltip, headless legend model and built-in legend renderer                                                                                                     | mouseover/zoom/panning/brush examples ported; external legend commands work without legend DOM |
 | 4. Sync & live                | Shared scale/pointer/selection/clock, follow mode, append/retention, IntersectionObserver pause                                                                                                          | shared-zoom/shared-panning + new live-stream example                                                      |
@@ -960,12 +1021,13 @@ Additional acceptance checks for the ownership contract:
 
 None at this time.
 
-Browser baseline details: build `target: 'baseline-widely-available'` set explicitly in the
-Vite library config and a matching `browserslist` entry; Playwright suite runs on
-Chromium, Firefox and WebKit (`test:all-browsers`) in CI; supported minimum versions are
-documented in the README and migration guide. Required platform features
-(`adoptedStyleSheets`, `ElementInternals`, `OffscreenCanvas`, `structuredClone`,
-`Intl.DateTimeFormat#formatToParts` with time zones, CSS `:state()`) are all covered.
+Browser baseline details: set the Vite library target from the frozen support manifest
+and keep `browserslist`, documentation and Playwright minimum-version jobs in sync.
+Verify required platform features (`adoptedStyleSheets`, `ElementInternals`,
+`OffscreenCanvas`, `Intl.DateTimeFormat#formatToParts` with time zones, CSS `:state()`)
+against that matrix. `structuredClone` is not a required platform feature and must not be
+used as a prerequisite; configuration updates preserve callbacks and shared identities
+without cloning.
 
 Deferred (revisit after v5.0): automatic SVG/canvas switching (`renderer: 'auto'`);
 declarative child config elements and `src` data loading for `<fews-chart>`.
