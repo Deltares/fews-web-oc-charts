@@ -11,6 +11,7 @@
 | Distribution           | Core ESM API **plus an HTML5 Web Component** (`<fews-chart>`, see 3.13)                                                          |
 | Web Component          | Tag prefix **`fews-`**; v5.0 configured via **`el.config` property only** (no child config elements)                             |
 | v4 compatibility layer | **Full v4 public API**, delivered in the **last phase** of the roadmap (see 3.14)                                                |
+| Multi-series layouts   | **Grouped bars, stacked bars and stacked areas are v5.0 requirements**, with shared columnar layout and SVG/canvas parity (see 3.6.1) |
 | Browser support        | **Baseline Widely Available** as of each release date; freeze the exact minimum browser versions for v5.0.0 in the support manifest, build targets and CI matrix. No polyfills. |
 
 ## 1. Analysis of the current library (v4.7)
@@ -94,7 +95,8 @@ legend; domain-change events.
 - Dependency precision examples:
   - y2 domain change → only marks bound to y2 + y2 axis/grid.
   - pointer move → only overlay layer (crosshair, highlight, tooltip); never data layers.
-  - legend toggle → one mark's visibility + autoscale of its scales (if enabled).
+  - legend toggle → one mark's visibility + autoscale of its scales (if enabled);
+    a grouped/stacked layer toggle also invalidates its composite layout (3.6.1).
   - theme change → style token cache refresh; canvas layers repaint, SVG via CSS vars only.
 
 #### 3.1.1 Runtime options: update, unset & replace
@@ -191,6 +193,10 @@ plot.update({ theme: undefined })               // restore inherited/default the
     fall within the valid JavaScript `Date` range. Ingestion validates equal column
     lengths and reports the offending column/index without partially creating or
     mutating a store.
+  - Tables additionally support dictionary-encoded categorical columns for band axes,
+    with stable category identities and an explicit ordered scale domain. Numeric/time
+    x ordering rules above apply to ordered series; categorical tables are not sorted
+    numerically. Multi-series layouts use aligned value columns in one table (3.6.1).
   - **Ensemble** = `createEnsemble({ x, members: Float32Array[] | matrix })`: one shared
     x column, member matrix (row-major `members × time`), optional member metadata.
 - Growable **ring buffer** with `capacity`, `maxPoints`, `maxAge` retention.
@@ -388,7 +394,8 @@ series(data, {
 ```
 
 Line + markers + area in **one** mark (one data reference, one legend entry, one hit-test).
-Other marks: `band` (range / min-max), `bar` (incl. stacked/grouped, step bars),
+Other marks: `band` (range / min-max), `bar` (single/grouped/stacked, step bars),
+`stackedArea` (multi-series filled areas; see 3.6.1),
 `histogram`, `arrows`/`direction` (wind/current), `heatmap` (matrix, time×level),
 `progress`, `rule` (horizontal/vertical), `text`, `thresholds` (warning levels as a mark),
 `colorBar`. Each mark implements:
@@ -405,7 +412,132 @@ interface Mark {
 }
 ```
 
-Marks never know if they are in cartesian or polar coordinates; they call `ctx.project()`.
+Marks use `ctx.project()` rather than dispatching on axes classes. Declare supported
+coordinate/scale combinations and reject unsupported bindings during configuration
+validation, before rendering. Grouped/stacked layouts below are cartesian in v5.0;
+polar wind/current roses retain their separately specified behaviour.
+
+#### 3.6.1 Grouped bars, stacked bars & stacked areas
+
+These are first-class v5.0 features, not application-side preprocessing or deferred
+enhancements. A composite mark owns ordered, independently styled/visible layers over
+one aligned table. Share the layout computation between bars and areas; keep ordinary
+`series(..., { area })` as the single-series baseline/range fill, not an implicit stack
+across unrelated marks.
+
+```ts
+import { bar, stackedArea, createTable } from '@deltares/fews-web-oc-charts'
+
+const flows = createTable({
+  t: times, tEnd: intervalEnds,
+  upstream: upstreamValues, lateral: lateralValues,
+})
+const layers = [
+  { id: 'upstream', y: 'upstream', label: 'Upstream', fill: '#4477aa' },
+  { id: 'lateral', y: 'lateral', label: 'Lateral inflow', fill: '#228833' },
+]
+
+// Alternative marks: each can be used in a plot with named t/q scales.
+const grouped = bar(flows, {
+  id: 'grouped-flow', x: 't', scales: { x: 't', y: 'q' },
+  layers, layout: 'grouped', interval: { start: 't', end: 'tEnd' },
+  groupPadding: 0.1, layerPadding: 0.05,
+})
+const stacked = bar(flows, {
+  id: 'stacked-flow', x: 't', scales: { x: 't', y: 'q' },
+  layers, layout: 'stacked', interval: { start: 't', end: 'tEnd' },
+})
+const areas = stackedArea(flows, {
+  id: 'flow-areas', x: 't', scales: { x: 't', y: 'q' },
+  layers, curve: 'linear',
+})
+
+stacked.update({ layout: 'grouped' }) // retain data and stable layer identities
+areas.update({ layers: [...layers].reverse() }) // explicit stack/legend order
+```
+
+- **Data & alignment**: each layer references a numeric value column in the same
+  table and the same x column; equal-length validation and store ownership apply.
+  Require unique x keys within these composites (strictly increasing numeric/time
+  x, or one row per category); reject duplicates with the offending row/key instead
+  of guessing aggregation. This is a mark-specific restriction, not a change to
+  ordinary series' duplicate support. Do not zip unrelated stores by index or silently
+  interpolate/zero-fill misaligned timestamps. Object/long-form migration examples
+  show explicit pivoting, duplicate aggregation and missing-value policy before ingestion.
+- **Layout API**: `bar` supports single-series `y` or multi-series `layers` (mutually
+  exclusive); multi-series bars require `layout: 'grouped' | 'stacked'`.
+  `stackedArea` requires `layers` and a continuous numeric/time x scale. Layer IDs are
+  unique within their mark, independent of labels, column names and array positions.
+  Array order determines group slots, stack accumulation, drawing and legend order.
+  Layer descriptors support `visible`, label and style updates through the normal
+  collection replacement contract; unchanged IDs retain resources and visibility
+  unless explicitly overridden. Reject incompatible scales/units within a composite:
+  all layers share one value scale and one unit, never separate y axes.
+- **Bar geometry**: support vertical and horizontal orientation, swapping category/
+  interval and value axes consistently. Band scales supply the outer category band;
+  numeric/time axes require explicit interval start/end columns or a positive
+  pixel width centred on x, never infer widths from a viewport's first sample.
+  Interval bounds must be finite, ordered and non-overlapping across rows; include
+  full interval bounds in extents/window lookup. Grouped layers divide the outer
+  band/interval into stable slots, each measured from zero; stacked layers share its
+  width. Document defaults and validate padding fractions in `[0, 1)` and positive
+  widths. Clip geometry, not the underlying intervals; reversed scales, irregular
+  time intervals and resize must not change sample identity or group membership.
+- **Stack semantics**: use a zero baseline with separate positive and negative
+  accumulators (diverging stacking) in data space, before projection. For values
+  `[3, -2, 4]`, endpoints are `[0, 3]`, `[-2, 0]`, `[3, 7]`, with extent `[-2, 7]`.
+  Grouped values use extent `[-2, 4]`. Include zero and cumulative endpoints in
+  stacked extents, including visible-window autoscale; never use only raw maxima.
+  Require a linear value scale for stacks in v5.0; reject log scales and unsupported
+  offsets explicitly. Percent-normalised, streamgraph and grouped-stacked layouts
+  are not part of this initial contract.
+- **Missing & zero values**: zero is a valid value, not a gap. A missing (`NaN`)
+  visible layer makes the entire stacked row a gap, avoiding a misleading partial
+  total; stacked areas break at that row and never bridge it. A grouped missing
+  value leaves only its own slot empty. All-missing/empty composites contribute no
+  data extent, use scale `defaultDomain` and create no hit candidates. Hidden layers
+  do not contribute to missing-value checks, sums, extents or hit tests.
+- **Visibility & updates**: hiding a layer restacks the remaining visible layers;
+  grouped bars retain hidden slots so other bars do not jump horizontally. A layer
+  change invalidates dependent composite geometry, extents and hit indexes, not
+  unrelated marks or canonical columns. Append/prepend/upsert/retention use the
+  existing atomic table mutation contract, updating all aligned columns together.
+  Recompute affected stack rows; membership/order/visibility changes rebuild the
+  applicable layout. Validate patches before committing and support unsetting
+  layout/style options under 3.1.1 without reconstructing the plot.
+- **Derived data & LOD**: cache bounded columnar lower/upper stack endpoints and
+  extent indexes by table/column versions, layer order, visibility and gap policy;
+  never materialise D3's source-sized nested tuple output as a second dataset.
+  Compute stacks before decimation. Stacked areas use one shared retained-index set
+  for all boundaries, preserving gap edges, sign changes and boundary extrema;
+  independently decimating each layer is invalid because shared edges can diverge.
+  Preserve viewport neighbours and apply the same curve to shared boundaries;
+  initially support linear and step curves, rejecting unsupported curves explicitly.
+  Bars use interval/window culling, not line decimation that drops categories.
+  Account for endpoint, index and scratch buffers under 3.2.1 with explicit limits.
+- **Rendering & interaction**: SVG and canvas consume the same endpoints/group slots;
+  keyed SVG rectangles use `(layerId, sampleId)`, areas one path per layer.
+  Hit testing uses actual rectangles or filled stack bands, not raw y or nearest
+  vertices alone; highlights follow the selected segment. Tooltips expose layer ID,
+  label, original value, stack lower/upper bounds and positive/negative totals where
+  applicable, without replacing raw values with cumulative heights. x-only tooltips
+  list eligible layers in configured order; zero-height/zero-width geometry is not
+  an xy hit candidate. Crosshair, export and accessible data tables use the same
+  source identity and raw/derived-value distinction.
+- **Legend & adapters**: expose a composite parent and stable per-layer children
+  using the headless model (3.8.1), filled symbols and existing mixed/toggle/isolate
+  semantics. Built-in, Web Component and Vue custom legends all drive the same
+  visibility/restacking path. Use the same config/handle types in all entry points,
+  with no extra element attributes or framework-specific layout state.
+- **Acceptance tests**: assert exact endpoints/extents for positive, negative, mixed,
+  zero, missing and empty input; layer reorder/hide/show/isolate; duplicate/misaligned
+  input rejection and invalid-patch atomicity. Cover categorical and numeric/time
+  groups, explicit intervals, horizontal/reversed axes, padding, clipping, resize,
+  visible-window autoscale, appends/upserts/retention and option resets. Verify shared
+  area boundaries and gaps before/after LOD and zoom, raw versus cumulative tooltip
+  values, segment hit tests, stable IDs and cleanup. Add deterministic grouped-bar,
+  stacked-bar and stacked-area fixtures for both SVG/canvas, exports and core/element/
+  Vue entry points, including legend-driven restacking and unchanged source buffers.
 
 ### 3.7 Ensembles (first-class)
 
@@ -475,15 +607,15 @@ calling `drawLegendSymbol`, or maintaining a second list of visible series.
   DOM nodes or per-point data.
 - Each immutable entry snapshot has `{ id, markId, label, symbol, visibility, disabled,
   children }`. `visibility` is `'visible' | 'hidden' | 'mixed'`; `children` is an ordered
-  readonly list for ensemble parts/groups. IDs remain stable on rename, reorder, style
+  readonly list for ensemble parts or composite bar/area layers/groups. IDs remain stable on rename, reorder, style
   changes and config reconciliation; duplicate IDs are rejected. Labels are plain text.
   Unlabelled/excluded marks follow one documented inclusion policy in all renderers.
 - `symbol` uses the core's typed, declarative `SymbolSpec`, including composed line/
-  marker/area symbols and ensemble bands. Resolve theme/mark styles through the shared
+  marker/area symbols, bar/stacked-area layers and ensemble bands. Resolve theme/mark styles through the shared
   style cache, never by scraping a rendered SVG path. The same spec works for SVG and
   canvas marks; a pure symbol-to-SVG-primitives helper supports framework rendering
   without raw HTML injection or an imperative DOM renderer.
-- Commands change authoritative mark/ensemble visibility via the runtime option/state
+- Commands change authoritative mark/ensemble/composite-layer visibility via the runtime option/state
   path (3.1.1), not a Vue-local mirror. Parent toggle hides all children when fully
   visible, otherwise shows all; child changes recompute the parent's mixed state.
   Isolation operates on siblings at the selected hierarchy level; `showAll()` affects
@@ -761,6 +893,10 @@ no copy of the v4 implementation.
     Legacy rows remain accessible, so compat memory includes both representations.
   - `ChartLine` + `ChartMarker` with same data stay two marks (behaviour preserved), but
     share converted stores, block indexes and compatible LOD results.
+  - Existing `ChartBar` x/x1 category grouping maps to grouped `bar` layers; preserve
+    v4 legend/style/spacing behaviour. `ChartArea` scalar and explicit `[y0, y1]`
+    fills remain baseline/range fills, never implicitly stacked. New stacking is an
+    opt-in core feature, not a change to legacy charts' default semantics.
   - Visitors → v5 plugins; `accept(visitor)` installs the plugin.
   - Explicit `redraw()`/`zoom()` calls trigger a full invalidate for identical semantics;
     lodash-style deep-merge `setOptions` reimplemented locally (no lodash dependency).
@@ -929,7 +1065,8 @@ plot.destroy()
   ```
 - Strict TS, no circular imports (lint rule `import/no-cycle`), no barrel re-imports inside src.
 - Tests: Vitest unit (reactive core incl. glitch/ordering/disposal tests, time-zone
-  module vs. v4/luxon reference output, data, layout, scales, decimation, quantiles in
+  module vs. v4/luxon reference output, data, layout, scales, decimation, grouped/stacked
+  layout and stack-safe LOD (3.6.1), quantiles in
   Node, runtime option patch/unset/replacement contract in 3.1.1), Vitest browser +
   Playwright visual regression (port existing `examples/` as
   fixtures, core API, `<fews-chart>` and Vue custom-legend variants), perf benchmarks (`vitest bench`)
@@ -978,6 +1115,12 @@ Additional acceptance checks for the ownership contract:
   cache counts/bytes stay within limits and plateau rather than grow per window.
 - Quantile consumers share results, sort once per requested time step, exclude missing
   members and return `NaN` for all-missing steps.
+- Grouped/stacked composites and multiple plots retain one canonical aligned table;
+  identical stack consumers share bounded derived endpoints, not projected geometry.
+  Repeated layer toggles, reorders, live updates and pan/zoom plateau within declared
+  cache limits. Measure stack computation/LOD separately from rendering; pointer
+  moves perform no restacking or data-layer work. Add dedicated multi-layer memory
+  fixtures rather than applying the single-line <20 MB budget to stack buffers.
 - Compat paired marks convert once per source/mapping per flush, including in-place
   edits followed by `redraw()`; destroying one consumer leaves others functional.
 - Separate memory fixtures cover spatial-index peak/retained allocations, ensembles,
@@ -989,9 +1132,9 @@ Additional acceptance checks for the ownership contract:
 | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | 0. Spike (1–2 wk)             | Own reactive core prototype + scheduler, columnar series, M4 decimation, SVG line renderer; ownership/D3 boundary contract (3.2.1), wrapped-ring and shared-binding probes; `Intl` zone-offset prototype; deterministic visual/performance harness; benchmark vs. v4 | ≥5× gain on pan with 1M points on the same pinned runner/browser and equivalent output; core ownership/memory checks in §6 pass; offsets and documented DST tick semantics pass the time-zone matrix |
 | 1. Core                       | Reactive core hardened (scopes, diagnostics), runtime option update/unset/setConfig contract (3.1.1), `time/` module (luxon replacement), plot container, layout engine, named scales, axes (value/time/band/degrees), coordinate systems, theme tokens, destroy | Static basic-line/secondary-axis/time-axes examples pass deterministic per-engine visual regression at the §5 threshold, with no unexplained diffs; core option contract tests pass |
-| 2. Marks                      | `series` (line+markers+area), band, bar, histogram, rule, text, heatmap, arrows/direction, progress; SVG first, canvas opt-in                                                                            | All static examples ported                                                                                |
-| 3. Interaction                | Pointer hub, zoom, pan, brush, crosshair, tooltip, headless legend model and built-in legend renderer                                                                                                     | mouseover/zoom/panning/brush examples ported; external legend commands work without legend DOM |
-| 4. Sync & live                | Shared scale/pointer/selection/clock, follow mode, append/retention, IntersectionObserver pause                                                                                                          | shared-zoom/shared-panning + new live-stream example                                                      |
+| 2. Marks                      | `series` (line+markers+area), band, single/grouped/stacked `bar`, `stackedArea`, shared columnar stack layout and stack-safe LOD (3.6.1), histogram, rule, text, heatmap, arrows/direction, progress; SVG first, canvas opt-in | All static examples ported; new grouped-bar, stacked-bar and stacked-area fixtures pass on SVG/canvas, with exact layout/extent/gap tests |
+| 3. Interaction                | Pointer hub, zoom, pan, brush, crosshair, tooltip, headless legend model and built-in legend renderer; composite-layer hit tests, tooltips and visibility                                                 | mouseover/zoom/panning/brush examples ported; external legend commands work without legend DOM; composite toggles restack/autoscale correctly |
+| 4. Sync & live                | Shared scale/pointer/selection/clock, follow mode, append/retention, IntersectionObserver pause; incremental aligned-table stack updates                                                                  | shared-zoom/shared-panning + new live-stream example; stacked/grouped updates and retention preserve alignment and bounded caches |
 | 5. Ensembles                  | Ensemble store, quantile cache, members/spread/median rendering, ensemble tooltip/legend                                                                                                                 | 50×10k benchmark meets target                                                                             |
 | 6. Domain plugins             | Warning levels, alert lines, current time, DST indicator (on new `time/`), level select, cross-section select, data field, Beaufort, colour bar, polar wind/current roses                                | Feature parity checklist complete                                                                         |
 | 7. Web Component              | `<fews-chart>` with `el.config`, plot-level attributes, `sync-group` registry, events, Shadow DOM theming, typings, slotted/external legend facade and symbol helper                                        | All examples also runnable via `<fews-chart>`; works in Vue app without adapter; config/attribute-removal and custom-legend parity tests pass |
