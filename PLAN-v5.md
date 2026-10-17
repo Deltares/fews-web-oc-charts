@@ -11,7 +11,7 @@
 | Distribution           | Core ESM API **plus an HTML5 Web Component** (`<fews-chart>`, see 3.13)                                                          |
 | Web Component          | Tag prefix **`fews-`**; v5.0 configured via **`el.config` property only** (no child config elements)                             |
 | v4 compatibility layer | **Full v4 public API**, delivered in the **last phase** of the roadmap (see 3.14)                                                |
-| Multi-series layouts   | **Grouped bars, stacked bars and stacked areas are v5.0 requirements**, with shared columnar layout and SVG/canvas parity (see 3.6.1) |
+| Multi-series layouts   | **Grouped bars, named stacks (including side-by-side stacked bars) and stacked areas are v5.0 requirements**, with shared columnar layout and SVG/canvas parity (see 3.6.1) |
 | Browser support        | **Baseline Widely Available** as of each release date; freeze the exact minimum browser versions for v5.0.0 in the support manifest, build targets and CI matrix. No polyfills. |
 
 ## 1. Analysis of the current library (v4.7)
@@ -417,7 +417,7 @@ coordinate/scale combinations and reject unsupported bindings during configurati
 validation, before rendering. Grouped/stacked layouts below are cartesian in v5.0;
 polar wind/current roses retain their separately specified behaviour.
 
-#### 3.6.1 Grouped bars, stacked bars & stacked areas
+#### 3.6.1 Grouped bars, named stacks & stacked areas
 
 These are first-class v5.0 features, not application-side preprocessing or deferred
 enhancements. A composite mark owns ordered, independently styled/visible layers over
@@ -431,6 +431,7 @@ import { bar, stackedArea, createTable } from '@deltares/fews-web-oc-charts'
 const flows = createTable({
   t: times, tEnd: intervalEnds,
   upstream: upstreamValues, lateral: lateralValues,
+  forecastUpstream: forecastUpstreamValues, forecastLateral: forecastLateralValues,
 })
 const layers = [
   { id: 'upstream', y: 'upstream', label: 'Upstream', fill: '#4477aa' },
@@ -450,6 +451,21 @@ const stacked = bar(flows, {
 const areas = stackedArea(flows, {
   id: 'flow-areas', x: 't', scales: { x: 't', y: 'q' },
   layers, curve: 'linear',
+})
+
+// Two independent stacks side by side within each time interval.
+const compared = bar(flows, {
+  id: 'compared-flow', x: 't', scales: { x: 't', y: 'q' },
+  layout: 'stacked', interval: { start: 't', end: 'tEnd' },
+  groupPadding: 0.1, layerPadding: 0.05,
+  layers: [
+    { ...layers[0], stack: 'observed' },
+    { ...layers[1], stack: 'observed' },
+    { id: 'forecast-upstream', y: 'forecastUpstream',
+      label: 'Forecast upstream', stack: 'forecast', fill: '#66ccee' },
+    { id: 'forecast-lateral', y: 'forecastLateral',
+      label: 'Forecast lateral inflow', stack: 'forecast', fill: '#aa3377' },
+  ],
 })
 
 stacked.update({ layout: 'grouped' }) // retain data and stable layer identities
@@ -473,14 +489,35 @@ areas.update({ layers: [...layers].reverse() }) // explicit stack/legend order
   collection replacement contract; unchanged IDs retain resources and visibility
   unless explicitly overridden. Reject incompatible scales/units within a composite:
   all layers share one value scale and one unit, never separate y axes.
+- **Named stacks**: layers in stacked bars or `stackedArea` accept `stack: string`.
+  Equal stack IDs accumulate together; different IDs start independently from zero.
+  If all layers omit `stack`, retain one implicit stack and the simple API above.
+  If any layer names a stack, require every layer to supply a non-empty stack ID;
+  reject mixed named/unnamed input atomically. Reject `stack` on grouped bars rather
+  than ignoring it. Stack IDs are scoped to their composite mark: the same name in
+  separate marks does not merge them or coordinate their slots.
+  First appearance in the full layer array determines stack order; relative array
+  order within each stack determines accumulation. Hidden layers retain their
+  position in that ordering. Stack IDs, not display labels or positions, identify
+  legend groups and tooltip totals; use the ID as the initial stack label.
+  Stacked bars place one slot per named stack side by side within each category/
+  interval, yielding grouped-stacked bars without a separate layout mode.
+  Named area stacks are independent overlaid stacks, drawn in stack order with
+  layer order within each stack; they are not horizontally grouped or added together.
+  Hit-test ties between overlapping area stacks select the topmost painted band;
+  x-only tooltips include all eligible stacks. Use separate plots for non-overlapping
+  area-stack comparisons.
 - **Bar geometry**: support vertical and horizontal orientation, swapping category/
   interval and value axes consistently. Band scales supply the outer category band;
   numeric/time axes require explicit interval start/end columns or a positive
   pixel width centred on x, never infer widths from a viewport's first sample.
   Interval bounds must be finite, ordered and non-overlapping across rows; include
   full interval bounds in extents/window lookup. Grouped layers divide the outer
-  band/interval into stable slots, each measured from zero; stacked layers share its
-  width. Document defaults and validate padding fractions in `[0, 1)` and positive
+  band/interval into stable layer slots, each measured from zero; stacked bars divide
+  it into stack slots, with all layers in one stack sharing that slot's width.
+  `groupPadding` insets the outer band/interval; `layerPadding` separates adjacent
+  layer slots in grouped mode or stack slots in stacked mode, never stacked segments.
+  Document defaults and validate padding fractions in `[0, 1)` and positive
   widths. Clip geometry, not the underlying intervals; reversed scales, irregular
   time intervals and resize must not change sample identity or group membership.
 - **Stack semantics**: use a zero baseline with separate positive and negative
@@ -488,28 +525,38 @@ areas.update({ layers: [...layers].reverse() }) // explicit stack/legend order
   `[3, -2, 4]`, endpoints are `[0, 3]`, `[-2, 0]`, `[3, 7]`, with extent `[-2, 7]`.
   Grouped values use extent `[-2, 4]`. Include zero and cumulative endpoints in
   stacked extents, including visible-window autoscale; never use only raw maxima.
+  Accumulate positive/negative values separately for each named stack and union their
+  extents, never sum independent stack totals. For stacks A = `[3, 4]` and
+  B = `[5, -2]`, the combined value extent is `[-2, 7]`, not `[-2, 12]`.
   Require a linear value scale for stacks in v5.0; reject log scales and unsupported
-  offsets explicitly. Percent-normalised, streamgraph and grouped-stacked layouts
+  offsets explicitly. Percent-normalised and streamgraph layouts
   are not part of this initial contract.
 - **Missing & zero values**: zero is a valid value, not a gap. A missing (`NaN`)
-  visible layer makes the entire stacked row a gap, avoiding a misleading partial
-  total; stacked areas break at that row and never bridge it. A grouped missing
+  visible layer makes that stack's row a gap, avoiding a misleading partial
+  total; other stacks at the same x remain valid. Stacked areas break only the
+  affected stack at that row and never bridge it. A grouped missing
   value leaves only its own slot empty. All-missing/empty composites contribute no
   data extent, use scale `defaultDomain` and create no hit candidates. Hidden layers
   do not contribute to missing-value checks, sums, extents or hit tests.
-- **Visibility & updates**: hiding a layer restacks the remaining visible layers;
-  grouped bars retain hidden slots so other bars do not jump horizontally. A layer
-  change invalidates dependent composite geometry, extents and hit indexes, not
+- **Visibility & updates**: hiding a layer restacks the remaining visible layers in
+  its stack; other stacks' totals are unchanged. Grouped bars retain hidden layer
+  slots and stacked bars retain fully hidden stack slots so other bars do not jump
+  horizontally. Only explicit membership/order changes remove/reorder those slots.
+  Changing a layer's `stack` retains its layer ID and invalidates both the old and
+  new stacks; validate the complete replacement layer array before committing.
+  A layer change invalidates dependent composite geometry, extents and hit indexes, not
   unrelated marks or canonical columns. Append/prepend/upsert/retention use the
   existing atomic table mutation contract, updating all aligned columns together.
   Recompute affected stack rows; membership/order/visibility changes rebuild the
   applicable layout. Validate patches before committing and support unsetting
   layout/style options under 3.1.1 without reconstructing the plot.
 - **Derived data & LOD**: cache bounded columnar lower/upper stack endpoints and
-  extent indexes by table/column versions, layer order, visibility and gap policy;
-  never materialise D3's source-sized nested tuple output as a second dataset.
+  extent indexes by table/column versions, stack membership/order, layer order,
+  visibility and gap policy; never materialise D3's source-sized nested tuple output
+  as a second dataset.
   Compute stacks before decimation. Stacked areas use one shared retained-index set
-  for all boundaries, preserving gap edges, sign changes and boundary extrema;
+  per stack for all its boundaries, preserving gap edges, sign changes and boundary
+  extrema;
   independently decimating each layer is invalid because shared edges can diverge.
   Preserve viewport neighbours and apply the same curve to shared boundaries;
   initially support linear and step curves, rejecting unsupported curves explicitly.
@@ -519,24 +566,34 @@ areas.update({ layers: [...layers].reverse() }) // explicit stack/legend order
   keyed SVG rectangles use `(layerId, sampleId)`, areas one path per layer.
   Hit testing uses actual rectangles or filled stack bands, not raw y or nearest
   vertices alone; highlights follow the selected segment. Tooltips expose layer ID,
-  label, original value, stack lower/upper bounds and positive/negative totals where
-  applicable, without replacing raw values with cumulative heights. x-only tooltips
+  label, original value, stack ID, stack lower/upper bounds and per-stack positive/
+  negative totals where applicable, without replacing raw values with cumulative
+  heights. x-only tooltips
   list eligible layers in configured order; zero-height/zero-width geometry is not
   an xy hit candidate. Crosshair, export and accessible data tables use the same
   source identity and raw/derived-value distinction.
 - **Legend & adapters**: expose a composite parent and stable per-layer children
+  for grouped bars and implicit stacks; named stacks use parent → stack → layer
+  hierarchy, with stack entry identity derived from `(markId, stackId)`.
+  Stack toggles affect only their layers; layer isolation acts within its stack,
+  stack isolation within its composite. Compute parent/stack mixed state recursively
   using the headless model (3.8.1), filled symbols and existing mixed/toggle/isolate
   semantics. Built-in, Web Component and Vue custom legends all drive the same
   visibility/restacking path. Use the same config/handle types in all entry points,
   with no extra element attributes or framework-specific layout state.
 - **Acceptance tests**: assert exact endpoints/extents for positive, negative, mixed,
   zero, missing and empty input; layer reorder/hide/show/isolate; duplicate/misaligned
-  input rejection and invalid-patch atomicity. Cover categorical and numeric/time
-  groups, explicit intervals, horizontal/reversed axes, padding, clipping, resize,
+  input rejection and invalid-patch atomicity. Include at least two named stacks
+  with independent positive/negative totals and gaps; assert union extents, stable
+  stack slots, stack/layer isolation, reassignment, reorder/removal, unnamed defaults,
+  mixed named/unnamed rejection and rejection of stack IDs in grouped mode.
+  Cover categorical and numeric/time groups, explicit intervals, horizontal/reversed
+  axes, padding, clipping, resize,
   visible-window autoscale, appends/upserts/retention and option resets. Verify shared
   area boundaries and gaps before/after LOD and zoom, raw versus cumulative tooltip
   values, segment hit tests, stable IDs and cleanup. Add deterministic grouped-bar,
-  stacked-bar and stacked-area fixtures for both SVG/canvas, exports and core/element/
+  stacked-bar, side-by-side named-stack bar and overlaid named-stack area fixtures,
+  including overlapping-area hit order, for both SVG/canvas, exports and core/element/
   Vue entry points, including legend-driven restacking and unchanged source buffers.
 
 ### 3.7 Ensembles (first-class)
@@ -607,7 +664,8 @@ calling `drawLegendSymbol`, or maintaining a second list of visible series.
   DOM nodes or per-point data.
 - Each immutable entry snapshot has `{ id, markId, label, symbol, visibility, disabled,
   children }`. `visibility` is `'visible' | 'hidden' | 'mixed'`; `children` is an ordered
-  readonly list for ensemble parts or composite bar/area layers/groups. IDs remain stable on rename, reorder, style
+  readonly list for ensemble parts or composite bar/area stacks/layers/groups,
+  including recursive named-stack hierarchies (3.6.1). IDs remain stable on rename, reorder, style
   changes and config reconciliation; duplicate IDs are rejected. Labels are plain text.
   Unlabelled/excluded marks follow one documented inclusion policy in all renderers.
 - `symbol` uses the core's typed, declarative `SymbolSpec`, including composed line/
@@ -1117,7 +1175,7 @@ Additional acceptance checks for the ownership contract:
   members and return `NaN` for all-missing steps.
 - Grouped/stacked composites and multiple plots retain one canonical aligned table;
   identical stack consumers share bounded derived endpoints, not projected geometry.
-  Repeated layer toggles, reorders, live updates and pan/zoom plateau within declared
+  Repeated layer/stack toggles, stack reassignment, reorders, live updates and pan/zoom plateau within declared
   cache limits. Measure stack computation/LOD separately from rendering; pointer
   moves perform no restacking or data-layer work. Add dedicated multi-layer memory
   fixtures rather than applying the single-line <20 MB budget to stack buffers.
@@ -1132,7 +1190,7 @@ Additional acceptance checks for the ownership contract:
 | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | 0. Spike (1–2 wk)             | Own reactive core prototype + scheduler, columnar series, M4 decimation, SVG line renderer; ownership/D3 boundary contract (3.2.1), wrapped-ring and shared-binding probes; `Intl` zone-offset prototype; deterministic visual/performance harness; benchmark vs. v4 | ≥5× gain on pan with 1M points on the same pinned runner/browser and equivalent output; core ownership/memory checks in §6 pass; offsets and documented DST tick semantics pass the time-zone matrix |
 | 1. Core                       | Reactive core hardened (scopes, diagnostics), runtime option update/unset/setConfig contract (3.1.1), `time/` module (luxon replacement), plot container, layout engine, named scales, axes (value/time/band/degrees), coordinate systems, theme tokens, destroy | Static basic-line/secondary-axis/time-axes examples pass deterministic per-engine visual regression at the §5 threshold, with no unexplained diffs; core option contract tests pass |
-| 2. Marks                      | `series` (line+markers+area), band, single/grouped/stacked `bar`, `stackedArea`, shared columnar stack layout and stack-safe LOD (3.6.1), histogram, rule, text, heatmap, arrows/direction, progress; SVG first, canvas opt-in | All static examples ported; new grouped-bar, stacked-bar and stacked-area fixtures pass on SVG/canvas, with exact layout/extent/gap tests |
+| 2. Marks                      | `series` (line+markers+area), band, single/grouped/stacked `bar` with named side-by-side stacks, `stackedArea` with named independent stacks, shared columnar stack layout and stack-safe LOD (3.6.1), histogram, rule, text, heatmap, arrows/direction, progress; SVG first, canvas opt-in | All static examples ported; grouped-bar, stacked-bar, named-stack comparison and stacked-area fixtures pass on SVG/canvas, with exact per-stack layout/extent/gap tests |
 | 3. Interaction                | Pointer hub, zoom, pan, brush, crosshair, tooltip, headless legend model and built-in legend renderer; composite-layer hit tests, tooltips and visibility                                                 | mouseover/zoom/panning/brush examples ported; external legend commands work without legend DOM; composite toggles restack/autoscale correctly |
 | 4. Sync & live                | Shared scale/pointer/selection/clock, follow mode, append/retention, IntersectionObserver pause; incremental aligned-table stack updates                                                                  | shared-zoom/shared-panning + new live-stream example; stacked/grouped updates and retention preserve alignment and bounded caches |
 | 5. Ensembles                  | Ensemble store, quantile cache, members/spread/median rendering, ensemble tooltip/legend                                                                                                                 | 50×10k benchmark meets target                                                                             |
