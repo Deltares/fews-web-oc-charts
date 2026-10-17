@@ -570,8 +570,47 @@ React, Angular or FEWS Web OC config-driven pages without a framework adapter.
   (`<fews-scale>`, `<fews-axis>`, `<fews-series>`, `<fews-ensemble>`, …) and `src`
   attributes for data loading, built as a mapping onto `el.config`.
 - **Escape hatch**: `el.plot` exposes the underlying core plot object for advanced use.
-  Its headless legend model (3.8.1) is usable from framework code without enabling the
-  element's built-in legend. Subscribe after `ready`, and rebind after reconnection.
+  Custom legends need not access it: the stable `el.legend` facade exposes the core
+  model directly (see below).
+- **Custom legend parity with Vue**: provide a named `<slot name="legend">` for
+  application-owned light-DOM content. Assigned content automatically suppresses the
+  built-in legend renderer, including a configured plugin, without mutating config or
+  visibility. Native slots are not scoped Vue slots: applications receive entries and
+  invoke commands through `el.legend` and events, not slot props. Legend content is UI,
+  not a second configuration dialect or a deferred child config element.
+  `legend="external"` suppresses the built-in renderer for a legend elsewhere on the
+  page; the model remains available without a slot or plugin. Custom slot/external
+  presentation takes precedence over built-in position settings. Removing slot content
+  or the external override restores the currently configured renderer. Observe
+  `slotchange`, not chart DOM mutations; never install duplicate renderers/listeners.
+- **Public legend API**: `el.legend.entries` is the current immutable readonly entry
+  snapshot from 3.8.1; `toggle(id)`, `setVisible(id, boolean)`, `isolate(id)` and
+  `showAll()` delegate to that model with identical hierarchy/error semantics.
+  Before readiness or while disconnected, entries are empty and commands throw a
+  descriptive not-ready error. The facade retains identity across reconnects but
+  rebinds to the current plot, releasing old subscriptions and snapshots. Callers
+  never need to cache a plot reference or duplicate visibility state.
+- **Legend notifications**: `legendchange` carries `{ entries }` whenever legend
+  metadata/state changes, including label, theme, membership and visibility. Publish
+  after committing state so reading `el.legend.entries` agrees with the event detail.
+  `ready` exposes the initial populated model; disconnection clears it and notifies
+  subscribers. No notifications for pointer moves or appends with unchanged metadata.
+  Keep `legendtoggle` for visibility-action details from 3.8.1, with no second mutation
+  or feedback loop. Consumers can register events once on the element across reconnects
+  and render immediately from the current snapshot if it is already ready.
+- **Symbols**: export `renderLegendSymbol(svgElement, symbol)` from the element entry
+  point. It uses the same `SymbolSpec`/pure primitive helper as Vue `LegendSymbol`,
+  replaces only children it owns in the supplied SVG, sets a documented viewBox and
+  decorative `aria-hidden`, and accepts composed symbols for SVG/canvas marks.
+  It does not query chart DOM, use `innerHTML`/raw markup, or retain the chart/store.
+  Applications own labels, rows, focus management and styling; symbols use resolved
+  style metadata so they also work outside the shadow tree.
+- **Layout & accessibility**: slotted legend UI participates in normal host layout
+  outside the plot viewport, with no additional built-in legend margin; external
+  containers use application layout. ResizeObserver updates the plot viewport when
+  a legend wraps/resizes. Light-DOM content remains application-styled; provide a
+  legend-slot wrapper part for placement. Examples use buttons/checkboxes, stable IDs,
+  keyboard access, mixed states and text labels; hidden entries remain operable.
 - **Shadow DOM** with an SVG root; theming through CSS custom properties
   (`--fews-chart-*`, inherit through shadow boundary) and `::part(axis|legend|tooltip|plot)`;
   `adoptedStyleSheets` shared across all instances (one stylesheet in memory).
@@ -579,7 +618,8 @@ React, Angular or FEWS Web OC config-driven pages without a framework adapter.
   pointer / selection signals – synchronising charts is purely declarative.
   `sync="t,pointer"` selects what to share.
 - **Events** (bubbling, composed `CustomEvent`s): `domainchange`, `pointerchange`,
-  `selectionchange`, `legendtoggle`, `brushend`, `ready`, `error`.
+  `selectionchange`, `legendchange`, `legendtoggle`, `brushend`, `ready`, `error`.
+  Publish typed event maps and legend facade/entry types for plain TS and frameworks.
 - **Lifecycle**: `connectedCallback` creates the plot, `disconnectedCallback` calls
   `destroy()` (deferred one microtask so DOM moves don't recreate the plot);
   `ElementInternals` for ARIA role/label; works with `form`-free usage only.
@@ -589,6 +629,56 @@ React, Angular or FEWS Web OC config-driven pages without a framework adapter.
   handling (properties set before definition are re-applied), Vue `isCustomElement` docs,
   typed `HTMLElementTagNameMap` + JSX/Vue `GlobalComponents` declarations generated.
 - Separate entry point `@deltares/fews-web-oc-charts/element` so core users don't pay for it.
+
+Custom legend example (after assigning a valid `el.config` as above):
+
+```html
+<fews-chart id="custom-chart">
+  <ul slot="legend" aria-label="Chart legend"></ul>
+</fews-chart>
+<script type="module">
+  import { renderLegendSymbol } from '@deltares/fews-web-oc-charts/element'
+
+  const el = document.getElementById('custom-chart')
+  const list = el.querySelector('[slot="legend"]')
+  function renderLegend() {
+    const rows = el.legend.entries.map((entry) => {
+      const row = document.createElement('li')
+      const button = document.createElement('button')
+      button.type = 'button'
+      button.disabled = entry.disabled
+      button.setAttribute('aria-pressed',
+        entry.visibility === 'mixed' ? 'mixed' : String(entry.visibility === 'visible'))
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+      svg.setAttribute('width', '24')
+      svg.setAttribute('height', '16')
+      renderLegendSymbol(svg, entry.symbol)
+      button.append(svg, document.createTextNode(entry.label))
+      button.addEventListener('click', () => el.legend.toggle(entry.id))
+      row.append(button)
+      return row
+    })
+    list.replaceChildren(...rows)
+  }
+  // The application calls defineFewsChart() before awaiting upgrade.
+  await customElements.whenDefined('fews-chart')
+  el.addEventListener('ready', renderLegend)
+  el.addEventListener('legendchange', renderLegend)
+  renderLegend() // also handles an already-ready element
+</script>
+```
+
+This flat example illustrates the API; ship a keyed DOM-update example preserving
+focused buttons and a recursive ensemble example for production accessibility.
+Applications dispose external listeners when their owning view is removed.
+
+- **Custom legend acceptance tests**: cover slotted and separately mounted legends,
+  no built-in DOM/margins, symbol parity with Vue for SVG/canvas marks, parent/child
+  visibility, commands/events and programmatic option resets. Verify config replacement,
+  labels/themes, slot insertion/removal, `legend="external"` removal, resize, keyboard/
+  focus preservation, late upgrade, already-ready subscription, disconnect/reconnect
+  and multiple consumers. Assert no retained old plots or duplicate notifications,
+  and no data-buffer copies or legend updates for unrelated pointer/data activity.
 
 ### 3.14 v4 compatibility layer (`compat/`) – full v4 API
 
@@ -843,7 +933,7 @@ Additional acceptance checks for the ownership contract:
 | 4. Sync & live                | Shared scale/pointer/selection/clock, follow mode, append/retention, IntersectionObserver pause                                                                                                          | shared-zoom/shared-panning + new live-stream example                                                      |
 | 5. Ensembles                  | Ensemble store, quantile cache, members/spread/median rendering, ensemble tooltip/legend                                                                                                                 | 50×10k benchmark meets target                                                                             |
 | 6. Domain plugins             | Warning levels, alert lines, current time, DST indicator (on new `time/`), level select, cross-section select, data field, Beaufort, colour bar, polar wind/current roses                                | Feature parity checklist complete                                                                         |
-| 7. Web Component              | `<fews-chart>` with `el.config`, plot-level attributes, `sync-group` registry, events, Shadow DOM theming, typings                                                                                       | All examples also runnable via `<fews-chart>`; works in Vue app without adapter; config replacement and attribute-removal contract tests pass |
+| 7. Web Component              | `<fews-chart>` with `el.config`, plot-level attributes, `sync-group` registry, events, Shadow DOM theming, typings, slotted/external legend facade and symbol helper                                        | All examples also runnable via `<fews-chart>`; works in Vue app without adapter; config/attribute-removal and custom-legend parity tests pass |
 | 8. Adoption                   | Vue component/composables and scoped/custom legends (3.15), docs site from examples, migration guide, FEWS Web OC integration behind a flag; `5.0.0-beta`                                                  | FEWS Web OC runs on v5 behind a flag; Vue custom-legend and lifecycle acceptance tests pass |
 | 9. Compatibility layer (last) | Full v4 public API in `./compat` (see 3.14); deprecation warnings; migration guide per class                                                                                                             | Complete v4 example + test suite runs unchanged against `compat` (import path swap only); `5.0.0` release |
 
