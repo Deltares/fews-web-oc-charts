@@ -52,6 +52,9 @@ legend; domain-change events.
    `d3-zoom`, `d3-brush`, `d3-time-format`, `d3-array`, `d3-quadtree/d3-delaunay`, but
    import sub-packages only.
 6. **Explicit lifecycle** – `plot.destroy()` releases observers, listeners, buffers.
+7. **Options stay editable** – construction is not a configuration boundary. Typed
+   updates and explicit unsetting work consistently without recreation or `redraw()`
+   (see 3.1.1).
 
 ## 3. Architecture
 
@@ -92,6 +95,89 @@ legend; domain-change events.
   - pointer move → only overlay layer (crosshair, highlight, tooltip); never data layers.
   - legend toggle → one mark's visibility + autoscale of its scales (if enabled).
   - theme change → style token cache refresh; canvas layers repaint, SVG via CSS vars only.
+
+#### 3.1.1 Runtime options: update, unset & replace
+
+All public plot, mark, axis, scale and built-in plugin handles expose
+`update(patch)` with the same option names used at construction. No string-path
+setters, manual `redraw()`, or mutation of internal D3 objects is required.
+
+| Patch input | Meaning |
+| ----------- | ------- |
+| Key omitted | Keep its existing explicit override unchanged |
+| `key: value` | Set an explicit override, including `false`, `0` and `''` where valid |
+| `key: undefined` | Remove the explicit override; resolve from current inheritance/defaults |
+| Nested plain object | Recursively patch its supplied keys; omitted siblings remain unchanged |
+| Array | Replace the entire array, never merge by numeric index |
+| Function, store or shared handle | Replace the reference atomically; never deep-merge or clone |
+| `null` | A value only where the option type explicitly permits it; never an unset alias |
+
+- **Unset is not disable**: `markers: undefined` restores inherited/default marker
+  behaviour; `markers: false` explicitly disables markers. Optional visual components
+  (`line`, `markers`, `area`, ensemble display parts) accept `false | Options`.
+  Removing a nested override such as `line.stroke` keeps the other line options.
+  Resetting a parent removes all its nested overrides. Required references such as a
+  mark's data/scale binding cannot be unset unless a documented default exists.
+- **Resolution**: retain explicit overrides separately from resolved options. Resolve
+  library defaults → applicable plot/theme defaults → handle overrides, with a
+  documented precedence per option. Unsetting reveals the **current** inherited value,
+  not the constructor value. Remove stale inline SVG/CSS attributes, canvas paint
+  settings, formatter callbacks and listeners when their overrides disappear.
+- **Types & ownership**: patches explicitly permit `undefined` for resettable keys,
+  including with `exactOptionalPropertyTypes`; plain `Partial<T>` is insufficient.
+  Readonly option snapshots expose explicit and resolved state without allowing
+  mutation to bypass invalidation. Copy owned plain option objects/arrays on input;
+  preserve store, shared-handle and callback identity. Check property presence rather
+  than truthiness, so explicit `undefined` is distinguishable from an absent key.
+- **Collections**: supplied `marks`, `axes` and `plugins` arrays are complete membership/
+  order lists; `[]` removes all, omission keeps the collection, and `undefined` restores
+  its documented default. `scales` is a named map: omitted names stay bound, and an
+  explicit `undefined` removes a binding. Stable explicit IDs identify collection
+  entries across updates; reject duplicate IDs. Reuse unchanged handles/resources,
+  dispose removed entries, and never re-ingest data for an option-only update.
+  Change one item through its retained handle instead of rebuilding the collection.
+- **Shared state**: `sharedScale.update(...)` changes its options for all consumers;
+  plot updates only change local options/bindings. Removing a scale binding still used
+  by a mark/axis is an error unless the same transaction removes/rebinds those users.
+  Replacing a scale/mark kind or plugin implementation is an explicit collection/binding
+  replacement, not an attempted patch of immutable identity or implementation type.
+- **Atomic application**: validate the complete patch before committing; invalid
+  options, unknown keys/IDs and dangling references throw a descriptive error with
+  the option path, leaving prior state intact. Multiple valid updates within `batch`
+  publish together and schedule one frame (batching is not rollback of earlier calls).
+  Effective no-op updates schedule no work. Invalidate only affected dependencies;
+  changing style/formatters must not rebuild data, extents or LOD unnecessarily.
+- **Complete configuration**: `plot.setConfig(config)` replaces the plot configuration
+  using the same shape as `createPlot`; omitted plot options return to defaults and
+  omitted collections/bindings are removed or defaulted. Unlike `update`, nested plain
+  options are replacements, not sticky merges. Reconcile entries by ID and preserve
+  data references. Reusing a handle retains its handle-managed options/state; replacing
+  its configuration must not silently mutate an externally shared handle. A config
+  snapshot does not reset live domains, pointer or selection unless explicitly set.
+  `el.config = config` delegates to this path; `el.plot.update(...)` provides patching.
+- **Validation coverage**: test set → change → unset → inherit/default for scalar,
+  nested, array, callback and feature-toggle options; parent reset; `false`/`0`/`''`;
+  strict TypeScript patches; collection removal/reorder; shared-handle updates;
+  invalid-patch atomicity; coalescing/no-ops; and cleanup of styles/listeners/caches.
+  Run the same scenarios through core, Web Component and Vue adapters, on SVG and
+  canvas. Include updating after construction without reconstructing the plot.
+
+```ts
+const observed = series(obs, {
+  id: 'obs', x: 't', y: 'q',
+  line: { stroke: 'red', width: 2 },
+  markers: { symbol: 'circle' },
+})
+const dischargeAxis = axis('q', { id: 'q-axis', position: 'left', label: 'Discharge' })
+const wheelZoom = zoom({ id: 'zoom', mode: 'x', wheel: 'x' })
+// Retain these handles when passing them to createPlot.
+observed.update({ line: { width: 3 }, markers: false })
+observed.update({ line: { stroke: undefined } }) // keep width; restore default stroke
+dischargeAxis.update({ label: undefined })       // remove custom label
+t.update({ follow: undefined })                 // reset follow option for all consumers
+wheelZoom.update({ wheel: undefined })          // restore default wheel behaviour
+plot.update({ theme: undefined })               // restore inherited/default theme
+```
 
 ### 3.2 Data store (`data/`)
 
@@ -265,6 +351,7 @@ Other marks: `band` (range / min-max), `bar` (incl. stacked/grouped, step bars),
 ```ts
 interface Mark {
   id: string
+  update(patch: MarkOptionsPatch): void   // mark-specific typed patch, see 3.1.1
   scales: string[]                       // dependencies → precise invalidation
   extent(scale, window?): [min,max]      // uses block index
   render(ctx: RenderContext): void       // ctx = coordinate system + renderer + LOD
@@ -310,6 +397,9 @@ ensemble(fc, {
   ```ts
   type Plugin = (ctx: PlotContext) => { update?(dirty: DirtyFlags): void; destroy(): void }
   ```
+- Built-in plugin factories return configurable handles (3.1.1). Their public
+  `handle.update(optionsPatch)` is distinct from the installed instance's internal
+  `update(dirty)` render hook; user-defined plugins may opt into the same contract.
 - Ported plugins: `zoom({ mode: 'x'|'y'|'xy', wheel, modifier, reset: 'initial'|'full'|'toggle' })`,
   `pan`, `brush` (select range → event), `crosshair` (former MouseOver: trace values,
   vertical/horizontal), `tooltip` (HTML, positioning), `legend` (HTML, toggle, isolate),
@@ -421,9 +511,18 @@ React, Angular or FEWS Web OC config-driven pages without a framework adapter.
 
 - **Configuration (v5.0)**: a single `el.config` property with exactly the same shape as
   `createPlot` options – no second config dialect to document and test. Assigning a new
-  object is diffed (scales/axes/marks by id) and applied incrementally via signals.
+  object calls `plot.setConfig` (3.1.1): complete replacement semantics with incremental
+  reconciliation, not a deep merge that retains omitted options. Handles can be updated
+  directly or through `el.plot.update` without reassigning the whole configuration.
   Attributes cover only simple, string-friendly plot-level toggles: `sync-group`, `sync`,
   `zoom`, `pan`, `crosshair`, `tooltip`, `legend`, `current-time`, `theme`.
+- **Attribute updates/removal**: present attributes are element-owned overrides above
+  `el.config` for the corresponding option; removal deletes that override and reveals
+  the current config/default value. Removing a boolean attribute does not override
+  an explicit `true` in config with `false`. Parse and validate before applying; invalid
+  attribute/config changes emit `error` and retain the last valid state. Property/core
+  method validation errors also throw to their caller. Reconcile plugin toggles with
+  configured plugins, never install duplicate zoom/pointer listeners.
 - **Future (post-5.0, not in scope)**: declarative light-DOM child config elements
   (`<fews-scale>`, `<fews-axis>`, `<fews-series>`, `<fews-ensemble>`, …) and `src`
   attributes for data loading, built as a mapping onto `el.config`.
@@ -485,6 +584,9 @@ no copy of the v4 implementation.
   - Visitors → v5 plugins; `accept(visitor)` installs the plugin.
   - Explicit `redraw()`/`zoom()` calls trigger a full invalidate for identical semantics;
     lodash-style deep-merge `setOptions` reimplemented locally (no lodash dependency).
+    Preserve v4 merge/undefined semantics only in compat; translate resulting changes
+    to core updates. Document migration to v5's explicit `undefined` reset rather than
+    changing legacy `setOptions` behaviour.
   - DOM structure & CSS classes kept where apps style them (`.wb-charts`, layer groups,
     `data-chart-id`), so existing stylesheets keep working.
 - **Verification**: run the full v4 `examples/` Playwright snapshot suite and v4 unit tests
@@ -517,7 +619,9 @@ const plot = createPlot(el, {
 })
 
 obs.append([{ time: new Date(), value: 12.3 }])   // live update, only obs mark repaints
-plot.update({ marks: [...] })                      // declarative diffing of marks by id
+plot.update({ theme: undefined })                  // remove explicit theme override
+plot.update({ marks: [...] })                      // replace membership; reconcile by id
+plot.setConfig(nextConfig)                        // full config, omitted options reset
 plot.destroy()
 ```
 
@@ -548,7 +652,8 @@ plot.destroy()
 - Strict TS, no circular imports (lint rule `import/no-cycle`), no barrel re-imports inside src.
 - Tests: Vitest unit (reactive core incl. glitch/ordering/disposal tests, time-zone
   module vs. v4/luxon reference output, data, layout, scales, decimation, quantiles in
-  Node), Vitest browser + Playwright visual regression (port existing `examples/` as
+  Node, runtime option patch/unset/replacement contract in 3.1.1), Vitest browser +
+  Playwright visual regression (port existing `examples/` as
   fixtures, both core API and `<fews-chart>` variants), perf benchmarks (`vitest bench`)
   with budgets in CI, memory snapshots via Playwright CDP (create/destroy 1000 elements
   → no growth).
@@ -595,13 +700,13 @@ Additional acceptance checks for the ownership contract:
 | Phase                         | Content                                                                                                                                                                                                  | Exit criterion                                                                                            |
 | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | 0. Spike (1–2 wk)             | Own reactive core prototype + scheduler, columnar series, M4 decimation, SVG line renderer; ownership/D3 boundary contract (3.2.1), wrapped-ring and shared-binding probes; `Intl` zone-offset prototype; benchmark vs. v4 | ≥5× gain on pan with 1M points in SVG; core ownership/memory checks in §6 pass; zone offsets match luxon on test matrix |
-| 1. Core                       | Reactive core hardened (scopes, diagnostics), `time/` module (luxon replacement), plot container, layout engine, named scales, axes (value/time/band/degrees), coordinate systems, theme tokens, destroy | Static basic-line/secondary-axis/time-axes examples pixel-equal to v4                                     |
+| 1. Core                       | Reactive core hardened (scopes, diagnostics), runtime option update/unset/setConfig contract (3.1.1), `time/` module (luxon replacement), plot container, layout engine, named scales, axes (value/time/band/degrees), coordinate systems, theme tokens, destroy | Static basic-line/secondary-axis/time-axes examples pixel-equal to v4; core option contract tests pass |
 | 2. Marks                      | `series` (line+markers+area), band, bar, histogram, rule, text, heatmap, arrows/direction, progress; SVG first, canvas opt-in                                                                            | All static examples ported                                                                                |
 | 3. Interaction                | Pointer hub, zoom, pan, brush, crosshair, tooltip, legend                                                                                                                                                | mouseover/zoom/panning/brush examples ported                                                              |
 | 4. Sync & live                | Shared scale/pointer/selection/clock, follow mode, append/retention, IntersectionObserver pause                                                                                                          | shared-zoom/shared-panning + new live-stream example                                                      |
 | 5. Ensembles                  | Ensemble store, quantile cache, members/spread/median rendering, ensemble tooltip/legend                                                                                                                 | 50×10k benchmark meets target                                                                             |
 | 6. Domain plugins             | Warning levels, alert lines, current time, DST indicator (on new `time/`), level select, cross-section select, data field, Beaufort, colour bar, polar wind/current roses                                | Feature parity checklist complete                                                                         |
-| 7. Web Component              | `<fews-chart>` with `el.config`, plot-level attributes, `sync-group` registry, events, Shadow DOM theming, typings                                                                                       | All examples also runnable via `<fews-chart>`; works in Vue app without adapter                           |
+| 7. Web Component              | `<fews-chart>` with `el.config`, plot-level attributes, `sync-group` registry, events, Shadow DOM theming, typings                                                                                       | All examples also runnable via `<fews-chart>`; works in Vue app without adapter; config replacement and attribute-removal contract tests pass |
 | 8. Adoption                   | Vue adapter, docs site from examples, migration guide, FEWS Web OC integration behind a flag; `5.0.0-beta`                                                                                               | FEWS Web OC runs on v5 behind a flag                                                                      |
 | 9. Compatibility layer (last) | Full v4 public API in `./compat` (see 3.14); deprecation warnings; migration guide per class                                                                                                             | Complete v4 example + test suite runs unchanged against `compat` (import path swap only); `5.0.0` release |
 
