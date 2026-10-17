@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>v5 spike: time zones and DST</title>
+  </head>
+  <body>
+    <nav aria-label="Examples">
+      <a href="/">All examples</a>
+      <a href="../v5-spike-line/">Million-point line</a>
+      <a href="../v5-spike-live/">Shared live data</a>
+    </nav>
+    <h1>v5 spike: time zones and DST</h1>
+    <p>
+      The spike's Intl prototype resolves local-hour boundaries to UTC instants. Nonexistent hours
+      are omitted; repeated hours appear twice with their UTC offsets to distinguish them. The line
+      uses epoch milliseconds, so its x spacing represents elapsed time.
+    </p>
+    <p class="note">
+      Phase 0 prototype. The tick table exposes the time-zone results directly; this is not the
+      final multi-level time-axis API.
+    </p>
+    <div class="controls">
+      <label for="scenario">
+        Scenario
+        <select id="scenario">
+          <option value="spring">Amsterdam: spring forward</option>
+          <option value="fall">Amsterdam: fall back</option>
+          <option value="lord-howe">Lord Howe: 30-minute spring forward</option>
+          <option value="mexico">Mexico City: no DST in 2024</option>
+          <option value="kolkata">Kolkata: UTC+05:30</option>
+          <option value="utc">UTC: no offset</option>
+        </select>
+      </label>
+    </div>
+    <p id="description" role="status"></p>
+    <figure>
+      <svg
+        id="chart"
+        viewBox="0 0 1000 240"
+        role="img"
+        aria-label="Signal plotted against elapsed UTC time"
+      ></svg>
+      <figcaption id="domain"></figcaption>
+    </figure>
+    <div class="table-container">
+      <table>
+        <caption>
+          Local-hour ticks returned by zonedTicks
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">Local date and time</th>
+            <th scope="col">UTC offset</th>
+            <th scope="col">UTC instant</th>
+          </tr>
+        </thead>
+        <tbody id="ticks"></tbody>
+      </table>
+    </div>
+    <script type="module" src="./v5-spike-time.ts"></script>
+  </body>
+</html>

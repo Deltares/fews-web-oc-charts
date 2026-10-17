@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>v5 spike: shared live data</title>
+  </head>
+  <body>
+    <nav aria-label="Examples">
+      <a href="/">All examples</a>
+      <a href="../v5-spike-line/">Million-point line</a>
+      <a href="../v5-spike-time/">Time zones and DST</a>
+    </nav>
+    <h1>v5 spike: shared live data</h1>
+    <p>
+      Two SVG renderers share one 8,192-sample ring buffer and one reactive domain. Their pixel
+      ranges and geometry remain independent. Append batches manually or start a deterministic live
+      stream; old samples are evicted without growing the canonical buffers.
+    </p>
+    <p class="note">
+      Phase 0 prototype. The example explicitly publishes store versions to the reactive core;
+      automatic store subscriptions and the public shared-scale API are not implemented yet.
+    </p>
+    <div id="controls" class="controls">
+      <button id="append" type="button">Append 128 samples</button>
+      <button id="stream" type="button" aria-pressed="false">Start stream</button>
+      <label for="follow">
+        <input id="follow" type="checkbox" checked />
+        Follow latest samples
+      </label>
+      <button id="destroy" type="button">Destroy example</button>
+    </div>
+    <figure>
+      <svg
+        id="wide-chart"
+        viewBox="0 0 1000 240"
+        role="img"
+        aria-label="Wide view of the shared live signal"
+      ></svg>
+      <figcaption>1,000-unit range; y domain -1.5 to 1.5.</figcaption>
+    </figure>
+    <figure class="narrow">
+      <svg
+        id="narrow-chart"
+        viewBox="0 0 600 180"
+        role="img"
+        aria-label="Narrow view of the same shared live signal"
+      ></svg>
+      <figcaption>
+        600-unit range; the same store and x domain, with independent geometry.
+      </figcaption>
+    </figure>
+    <p id="status" class="status" role="status"></p>
+    <script type="module" src="./v5-spike-live.ts"></script>
+  </body>
+</html>

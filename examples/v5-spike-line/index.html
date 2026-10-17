@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>v5 spike: million-point line</title>
+  </head>
+  <body>
+    <nav aria-label="Examples">
+      <a href="/">All examples</a>
+      <a href="../v5-spike-live/">Shared live data</a>
+      <a href="../v5-spike-time/">Time zones and DST</a>
+    </nav>
+    <h1>v5 spike: million-point line</h1>
+    <p>
+      One million samples in a columnar store, rendered as an SVG line using M4 decimation. Drag to
+      preview a pan using cached geometry; release to commit the domain and rebuild the visible
+      window. The controls also work without dragging.
+    </p>
+    <p class="note">
+      Phase 0 prototype, imported directly from the spike modules. These are example-owned controls
+      and a background grid, not the final v5 axes or interaction API.
+    </p>
+    <div class="controls">
+      <label for="window-size">
+        Visible samples
+        <select id="window-size">
+          <option value="1000000">1,000,000</option>
+          <option value="100000" selected>100,000</option>
+          <option value="10000">10,000</option>
+        </select>
+      </label>
+      <label for="position">
+        Window start
+        <input id="position" type="range" min="0" max="900000" step="1" value="0" />
+      </label>
+      <button id="pan-left" type="button">Pan left</button>
+      <button id="pan-right" type="button">Pan right</button>
+      <button id="reset" type="button">Reset</button>
+    </div>
+    <figure>
+      <svg
+        id="chart"
+        class="draggable"
+        viewBox="0 0 1000 300"
+        role="img"
+        aria-label="Million-point signal with missing-value gaps; x is sample index, y is signal value"
+      ></svg>
+      <figcaption>Signal value (-1.5 to 1.5) against sample index.</figcaption>
+    </figure>
+    <p id="status" class="status" role="status"></p>
+    <script type="module" src="./v5-spike-line.ts"></script>
+  </body>
+</html>
