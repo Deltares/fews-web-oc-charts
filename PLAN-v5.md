@@ -22,7 +22,7 @@
 | Data           | `DataPoint[]` = array of objects `{x: Date, y: number}`; `mapDataCartesian` slices a copy per render; extent recomputed per key                                                                       | ~50–80 bytes/point + `Date` objects, GC pressure, slow for long/ensemble series |
 | Styling        | `getComputedStyle()` called in pointer-move & legend paths                                                                                                                                            | Forced style recalcs on hover                                                   |
 | Ensembles      | One `Chart` per member; percentiles computed by the app                                                                                                                                               | N DOM groups, N tooltips, N extents                                             |
-| Line + markers | `ChartLine` + `ChartMarker` as two series with the same data                                                                                                                                          | Doubles data, legend entries, hit-tests                                         |
+| Line + markers | `ChartLine` + `ChartMarker` can share the source array, but each creates render-window arrays (markers also filter)                                                                                  | Duplicates derived work, window arrays, legend entries and hit-tests             |
 | Axes           | `x[0..1]`, `y[0..1]` indices hard-coded (`0 \| 1`)                                                                                                                                                    | Max 2 axes per direction, index-based coupling                                  |
 | Sync           | `ZoomHandler` holds an array of axes; `addEventListener('update:x-domain')` only for x                                                                                                                | Ad-hoc, x-only, easy to create feedback loops                                   |
 | Architecture   | `Chart` does data, extent, styling, tooltip, highlight, legend symbol, cartesian **and** polar plotting (`instanceof` dispatch, circular imports via `index.js`); options mutated with lodash `merge` | Hard to extend, test, tree-shake                                                |
@@ -42,7 +42,8 @@ legend; domain-change events.
 
 1. **Invalidate, don't redraw** – every piece of state is tracked; a change marks only
    dependent layers dirty; one `requestAnimationFrame` flush per frame.
-2. **Columnar data** – typed arrays, shared time columns, no per-point objects.
+2. **Columnar data** – typed arrays, shared time columns, no per-point objects in
+   canonical storage; explicit ownership and bounded derived caches (see 3.2.1).
 3. **Composition over inheritance** – plain functions & objects, small modules, no
    `instanceof`, tree-shakable ESM, no lodash.
 4. **Named, shareable state** – scales, pointer and selection are first-class objects that
@@ -82,7 +83,7 @@ legend; domain-change events.
   - Dev-mode diagnostics: cycle detection, effect run counters (feeds the redraw overlay).
 - Interop: tiny adapters `toVueRef(signal)` / `fromVueRef(ref)` in the Vue adapter so the
   core stays framework-free.
-- State signals: `size`, `margins`, per-scale `domain`/`range`, per-series `version`,
+- State signals: `size`, `margins`, shareable scale `domain`, plot-local scale `range`, per-series `version`,
   `theme`, `pointer`, `selection`, mark `visible`/`style`.
 - **Scheduler**: effects don't render directly; they set dirty bits on layers
   (`LAYOUT | AXES | GRID | MARKS(id) | OVERLAY | INTERACTION`) and schedule one rAF.
@@ -102,15 +103,67 @@ legend; domain-change events.
 - Growable **ring buffer** with `capacity`, `maxPoints`, `maxAge` retention.
 - **Block min/max index** (e.g. 256-sample blocks, segment tree) → O(log n) extent for any
   x-window and fast autoscale while zoomed/panned.
-- **LOD / decimation**: M4 / min-max-per-pixel-column decimation on render, cached per
-  (domain, pixel width, version). 1M points → ~4×width vertices.
-- Derived columns are lazy & cached by version: ensemble quantiles (per time step, using
-  `d3.quantileSorted` on a reused scratch buffer), mean, median, min/max envelope,
-  exceedance probability for warning thresholds.
+- **LOD / decimation**: M4 / min-max-per-pixel-column decimation on render, retaining
+  source indices rather than copied x/y columns; cache ownership and keys in 3.2.1.
+  1M points → ~4×width vertices for a continuous line; preserve missing-value gaps.
+- Derived columns are lazy & cached by source version and normalised operation parameters:
+  ensemble quantiles, mean, median, min/max envelope, exceedance probability for warning
+  thresholds. For each requested time step, gather non-missing members into reusable
+  scratch storage, sort the valid prefix once, then call `d3.quantileSorted` for all
+  requested probabilities. No valid members → `NaN`; median and p50 share one result.
+  Bands, member summaries and tooltips reuse these store-owned results across plots.
 - Adapters: `fromObjects(array, { x: 't', y: 'value' })`, `fromFewsPiTimeSeries(json)`
   (flag/comment columns preserved), and accepting the v4 `DataPoint[]` for migration.
 - Mutations: `append`, `prepend`, `upsert(range)`, `replace`, `clear`; each bumps
   `version` and reports the affected x-range so renderers can patch incrementally.
+
+#### 3.2.1 Data ownership & D3 boundary contract
+
+This contract is a **phase-0 acceptance requirement**, not a later optimisation.
+
+- **Canonical owner**: a store owns column buffers, retention state, versions and block
+  indexes. Marks, plots, the Web Component and Vue adapter retain store references,
+  never their own data copies. A shared time column has one owner/version; dependent
+  stores subscribe to it, and aligned append/retention updates are batched atomically.
+  Object adapters convert once and do not retain source rows in core stores (compat
+  retains legacy rows as required by its API).
+- **Input ownership**: default ingestion copies caller-owned typed arrays once into
+  store-owned storage. An explicit borrowed/read-only mode may reuse buffers, but must
+  reject store mutations; external mutation is unsupported. Rendering never copies
+  canonical columns. Capacity growth may allocate replacement buffers; account for
+  spare capacity and peak old/new buffer overlap in memory benchmarks.
+- **D3 shapes**: use numeric source indices with accessors into the columns, not
+  reconstructed `{ x, y }` objects or `[x, y]` tuples. Contiguous windows use typed-array
+  `subarray` views where applicable; non-contiguous LOD uses reusable, viewport-sized
+  typed index buffers. Do not allocate an identity index array of source length.
+  A logical-index array-like adapter handles undecimated windows and ring wraparound
+  without flattening the store. Verify this adapter against runtime and TypeScript
+  D3 signatures; non-array-like iterables are materialised by D3 and are not zero-copy.
+  Accessors map logical to physical slots and preserve boundary neighbours and gaps.
+- **D3 selections**: `.datum(storeOrView)` retains a reference, not a clone. Discrete
+  joins bind stable source identifiers/indices instead of allocating point objects.
+  Rebind or clear obsolete views so DOM nodes cannot retain replaced buffers; ring
+  slot reuse must not reuse the identity of an evicted sample.
+- **Cache ownership**: stores own block indexes and derived-column caches. A bounded
+  store-associated LOD cache may be shared across marks/plots only when source columns,
+  versions, logical window, x-domain/mapping, pixel width, algorithm and gap policy
+  match; include any additional algorithm dependencies. Plot bindings own screen-space
+  geometry, spatial indexes and renderer resources. Never cache projected x/y columns
+  per mark as a second canonical dataset.
+- **Bounds & invalidation**: every cache has an explicit byte/entry limit with LRU
+  eviction; reusable scratch buffers are bounded by active viewport/member needs.
+  Mutations invalidate intersecting windows; retention, ring-slot reuse and buffer
+  replacement invalidate affected index/view references. Version keys alone are not
+  eviction: obsolete generations must be released. Last-consumer disposal releases
+  shared render caches; destroying one plot must not destroy another plot's store.
+- **Geometry keys**: SVG paths and canvas `Path2D` depend on LOD/source versions, both
+  scale domains/ranges, coordinate projection, curve, baseline and other geometry
+  options. Raster caches additionally depend on DPR and paint/style state. Keep these
+  plot-local; invalidate on resize, y-only zoom and polar configuration changes too.
+- **Interaction state**: reactive domains/selections are authoritative; D3 zoom/brush
+  state is a local interaction adapter, not another persistent source of truth.
+  Programmatic/shared domain changes rebase local gesture state without feedback
+  loops. Derive transient D3 scales from signals; do not retain parallel domain histories.
 
 ### 3.3 Scales & axes (`scales/`, `axes/`)
 
@@ -120,7 +173,10 @@ legend; domain-change events.
             q: linear({ nice: true, includeZero: true }),
             h: linear({ reverse: true }), dir: degrees() }
   ```
-- Scale = `{ domain signal, range signal, d3 scale (derived), options, autoscale policy }`.
+- Shared scale state = `{ domain signal, options, autoscale policy }`; each plot binds
+  it to `{ range signal, d3 scale (derived) }`. Different-width plots share domains,
+  never pixel ranges or mutable D3 scale instances. Autoscale combines eligible extents
+  from live bindings in one shared computation; binding removal updates that union.
 - Autoscale policy per scale: `'data' | 'visible' (extent within other-axis window) |
 'fixed' | fn`, plus `nice`, `includeZero`, `symmetric`, `defaultDomain`, `padding`.
 - Axes are views on scales: `axis('q', { position: 'left', label, unit, grid, format,
@@ -179,7 +235,8 @@ hourCycle: 'h23', year…second })` + `formatToParts`; memoised per (tz, hour bu
 - **Gesture fast path**: during pan/zoom apply a transform to cached layers
   (CSS/SVG transform or canvas `drawImage`) and do the full LOD re-render throttled /
   at gesture end.
-- Canvas: devicePixelRatio aware, `Path2D` caching per (mark, LOD key).
+- Canvas: devicePixelRatio aware, bounded plot-local `Path2D`/raster caches with complete
+  geometry/paint dependencies (see 3.2.1).
 - Optional later: WebGL renderer for >10M points behind the same mark interface.
 - Export: `plot.toSVG()`, `plot.toPNG()` (canvas layers inlined as images).
 
@@ -258,14 +315,20 @@ ensemble(fc, {
   vertical/horizontal), `tooltip` (HTML, positioning), `legend` (HTML, toggle, isolate),
   `currentTime` (driven by a shared clock signal), `dstIndicator`, `alertLines`,
   `levelSelect`, `crossSectionSelect`, `dataField`.
-- Hit testing: bisect on typed x column; scatter/points use lazily built `d3-quadtree`;
-  polar uses angular bisect.
+- Hit testing: bisect on ordered typed x columns using logical ring indices; polar uses
+  angular bisect. Only scatter/xy hit testing builds a lazy, plot-local screen-space
+  `d3-quadtree`, storing source indices rather than copied point records. Rebuild on
+  relevant source/projection/domain/range changes; map pointers back through temporary
+  gesture transforms. D3 allocates tree nodes and bulk-build coordinate scratch arrays:
+  include both in memory budgets, cap indexed points, and surface budget exhaustion
+  explicitly rather than silently dropping hit-test candidates.
 - Keyboard & a11y: focusable plot, arrow keys pan, +/- zoom, `Esc` reset, ARIA summary,
   optional hidden data table.
 
 ### 3.9 Synchronisation (`sync/`)
 
-State objects are shareable; sync = sharing the same signal.
+Domain/selection state is shareable; sync = sharing the same signal. Scale bindings and
+pointer pixels remain plot-local.
 
 ```ts
 const time = sharedScale(time({ timeZone })) // one domain signal
@@ -278,6 +341,9 @@ createPlot(elB, { scales: { t: time, h: linear() }, plugins: [crosshair({ pointe
 
 - Works for any scale (x **or** y), any number of plots, no feedback loops (single source
   of truth), domain events via `time.domain.subscribe(…)`.
+- Shared pointers publish domain values keyed by shared scale identity plus source/
+  active state; each plot derives its own pixels and inside/clipping state. The pointer
+  hub's `{ px, py, inside }` is local and is never copied into another plot as authority.
 - Optional `linkScales(a, b, { transform })` for linked but different scales
   (e.g. UTC vs. local, m vs. ft, offset by forecast lead time).
 - Shared `clock` signal for current time across all plots.
@@ -304,7 +370,9 @@ createPlot(elB, { scales: { t: time, h: linear() }, plugins: [crosshair({ pointe
 
 ### 3.12 Memory & resource hygiene
 
-- No per-point objects, no `slice` copies at render (use index windows).
+- No per-point objects in canonical storage, no `slice` copies at render (use index
+  windows). D3 spatial-index objects, legacy rows and opt-in accessibility/export
+  materialisation are separately accounted exceptions, not hidden zero-copy claims.
 - Reusable scratch buffers for decimation/quantiles.
 - Single ResizeObserver / IntersectionObserver shared across all plots (module-level).
 - `destroy()` disconnects observers, removes listeners, detaches from shared signals,
@@ -404,12 +472,17 @@ no copy of the v4 implementation.
     Data types (`DataPoint`, `dataExtentFor`), SCSS class names (`wb-charts`, layer classes).
 - **Mapping strategy**:
   - `CartesianAxes`/`PolarAxes` → wrap a v5 plot; `x[i]`/`y[i]` options → named scales
-    `x0, x1, y0, y1`; `xScales[i]` returns a live d3 scale view onto the v5 scale signal.
+    `x0, x1, y0, y1`; `xScales[i]` returns a live d3-compatible view onto that plot's
+    scale binding, with domain writes routed through the authoritative signal.
   - `Chart.addTo(axes, axisIndex, id, style)` → creates the matching v5 mark; `DataPoint[]`
-    converted to columnar store (cached; re-converted on `data` setter).
-  - `ChartLine` + `ChartMarker` with same data stay two marks (behaviour preserved).
-  - Visitors → v5 plugins; `accept(visitor)` installs the plugin; `redraw()` becomes a no-op
-    or `invalidate()` (v5 tracks changes itself).
+    converted through a shared weak-keyed cache by source-array identity and column
+    mapping/conversion policy, not by chart. Setters (even with the same array) and
+    explicit `redraw()` refresh legacy in-place edits; coalesce conversion once per
+    source/mapping per flush and notify all dependent marks. Release unused conversions.
+    Legacy rows remain accessible, so compat memory includes both representations.
+  - `ChartLine` + `ChartMarker` with same data stay two marks (behaviour preserved), but
+    share converted stores, block indexes and compatible LOD results.
+  - Visitors → v5 plugins; `accept(visitor)` installs the plugin.
   - Explicit `redraw()`/`zoom()` calls trigger a full invalidate for identical semantics;
     lodash-style deep-merge `setOptions` reimplemented locally (no lodash dependency).
   - DOM structure & CSS classes kept where apps style them (`.wb-charts`, layer groups,
@@ -490,15 +563,38 @@ plot.destroy()
 | 50 members × 10k steps ensemble, initial render         | < 50 ms                                  |
 | Pointer move (crosshair + tooltip, 20 series)           | < 2 ms, no data-layer work               |
 | Append 1 point/s to 10 plots                            | only affected marks repaint; < 1 ms/plot |
-| Memory, 1M points                                       | < 20 MB (vs. ~80 MB today)               |
+| Memory, 1M points, core SVG line fixture (defined below) | < 20 MB retained JS/ArrayBuffer memory  |
 | 6 synchronised plots, wheel zoom                        | 60 fps                                   |
 | 100 `<fews-chart>` elements on one page, initial render | < 1 s total; only visible ones render    |
+
+Memory fixture: one core store with 1M points (Float64 x/y), capacity exactly 1M, one
+1000 CSS-pixel-wide SVG line plot, no markers/spatial index, warmed by 100 distinct
+pan/zoom windows. Measure post-GC incremental retained JS heap plus ArrayBuffer backing
+stores against the empty-plot baseline, without double-counting buffers. The <20 MB
+budget includes 16 MB of columns, block indexes, LOD, scratch and retained path/cache
+state. Record browser-native SVG/canvas/Path2D memory separately; this is not a claim
+that total browser memory is <20 MB. Record peak allocations during growth separately.
+
+Additional acceptance checks for the ownership contract:
+
+- Line/markers/area and two plots referencing one store retain one set of canonical
+  buffers; adding a second same-width plot can reuse LOD but not projected geometry.
+- Different-width shared-scale plots retain independent ranges and correct hit tests;
+  y-only zoom, resize and external domain updates invalidate geometry/gesture state.
+- Wrapped-ring rendering and repeated pan/zoom allocate no source-sized render copies;
+  cache counts/bytes stay within limits and plateau rather than grow per window.
+- Quantile consumers share results, sort once per requested time step, exclude missing
+  members and return `NaN` for all-missing steps.
+- Compat paired marks convert once per source/mapping per flush, including in-place
+  edits followed by `redraw()`; destroying one consumer leaves others functional.
+- Separate memory fixtures cover spatial-index peak/retained allocations, ensembles,
+  compat dual representations and create/destroy cleanup of shared resources.
 
 ## 7. Phased roadmap
 
 | Phase                         | Content                                                                                                                                                                                                  | Exit criterion                                                                                            |
 | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| 0. Spike (1–2 wk)             | Own reactive core prototype + scheduler, columnar series, M4 decimation, SVG line renderer; `Intl` zone-offset prototype; benchmark vs. v4                                                               | ≥5× gain on pan with 1M points in SVG; zone offsets match luxon on test matrix                            |
+| 0. Spike (1–2 wk)             | Own reactive core prototype + scheduler, columnar series, M4 decimation, SVG line renderer; ownership/D3 boundary contract (3.2.1), wrapped-ring and shared-binding probes; `Intl` zone-offset prototype; benchmark vs. v4 | ≥5× gain on pan with 1M points in SVG; core ownership/memory checks in §6 pass; zone offsets match luxon on test matrix |
 | 1. Core                       | Reactive core hardened (scopes, diagnostics), `time/` module (luxon replacement), plot container, layout engine, named scales, axes (value/time/band/degrees), coordinate systems, theme tokens, destroy | Static basic-line/secondary-axis/time-axes examples pixel-equal to v4                                     |
 | 2. Marks                      | `series` (line+markers+area), band, bar, histogram, rule, text, heatmap, arrows/direction, progress; SVG first, canvas opt-in                                                                            | All static examples ported                                                                                |
 | 3. Interaction                | Pointer hub, zoom, pan, brush, crosshair, tooltip, legend                                                                                                                                                | mouseover/zoom/panning/brush examples ported                                                              |
