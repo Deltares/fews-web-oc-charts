@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>v5: skew-T log-P sounding</title>
+    <style>
+      #chart {
+        height: 640px;
+        max-width: 760px;
+      }
+      .temperature-key {
+        color: #d33;
+      }
+      .dew-point-key {
+        color: #198754;
+      }
+    </style>
+  </head>
+  <body>
+    <nav aria-label="Examples"><a href="/">All examples</a></nav>
+    <h1>v5: skew-T log-P sounding</h1>
+    <p>
+      A synthetic sounding in physical temperature and pressure coordinates. Isotherms slope up to
+      the right; isobars have logarithmic spacing.
+    </p>
+    <p>
+      <strong class="temperature-key">Solid: temperature</strong> /
+      <strong class="dew-point-key">Dashed: dew point</strong>
+    </p>
+    <label>
+      Skew (C per natural-log pressure)
+      <input id="skew" type="range" min="0" max="45" step="1" value="30" />
+    </label>
+    <figure>
+      <div id="chart" class="plot-host"></div>
+      <figcaption>
+        Temperature in Celsius; pressure in hPa, decreasing upwards. Move over the plot for a
+        physical-coordinate readout.
+      </figcaption>
+    </figure>
+    <output id="readout" aria-live="polite">Move over the sounding.</output>
+    <p class="note">
+      Simple sounding only: no parcel ascent, adiabats, mixing-ratio curves, wind barbs or
+      instability diagnostics.
+    </p>
+    <script type="module" src="./v5-skew-t.ts"></script>
+  </body>
+</html>

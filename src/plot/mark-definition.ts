@@ -7,7 +7,7 @@ import {
 } from '../scales/scale.js'
 import type { ThemeTokens } from '../theme/theme.js'
 
-export type CoordinateSystem = 'cartesian' | 'polar'
+export type CoordinateSystem = 'cartesian' | 'polar' | 'skewT'
 export type Orientation = 'x' | 'y' | 'angular' | 'radial'
 
 export interface MarkValidationContext {
@@ -17,6 +17,7 @@ export interface MarkValidationContext {
 }
 
 export interface MarkRenderContext {
+  readonly skew?: number
   readonly localCoordinates?: boolean
   readonly coordinateSystem: CoordinateSystem
   readonly scales: Readonly<Record<string, ScaleBinding>>

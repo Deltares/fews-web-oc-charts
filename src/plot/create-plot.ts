@@ -50,8 +50,18 @@ import {
 } from './marks.js'
 import { isZoomHandle, type ZoomHandle, type ZoomMode, type ZoomResetMode } from './zoom.js'
 import { matchesModifierKey } from '../Utils/modifierKey.js'
+import {
+  projectSkewTPoint,
+  invertSkewTPoint,
+  type SkewTOptions,
+  type SkewTPoint,
+  type SoundingPoint,
+} from './skew-t-geometry.js'
+import { renderSkewTAxes } from './render-skew-t-axes.js'
+import { skewTMarkExtents } from './skew-t-extents.js'
 
 export interface PlotOptions {
+  skewT?: SkewTOptions
   clipMarks: boolean
   autoMargins: boolean
   axisLayout: 'outside' | 'inset'
@@ -81,6 +91,14 @@ export type PlotConfig = Omit<
 }
 
 export type PolarPlotConfig = Omit<PlotConfig, 'directions'>
+export type SkewTPlotConfig = Omit<PlotConfig, 'directions'>
+
+export interface SkewTPlot extends Omit<Plot, 'update' | 'setConfig'> {
+  update(patch: SkewTPlotConfig): void
+  setConfig(config: SkewTPlotConfig): void
+  project(temperature: number, pressure: number): SkewTPoint
+  invert(x: number, y: number): SoundingPoint
+}
 
 export interface Plot {
   readonly element: SVGSVGElement
@@ -121,6 +139,7 @@ function isCartesianSide(position: AxisSide): position is CartesianSide {
 }
 
 const optionKeys = [
+  'skewT',
   'clipMarks',
   'autoMargins',
   'axisLayout',
@@ -154,6 +173,20 @@ function direction(
 ): Orientation {
   const axes = options.axes.filter((axis) => axis.scale === name)
   const scale = options.scales[name]
+  if (coordinateSystem === 'skewT') {
+    const orientation = scale.kind === 'linear' ? 'x' : scale.kind === 'log' ? 'y' : undefined
+    if (!orientation)
+      throw new Error('Skew-T plots require linear temperature and log pressure scales.')
+    if (
+      axes.some((axis) => {
+        const side = axis === candidate ? position : axis.options.get().resolved.position
+        return orientation === 'x' ? side !== 'bottom' : side !== 'left' && side !== 'right'
+      })
+    ) {
+      throw new Error('Skew-T axes require bottom temperature and left or right pressure axes.')
+    }
+    return orientation
+  }
   if (coordinateSystem === 'polar') {
     let orientation: Orientation | undefined
     if (scale.kind === 'angular') orientation = 'angular'
@@ -225,7 +258,7 @@ function validatePlotCollections(
   if (options.plugins.length > 1) {
     throw new Error('A plot can install at most one zoom plugin.')
   }
-  if (coordinateSystem === 'polar' && options.plugins.length > 0) {
+  if (coordinateSystem !== 'cartesian' && options.plugins.length > 0) {
     throw new Error('The zoom plugin currently supports Cartesian plots only.')
   }
   for (const key of ['scales', 'directions'] as const) {
@@ -237,7 +270,7 @@ function validatePlotCollections(
 }
 
 function validateAxisPosition(position: AxisSide, coordinateSystem: CoordinateSystem) {
-  if (coordinateSystem === 'cartesian' && (position === 'angular' || position === 'radial')) {
+  if (coordinateSystem !== 'polar' && (position === 'angular' || position === 'radial')) {
     throw new Error('Cartesian plots require top, right, bottom or left axes.')
   }
   if (coordinateSystem === 'polar' && position !== 'angular' && position !== 'radial') {
@@ -280,6 +313,9 @@ function validateAxisAppearance(
   options: PlotOptions,
   coordinateSystem: CoordinateSystem,
 ) {
+  if (coordinateSystem === 'skewT' && (axis.crossAt || axis.style !== 'default')) {
+    throw new Error('Skew-T plots require default axes without axis crossings.')
+  }
   if (coordinateSystem === 'polar' && axis.crossAt) {
     throw new Error('Crossing axes require cartesian plots.')
   }
@@ -323,6 +359,9 @@ function validatePlotMarks(options: PlotOptions, coordinateSystem: CoordinateSys
   for (const mark of options.marks) {
     const definition = findMarkDefinition(mark)
     if (!definition) throw new Error(`plot.marks accepts ${supportedMarks} marks only.`)
+    if (coordinateSystem === 'skewT' && definition.name !== 'line') {
+      throw new Error('Skew-T plots currently support line() marks only, including markers.')
+    }
     definition.validate(mark, context)
     if (marks.has(mark)) throw new Error('Duplicate mark handle in plot.marks.')
     marks.add(mark)
@@ -332,6 +371,21 @@ function validatePlotMarks(options: PlotOptions, coordinateSystem: CoordinateSys
 }
 
 function validatePlotDirections(options: PlotOptions, coordinateSystem: CoordinateSystem) {
+  if (coordinateSystem === 'skewT') {
+    const scales = Object.values(options.scales)
+    if (
+      scales.length !== 2 ||
+      scales.filter((scale) => scale.kind === 'linear').length !== 1 ||
+      scales.filter((scale) => scale.kind === 'log').length !== 1
+    ) {
+      throw new Error(
+        'Skew-T plots require exactly one linear temperature scale and one log pressure scale.',
+      )
+    }
+    if (Object.keys(options.directions).length > 0) {
+      throw new Error('Skew-T plots infer scale directions.')
+    }
+  }
   if (coordinateSystem === 'polar') {
     const angularScales = Object.values(options.scales).filter((scale) => scale.kind === 'angular')
     const radialScales = Object.values(options.scales).filter((scale) => scale.kind === 'radial')
@@ -358,6 +412,7 @@ function createPlotInternal(
   validatePatch(config)
   const state = createOptionState<PlotOptions>(config, {
     defaults: () => ({
+      skewT: coordinateSystem === 'skewT' ? { skew: 30 } : undefined,
       clipMarks: true,
       autoMargins: false,
       axisLayout: 'outside',
@@ -374,6 +429,18 @@ function createPlotInternal(
     isAtomicReference: (value) =>
       isScaleHandle(value) || isAxisHandle(value) || isPlotMark(value) || isZoomHandle(value),
     validate(options) {
+      if (coordinateSystem === 'skewT') {
+        if (!options.skewT) throw new Error('Skew-T plots require skewT options.')
+        validateKeys(options.skewT, ['skew'], 'plot.skewT')
+        if (!Number.isFinite(options.skewT.skew) || options.skewT.skew < 0) {
+          throw new Error('plot.skewT.skew must be finite and nonnegative.')
+        }
+        if (options.axisLayout !== 'outside') {
+          throw new Error('Skew-T plots currently require outside axes.')
+        }
+      } else if (options.skewT !== undefined) {
+        throw new Error('plot.skewT requires createSkewTPlot().')
+      }
       validatePlotAppearance(options)
       validatePlotCollections(options, coordinateSystem)
       validatePlotAxes(options, coordinateSystem)
@@ -428,6 +495,7 @@ function createPlotInternal(
     themeVersion.update((value) => value + 1),
   )
   const element = svgElement('svg', { class: 'fews-chart', role: 'img' })
+  if (coordinateSystem === 'skewT') element.dataset.coordinateSystem = 'skewT'
   element.style.display = 'block'
   const background = svgElement('rect')
   const polarBackground = svgElement('path', { display: 'none' })
@@ -442,6 +510,7 @@ function createPlotInternal(
   clipPath.append(clipRect)
   definitions.append(clipPath)
   marksLayer.setAttribute('clip-path', `url(#${clipId})`)
+  if (coordinateSystem === 'skewT') gridLayer.setAttribute('clip-path', `url(#${clipId})`)
   interface MountedMark {
     readonly mark: PlotMark
     readonly definition: MarkDefinition<PlotMark>
@@ -488,6 +557,7 @@ function createPlotInternal(
   function renderMarkGeometry(current: PlotOptions) {
     mountMarks(current.marks)
     const context: MarkRenderContext = {
+      skew: current.skewT?.skew,
       localCoordinates: current.axisLayout === 'inset',
       coordinateSystem,
       scales: markScales,
@@ -577,12 +647,15 @@ function createPlotInternal(
         const domain = binding.scale.domain.get()
         const low = Number(domain[0])
         const high = Number(domain[1])
-        const nextDomain = [
-          anchor + (low - anchor) * factor,
-          anchor + (high - anchor) * factor,
-        ] as const
+        const zoomValue =
+          binding.scale.kind === 'log'
+            ? (value: number) =>
+                Math.exp(Math.log(anchor) + (Math.log(value) - Math.log(anchor)) * factor)
+            : (value: number) => anchor + (value - anchor) * factor
+        const nextDomain = [zoomValue(low), zoomValue(high)] as const
         if (
           nextDomain.some((value) => !Number.isFinite(value)) ||
+          (binding.scale.kind === 'log' && nextDomain.some((value) => value <= 0)) ||
           (binding.scale.kind === 'time' && nextDomain.some((value) => Math.abs(value) > 8.64e15))
         ) {
           continue
@@ -760,6 +833,9 @@ function createPlotInternal(
       const stopExtents = registerScaleExtents(scale, (mode) => {
         const config = options.get().resolved
         if (config.scales[name] !== scale) return undefined
+        if (coordinateSystem === 'skewT') {
+          return skewTMarkExtents(config.marks, config.scales, name, mode, config.skewT!.skew)
+        }
         return markExtents(config.marks, config.scales, name, mode)
       })
       bindings.set(name, {
@@ -930,7 +1006,17 @@ function createPlotInternal(
       gridLayer.setAttribute('stroke', `var(--fews-chart-grid, ${tokens.grid})`)
     }
     if (dirty & (DirtyLayer.layout | DirtyLayer.axes)) {
-      if (coordinateSystem === 'polar') {
+      if (coordinateSystem === 'skewT') {
+        renderSkewTAxes(
+          axesLayer,
+          gridLayer,
+          current.axes,
+          localScales,
+          regions.get(),
+          tokens,
+          current.skewT!.skew,
+        )
+      } else if (coordinateSystem === 'polar') {
         renderPolarAxes(axesLayer, gridLayer, current.axes, localScales, regions.get(), tokens)
       } else {
         renderAxes(axesLayer, gridLayer, current.axes, localScales, regions.get(), tokens)
@@ -985,6 +1071,7 @@ function createPlotInternal(
         current.background,
         current.autoMargins,
         current.clipMarks,
+        current.skewT?.skew,
         ...marginKeys.map((side) => current.margins[side]),
         ...current.axes.flatMap((axis) => [axis, axis.options.version]),
         ...current.marks,
@@ -1068,7 +1155,18 @@ function createPlotInternal(
       pending.inside && px >= 0 && py >= 0 && px <= plotRegion.width && py <= plotRegion.height
     const current = options.get().resolved
     const values = new Map<string, ScaleValue>()
-    if (coordinateSystem === 'cartesian') {
+    if (coordinateSystem === 'skewT') {
+      const [temperature, pressure] = skewTBindings(localScales)
+      const sounding = invertSkewTPoint(
+        temperature[1],
+        pressure[1],
+        svgX,
+        svgY,
+        current.skewT!.skew,
+      )
+      values.set(temperature[0], sounding.temperature)
+      values.set(pressure[0], sounding.pressure)
+    } else if (coordinateSystem === 'cartesian') {
       for (const [name, binding] of Object.entries(localScales)) {
         const pixel =
           direction(current, name, undefined, undefined, coordinateSystem) === 'x' ? svgX : svgY
@@ -1186,6 +1284,44 @@ function createPlotInternal(
 
 export function createPlot(host: HTMLElement, config: PlotConfig = {}): Plot {
   return createPlotInternal(host, config, 'cartesian')
+}
+
+function skewTBindings(scales: Readonly<Record<string, ScaleBinding>>) {
+  const entries = Object.entries(scales)
+  const temperature = entries.find(([, binding]) => binding.scale.kind === 'linear')
+  const pressure = entries.find(([, binding]) => binding.scale.kind === 'log')
+  if (!temperature || !pressure) throw new Error('Skew-T temperature or pressure scale is missing.')
+  return [temperature, pressure] as const
+}
+
+export function createSkewTPlot(host: HTMLElement, config: SkewTPlotConfig): SkewTPlot {
+  const plot = createPlotInternal(host, config, 'skewT')
+  function bindings() {
+    if (plot.destroyed) throw new Error('Cannot project or invert with a destroyed plot.')
+    return skewTBindings(plot.scales)
+  }
+  return Object.assign(plot, {
+    project(temperature: number, pressure: number): SkewTPoint {
+      const [x, y] = bindings()
+      return projectSkewTPoint(
+        x[1],
+        y[1],
+        temperature,
+        pressure,
+        plot.options.get().resolved.skewT!.skew,
+      )
+    },
+    invert(x: number, y: number): SoundingPoint {
+      const [temperature, pressure] = bindings()
+      return invertSkewTPoint(
+        temperature[1],
+        pressure[1],
+        x,
+        y,
+        plot.options.get().resolved.skewT!.skew,
+      )
+    },
+  })
 }
 
 export function createPolarPlot(host: HTMLElement, config: PolarPlotConfig = {}): PolarPlot {

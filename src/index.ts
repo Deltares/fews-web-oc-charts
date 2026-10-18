@@ -7,7 +7,8 @@ export * from './Scale/index.js'
 export * from './Tooltip/index.js'
 export * from './Data/index.js'
 export type { DataPoint, DataValue } from './Data/types.js'
-export { createPlot, createPolarPlot } from './plot/create-plot.js'
+export { createPlot, createPolarPlot, createSkewTPlot } from './plot/create-plot.js'
+export type { SkewTOptions, SkewTPoint, SoundingPoint } from './plot/skew-t-geometry.js'
 export type {
   Plot,
   PlotConfig,
@@ -16,6 +17,8 @@ export type {
   PolarPlot,
   PolarPlotConfig,
   PolarPoint,
+  SkewTPlot,
+  SkewTPlotConfig,
 } from './plot/create-plot.js'
 export { axis } from './plot/axis.js'
 export type { AxisHandle, AxisOptions, AxisSide } from './plot/axis.js'
@@ -104,6 +107,7 @@ export type {
 } from './plot/line.js'
 export {
   linearScale,
+  logScale,
   timeScale,
   bandScale,
   degreesScale,
