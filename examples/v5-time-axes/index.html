@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>v5: civil-time axes</title>
+  </head>
+  <body>
+    <nav aria-label="Examples">
+      <a href="/">All examples</a>
+      <a href="../v5-shared-scales/">Shared domains, local ranges</a>
+      <a href="../v5-runtime-options/">Runtime options and themes</a>
+    </nav>
+    <h1>v5: civil-time axes</h1>
+    <p>
+      Automatic time ticks follow local calendar boundaries. Switch between the 2026 spring-forward
+      and fall-back transitions to see missing and repeated local hours; change the axis time zone
+      and locale without changing the shared instant domain.
+    </p>
+    <p class="note">
+      Phase 1 public API: this example renders scales, axes and layout only. Marks and interactive
+      zoom are not available yet.
+    </p>
+    <div class="controls">
+      <label for="period">
+        Example window
+        <select id="period">
+          <option value="spring">Spring forward — Europe, 29 March 2026</option>
+          <option value="fall">Fall back — Europe, 25 October 2026</option>
+          <option value="week">One-week calendar view</option>
+        </select>
+      </label>
+      <label for="time-zone">
+        Axis time zone
+        <select id="time-zone">
+          <option value="Europe/Amsterdam">Europe / Amsterdam</option>
+          <option value="America/New_York">America / New York</option>
+          <option value="UTC">UTC</option>
+        </select>
+      </label>
+      <label for="locale">
+        Label locale
+        <select id="locale">
+          <option value="en-GB">English (UK)</option>
+          <option value="en-US">English (US)</option>
+          <option value="nl-NL">Nederlands</option>
+        </select>
+      </label>
+    </div>
+    <figure>
+      <div id="plot" class="plot-host"></div>
+      <figcaption>
+        The repeated fall-back hour receives offset labels. The secondary row supplies calendar
+        context and is omitted when it has not changed.
+      </figcaption>
+    </figure>
+    <p id="status" class="status" role="status"></p>
+    <h2>Public API</h2>
+    <pre><code>const t = time({ domain: [from, to], timeZone: 'UTC' })
+const timeAxis = axis('t', {
+  position: 'bottom',
+  timeZone: 'Europe/Amsterdam',
+  locale: 'en-GB',
+})
+createPlot(element, { scales: { t }, axes: [timeAxis] })</code></pre>
+    <script type="module" src="./v5-time-axes.ts"></script>
+  </body>
+</html>
