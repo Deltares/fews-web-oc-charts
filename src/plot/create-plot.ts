@@ -84,11 +84,19 @@ export interface Plot {
   readonly size: ReadonlySignal<Readonly<Size>>
   readonly regions: ReadonlySignal<PlotLayout>
   readonly theme: ReadonlySignal<ThemeTokens>
+  readonly pointer: ReadonlySignal<PlotPointer>
   readonly scales: Readonly<Record<string, ScaleBinding>>
   readonly destroyed: boolean
   update(patch: PlotConfig): void
   setConfig(config: PlotConfig): void
   destroy(): void
+}
+
+export interface PlotPointer {
+  readonly px: number
+  readonly py: number
+  readonly x: ReadonlyMap<string, ScaleValue>
+  readonly inside: boolean
 }
 
 export interface PolarPoint {
@@ -365,6 +373,9 @@ function createPlotInternal(
   )
   const size = reactive.signal<Readonly<Size>>(Object.freeze({ width: 0, height: 0 }))
   const regions = reactive.signal(layout({ width: 0, height: 0 }))
+  const pointer = reactive.signal<PlotPointer>(
+    Object.freeze({ px: 0, py: 0, x: new Map(), inside: false }),
+  )
   const initialThemeMode = options.get().resolved.theme
   const theme = reactive.signal(
     resolveTheme(host, initialThemeMode, matchMedia('(prefers-color-scheme: dark)').matches),
@@ -863,12 +874,99 @@ function createPlotInternal(
     reconcile()
   }
 
+  let pointerFrame: number | undefined
+  let pendingPointer: { clientX: number; clientY: number; inside: boolean } | undefined
+  function publishPointer() {
+    pointerFrame = undefined
+    const pending = pendingPointer
+    pendingPointer = undefined
+    if (!pending || destroyed) return
+    const rect = element.getBoundingClientRect()
+    const actualSize = size.get()
+    const plotRegion = regions.get().plot
+    if (rect.width <= 0 || rect.height <= 0 || actualSize.width <= 0 || actualSize.height <= 0) {
+      pointer.set(Object.freeze({ px: 0, py: 0, x: new Map(), inside: false }))
+      return
+    }
+    const svgX = ((pending.clientX - rect.left) / rect.width) * actualSize.width
+    const svgY = ((pending.clientY - rect.top) / rect.height) * actualSize.height
+    const px = svgX - plotRegion.x
+    const py = svgY - plotRegion.y
+    const inside =
+      pending.inside && px >= 0 && py >= 0 && px <= plotRegion.width && py <= plotRegion.height
+    const current = options.get().resolved
+    const values = new Map<string, ScaleValue>()
+    if (coordinateSystem === 'cartesian') {
+      for (const [name, binding] of Object.entries(localScales)) {
+        const pixel =
+          direction(current, name, undefined, undefined, coordinateSystem) === 'x' ? svgX : svgY
+        if (binding.scale.kind === 'band') {
+          const domain = binding.scale.domain.get()
+          if (domain.length === 0) continue
+          const centerAt = (index: number) => binding.project(domain[index]) + binding.bandwidth / 2
+          let low = 0
+          let high = domain.length - 1
+          const ascending = centerAt(high) >= centerAt(low)
+          while (low < high) {
+            const middle = Math.floor((low + high) / 2)
+            const midpoint = (centerAt(middle) + centerAt(middle + 1)) / 2
+            if (ascending ? pixel > midpoint : pixel < midpoint) low = middle + 1
+            else high = middle
+          }
+          values.set(name, domain[low])
+        } else {
+          values.set(name, binding.invert(pixel))
+        }
+      }
+    } else {
+      const angularEntry = Object.entries(localScales).find(
+        ([, binding]) => binding.scale.kind === 'angular',
+      )
+      const radialEntry = Object.entries(localScales).find(
+        ([, binding]) => binding.scale.kind === 'radial',
+      )
+      if (angularEntry && radialEntry) {
+        const [angularName, angular] = angularEntry
+        const [radialName, radial] = radialEntry
+        const dx = px - plotRegion.width / 2
+        const dy = py - plotRegion.height / 2
+        const radius = Math.hypot(dx, dy)
+        const angularOptions = angular.scale.options.get().resolved
+        const sign = angularOptions.direction === 'anticlockwise' ? -1 : 1
+        const intercept = angularOptions.intercept ?? 0
+        const angularRange = angular.range.get()
+        const middle = (angularRange[0] + angularRange[1]) / 2
+        const angle = radius === 0 ? middle : sign * (Math.atan2(dx, -dy) - intercept)
+        const unwrappedAngle = angle + Math.round((middle - angle) / (2 * Math.PI)) * 2 * Math.PI
+        values.set(angularName, angular.invert(unwrappedAngle))
+        values.set(radialName, radial.invert(radius))
+      }
+    }
+    pointer.set(Object.freeze({ px, py, x: values, inside }))
+  }
+  function queuePointer(event: PointerEvent, inside: boolean) {
+    if (!event.isPrimary) return
+    pendingPointer = { clientX: event.clientX, clientY: event.clientY, inside }
+    if (pointerFrame === undefined) pointerFrame = requestAnimationFrame(publishPointer)
+  }
+  const onPointerEnter = (event: PointerEvent) => queuePointer(event, true)
+  const onPointerMove = (event: PointerEvent) => queuePointer(event, true)
+  const onPointerDown = (event: PointerEvent) => queuePointer(event, true)
+  const onPointerLeave = (event: PointerEvent) => queuePointer(event, false)
+  const onPointerCancel = (event: PointerEvent) => queuePointer(event, false)
+  element.addEventListener('pointerenter', onPointerEnter)
+  element.addEventListener('pointermove', onPointerMove)
+  element.addEventListener('pointerdown', onPointerDown)
+  element.addEventListener('pointerleave', onPointerLeave)
+  element.addEventListener('pointercancel', onPointerCancel)
+
   return {
     element,
     options,
     size,
     regions,
     theme,
+    pointer,
     get scales() {
       return localScales
     },
@@ -884,6 +982,13 @@ function createPlotInternal(
     destroy() {
       if (destroyed) return
       destroyed = true
+      element.removeEventListener('pointerenter', onPointerEnter)
+      element.removeEventListener('pointermove', onPointerMove)
+      element.removeEventListener('pointerdown', onPointerDown)
+      element.removeEventListener('pointerleave', onPointerLeave)
+      element.removeEventListener('pointercancel', onPointerCancel)
+      if (pointerFrame !== undefined) cancelAnimationFrame(pointerFrame)
+      pendingPointer = undefined
       stopSize()
       stopPixelRatio()
       stopTheme()
