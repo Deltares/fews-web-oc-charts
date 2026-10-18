@@ -18,6 +18,14 @@ export type {
 export { axis } from './plot/axis.js'
 export type { AxisHandle, AxisOptions, AxisSide } from './plot/axis.js'
 export { line } from './plot/line.js'
+export { band as bandMark, band as range } from './plot/band.js'
+export type {
+  BandMark,
+  BandOptions,
+  BandRange,
+  BandRangeValue,
+  BandRangeValues,
+} from './plot/band.js'
 export { createSeries, fromObjects } from './data-store/series.js'
 export type {
   SeriesInput,

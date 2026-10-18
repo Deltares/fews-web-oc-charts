@@ -1,3 +1,4 @@
+import { arc } from 'd3'
 import { createOptionState, type OptionPatch, type OptionStateSnapshot } from '../core/options.js'
 import { DirtyLayer, type DirtyLayers } from '../core/frame-scheduler.js'
 import { reactive, invalidate, cancelRender, optionSignal } from '../core/runtime.js'
@@ -23,9 +24,12 @@ import { resolveTheme, watchTheme, type ThemeMode, type ThemeTokens } from '../t
 import { isAxisHandle, validateAxisUpdates, type AxisHandle, type AxisSide } from './axis.js'
 import { observeSize } from './resize.js'
 import { svgElement, renderAxes, renderPolarAxes, axisTickLabels } from './render-axes.js'
+import { isBandMark, type BandMark } from './band.js'
 import { isLineMark, validateLineValuesForScale, type LineMark } from './line.js'
 import { isSeriesMark, validateSeriesUpdates, type SeriesMark } from './series.js'
 import { markExtents } from './mark-extents.js'
+
+type PlotMark = LineMark | SeriesMark | BandMark
 
 export interface PlotOptions {
   width?: number
@@ -37,7 +41,7 @@ export interface PlotOptions {
   scales: Record<string, ScaleHandle>
   directions: Record<string, 'x' | 'y'>
   axes: readonly AxisHandle[]
-  marks: readonly (LineMark | SeriesMark)[]
+  marks: readonly PlotMark[]
 }
 
 export type PlotConfig = Omit<
@@ -46,7 +50,7 @@ export type PlotConfig = Omit<
 > & {
   scales?: Record<string, ScaleHandle | undefined>
   axes?: readonly AxisHandle[]
-  marks?: readonly (LineMark | SeriesMark)[]
+  marks?: readonly PlotMark[]
   themeElement?: Element
 }
 
@@ -209,13 +213,30 @@ function validatePlotScales(options: PlotOptions, coordinateSystem: CoordinateSy
 }
 
 function validatePlotMark(
-  mark: LineMark | SeriesMark,
+  mark: PlotMark,
   options: PlotOptions,
   coordinateSystem: CoordinateSystem,
   dataBacked = isSeriesMark(mark),
 ) {
-  if (!mark || (!isLineMark(mark) && !isSeriesMark(mark))) {
-    throw new Error('plot.marks accepts line() or series() marks only.')
+  if (!mark || (!isLineMark(mark) && !isSeriesMark(mark) && !isBandMark(mark))) {
+    throw new Error('plot.marks accepts line(), series() or band() marks only.')
+  }
+  if (isBandMark(mark)) {
+    if (!Object.hasOwn(options.scales, mark.x) || !Object.hasOwn(options.scales, mark.y)) {
+      throw new Error(`band "${mark.id ?? ''}" references a missing x or y scale.`)
+    }
+    const xDirection = coordinateSystem === 'polar' ? 'angular' : 'x'
+    const yDirection = coordinateSystem === 'polar' ? 'radial' : 'y'
+    if (direction(options, mark.x, undefined, undefined, coordinateSystem) !== xDirection) {
+      throw new Error(`band "${mark.id ?? ''}" requires a ${xDirection}-direction scale.`)
+    }
+    if (direction(options, mark.y, undefined, undefined, coordinateSystem) !== yDirection) {
+      throw new Error(`band "${mark.id ?? ''}" requires a ${yDirection}-direction scale.`)
+    }
+    if (options.scales[mark.x].kind === 'band' || options.scales[mark.y].kind === 'band') {
+      throw new Error(`band "${mark.id ?? ''}" requires numeric or time scales.`)
+    }
+    return
   }
   if (coordinateSystem === 'polar') {
     throw new Error('line() marks are supported on cartesian plots only.')
@@ -253,7 +274,7 @@ function validatePlotMark(
 
 function validatePlotMarks(options: PlotOptions, coordinateSystem: CoordinateSystem) {
   const markIds = new Set<string>()
-  const marks = new Set<LineMark | SeriesMark>()
+  const marks = new Set<PlotMark>()
   for (const mark of options.marks) {
     validatePlotMark(mark, options, coordinateSystem)
     if (marks.has(mark)) throw new Error('Duplicate mark handle in plot.marks.')
@@ -299,7 +320,11 @@ function createPlotInternal(
       marks: [],
     }),
     isAtomicReference: (value) =>
-      isScaleHandle(value) || isAxisHandle(value) || isLineMark(value) || isSeriesMark(value),
+      isScaleHandle(value) ||
+      isAxisHandle(value) ||
+      isLineMark(value) ||
+      isSeriesMark(value) ||
+      isBandMark(value),
     validate(options) {
       validatePlotAppearance(options)
       validatePlotCollections(options)
@@ -363,8 +388,11 @@ function createPlotInternal(
   definitions.append(clipPath)
   marksLayer.setAttribute('clip-path', `url(#${clipId})`)
   const areaPaths: (SVGPathElement | undefined)[] = []
-  const linePaths: SVGPathElement[] = []
+  const linePaths: (SVGPathElement | undefined)[] = []
   const markerGroups: (SVGGElement | undefined)[] = []
+  const bandGroups = new Map<BandMark, SVGGElement>()
+  const bandGeometryKeys = new Map<BandMark, readonly unknown[]>()
+  const bandStyleKeys = new Map<BandMark, readonly unknown[]>()
   const geometryKeys: (readonly unknown[])[] = []
   const styleKeys: (readonly unknown[] | undefined)[] = []
   let renderedMarks: PlotOptions['marks'] = []
@@ -381,13 +409,31 @@ function createPlotInternal(
       const oldGeometry = geometryKeys.splice(0)
       const oldStyles = styleKeys.splice(0)
       const claimed = new Set<number>()
+      const staleBands = new Map(bandGroups)
       const matches = current.marks.map((mark) =>
-        renderedMarks.findIndex((previous) =>
-          mark.id ? previous.id === mark.id : previous === mark,
+        renderedMarks.findIndex(
+          (previous) =>
+            isBandMark(mark) === isBandMark(previous) &&
+            (mark.id ? previous.id === mark.id : previous === mark),
         ),
       )
       for (const index of matches) if (index >= 0) claimed.add(index)
-      current.marks.forEach((_mark, index) => {
+      current.marks.forEach((mark, index) => {
+        if (isBandMark(mark)) {
+          let group = bandGroups.get(mark)
+          if (!group) {
+            group = svgElement('g', { 'data-mark': 'band' })
+            bandGroups.set(mark, group)
+          }
+          staleBands.delete(mark)
+          marksLayer.append(group)
+          linePaths[index] = undefined
+          areaPaths[index] = undefined
+          markerGroups[index] = undefined
+          geometryKeys[index] = []
+          styleKeys[index] = undefined
+          return
+        }
         let source = matches[index]
         if (source < 0 && index < oldLines.length && !claimed.has(index)) {
           source = index
@@ -402,22 +448,113 @@ function createPlotInternal(
           for (const node of [oldAreas[source], oldLines[source], oldMarkers[source]]) {
             if (node) marksLayer.append(node)
           }
+        } else {
+          linePaths[index] = undefined
+          areaPaths[index] = undefined
+          markerGroups[index] = undefined
+          geometryKeys[index] = []
+          styleKeys[index] = undefined
         }
       })
       oldLines.forEach((path, index) => {
         if (claimed.has(index)) return
-        path.remove()
+        path?.remove()
         oldAreas[index]?.remove()
         oldMarkers[index]?.remove()
       })
+      for (const group of staleBands.values()) group.remove()
+      for (const mark of bandGroups.keys()) {
+        if (!current.marks.includes(mark)) {
+          bandGroups.delete(mark)
+          bandGeometryKeys.delete(mark)
+          bandStyleKeys.delete(mark)
+        }
+      }
       renderedMarks = [...current.marks]
     }
     current.marks.forEach((mark, markIndex) => {
+      const xScale = localScales[mark.x]
+      const yScale = localScales[mark.y]
+      if (isBandMark(mark)) {
+        const key = [
+          mark,
+          xScale,
+          yScale,
+          xScale.scale.domain.version,
+          yScale.scale.domain.version,
+          xScale.scale.options.version,
+          yScale.scale.options.version,
+          ...xScale.range.get(),
+          ...yScale.range.get(),
+          ...(coordinateSystem === 'polar' ? [regions.get().plot.x, regions.get().plot.y] : []),
+        ]
+        const previous = bandGeometryKeys.get(mark)
+        if (
+          previous &&
+          key.length === previous.length &&
+          key.every((value, index) => value === previous[index])
+        ) {
+          return
+        }
+        bandGeometryKeys.set(mark, key)
+        bandStyleKeys.delete(mark)
+        const group = bandGroups.get(mark)
+        if (!group) throw new Error('Missing band renderer for a configured mark.')
+        if (mark.id) group.dataset.markId = mark.id
+        else delete group.dataset.markId
+        const region = regions.get().plot
+        if (coordinateSystem === 'polar') {
+          group.setAttribute(
+            'transform',
+            `translate(${region.x + region.width / 2},${region.y + region.height / 2})`,
+          )
+        } else {
+          group.removeAttribute('transform')
+        }
+        let rangeIndex = 0
+        for (let index = 0; index < mark.xValues.length; index += 1) {
+          const xRange = mark.xValues[index]
+          const yRange = mark.yValues[index]
+          if (!xRange || !yRange) continue
+          if (coordinateSystem === 'polar') {
+            let path = group.children[rangeIndex] as SVGPathElement | undefined
+            if (!path) {
+              path = svgElement('path', { 'data-mark': 'band-range', stroke: 'none' })
+              group.append(path)
+            }
+            const angular = xScale.scale.options.get().resolved
+            const direction = angular.direction === 'anticlockwise' ? -1 : 1
+            const intercept = angular.intercept ?? 0
+            const d =
+              arc<null>()
+                .innerRadius(Math.min(yScale.project(yRange[0]), yScale.project(yRange[1])))
+                .outerRadius(Math.max(yScale.project(yRange[0]), yScale.project(yRange[1])))
+                .startAngle(intercept + direction * xScale.project(xRange[0]))
+                .endAngle(intercept + direction * xScale.project(xRange[1]))(null) ?? ''
+            path.setAttribute('d', d)
+          } else {
+            let rect = group.children[rangeIndex] as SVGRectElement | undefined
+            if (!rect) {
+              rect = svgElement('rect', { 'data-mark': 'band-range', stroke: 'none' })
+              group.append(rect)
+            }
+            const x0 = xScale.project(xRange[0])
+            const x1 = xScale.project(xRange[1])
+            const y0 = yScale.project(yRange[0])
+            const y1 = yScale.project(yRange[1])
+            rect.setAttribute('x', String(Math.min(x0, x1)))
+            rect.setAttribute('y', String(Math.min(y0, y1)))
+            rect.setAttribute('width', String(Math.abs(x1 - x0)))
+            rect.setAttribute('height', String(Math.abs(y1 - y0)))
+          }
+          rangeIndex += 1
+        }
+        while (group.children.length > rangeIndex) group.lastElementChild?.remove()
+        return
+      }
       const store = isSeriesMark(mark) ? mark.data : undefined
       const staticMark = isLineMark(mark) ? mark : undefined
       const visible = !isSeriesMark(mark) || mark.visible
-      const xScale = localScales[mark.x]
-      const yScale = localScales[mark.y]
       const key = [
         mark,
         store?.version,
@@ -553,11 +690,23 @@ function createPlotInternal(
 
   function renderMarkStyles(current: PlotOptions, tokens: ThemeTokens) {
     current.marks.forEach((mark, markIndex) => {
+      if (isBandMark(mark)) {
+        const key = [mark, mark.fill, mark.opacity, tokens.accent]
+        const previous = bandStyleKeys.get(mark)
+        if (previous && key.every((value, index) => value === previous[index])) return
+        bandStyleKeys.set(mark, key)
+        const group = bandGroups.get(mark)
+        if (!group) throw new Error('Missing band renderer for a configured mark.')
+        group.setAttribute('fill', mark.fill ?? `var(--fews-chart-accent, ${tokens.accent})`)
+        group.setAttribute('fill-opacity', String(mark.opacity))
+        return
+      }
       const key = [mark, mark.stroke, mark.strokeWidth, mark.markers, mark.area, tokens.accent]
       const previous = styleKeys[markIndex]
       if (previous && key.every((value, index) => value === previous[index])) return
       styleKeys[markIndex] = key
       const path = linePaths[markIndex]
+      if (!path) throw new Error('Missing line renderer for a configured mark.')
       path.setAttribute('stroke', mark.stroke ?? `var(--fews-chart-accent, ${tokens.accent})`)
       path.setAttribute('stroke-width', String(mark.strokeWidth))
       const areaPath = areaPaths[markIndex]
@@ -890,6 +1039,10 @@ function createPlotInternal(
       areaPaths.length = 0
       linePaths.length = 0
       markerGroups.length = 0
+      bandGroups.forEach((group) => group.remove())
+      bandGroups.clear()
+      bandGeometryKeys.clear()
+      bandStyleKeys.clear()
       geometryKeys.length = 0
       styleKeys.length = 0
       renderedMarks = []

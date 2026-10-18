@@ -7,6 +7,7 @@ import {
   degrees,
   line,
   linear,
+  range,
   series,
   time,
   type AutoscaleContext,
@@ -149,6 +150,33 @@ describe('autoscale policies', () => {
     expect(y.domain.get()).toEqual([2, 30])
     x.domain.set(['a'])
     expect(y.domain.get()).toEqual([10, 20])
+  })
+
+  test('range mark extents include both interval endpoints and visible overlaps', () => {
+    const x = linear({ domain: [0, 1] })
+    const y = linear({ autoscale: 'visible' })
+    plot({
+      scales: { x, y },
+      directions: { x: 'x' },
+      marks: [
+        range({
+          x: 'x',
+          y: 'y',
+          xValues: [
+            [-1, 0.5],
+            [0.5, 2],
+            [3, 4],
+          ],
+          yValues: [
+            [100, 200],
+            [10, 20],
+            [1000, 2000],
+          ],
+        }),
+      ],
+    })
+    expect(x.domain.get()).toEqual([0, 1])
+    expect(y.domain.get()).toEqual([10, 200])
   })
 
   test('empty/all-gap data uses defaults; singleton data stays projectable and time-safe', () => {

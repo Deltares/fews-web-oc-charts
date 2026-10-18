@@ -409,6 +409,12 @@ Other marks: `band` (range / min-max), `bar` (single/grouped/stacked, step bars)
 `progress`, `rule` (horizontal/vertical), `text`, `thresholds` (warning levels as a mark),
 `colorBar`. Each mark implements:
 
+The range `band` mark accepts aligned `xValues` and `yValues` of ascending numeric
+`[min, max]` pairs (with `null`/`undefined` gaps), drawing one rectangle per pair on
+cartesian numeric/time scales or one annular sector per pair on polar angular/radial
+scales. Its public constructor is exported as `range` and `bandMark`, because `band`
+is already the public band-scale constructor.
+
 ```ts
 interface Mark {
   id: string
