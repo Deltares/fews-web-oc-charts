@@ -91,7 +91,7 @@ export class BrushHandler implements Visitor {
         const brushGroup = this.brushGroup
         const brush = this.brush
         setTimeout(() => {
-          brushGroup.call(brush.move, domain as d3.BrushSelection)
+          brushGroup.call(brush.move.bind(brush), domain as d3.BrushSelection)
         })
       }
     }
