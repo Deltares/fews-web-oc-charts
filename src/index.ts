@@ -42,7 +42,7 @@ export type {
   TextValue,
   TextValues,
 } from './plot/text.js'
-export { band as bandMark, band as range } from './plot/band.js'
+export { band, band as range } from './plot/band.js'
 export type {
   BandMark,
   BandOptions,
