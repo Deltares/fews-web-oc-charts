@@ -327,25 +327,144 @@ describe('createPlot named scales', () => {
     expect(() => current.scales.categories.invert(20)).toThrow(/band/)
   })
 
-  test('renders multi-level civil-time labels with per-axis timezone overrides', async () => {
-    const current = plot(host(700, 320), {
-      scales: {
-        t: time({
-          domain: [Date.UTC(2024, 11, 31, 18), Date.UTC(2025, 0, 2, 18)],
-          timeZone: 'UTC',
-        }),
-      },
-      axes: [axis('t', { position: 'bottom', timeZone: 'America/New_York', locale: 'en-US' })],
-    })
-    await frame()
-    const contexts = [...current.element.querySelectorAll('[data-tick-context]')]
-    expect(contexts.length).toBeGreaterThan(0)
-    expect(contexts.map((label) => label.textContent).join(' ')).toContain('Dec 31, 2024')
-    expect(current.regions.get().axes[0].height).toBeGreaterThanOrEqual(36)
+  test.each(['top', 'right', 'bottom', 'left'] as const)(
+    'preserves %s axis geometry, band centering, grid and captions',
+    async (position) => {
+      const handle = axis('categories', {
+        position,
+        grid: true,
+        label: 'Category',
+        unit: 'm',
+        labelAngle: 30,
+        format: (value) => `tick:${value}`,
+      })
+      const current = plot(host(), {
+        scales: { categories: band({ domain: ['a', 'b', 'c'], reverse: true }) },
+        axes: [handle],
+      })
+      await frame()
+      const group = current.element.querySelector('[data-layer="axes"] > g')!
+      const grid = current.element.querySelector('[data-layer="grid"]')!
+      const region = current.regions.get().plot
+      const bandRegion = current.regions.get().axes[0]
+      const horizontal = position === 'top' || position === 'bottom'
+      const sign = position === 'top' || position === 'left' ? -1 : 1
+      const baseline = {
+        top: bandRegion.y + bandRegion.height,
+        right: bandRegion.x,
+        bottom: bandRegion.y,
+        left: bandRegion.x + bandRegion.width,
+      }[position]
+      const coordinates = (element: Element) =>
+        ['x1', 'y1', 'x2', 'y2'].map((name) => Number(element.getAttribute(name)))
+      expect(group.getAttribute('fill')).toBe('currentColor')
+      expect(coordinates(group.firstElementChild!)).toEqual(
+        horizontal
+          ? [region.x, baseline, region.x + region.width, baseline]
+          : [baseline, region.y, baseline, region.y + region.height],
+      )
+      const ticks = current.scales.categories.ticks(6)
+      const lines = group.querySelectorAll('line')
+      expect(lines).toHaveLength(ticks.length + 1)
+      expect(grid.children).toHaveLength(ticks.length)
+      ticks.forEach((value, index) => {
+        const pixel =
+          current.scales.categories.project(value) + current.scales.categories.bandwidth / 2
+        const x = horizontal ? pixel : baseline
+        const y = horizontal ? baseline : pixel
+        const line = lines[index + 1]
+        expect(coordinates(line)).toEqual([
+          x,
+          y,
+          x + (horizontal ? 0 : sign * 5),
+          y + (horizontal ? sign * 5 : 0),
+        ])
+        expect(line.getAttribute('stroke')).toBe('currentColor')
+        const label = line.nextElementSibling!
+        const labelX = x + (horizontal ? 0 : sign * 9)
+        const labelY = y + (horizontal ? sign * 9 : 0)
+        expect(label.textContent).toBe(`tick:${value}`)
+        expect(Number(label.getAttribute('x'))).toBe(labelX)
+        expect(Number(label.getAttribute('y'))).toBe(labelY)
+        expect(label.getAttribute('transform')).toBe(`rotate(30 ${labelX} ${labelY})`)
+        expect(label.getAttribute('text-anchor')).toBe(
+          horizontal ? 'middle' : position === 'left' ? 'end' : 'start',
+        )
+        expect(label.getAttribute('dominant-baseline')).toBe(
+          horizontal ? (position === 'top' ? 'auto' : 'hanging') : 'middle',
+        )
+        expect(coordinates(grid.children[index])).toEqual(
+          horizontal
+            ? [pixel, region.y, pixel, region.y + region.height]
+            : [region.x, pixel, region.x + region.width, pixel],
+        )
+        expect(grid.children[index].getAttribute('stroke')).toBe('inherit')
+      })
+      const fontSize = current.theme.get().fontSize
+      const captionX = horizontal
+        ? region.x + region.width / 2
+        : bandRegion.x + (sign < 0 ? fontSize : bandRegion.width - fontSize)
+      const captionY = horizontal
+        ? bandRegion.y + (sign > 0 ? bandRegion.height - fontSize : fontSize)
+        : region.y + region.height / 2
+      const caption = group.lastElementChild!
+      expect(caption.textContent).toBe('Category (m)')
+      expect(Number(caption.getAttribute('x'))).toBe(captionX)
+      expect(Number(caption.getAttribute('y'))).toBe(captionY)
+      expect(caption.getAttribute('transform')).toBe(
+        horizontal ? null : `rotate(-90 ${captionX} ${captionY})`,
+      )
+      expect(caption.getAttribute('text-anchor')).toBe('middle')
+      expect(caption.getAttribute('dominant-baseline')).toBe('middle')
 
-    current.options.get().resolved.axes[0].update({ format: () => 'custom' })
-    await frame()
-    expect(current.element.querySelectorAll('[data-tick-context]')).toHaveLength(0)
-    expect(current.element.textContent).toContain('custom')
-  })
+      handle.update({ grid: false, label: '', unit: '', labelAngle: 0 })
+      await frame()
+      const updatedGroup = current.element.querySelector('[data-layer="axes"] > g')!
+      expect(grid.children).toHaveLength(0)
+      expect(updatedGroup.querySelectorAll('text')).toHaveLength(ticks.length)
+      expect(updatedGroup.querySelector('[transform]')).toBeNull()
+    },
+  )
+
+  test.each(['top', 'bottom'] as const)(
+    'renders multi-level civil-time labels on %s with per-axis timezone overrides',
+    async (position) => {
+      const current = plot(host(700, 320), {
+        scales: {
+          t: time({
+            domain: [Date.UTC(2024, 11, 31, 18), Date.UTC(2025, 0, 2, 18)],
+            timeZone: 'UTC',
+          }),
+        },
+        axes: [
+          axis('t', {
+            position,
+            timeZone: 'America/New_York',
+            locale: 'en-US',
+            labelAngle: 15,
+          }),
+        ],
+      })
+      await frame()
+      const contexts = [...current.element.querySelectorAll('[data-tick-context]')]
+      expect(contexts.length).toBeGreaterThan(0)
+      expect(contexts.map((label) => label.textContent).join(' ')).toContain('Dec 31, 2024')
+      expect(current.regions.get().axes[0].height).toBeGreaterThanOrEqual(36)
+      for (const context of contexts) {
+        const primary = context.previousElementSibling!
+        const x = Number(context.getAttribute('x'))
+        const y = Number(context.getAttribute('y'))
+        expect(x).toBe(Number(primary.getAttribute('x')))
+        expect(y - Number(primary.getAttribute('y'))).toBe(
+          (position === 'top' ? -1 : 1) * current.theme.get().fontSize,
+        )
+        expect(context.getAttribute('transform')).toBe(`rotate(15 ${x} ${y})`)
+      }
+
+      current.options.get().resolved.axes[0].update({ format: () => 'custom' })
+      await frame()
+      expect(current.element.querySelectorAll('[data-tick-context]')).toHaveLength(0)
+      expect(current.element.textContent).toContain('custom')
+    },
+  )
 })
