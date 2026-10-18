@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>v5: range marks</title>
+  </head>
+  <body>
+    <nav aria-label="Examples">
+      <a href="/">All examples</a>
+      <a href="../v5-series/">Line, markers and area</a>
+      <a href="../v5-polar-range/">Polar range marks</a>
+    </nav>
+    <h1>v5: cartesian range marks</h1>
+    <p>
+      Each pair of x and y intervals produces a rectangle. The ranges contribute both endpoints to
+      autoscaling, and a gap in either interval omits that rectangle.
+    </p>
+    <p class="note">
+      Range marks accept numeric intervals on linear or time scales. One mark represents one
+      independently styled range layer; use multiple marks for different fills and opacity.
+    </p>
+    <figure>
+      <div id="chart" class="plot-host"></div>
+      <figcaption>
+        Forecast min/max envelopes for two locations; gaps represent unavailable intervals.
+      </figcaption>
+    </figure>
+    <h2>Public API</h2>
+    <pre><code>const forecast = range({
+  x: 't',
+  y: 'q',
+  xValues: [[start, end], [nextStart, nextEnd], null],
+  yValues: [[low, high], [nextLow, nextHigh], [low, high]],
+  fill: '#1677a6',
+  opacity: 0.25,
+})
+const plot = createPlot(element, {
+  scales: { t: time(), q: linear() },
+  marks: [forecast],
+})</code></pre>
+    <script type="module" src="./v5-range.ts"></script>
+  </body>
+</html>

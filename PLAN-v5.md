@@ -1126,17 +1126,23 @@ Run `npm run dev` and use the example index, or open these public-API demos:
 - [Polar coordinates](./examples/v5-polar-coordinates/index.html): clockwise and
   anticlockwise angles, intercepts, angular sweep, radial inner radius and projected
   coordinate readouts.
+- [Cartesian range marks](./examples/v5-range/index.html): numeric/time interval rectangles,
+  independent mark styling, gaps and endpoint autoscaling.
+- [Polar range marks](./examples/v5-polar-range/index.html): angular/radial intervals rendered
+  as annular sectors, with multiple independently styled layers.
 
 The scale, theme and polar demos remain axes-only; the polar example also reports projected
 coordinates using the public `project` API. The basic-line demo uses the narrow static `line()`
 foundation for visual fixtures. The [series demo](./examples/v5-series/index.html) now uses
-the data-backed foundation and autoscaling described below.
+the data-backed foundation and autoscaling described below. The range demos exercise the
+cartesian and polar interval mark implementations.
 The `v5-spike-*` examples remain separate phase 0 prototypes, not examples of the
 public v5 API.
 
 The package root now exports `createPlot`, `createPolarPlot`, `linear`, `time`, `band`,
-`degrees`, `angular`, `radial`, `sharedScale`, `axis`, `line`, `layout`, `batch` and
-`untracked`, alongside the existing v4 exports. The tested phase 0 reactive primitives
+`degrees`, `angular`, `radial`, `sharedScale`, `axis`, `line`, `range`, `bandMark`, `layout`,
+`batch` and `untracked`, alongside the existing v4 exports. (`band` remains the band-scale
+constructor; `range` and `bandMark` construct range marks.) The tested phase 0 reactive primitives
 have moved into `src/core`; the spike imports remain forwarding modules so the phase 0
 fixtures keep working.
 
