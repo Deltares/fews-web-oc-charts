@@ -1113,6 +1113,8 @@ Run `npm run dev` and use the example index, or open these public-API demos:
 - [Runtime options and themes](./examples/v5-runtime-options/index.html): band,
   linear and degree scales, stacked axes, handle updates, nested option unsetting,
   configuration replacement, scoped CSS tokens and explicit cleanup.
+- [Civil-time axes](./examples/v5-time-axes/index.html): automatic multi-level time
+  labels, locale/time-zone overrides, and spring-forward/fall-back calendar behavior.
 
 These phase 1 demos intentionally render axes without data marks. The `v5-spike-*`
 examples remain separate phase 0 prototypes, not examples of the public v5 API.
