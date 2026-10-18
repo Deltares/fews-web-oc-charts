@@ -303,7 +303,7 @@ function createPlotInternal(
   const linePaths: SVGPathElement[] = []
   element.append(background, definitions, gridLayer, marksLayer, axesLayer, title)
 
-  function renderMarks(current: PlotOptions, tokens: ThemeTokens) {
+  function renderMarkGeometry(current: PlotOptions) {
     current.marks.forEach((mark, markIndex) => {
       let path = linePaths[markIndex]
       if (!path) {
@@ -317,10 +317,8 @@ function createPlotInternal(
         linePaths.push(path)
         marksLayer.append(path)
       }
-      if (mark.id) path.setAttribute('data-mark-id', mark.id)
-      else path.removeAttribute('data-mark-id')
-      path.setAttribute('stroke', mark.stroke ?? `var(--fews-chart-accent, ${tokens.accent})`)
-      path.setAttribute('stroke-width', String(mark.strokeWidth))
+      if (mark.id) path.dataset.markId = mark.id
+      else delete path.dataset.markId
       const xScale = localScales[mark.x]
       const yScale = localScales[mark.y]
       let data = ''
@@ -347,6 +345,14 @@ function createPlotInternal(
       path.setAttribute('d', data)
     })
     while (linePaths.length > current.marks.length) linePaths.pop()?.remove()
+  }
+
+  function renderMarkStyles(current: PlotOptions, tokens: ThemeTokens) {
+    current.marks.forEach((mark, markIndex) => {
+      const path = linePaths[markIndex]
+      path.setAttribute('stroke', mark.stroke ?? `var(--fews-chart-accent, ${tokens.accent})`)
+      path.setAttribute('stroke-width', String(mark.strokeWidth))
+    })
   }
 
   function reconcile() {
@@ -499,8 +505,11 @@ function createPlotInternal(
         renderAxes(axesLayer, gridLayer, current.axes, localScales, regions.get(), tokens)
       }
     }
+    if (dirty & (DirtyLayer.layout | DirtyLayer.axes | DirtyLayer.marks)) {
+      renderMarkGeometry(current)
+    }
     if (dirty & (DirtyLayer.layout | DirtyLayer.axes | DirtyLayer.marks | DirtyLayer.style)) {
-      renderMarks(current, tokens)
+      renderMarkStyles(current, tokens)
     }
   }
 
