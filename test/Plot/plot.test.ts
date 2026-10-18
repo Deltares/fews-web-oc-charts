@@ -227,7 +227,10 @@ describe('createPlot named scales', () => {
     const before = current.scales.q
     current.update({ scales: { q: replacement }, axes: [second, first] })
     await frame()
-    expect(current.scales.q).not.toBe(before)
+    // Avoid matcher deep comparisons that read getters on the disposed binding.
+    expect(current.scales.q === before).toBe(false) // NOSONAR(S5906) - intentional reference comparison to avoid deep comparison of disposed binding
+    expect(current.scales.q.scale).toBe(replacement)
+    expect(current.scales.q.invert(current.scales.q.project(5))).toBeCloseTo(5)
     expect(current.element.querySelector('[data-layer="axes"] > g')!.textContent).toContain(
       'second',
     )
