@@ -34,7 +34,9 @@
     "test:all-browsers": "vp test run --mode all-browsers",
     "sonar": "sonar-scanner -Dsonar.host.url=$SONAR_URL -Dsonar.login=$SONAR_TOKEN -Dsonar.projectKey=$SONAR_KEY -Dsonar.projectName='Delft-FEWS Web OC Charts'",
     "spike:benchmark": "node scripts/phase0-benchmark.mjs",
-    "spike:interaction": "node scripts/phase0-interaction.mjs"
+    "spike:interaction": "node scripts/phase0-interaction.mjs",
+    "test:visual": "node scripts/phase1-visual-regression.mjs",
+    "test:visual:update": "node scripts/phase1-visual-regression.mjs --update"
   },
   "devDependencies": {
     "@types/d3": "^7.4.3",

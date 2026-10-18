@@ -1211,6 +1211,16 @@ plot region. It is a static fixture primitive: replace the mark to change its va
 polar marks, general series, data-driven autoscaling and interaction APIs follow in
 their respective phases. The deterministic per-engine visual regression gate remains
 part of the phase 1 exit criteria.
+`npm run test:visual` renders the basic-line (including the secondary axis),
+shared-scales and spring/fall civil-time-axis states in Chromium, Firefox and WebKit
+at a fixed viewport and device scale factor. It compares each engine's rendered
+pixels against the checked-in, browser-specific SVG reference fixtures under
+`test/visual/baselines/<browser>/` using the §5 changed-pixel threshold;
+`npm run test:visual:update` refreshes those fixtures after an intentional visual
+change. To update one engine only, use
+`VISUAL_BROWSERS=firefox npm run test:visual:update` (or `chromium` / `webkit`).
+Review generated references before accepting them; a failing comparison is not by
+itself a reason to regenerate a baseline.
 
 ```ts
 const polar = createPolarPlot(container, {
