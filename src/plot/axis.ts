@@ -4,7 +4,7 @@ import type { ReadonlySignal } from '../core/reactive.js'
 import { finiteNonnegative, validateKeys } from '../core/validation.js'
 import type { ScaleValue } from '../scales/scale.js'
 
-export type AxisSide = 'top' | 'right' | 'bottom' | 'left'
+export type AxisSide = 'top' | 'right' | 'bottom' | 'left' | 'angular' | 'radial'
 export interface AxisOptions {
   id?: string | undefined
   position: AxisSide
@@ -66,8 +66,8 @@ export function axis(scale: string, initial: OptionPatch<AxisOptions> = {}): Axi
       labelAngle: 0,
     }),
     validate(options) {
-      if (!['top', 'right', 'bottom', 'left'].includes(options.position)) {
-        throw new Error('axis.position must be top, right, bottom or left.')
+      if (!['top', 'right', 'bottom', 'left', 'angular', 'radial'].includes(options.position)) {
+        throw new Error('axis.position must be a cartesian side, angular or radial.')
       }
       finiteNonnegative(options.tickCount, 'axis.tickCount')
       if (!Number.isInteger(options.tickCount) || options.tickCount === 0) {

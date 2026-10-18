@@ -1119,10 +1119,11 @@ Run `npm run dev` and use the example index, or open these public-API demos:
 These phase 1 demos intentionally render axes without data marks. The `v5-spike-*`
 examples remain separate phase 0 prototypes, not examples of the public v5 API.
 
-The package root now exports `createPlot`, `linear`, `time`, `band`, `degrees`,
-`sharedScale`, `axis`, `layout`, `batch` and `untracked`, alongside the existing v4
-exports. The tested phase 0 reactive primitives have moved into `src/core`; the spike
-imports remain forwarding modules so the phase 0 fixtures keep working.
+The package root now exports `createPlot`, `createPolarPlot`, `linear`, `time`, `band`,
+`degrees`, `angular`, `radial`, `sharedScale`, `axis`, `layout`, `batch` and `untracked`,
+alongside the existing v4 exports. The tested phase 0 reactive primitives have moved
+into `src/core`; the spike imports remain forwarding modules so the phase 0 fixtures
+keep working.
 
 ```ts
 const t = time({ domain: [Date.UTC(2026, 0, 1), Date.UTC(2026, 0, 2)] })
@@ -1192,9 +1193,27 @@ detail.destroy()
 This is the plot/scale foundation, not completion of every roadmap phase 1 exit gate.
 Time ticks use local civil-calendar boundaries with `Intl` labels in the configured
 locale/zone, including spring-gap omission, fall-fold disambiguation and multi-level
-horizontal axis labels. Polar coordinates and the migrated basic-line visual fixtures
-remain to be implemented; marks, data-driven autoscaling and interaction APIs follow
-in their respective phases.
+horizontal axis labels. Phase 1 now also includes `createPolarPlot`, `angular` and
+`radial` scales, angular/radial axes, and `plot.project(angle, radius)` for converting
+data coordinates to SVG coordinates. Angular scales default to a clockwise bearing
+from north and may configure direction, intercept and angular range; radial scales
+may configure an inner-radius fraction. Polar marks and the migrated basic-line visual
+fixtures remain to be implemented; marks, data-driven autoscaling and interaction APIs
+follow in their respective phases.
+
+```ts
+const polar = createPolarPlot(container, {
+  scales: {
+    bearing: angular({ domain: [0, 360], direction: 'clockwise' }),
+    distance: radial({ domain: [0, 100], innerRadius: 0.15 }),
+  },
+  axes: [
+    axis('bearing', { position: 'angular', grid: true }),
+    axis('distance', { position: 'radial', grid: true }),
+  ],
+})
+const point = polar.project(90, 50)
+```
 
 ### Target composed API
 
