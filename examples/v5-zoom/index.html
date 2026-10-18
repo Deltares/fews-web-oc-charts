@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>v5: interactive zoom</title>
+  </head>
+  <body>
+    <nav aria-label="Examples">
+      <a href="/">All examples</a>
+      <a href="../v5-basic-line/">Basic line</a>
+    </nav>
+    <h1>v5: interactive zoom</h1>
+    <p>
+      Zoom the chart with the mouse wheel. Choose which scale directions respond and whether Ctrl or
+      Shift is required. Double-click inside the plot to restore the initial domain.
+    </p>
+    <fieldset class="controls">
+      <legend>Zoom interaction</legend>
+      <label for="mode">
+        Zoom mode
+        <select id="mode">
+          <option value="x" selected>Horizontal (x)</option>
+          <option value="y">Vertical (y)</option>
+          <option value="xy">Both (xy)</option>
+        </select>
+      </label>
+      <label for="wheel">
+        Wheel axes
+        <select id="wheel">
+          <option value="none">Disabled</option>
+          <option value="x" selected>Horizontal (x)</option>
+          <option value="y">Vertical (y)</option>
+          <option value="xy">Both (xy)</option>
+        </select>
+      </label>
+      <label for="modifier">
+        Required modifier
+        <select id="modifier">
+          <option value="none">None</option>
+          <option value="ctrl" selected>Ctrl</option>
+          <option value="shift">Shift</option>
+        </select>
+      </label>
+      <button id="reset" type="button">Reset domains</button>
+    </fieldset>
+    <figure>
+      <div id="chart" class="plot-host"></div>
+      <figcaption>
+        Wheel zoom is anchored at the cursor. The chart shows hourly observations in UTC.
+      </figcaption>
+    </figure>
+    <p id="status" class="status" role="status"></p>
+    <h2>Current domains</h2>
+    <pre id="snapshot" aria-label="Current scale domains"></pre>
+    <h2>Public API</h2>
+    <pre><code>const interaction = zoom({ mode: 'x', wheel: 'x', modifier: ModifierKey.Ctrl })
+const plot = createPlot(host, { scales: { t, q }, axes, marks, plugins: [interaction] })
+interaction.update({ mode: 'xy', wheel: 'xy' }) // update the mounted behavior
+// Wheel over the plot to zoom; double-click inside the plot to reset.</code></pre>
+    <script type="module" src="./v5-zoom.ts"></script>
+  </body>
+</html>

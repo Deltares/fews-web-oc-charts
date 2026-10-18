@@ -1142,6 +1142,8 @@ Run `npm run dev` and use the example index, or open these public-API demos:
   independent mark styling, gaps and endpoint autoscaling.
 - [Polar range marks](./examples/v5-polar-range/index.html): angular/radial intervals rendered
   as annular sectors, with multiple independently styled layers.
+- [Zoom interaction](./examples/v5-zoom/index.html): pointer-anchored wheel zoom with axis,
+  modifier and reset controls.
 
 The scale, theme and polar demos remain axes-only; the polar example also reports projected
 coordinates using the public `project` API. The basic-line demo uses the narrow static `line()`
@@ -1876,8 +1878,9 @@ angular/radial scales are inverted from the pointer position.
 under the pointer, supports x/y/xy selection and an optional Ctrl/Shift modifier, and
 skips band scales. Double-click applies the handle's `reset` policy (`initial`, `full`
 or `toggle`). Removing the plugin or destroying the plot releases its event listeners.
-The current zoom plugin supports Cartesian plots; drag-zoom, pan and brush are later
-Phase 3 work.
+The [v5 zoom example](./examples/v5-zoom/index.html) demonstrates the public API and
+live option updates. The current zoom plugin supports Cartesian plots; drag-zoom, pan and
+brush are later Phase 3 work.
 
 ## 8. Additional improvements to consider
 
