@@ -24,6 +24,15 @@ export { arrows } from './plot/arrows.js'
 export type { ArrowsMark, ArrowsOptions, VectorValue, VectorValues } from './plot/arrows.js'
 export { direction } from './plot/direction.js'
 export type { DirectionMark, DirectionOptions } from './plot/direction.js'
+export { progress } from './plot/progress.js'
+export type {
+  ProgressAngleRange,
+  ProgressAngleRanges,
+  ProgressMark,
+  ProgressOptions,
+  ProgressValue,
+  ProgressValues,
+} from './plot/progress.js'
 export { text } from './plot/text.js'
 export type {
   TextAnchor,

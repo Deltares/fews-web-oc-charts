@@ -1384,6 +1384,19 @@ observed.update({ line: { stroke: undefined }, markers: false })
 - Browser tests cover orientation, scale projection updates, default/custom styling,
   autoscale exclusion and rejection of unsupported scale/coordinate bindings.
 
+### Phase 2 progress marks (implemented SVG foundation)
+
+- [Progress demo](./examples/v5-progress/index.html) shows rounded polar completion
+  tracks and partial progress arcs.
+- `progress({ x, y, xValues, yValues, thickness?, fill?, opacity?, id? })` renders
+  each angular interval as an SVG arc centered on its radial value. `thickness` is in
+  pixels (default 12); `xValues` contains ascending finite angle pairs and `yValues`
+  contains nonnegative finite radial values. `null`/`undefined` gaps are skipped.
+  Polar angular/radial scales are required. Both interval endpoints and radial
+  centers contribute to autoscale extents.
+- Browser tests cover projected geometry, gaps, style, autoscaling, keyed renderer
+  reuse and rejection of invalid values and bindings.
+
 ### Phase 2 text marks (implemented SVG foundation)
 
 - [Text demo](./examples/v5-text/index.html) places labels at aligned x/y coordinates.
