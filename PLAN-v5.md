@@ -2,16 +2,16 @@
 
 ## 0. Decisions taken
 
-| Topic                  | Decision                                                                                                                         |
-| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| Package                | Keep `@deltares/fews-web-oc-charts`, release as **major v5**                                                                     |
-| Default renderer       | **SVG**; canvas is an explicit opt-in per mark or plot-wide. **No `auto` renderer** for now                                      |
-| Time handling          | **Remove `luxon`**; use `Intl.DateTimeFormat` + `d3-time` (see 3.3.1)                                                            |
-| Reactivity             | **Own reactive core** (no external signals library)                                                                              |
-| Distribution           | Core ESM API **plus an HTML5 Web Component** (`<fews-chart>`, see 3.13)                                                          |
-| Web Component          | Tag prefix **`fews-`**; v5.0 configured via **`el.config` property only** (no child config elements)                             |
-| v4 compatibility layer | **Full v4 public API**, delivered in the **last phase** of the roadmap (see 3.14)                                                |
-| Multi-series layouts   | **Grouped bars, named stacks (including side-by-side stacked bars) and stacked areas are v5.0 requirements**, with shared columnar layout and SVG/canvas parity (see 3.6.1) |
+| Topic                  | Decision                                                                                                                                                                        |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Package                | Keep `@deltares/fews-web-oc-charts`, release as **major v5**                                                                                                                    |
+| Default renderer       | **SVG**; canvas is an explicit opt-in per mark or plot-wide. **No `auto` renderer** for now                                                                                     |
+| Time handling          | **Remove `luxon`**; use `Intl.DateTimeFormat` + `d3-time` (see 3.3.1)                                                                                                           |
+| Reactivity             | **Own reactive core** (no external signals library)                                                                                                                             |
+| Distribution           | Core ESM API **plus an HTML5 Web Component** (`<fews-chart>`, see 3.13)                                                                                                         |
+| Web Component          | Tag prefix **`fews-`**; v5.0 configured via **`el.config` property only** (no child config elements)                                                                            |
+| v4 compatibility layer | **Full v4 public API**, delivered in the **last phase** of the roadmap (see 3.14)                                                                                               |
+| Multi-series layouts   | **Grouped bars, named stacks (including side-by-side stacked bars) and stacked areas are v5.0 requirements**, with shared columnar layout and SVG/canvas parity (see 3.6.1)     |
 | Browser support        | **Baseline Widely Available** as of each release date; freeze the exact minimum browser versions for v5.0.0 in the support manifest, build targets and CI matrix. No polyfills. |
 
 ## 1. Analysis of the current library (v4.7)
@@ -23,7 +23,7 @@
 | Data           | `DataPoint[]` = array of objects `{x: Date, y: number}`; `mapDataCartesian` slices a copy per render; extent recomputed per key                                                                       | ~50–80 bytes/point + `Date` objects, GC pressure, slow for long/ensemble series |
 | Styling        | `getComputedStyle()` called in pointer-move & legend paths                                                                                                                                            | Forced style recalcs on hover                                                   |
 | Ensembles      | One `Chart` per member; percentiles computed by the app                                                                                                                                               | N DOM groups, N tooltips, N extents                                             |
-| Line + markers | `ChartLine` + `ChartMarker` can share the source array, but each creates render-window arrays (markers also filter)                                                                                  | Duplicates derived work, window arrays, legend entries and hit-tests             |
+| Line + markers | `ChartLine` + `ChartMarker` can share the source array, but each creates render-window arrays (markers also filter)                                                                                   | Duplicates derived work, window arrays, legend entries and hit-tests            |
 | Axes           | `x[0..1]`, `y[0..1]` indices hard-coded (`0 \| 1`)                                                                                                                                                    | Max 2 axes per direction, index-based coupling                                  |
 | Sync           | `ZoomHandler` holds an array of axes; `addEventListener('update:x-domain')` only for x                                                                                                                | Ad-hoc, x-only, easy to create feedback loops                                   |
 | Architecture   | `Chart` does data, extent, styling, tooltip, highlight, legend symbol, cartesian **and** polar plotting (`instanceof` dispatch, circular imports via `index.js`); options mutated with lodash `merge` | Hard to extend, test, tree-shake                                                |
@@ -105,15 +105,15 @@ All public plot, mark, axis, scale and built-in plugin handles expose
 `update(patch)` with the same option names used at construction. No string-path
 setters, manual `redraw()`, or mutation of internal D3 objects is required.
 
-| Patch input | Meaning |
-| ----------- | ------- |
-| Key omitted | Keep its existing explicit override unchanged |
-| `key: value` | Set an explicit override, including `false`, `0` and `''` where valid |
-| `key: undefined` | Remove the explicit override; resolve from current inheritance/defaults |
-| Nested plain object | Recursively patch its supplied keys; omitted siblings remain unchanged |
-| Array | Replace the entire array, never merge by numeric index |
-| Function, store or shared handle | Replace the reference atomically; never deep-merge or clone |
-| `null` | A value only where the option type explicitly permits it; never an unset alias |
+| Patch input                      | Meaning                                                                        |
+| -------------------------------- | ------------------------------------------------------------------------------ |
+| Key omitted                      | Keep its existing explicit override unchanged                                  |
+| `key: value`                     | Set an explicit override, including `false`, `0` and `''` where valid          |
+| `key: undefined`                 | Remove the explicit override; resolve from current inheritance/defaults        |
+| Nested plain object              | Recursively patch its supplied keys; omitted siblings remain unchanged         |
+| Array                            | Replace the entire array, never merge by numeric index                         |
+| Function, store or shared handle | Replace the reference atomically; never deep-merge or clone                    |
+| `null`                           | A value only where the option type explicitly permits it; never an unset alias |
 
 - **Unset is not disable**: `markers: undefined` restores inherited/default marker
   behaviour; `markers: false` explicitly disables markers. Optional visual components
@@ -167,7 +167,9 @@ setters, manual `redraw()`, or mutation of internal D3 objects is required.
 
 ```ts
 const observed = series(obs, {
-  id: 'obs', x: 't', y: 'q',
+  id: 'obs',
+  x: 't',
+  y: 'q',
   line: { stroke: 'red', width: 2 },
   markers: { symbol: 'circle' },
 })
@@ -176,10 +178,10 @@ const wheelZoom = zoom({ id: 'zoom', mode: 'x', wheel: 'x' })
 // Retain these handles when passing them to createPlot.
 observed.update({ line: { width: 3 }, markers: false })
 observed.update({ line: { stroke: undefined } }) // keep width; restore default stroke
-dischargeAxis.update({ label: undefined })       // remove custom label
-t.update({ follow: undefined })                 // reset follow option for all consumers
-wheelZoom.update({ wheel: undefined })          // restore default wheel behaviour
-plot.update({ theme: undefined })               // restore inherited/default theme
+dischargeAxis.update({ label: undefined }) // remove custom label
+t.update({ follow: undefined }) // reset follow option for all consumers
+wheelZoom.update({ wheel: undefined }) // restore default wheel behaviour
+plot.update({ theme: undefined }) // restore inherited/default theme
 ```
 
 ### 3.2 Data store (`data/`)
@@ -320,14 +322,14 @@ format tokens, and DST transition search (`DstIndicator`). Replacement:
   must use exact instants or transition-safe spans, never fixed-hour buckets that can
   cross an offset transition.
 - `zonedTicks(scale, tz, count)`: choose calendar intervals in local civil time and
-resolve each local boundary to its corresponding instant. Do not shift a whole domain
-using one offset: a domain can cross an offset transition. Omit nonexistent local
-boundaries in a spring-forward gap; emit both distinct instants for an ambiguous
-fall-back boundary, ordered by instant. When two emitted ticks have the same local
-label, include an offset/disambiguator in the label.
+  resolve each local boundary to its corresponding instant. Do not shift a whole domain
+  using one offset: a domain can cross an offset transition. Omit nonexistent local
+  boundaries in a spring-forward gap; emit both distinct instants for an ambiguous
+  fall-back boundary, ordered by instant. When two emitted ticks have the same local
+  label, include an offset/disambiguator in the label.
 - `zonedInterval(d3Interval, tz)`: floor/ceil/offset in local civil time for day/week/
-month boundaries (used by ticks, grid, DST indicator, `follow` windows), with the
-same skipped/repeated-time rules as `zonedTicks`.
+  month boundaries (used by ticks, grid, DST indicator, `follow` windows), with the
+  same skipped/repeated-time rules as `zonedTicks`.
 - Formatting: cached `Intl.DateTimeFormat` instances keyed by (locale, tz, options);
   multi-format picks an option set (`{hour, minute}`, `{weekday, day}`, `{month, day}`,
   `{month: 'long'}`, `{year}`) instead of luxon format strings. `dateFormatter` supports
@@ -336,7 +338,7 @@ same skipped/repeated-time rules as `zonedTicks`.
   `formatToParts`. Unsupported tokens throw a descriptive error; migration guidance
   covers replacing other Luxon-only format strings with a caller-supplied formatter.
 - `findTransitions(tz, start, end)`: detect offset change per day then binary search to
-the minute → DST indicator.
+  the minute → DST indicator.
 - Durations (`'48h'`, `'P3D'`, ms) parsed by a tiny helper for `follow` windows.
   Numeric/millisecond and hour durations are elapsed time; ISO day durations such as
   `P3D` are local calendar days in the scale's time zone, so they need not equal 72
@@ -429,9 +431,12 @@ across unrelated marks.
 import { bar, stackedArea, createTable } from '@deltares/fews-web-oc-charts'
 
 const flows = createTable({
-  t: times, tEnd: intervalEnds,
-  upstream: upstreamValues, lateral: lateralValues,
-  forecastUpstream: forecastUpstreamValues, forecastLateral: forecastLateralValues,
+  t: times,
+  tEnd: intervalEnds,
+  upstream: upstreamValues,
+  lateral: lateralValues,
+  forecastUpstream: forecastUpstreamValues,
+  forecastLateral: forecastLateralValues,
 })
 const layers = [
   { id: 'upstream', y: 'upstream', label: 'Upstream', fill: '#4477aa' },
@@ -440,31 +445,57 @@ const layers = [
 
 // Alternative marks: each can be used in a plot with named t/q scales.
 const grouped = bar(flows, {
-  id: 'grouped-flow', x: 't', scales: { x: 't', y: 'q' },
-  layers, layout: 'grouped', interval: { start: 't', end: 'tEnd' },
-  groupPadding: 0.1, layerPadding: 0.05,
+  id: 'grouped-flow',
+  x: 't',
+  scales: { x: 't', y: 'q' },
+  layers,
+  layout: 'grouped',
+  interval: { start: 't', end: 'tEnd' },
+  groupPadding: 0.1,
+  layerPadding: 0.05,
 })
 const stacked = bar(flows, {
-  id: 'stacked-flow', x: 't', scales: { x: 't', y: 'q' },
-  layers, layout: 'stacked', interval: { start: 't', end: 'tEnd' },
+  id: 'stacked-flow',
+  x: 't',
+  scales: { x: 't', y: 'q' },
+  layers,
+  layout: 'stacked',
+  interval: { start: 't', end: 'tEnd' },
 })
 const areas = stackedArea(flows, {
-  id: 'flow-areas', x: 't', scales: { x: 't', y: 'q' },
-  layers, curve: 'linear',
+  id: 'flow-areas',
+  x: 't',
+  scales: { x: 't', y: 'q' },
+  layers,
+  curve: 'linear',
 })
 
 // Two independent stacks side by side within each time interval.
 const compared = bar(flows, {
-  id: 'compared-flow', x: 't', scales: { x: 't', y: 'q' },
-  layout: 'stacked', interval: { start: 't', end: 'tEnd' },
-  groupPadding: 0.1, layerPadding: 0.05,
+  id: 'compared-flow',
+  x: 't',
+  scales: { x: 't', y: 'q' },
+  layout: 'stacked',
+  interval: { start: 't', end: 'tEnd' },
+  groupPadding: 0.1,
+  layerPadding: 0.05,
   layers: [
     { ...layers[0], stack: 'observed' },
     { ...layers[1], stack: 'observed' },
-    { id: 'forecast-upstream', y: 'forecastUpstream',
-      label: 'Forecast upstream', stack: 'forecast', fill: '#66ccee' },
-    { id: 'forecast-lateral', y: 'forecastLateral',
-      label: 'Forecast lateral inflow', stack: 'forecast', fill: '#aa3377' },
+    {
+      id: 'forecast-upstream',
+      y: 'forecastUpstream',
+      label: 'Forecast upstream',
+      stack: 'forecast',
+      fill: '#66ccee',
+    },
+    {
+      id: 'forecast-lateral',
+      y: 'forecastLateral',
+      label: 'Forecast lateral inflow',
+      stack: 'forecast',
+      fill: '#aa3377',
+    },
   ],
 })
 
@@ -663,7 +694,7 @@ calling `drawLegendSymbol`, or maintaining a second list of visible series.
   model and commands. It contains metadata/references only, never copies of columns,
   DOM nodes or per-point data.
 - Each immutable entry snapshot has `{ id, markId, label, symbol, visibility, disabled,
-  children }`. `visibility` is `'visible' | 'hidden' | 'mixed'`; `children` is an ordered
+children }`. `visibility` is `'visible' | 'hidden' | 'mixed'`; `children` is an ordered
   readonly list for ensemble parts or composite bar/area stacks/layers/groups,
   including recursive named-stack hierarchies (3.6.1). IDs remain stable on rename, reorder, style
   changes and config reconciliation; duplicate IDs are rejected. Labels are plain text.
@@ -882,8 +913,10 @@ Custom legend example (after assigning a valid `el.config` as above):
       const button = document.createElement('button')
       button.type = 'button'
       button.disabled = entry.disabled
-      button.setAttribute('aria-pressed',
-        entry.visibility === 'mixed' ? 'mixed' : String(entry.visibility === 'visible'))
+      button.setAttribute(
+        'aria-pressed',
+        entry.visibility === 'mixed' ? 'mixed' : String(entry.visibility === 'visible'),
+      )
       const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
       svg.setAttribute('width', '24')
       svg.setAttribute('height', '16')
@@ -983,7 +1016,7 @@ this component. The Web Component remains a separate framework-neutral alternati
   Imperative handle updates are supported; reapplying a new config follows the
   documented replacement rules rather than a hidden controlled/uncontrolled merge.
 - **Vue-owned legend**: a scoped `#legend` slot receives `{ entries, toggle, setVisible,
-  isolate, showAll }` from the core model. Supplying the slot selects external legend
+isolate, showAll }` from the core model. Supplying the slot selects external legend
   rendering and suppresses the built-in renderer, including any configured legend
   plugin, without changing visibility state or mutating caller config. With no slot,
   preserve the configured built-in legend behaviour; do not install a legend implicitly.
@@ -1122,6 +1155,8 @@ plot.destroy()
   src/theme  src/element  src/vue  src/compat
   ```
 - Strict TS, no circular imports (lint rule `import/no-cycle`), no barrel re-imports inside src.
+- CI quality checks: run ESLint (`npx eslint .`) and Prettier (`npm run prettier`);
+  both must pass for each phase.
 - Tests: Vitest unit (reactive core incl. glitch/ordering/disposal tests, time-zone
   module vs. v4/luxon reference output, data, layout, scales, decimation, grouped/stacked
   layout and stack-safe LOD (3.6.1), quantiles in
@@ -1145,15 +1180,15 @@ plot.destroy()
 
 ## 6. Performance targets (CI-enforced benchmarks)
 
-| Scenario                                                | Target                                   |
-| ------------------------------------------------------- | ---------------------------------------- |
-| 1M-point series, pan frame                              | < 8 ms                                   |
-| 50 members × 10k steps ensemble, initial render         | < 50 ms                                  |
-| Pointer move (crosshair + tooltip, 20 series)           | < 2 ms, no data-layer work               |
-| Append 1 point/s to 10 plots                            | only affected marks repaint; < 1 ms/plot |
-| Memory, 1M points, core SVG line fixture (defined below) | < 20 MB retained JS/ArrayBuffer memory  |
-| 6 synchronised plots, wheel zoom                        | 60 fps                                   |
-| 100 `<fews-chart>` elements on one page, initial render | < 1 s total; only visible ones render    |
+| Scenario                                                 | Target                                   |
+| -------------------------------------------------------- | ---------------------------------------- |
+| 1M-point series, pan frame                               | < 8 ms                                   |
+| 50 members × 10k steps ensemble, initial render          | < 50 ms                                  |
+| Pointer move (crosshair + tooltip, 20 series)            | < 2 ms, no data-layer work               |
+| Append 1 point/s to 10 plots                             | only affected marks repaint; < 1 ms/plot |
+| Memory, 1M points, core SVG line fixture (defined below) | < 20 MB retained JS/ArrayBuffer memory   |
+| 6 synchronised plots, wheel zoom                         | 60 fps                                   |
+| 100 `<fews-chart>` elements on one page, initial render  | < 1 s total; only visible ones render    |
 
 Memory fixture: one core store with 1M points (Float64 x/y), capacity exactly 1M, one
 1000 CSS-pixel-wide SVG line plot, no markers/spatial index, warmed by 100 distinct
@@ -1186,18 +1221,18 @@ Additional acceptance checks for the ownership contract:
 
 ## 7. Phased roadmap
 
-| Phase                         | Content                                                                                                                                                                                                  | Exit criterion                                                                                            |
-| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| 0. Spike (1–2 wk)             | Own reactive core prototype + scheduler, columnar series, M4 decimation, SVG line renderer; ownership/D3 boundary contract (3.2.1), wrapped-ring and shared-binding probes; `Intl` zone-offset prototype; deterministic visual/performance harness; benchmark vs. v4 | ≥5× gain on pan with 1M points on the same pinned runner/browser and equivalent output; core ownership/memory checks in §6 pass; offsets and documented DST tick semantics pass the time-zone matrix |
-| 1. Core                       | Reactive core hardened (scopes, diagnostics), runtime option update/unset/setConfig contract (3.1.1), `time/` module (luxon replacement), plot container, layout engine, named scales, axes (value/time/band/degrees), coordinate systems, theme tokens, destroy | Static basic-line/secondary-axis/time-axes examples pass deterministic per-engine visual regression at the §5 threshold, with no unexplained diffs; core option contract tests pass |
-| 2. Marks                      | `series` (line+markers+area), band, single/grouped/stacked `bar` with named side-by-side stacks, `stackedArea` with named independent stacks, shared columnar stack layout and stack-safe LOD (3.6.1), histogram, rule, text, heatmap, arrows/direction, progress; SVG first, canvas opt-in | All static examples ported; grouped-bar, stacked-bar, named-stack comparison and stacked-area fixtures pass on SVG/canvas, with exact per-stack layout/extent/gap tests |
-| 3. Interaction                | Pointer hub, zoom, pan, brush, crosshair, tooltip, headless legend model and built-in legend renderer; composite-layer hit tests, tooltips and visibility                                                 | mouseover/zoom/panning/brush examples ported; external legend commands work without legend DOM; composite toggles restack/autoscale correctly |
-| 4. Sync & live                | Shared scale/pointer/selection/clock, follow mode, append/retention, IntersectionObserver pause; incremental aligned-table stack updates                                                                  | shared-zoom/shared-panning + new live-stream example; stacked/grouped updates and retention preserve alignment and bounded caches |
-| 5. Ensembles                  | Ensemble store, quantile cache, members/spread/median rendering, ensemble tooltip/legend                                                                                                                 | 50×10k benchmark meets target                                                                             |
-| 6. Domain plugins             | Warning levels, alert lines, current time, DST indicator (on new `time/`), level select, cross-section select, data field, Beaufort, colour bar, polar wind/current roses                                | Feature parity checklist complete                                                                         |
-| 7. Web Component              | `<fews-chart>` with `el.config`, plot-level attributes, `sync-group` registry, events, Shadow DOM theming, typings, slotted/external legend facade and symbol helper                                        | All examples also runnable via `<fews-chart>`; works in Vue app without adapter; config/attribute-removal and custom-legend parity tests pass |
-| 8. Adoption                   | Vue component/composables and scoped/custom legends (3.15), docs site from examples, migration guide, FEWS Web OC integration behind a flag; `5.0.0-beta`                                                  | FEWS Web OC runs on v5 behind a flag; Vue custom-legend and lifecycle acceptance tests pass |
-| 9. Compatibility layer (last) | Full v4 public API in `./compat` (see 3.14); deprecation warnings; migration guide per class                                                                                                             | Complete v4 example + test suite runs unchanged against `compat` (import path swap only); `5.0.0` release |
+| Phase                         | Content                                                                                                                                                                                                                                                                                     | Exit criterion                                                                                                                                                                                       |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0. Spike (1–2 wk)             | Own reactive core prototype + scheduler, columnar series, M4 decimation, SVG line renderer; ownership/D3 boundary contract (3.2.1), wrapped-ring and shared-binding probes; `Intl` zone-offset prototype; deterministic visual/performance harness; benchmark vs. v4                        | ≥5× gain on pan with 1M points on the same pinned runner/browser and equivalent output; core ownership/memory checks in §6 pass; offsets and documented DST tick semantics pass the time-zone matrix |
+| 1. Core                       | Reactive core hardened (scopes, diagnostics), runtime option update/unset/setConfig contract (3.1.1), `time/` module (luxon replacement), plot container, layout engine, named scales, axes (value/time/band/degrees), coordinate systems, theme tokens, destroy                            | Static basic-line/secondary-axis/time-axes examples pass deterministic per-engine visual regression at the §5 threshold, with no unexplained diffs; core option contract tests pass                  |
+| 2. Marks                      | `series` (line+markers+area), band, single/grouped/stacked `bar` with named side-by-side stacks, `stackedArea` with named independent stacks, shared columnar stack layout and stack-safe LOD (3.6.1), histogram, rule, text, heatmap, arrows/direction, progress; SVG first, canvas opt-in | All static examples ported; grouped-bar, stacked-bar, named-stack comparison and stacked-area fixtures pass on SVG/canvas, with exact per-stack layout/extent/gap tests                              |
+| 3. Interaction                | Pointer hub, zoom, pan, brush, crosshair, tooltip, headless legend model and built-in legend renderer; composite-layer hit tests, tooltips and visibility                                                                                                                                   | mouseover/zoom/panning/brush examples ported; external legend commands work without legend DOM; composite toggles restack/autoscale correctly                                                        |
+| 4. Sync & live                | Shared scale/pointer/selection/clock, follow mode, append/retention, IntersectionObserver pause; incremental aligned-table stack updates                                                                                                                                                    | shared-zoom/shared-panning + new live-stream example; stacked/grouped updates and retention preserve alignment and bounded caches                                                                    |
+| 5. Ensembles                  | Ensemble store, quantile cache, members/spread/median rendering, ensemble tooltip/legend                                                                                                                                                                                                    | 50×10k benchmark meets target                                                                                                                                                                        |
+| 6. Domain plugins             | Warning levels, alert lines, current time, DST indicator (on new `time/`), level select, cross-section select, data field, Beaufort, colour bar, polar wind/current roses                                                                                                                   | Feature parity checklist complete                                                                                                                                                                    |
+| 7. Web Component              | `<fews-chart>` with `el.config`, plot-level attributes, `sync-group` registry, events, Shadow DOM theming, typings, slotted/external legend facade and symbol helper                                                                                                                        | All examples also runnable via `<fews-chart>`; works in Vue app without adapter; config/attribute-removal and custom-legend parity tests pass                                                        |
+| 8. Adoption                   | Vue component/composables and scoped/custom legends (3.15), docs site from examples, migration guide, FEWS Web OC integration behind a flag; `5.0.0-beta`                                                                                                                                   | FEWS Web OC runs on v5 behind a flag; Vue custom-legend and lifecycle acceptance tests pass                                                                                                          |
+| 9. Compatibility layer (last) | Full v4 public API in `./compat` (see 3.14); deprecation warnings; migration guide per class                                                                                                                                                                                                | Complete v4 example + test suite runs unchanged against `compat` (import path swap only); `5.0.0` release                                                                                            |
 
 ## 8. Additional improvements to consider
 

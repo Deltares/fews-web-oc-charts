@@ -39,7 +39,7 @@ function indexedValues<T>(length: number, valueAt: (index: number) => T): Indexe
       }
       return Reflect.get(object, property, receiver)
     },
-  }) as IndexedValues<T>
+  })
 }
 
 export function createSvgLineRenderer(
