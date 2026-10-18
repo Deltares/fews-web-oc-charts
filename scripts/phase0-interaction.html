@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Phase 0 real-input line interaction benchmark</title>
+    <style>
+      body {
+        margin: 0;
+        background: white;
+        color: black;
+        font-family: sans-serif;
+      }
+      #chart {
+        width: 1000px;
+        height: 400px;
+        overflow: hidden;
+        touch-action: none;
+      }
+      svg {
+        display: block;
+        overflow: hidden;
+      }
+      .canvas > rect {
+        fill: none;
+      }
+      *,
+      *::before,
+      *::after {
+        animation: none !important;
+        transition: none !important;
+      }
+      main {
+        max-width: 1000px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="chart"></div>
+    <main>
+      <h1>Real-input line interaction benchmark</h1>
+      <p>
+        Run npm run spike:interaction for 10 warm-up and 30 measured drags per implementation, with
+        alternating order, plus a 10-second sustained drag per implementation. Each fixture runs in
+        a separate page with one million identical samples, an interior 200,000-unit domain, a 1000
+        by 400 CSS-pixel viewport, DPR 1, and a fixed black stroke on white. Axes, grids, tooltips
+        and animations are disabled; this is not a full-chart benchmark.
+      </p>
+      <p>
+        v4 uses CartesianAxes, ChartLine and PanHandler. The spike uses real pointer handlers,
+        reactive domain state and the frame scheduler: cached transforms during dragging,
+        re-decimation and a committed path on release. Every drag resets to the same domain. The
+        runner checks the final domain, removed preview transforms, newly exposed data, idle
+        geometry, and screenshots at a 0.1% changed-pixel limit with RGBA channel delta greater than
+        2. Screenshot work is outside measured intervals.
+      </p>
+      <p>
+        Metrics include frame intervals, input-to-DOM-update latency, release-to-settled latency,
+        and complete gesture duration on the browser performance clock. Settling means two
+        animation-frame callbacks without geometry changes after release, not an exact
+        paint/presentation timestamp. Automated mouse delivery is paced at 60 Hz; slow handlers can
+        delay delivery, which is recorded rather than hidden.
+      </p>
+      <p>
+        The renderer-only benchmark remains available via npm run spike:benchmark. Its timing and
+        speedup exclude browser input, scheduling, paint and final commit, and must not be presented
+        as end-to-end interaction performance. Real-input results are reported without a 5x
+        wall-clock speedup gate: both implementations spend time following the same paced gesture.
+        Use a dedicated runner for performance comparisons; shared CI is a correctness smoke test,
+        not certification of performance budgets.
+      </p>
+      <p>
+        Both commands exit unsuccessfully when their visual checks exceed the threshold, even if
+        timing measurements are fast. The former RGB-only comparison missed differences in black
+        strokes on transparent pixels; the RGBA comparison exposes those differences rather than
+        loosening the limit. Decimated and dense paths are not assumed to be pixel-equivalent.
+      </p>
+      <p>
+        Set PHASE0_TRACE_DIR to save separate diagnostic Chromium traces, screenshots and results.
+        Traces include input, main-thread, paint and compositor events. Diagnostic gestures run
+        after measurements so trace overhead does not affect reported timings. Browser-native
+        rendering memory and exact presentation latency are not measured here.
+      </p>
+    </main>
+    <script type="module" src="./phase0-interaction-entry.ts"></script>
+  </body>
+</html>
