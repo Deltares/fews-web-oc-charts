@@ -7,6 +7,7 @@ import {
   bandScale,
   degreesScale,
   sharedScale,
+  line,
   batch,
   type Plot,
 } from '../../src/index.js'
@@ -38,6 +39,44 @@ afterEach(() => {
 })
 
 describe('createPlot named scales', () => {
+  test('keeps inset mark geometry local and public projections absolute', async () => {
+    const current = plot(host(), {
+      width: 500,
+      height: 300,
+      margins: { top: 40, right: 40, bottom: 40, left: 40 },
+      axisLayout: 'inset',
+      background: 'plot',
+      clipMarks: false,
+      directions: { x: 'x' },
+      scales: {
+        x: linearScale({ domain: [0, 1] }),
+        y: linearScale({ domain: [0, 1] }),
+      },
+      axes: [
+        axis('x', { position: 'bottom', style: 'classic' }),
+        axis('y', { style: 'classic', crossAt: { scale: 'x', value: 0.5 } }),
+      ],
+      marks: [line({ x: 'x', y: 'y', xValues: [0, 1], yValues: [0, 1] })],
+    })
+    await frame()
+    expect(current.regions.get().plot).toMatchObject({ x: 40, y: 40, width: 420, height: 220 })
+    expect(current.scales.x.project(0)).toBe(40)
+    expect(current.element.querySelector('[data-mark="line"]')?.getAttribute('d')).toBe(
+      'M0,220L420,0',
+    )
+    expect(current.element.querySelector('[data-layer="marks"]')?.hasAttribute('clip-path')).toBe(
+      false,
+    )
+    current.update({ axisLayout: 'outside', clipMarks: true })
+    await frame()
+    expect(current.element.querySelector('[data-mark="line"]')?.getAttribute('d')).toBe(
+      `M${current.scales.x.project(0)},${current.scales.y.project(0)}L${current.scales.x.project(1)},${current.scales.y.project(1)}`,
+    )
+    expect(
+      current.element.querySelector('[data-layer="marks"]')?.getAttribute('clip-path'),
+    ).toMatch(/^url/)
+  })
+
   test('shares domains but never ranges or derived scales between differently sized plots', async () => {
     const shared = sharedScale(linearScale({ domain: [0, 100] }))
     const first = plot(host(), { scales: { q: shared }, directions: { q: 'x' } })

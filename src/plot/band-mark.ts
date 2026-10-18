@@ -1,4 +1,4 @@
-import { arc } from 'd3'
+import { arc, area, curveLinear, curveBasis, curveStep, curveStepBefore, curveStepAfter } from 'd3'
 import type { ThemeTokens } from '../theme/theme.js'
 import { isBandMark, type BandMark } from './band.js'
 import { svgElement } from './render-axes.js'
@@ -29,6 +29,7 @@ function createBandRenderer(): MarkRenderer<BandMark> {
       const region = context.plot
       const key = [
         mark,
+        context.localCoordinates,
         ...scaleKey(xScale),
         ...scaleKey(yScale),
         ...(polar ? [region.x, region.y, region.width, region.height] : []),
@@ -36,12 +37,46 @@ function createBandRenderer(): MarkRenderer<BandMark> {
       if (!geometryKey.changed(key)) return
       styleKey.clear()
       if (polar) {
+        const angular = xScale.scale.options.get().resolved
         group.setAttribute(
           'transform',
-          `translate(${region.x + region.width / 2},${region.y + region.height / 2})`,
+          `translate(${region.x + region.width / 2},${region.y + region.height / 2})${context.localCoordinates ? ` rotate(${((angular.intercept ?? 0) * 180) / Math.PI}) scale(${angular.direction === 'anticlockwise' ? -1 : 1},1)` : ''}`,
         )
       } else {
         group.removeAttribute('transform')
+      }
+      if (mark.curve) {
+        group.replaceChildren()
+        const curve = {
+          linear: curveLinear,
+          basis: curveBasis,
+          step: curveStep,
+          'step-before': curveStepBefore,
+          'step-after': curveStepAfter,
+        }[mark.curve]
+        const samples = Array.from({ length: mark.xValues.length }, (_, index) => index)
+        const generator = area<number>()
+          .defined((index) => Boolean(mark.xValues[index] && mark.yValues[index]))
+          .x((index) => xScale.project(mark.xValues[index]![0]))
+          .y0((index) => yScale.project(mark.yValues[index]![0]))
+          .y1((index) => yScale.project(mark.yValues[index]![1]))
+          .curve(curve)
+        group.append(
+          svgElement('path', {
+            'data-mark': 'band-area',
+            d: generator(samples) ?? '',
+            stroke: 'none',
+          }),
+        )
+        return
+      }
+      const tag = polar ? 'path' : 'rect'
+      if (
+        group.firstElementChild &&
+        (group.firstElementChild.localName !== tag ||
+          group.firstElementChild.getAttribute('data-mark') !== 'band-range')
+      ) {
+        group.replaceChildren()
       }
       let rangeIndex = 0
       for (let index = 0; index < mark.xValues.length; index += 1) {
@@ -61,8 +96,16 @@ function createBandRenderer(): MarkRenderer<BandMark> {
             arc<null>()
               .innerRadius(Math.min(yScale.project(yRange[0]), yScale.project(yRange[1])))
               .outerRadius(Math.max(yScale.project(yRange[0]), yScale.project(yRange[1])))
-              .startAngle(intercept + direction * xScale.project(xRange[0]))
-              .endAngle(intercept + direction * xScale.project(xRange[1]))(null) ?? ''
+              .startAngle(
+                context.localCoordinates
+                  ? xScale.project(xRange[0])
+                  : intercept + direction * xScale.project(xRange[0]),
+              )
+              .endAngle(
+                context.localCoordinates
+                  ? xScale.project(xRange[1])
+                  : intercept + direction * xScale.project(xRange[1]),
+              )(null) ?? ''
           path.setAttribute('d', d)
         } else {
           let rect = group.children[rangeIndex] as SVGRectElement | undefined
@@ -86,7 +129,10 @@ function createBandRenderer(): MarkRenderer<BandMark> {
     style(mark: BandMark, tokens: ThemeTokens) {
       if (!styleKey.changed([mark, mark.fill, mark.opacity, tokens.accent])) return
       group.setAttribute('fill', mark.fill ?? accent(tokens))
-      group.setAttribute('fill-opacity', String(mark.opacity))
+      group.setAttribute('fill-opacity', String(mark.curve ? 1 : mark.opacity))
+      group.setAttribute('opacity', String(mark.curve ? mark.opacity : 1))
+      if (mark.shapeRendering) group.setAttribute('shape-rendering', mark.shapeRendering)
+      else group.removeAttribute('shape-rendering')
     },
     destroy() {
       group.remove()
@@ -98,6 +144,9 @@ export const bandDefinition: MarkDefinition<BandMark> = {
   name: 'band',
   is: isBandMark,
   validate(mark, { scales, coordinateSystem, direction }) {
+    if (mark.curve && coordinateSystem !== 'cartesian') {
+      throw new Error('Curved bands support cartesian plots only.')
+    }
     if (!Object.hasOwn(scales, mark.x) || !Object.hasOwn(scales, mark.y)) {
       throw new Error(`band "${mark.id ?? ''}" references a missing x or y scale.`)
     }

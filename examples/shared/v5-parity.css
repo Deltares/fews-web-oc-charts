@@ -1,0 +1,13 @@
+.fews-chart {
+  --fews-chart-background: var(--background-color);
+  --fews-chart-foreground: var(--foreground-color);
+  --fews-chart-grid: var(--foreground-color-complement);
+  --fews-chart-font-size: 14px;
+}
+
+:root {
+  --fews-chart-background: var(--background-color);
+  --fews-chart-foreground: var(--foreground-color);
+  --fews-chart-grid: var(--foreground-color-complement);
+  --fews-chart-font-size: 14px;
+}

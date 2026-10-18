@@ -30,7 +30,15 @@ function createTextRenderer(): MarkRenderer<TextMark> {
     geometry(mark: TextMark, context: MarkRenderContext) {
       const xScale = context.scales[mark.x]
       const yScale = context.scales[mark.y]
-      if (!geometryKey.changed([mark, ...scaleKey(xScale), ...scaleKey(yScale)])) return
+      if (
+        !geometryKey.changed([
+          mark,
+          context.localCoordinates,
+          ...scaleKey(xScale),
+          ...scaleKey(yScale),
+        ])
+      )
+        return
       styleKey.clear()
       for (let index = 0; index < mark.textValues.length; index += 1) {
         let label = group.children[index] as SVGTextElement | undefined
@@ -49,11 +57,16 @@ function createTextRenderer(): MarkRenderer<TextMark> {
         const px = xScale.project(x)
         const py = yScale.project(y)
         label.removeAttribute('display')
-        label.setAttribute('x', String(px))
-        label.setAttribute('y', String(py))
+        label.setAttribute('x', String(context.localCoordinates ? 0 : px))
+        label.setAttribute('y', String(context.localCoordinates ? 0 : py))
         label.setAttribute('dx', String(mark.dx))
         label.setAttribute('dy', String(mark.dy))
-        if (mark.angle) label.setAttribute('transform', `rotate(${mark.angle} ${px} ${py})`)
+        if (context.localCoordinates) {
+          label.setAttribute(
+            'transform',
+            `translate(${px},${py})${mark.angle ? ` rotate(${mark.angle})` : ''}`,
+          )
+        } else if (mark.angle) label.setAttribute('transform', `rotate(${mark.angle} ${px} ${py})`)
         else label.removeAttribute('transform')
         label.dataset.index = String(index)
         label.textContent = String(value)

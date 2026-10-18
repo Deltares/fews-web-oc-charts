@@ -36,7 +36,8 @@
     "spike:benchmark": "node scripts/phase0-benchmark.mjs",
     "spike:interaction": "node scripts/phase0-interaction.mjs",
     "test:visual": "node scripts/phase1-visual-regression.mjs",
-    "test:visual:update": "node scripts/phase1-visual-regression.mjs --update"
+    "test:visual:update": "node scripts/phase1-visual-regression.mjs --update",
+    "test:visual:parity": "node scripts/static-visual-parity.mjs"
   },
   "devDependencies": {
     "@types/d3": "^7.4.3",

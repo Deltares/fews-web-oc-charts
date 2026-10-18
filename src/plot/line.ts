@@ -5,6 +5,8 @@ export type LineValue = ScaleValue | null | undefined
 export type LineValues = ArrayLike<LineValue>
 
 export interface LineMarkerOptions {
+  symbolSize?: number
+  skip?: number
   size?: number
   fill?: string
   stroke?: string
@@ -26,6 +28,11 @@ export interface LineOptions {
   line?: boolean
   stroke?: string
   strokeWidth?: number
+  strokeDasharray?: string
+  strokeLinecap?: 'butt' | 'round' | 'square'
+  strokeLinejoin?: 'miter' | 'round' | 'bevel'
+  digits?: number
+  vectorEffect?: 'none' | 'non-scaling-stroke'
   markers?: boolean | LineMarkerOptions
   area?: LineAreaOptions
 }
@@ -39,7 +46,16 @@ export interface LineMark {
   readonly line: boolean
   readonly stroke: string | undefined
   readonly strokeWidth: number
-  readonly markers: Readonly<Required<LineMarkerOptions>> | undefined
+  readonly strokeDasharray?: string
+  readonly strokeLinecap?: 'butt' | 'round' | 'square'
+  readonly strokeLinejoin?: 'miter' | 'round' | 'bevel'
+  readonly digits?: number
+  readonly vectorEffect?: 'none' | 'non-scaling-stroke'
+  readonly markers:
+    | Readonly<
+        Required<Omit<LineMarkerOptions, 'symbolSize'>> & Pick<LineMarkerOptions, 'symbolSize'>
+      >
+    | undefined
   readonly area: Readonly<Required<LineAreaOptions>> | undefined
 }
 
@@ -90,7 +106,23 @@ export function line(options: LineOptions): LineMark {
   if (!options || typeof options !== 'object') throw new Error('line options must be an object.')
   validateKeys(
     options,
-    ['id', 'x', 'y', 'xValues', 'yValues', 'line', 'stroke', 'strokeWidth', 'markers', 'area'],
+    [
+      'id',
+      'x',
+      'y',
+      'xValues',
+      'yValues',
+      'line',
+      'stroke',
+      'strokeWidth',
+      'strokeDasharray',
+      'strokeLinecap',
+      'strokeLinejoin',
+      'digits',
+      'vectorEffect',
+      'markers',
+      'area',
+    ],
     'line',
   )
   if (options.id !== undefined && (typeof options.id !== 'string' || options.id.length === 0)) {
@@ -117,15 +149,56 @@ export function line(options: LineOptions): LineMark {
   if (!Number.isFinite(strokeWidth) || strokeWidth <= 0) {
     throw new Error('line.strokeWidth must be a positive finite number.')
   }
-  let markers: Readonly<Required<LineMarkerOptions>> | undefined
+  if (options.strokeDasharray !== undefined && typeof options.strokeDasharray !== 'string') {
+    throw new Error('line.strokeDasharray must be a string.')
+  }
+  if (
+    options.strokeLinecap !== undefined &&
+    !['butt', 'round', 'square'].includes(options.strokeLinecap)
+  ) {
+    throw new Error('line.strokeLinecap must be butt, round or square.')
+  }
+  if (
+    options.strokeLinejoin !== undefined &&
+    !['miter', 'round', 'bevel'].includes(options.strokeLinejoin)
+  ) {
+    throw new Error('line.strokeLinejoin must be miter, round or bevel.')
+  }
+  if (
+    options.digits !== undefined &&
+    (!Number.isInteger(options.digits) || options.digits < 0 || options.digits > 15)
+  ) {
+    throw new Error('line.digits must be an integer in [0, 15].')
+  }
+  if (
+    options.vectorEffect !== undefined &&
+    !['none', 'non-scaling-stroke'].includes(options.vectorEffect)
+  ) {
+    throw new Error('line.vectorEffect must be none or non-scaling-stroke.')
+  }
+  let markers: LineMark['markers']
   if (options.markers !== undefined && options.markers !== false) {
     const markerOptions = options.markers === true ? {} : options.markers
     if (!markerOptions || typeof markerOptions !== 'object' || Array.isArray(markerOptions)) {
       throw new Error('line.markers must be a boolean or an options object.')
     }
-    validateKeys(markerOptions, ['size', 'fill', 'stroke', 'strokeWidth'], 'line.markers')
+    validateKeys(
+      markerOptions,
+      ['size', 'fill', 'stroke', 'strokeWidth', 'symbolSize', 'skip'],
+      'line.markers',
+    )
+    if (
+      markerOptions.symbolSize !== undefined &&
+      (!Number.isFinite(markerOptions.symbolSize) || markerOptions.symbolSize <= 0)
+    ) {
+      throw new Error('line.markers.symbolSize must be positive.')
+    }
+    const skip = markerOptions.skip ?? 1
+    if (!Number.isSafeInteger(skip) || skip < 1)
+      throw new Error('line.markers.skip must be a positive integer.')
     const size = markerOptions.size ?? 4
-    const markerStrokeWidth = markerOptions.strokeWidth ?? 0
+    const markerStrokeWidth =
+      markerOptions.strokeWidth ?? (markerOptions.symbolSize === undefined ? 0 : 1)
     for (const [key, value] of [
       ['size', size],
       ['strokeWidth', markerStrokeWidth],
@@ -145,6 +218,8 @@ export function line(options: LineOptions): LineMark {
       }
     }
     markers = Object.freeze({
+      symbolSize: markerOptions.symbolSize,
+      skip,
       size,
       fill: markerOptions.fill ?? '',
       stroke: markerOptions.stroke ?? 'none',
@@ -189,6 +264,11 @@ export function line(options: LineOptions): LineMark {
     line: options.line ?? true,
     stroke: options.stroke,
     strokeWidth,
+    strokeDasharray: options.strokeDasharray,
+    strokeLinecap: options.strokeLinecap,
+    strokeLinejoin: options.strokeLinejoin,
+    digits: options.digits,
+    vectorEffect: options.vectorEffect,
     markers,
     area,
   })

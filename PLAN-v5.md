@@ -1769,6 +1769,96 @@ Additional acceptance checks for the ownership contract:
 | 8. Adoption                   | Vue component/composables and scoped/custom legends (3.15), docs site from examples, migration guide, FEWS Web OC integration behind a flag; `5.0.0-beta`                                                                                                                                   | FEWS Web OC runs on v5 behind a flag; Vue custom-legend and lifecycle acceptance tests pass                                                                                                          |
 | 9. Compatibility layer (last) | Full v4 public API in `./compat` (see 3.14); deprecation warnings; migration guide per class                                                                                                                                                                                                | Complete v4 example + test suite runs unchanged against `compat` (import path swap only); `5.0.0` release                                                                                            |
 
+### Phase 2 static visual parity checkpoint
+
+**Status: partial; the Phase 2 exit criterion is not complete.** Work is frozen at
+the current parity result at the user's request. Eleven native v5 parity routes
+have been added alongside, not in place of, the 22 existing v5 examples. They use
+v5 plot/mark APIs, not v4 chart instances or copied reference SVG DOM.
+
+| v4 example         | Native v5 route                          |
+| ------------------ | ---------------------------------------- |
+| basic-line         | `examples/v5-parity-basic-line/`         |
+| range              | `examples/v5-parity-range/`              |
+| marker             | `examples/v5-parity-marker/`             |
+| area               | `examples/v5-parity-area/`               |
+| chart-text         | `examples/v5-parity-chart-text/`         |
+| reverse            | `examples/v5-parity-reverse/`            |
+| polar-line-marker  | `examples/v5-parity-polar-line-marker/`  |
+| polar-range        | `examples/v5-parity-polar-range/`        |
+| polar-axes-options | `examples/v5-parity-polar-axes-options/` |
+| bar                | `examples/v5-parity-bar/`                |
+| matrix             | `examples/v5-parity-matrix/`             |
+
+#### Opt-in native rendering capabilities
+
+- Axis `style: 'classic'` selects the reference-compatible Cartesian/polar axis
+  renderer; the default remains `'default'`. Cartesian `crossAt: { scale, value }`
+  positions an axis at a value on a perpendicular scale. Classic polar axes must
+  be supplied as a pair; invalid single-axis style updates are rejected atomically.
+- Plot `axisLayout: 'inset'` uses margins as the plot boundary and paints axes
+  before marks. `autoMargins: true` grows inset margins to fit measured ticks.
+  `background: 'plot'` restricts the background to the plot region;
+  `clipMarks: false` permits overflowing marks. Existing defaults remain
+  `'outside'`, `false`, `'chart'`, and `true`, respectively.
+  Public scale projections remain absolute even when inset marks use local geometry.
+- Lines and series support dash arrays, cap/join styles, coordinate `digits`,
+  `vectorEffect`, and SVG-symbol-area markers with a `skip` interval.
+  Angular/radial lines and markers are supported; polar areas still require bands.
+- Bands support Cartesian `linear`, `basis`, `step`, `step-before`, and
+  `step-after` curves for equal x endpoints, plus `shapeRendering`.
+- Bars support formatted SVG label overlays through `text.format(value, layerId,
+row)`, with optional `dx`, `dy`, and `fill`, for SVG and canvas bars.
+- Band scales support independent `paddingInner` and `paddingOuter`, falling back
+  to the existing `padding` value when unspecified.
+
+#### Exact comparison results
+
+Run `npm run test:visual:parity` for direct v4/v5 comparisons. The runner fixes
+viewport (1280 x 900), DPR (1), locale (`en-US`), timezone (`UTC`), and data seed;
+waits for fonts/rendering; and compares every RGBA channel with **zero tolerance**.
+It covers 25 chart hosts in light and dark themes: 50 comparisons per engine.
+`VISUAL_BROWSERS=chromium` (or `firefox`/`webkit`) selects individual engines.
+Mismatch images are written below the operating system's temporary directory at
+`fews-static-parity/<engine>/<example>/<host>/<theme>/`.
+
+| Engine   | Exact comparisons | Remaining changed pixels                                                                 |
+| -------- | ----------------- | ---------------------------------------------------------------------------------------- |
+| Chromium | 46 / 50           | polar-range solid: light 87, dark 94; mapped: light 78, dark 81                          |
+| Firefox  | 50 / 50           | None                                                                                     |
+| WebKit   | 45 / 50           | chart-text dark: 3; polar-line-marker light: 64, dark: 137; simple bar light: 6, dark: 3 |
+
+Thus 141 of 150 comparisons are exact. **The strict parity command intentionally
+exits nonzero for the nine remaining mismatches.** No tolerance was introduced,
+and the residual differences have not been accepted as 100% parity.
+The existing v5 visual regression suite also passes all 54 comparisons
+(18 fixtures in each of the three engines), with zero changed pixels.
+Library/type and example-gallery production builds pass, as do all 176 native
+plot tests in Chromium. Formatting and `git diff --check` pass. Changed-file
+ESLint still reports four pre-existing findings: unbound methods in
+`band-mark.ts`, `create-plot.ts`, and `text-mark.ts`, and the empty `BarLayer`
+interface in `bar.ts`; these unrelated findings were left unchanged.
+
+#### Reference quirks and remaining coverage
+
+At the user's explicit direction, reference bugs are preserved rather than fixed:
+
+- Chart text, grouped bars, and matrices reproduce the initial incomplete domains
+  and the different state after a theme-triggered redraw.
+- Missing categorical bar/matrix colours remain missing in the ports.
+- Classic polar radial grids preserve the reference's tick-as-pixel-radius
+  behaviour; polar-range reproduces the reference's effective Warm colour mapping.
+- The v4 matrix reference now uses the shared deterministic random generator
+  (optional validated `?seed=`), so its sparse data is repeatable.
+
+The v4 progress reference throws “Expected x to contain a number” and “Expected y
+to contain a numeric range”; it has no parity route and is **not** counted as a
+passing reference. Other uncovered examples are not implicitly certified:
+secondary-axis includes ensemble/current-time features, time-axes and vertical
+include interaction visitors, and spectrum is random/interactive. Interaction and
+domain-plugin ports remain outside this static checkpoint. Further static coverage
+and the outstanding exact matches are still needed before closing Phase 2.
+
 ## 8. Additional improvements to consider
 
 - **Missing-value & quality flags**: render gaps, flag-based styling (FEWS flags/doubtful

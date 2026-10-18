@@ -46,6 +46,19 @@ describe('named scale domain state', () => {
     expect(scale.options.version).toBe(version)
   })
 
+  test('validates independent categorical padding without changing defaults', () => {
+    const scale = bandScale({ paddingInner: 0.2, paddingOuter: 0.4 })
+    expect(scale.options.get().resolved).toMatchObject({
+      paddingInner: 0.2,
+      paddingOuter: 0.4,
+    })
+    expect(() => scale.update({ paddingInner: 1 })).toThrow()
+    expect(scale.options.get().resolved.paddingInner).toBe(0.2)
+    expect(() => linearScale({ paddingOuter: 0.1 })).toThrow()
+    scale.update({ paddingInner: undefined })
+    expect(scale.options.get().resolved.paddingInner).toBeUndefined()
+  })
+
   test('axis options support callback reset and reject immutable ID changes', () => {
     const formatter = () => 'label'
     const handle = axis('q', { id: 'axis', label: 'Flow', grid: true, format: formatter })

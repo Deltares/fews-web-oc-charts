@@ -20,10 +20,17 @@ import {
   type PlotLayout,
 } from '../layout/layout.js'
 import { resolveTheme, watchTheme, type ThemeMode, type ThemeTokens } from '../theme/theme.js'
-import { isAxisHandle, validateAxisUpdates, type AxisHandle, type AxisSide } from './axis.js'
+import {
+  isAxisHandle,
+  validateAxisUpdates,
+  type AxisHandle,
+  type AxisOptions,
+  type AxisSide,
+} from './axis.js'
 import { observeSize } from './resize.js'
 import { svgElement, renderAxes, renderPolarAxes, axisTickLabels } from './render-axes.js'
 import { markExtents } from './mark-extents.js'
+import { arc } from 'd3'
 import { projectPolarPoint } from './polar-geometry.js'
 import { watchCanvasPixelRatio } from './render-composite-canvas.js'
 import type {
@@ -43,6 +50,10 @@ import {
 } from './marks.js'
 
 export interface PlotOptions {
+  clipMarks: boolean
+  autoMargins: boolean
+  axisLayout: 'outside' | 'inset'
+  background: 'chart' | 'plot'
   width?: number
   height?: number
   title: string
@@ -98,6 +109,10 @@ function isCartesianSide(position: AxisSide): position is CartesianSide {
 }
 
 const optionKeys = [
+  'clipMarks',
+  'autoMargins',
+  'axisLayout',
+  'background',
   'width',
   'height',
   'title',
@@ -162,6 +177,14 @@ function direction(
 }
 
 function validatePlotAppearance(options: PlotOptions) {
+  if (typeof options.clipMarks !== 'boolean') throw new Error('plot.clipMarks must be boolean.')
+  if (typeof options.autoMargins !== 'boolean') throw new Error('plot.autoMargins must be boolean.')
+  if (!['outside', 'inset'].includes(options.axisLayout)) {
+    throw new Error('plot.axisLayout must be outside or inset.')
+  }
+  if (!['chart', 'plot'].includes(options.background)) {
+    throw new Error('plot.background must be chart or plot.')
+  }
   for (const dimension of ['width', 'height'] as const) {
     if (options[dimension] !== undefined) finiteNonnegative(options[dimension], `plot.${dimension}`)
   }
@@ -203,6 +226,7 @@ function validatePlotAxes(options: PlotOptions, coordinateSystem: CoordinateSyst
     if (!axis || !isAxisHandle(axis)) throw new Error('plot.axes requires axis handles.')
     const position = axis.options.get().resolved.position
     validateAxisPosition(position, coordinateSystem)
+    validateAxisAppearance(axis.options.get().resolved, axis.scale, options, coordinateSystem)
     if (axes.has(axis)) throw new Error('Duplicate axis handle in plot.axes.')
     axes.add(axis)
     const id = axis.options.get().resolved.id
@@ -211,8 +235,42 @@ function validatePlotAxes(options: PlotOptions, coordinateSystem: CoordinateSyst
     if (!Object.hasOwn(options.scales, axis.scale))
       throw new Error(`plot.axes references missing scale "${axis.scale}".`)
   }
+  if (
+    coordinateSystem === 'polar' &&
+    options.axes.some((axis) => axis.options.get().resolved.style === 'classic')
+  ) {
+    if (
+      options.axes.length !== 2 ||
+      options.axes.some((axis) => axis.options.get().resolved.style !== 'classic')
+    ) {
+      throw new Error('Classic polar plots require both angular and radial classic axes.')
+    }
+  }
 }
 
+function validateAxisAppearance(
+  axis: Readonly<AxisOptions>,
+  scale: string,
+  options: PlotOptions,
+  coordinateSystem: CoordinateSystem,
+) {
+  if (coordinateSystem === 'polar' && axis.crossAt) {
+    throw new Error('Crossing axes require cartesian plots.')
+  }
+  if (!axis.crossAt) return
+  const crossed = options.scales[axis.crossAt.scale]
+  if (!crossed) throw new Error(`axis.crossAt references missing scale "${axis.crossAt.scale}".`)
+  if (
+    axis.crossAt.scale === scale ||
+    direction(options, axis.crossAt.scale) ===
+      (axis.position === 'top' || axis.position === 'bottom' ? 'x' : 'y')
+  ) {
+    throw new Error('axis.crossAt must reference a perpendicular scale.')
+  }
+  if ((crossed.kind === 'band') !== (typeof axis.crossAt.value === 'string')) {
+    throw new Error('axis.crossAt.value must match the crossing scale kind.')
+  }
+}
 function validatePlotScales(options: PlotOptions, coordinateSystem: CoordinateSystem) {
   for (const [name, scale] of Object.entries(options.scales)) {
     if (!name || !scale || !isScaleHandle(scale))
@@ -274,6 +332,10 @@ function createPlotInternal(
   validatePatch(config)
   const state = createOptionState<PlotOptions>(config, {
     defaults: () => ({
+      clipMarks: true,
+      autoMargins: false,
+      axisLayout: 'outside',
+      background: 'chart',
       title: '',
       margins: { top: 8, right: 8, bottom: 8, left: 8 },
       theme: 'auto',
@@ -311,6 +373,7 @@ function createPlotInternal(
   const scope = reactive.createScope()
   const measurer = createTextMeasurer()
   const axisWidths = new Map<AxisHandle, { version: number; thickness: number }>()
+  const insetWidths = new Map<AxisHandle, number>()
   const axisValidators = new Map<AxisHandle, () => void>()
   const markValidators = new Map<PlotMark, { dispose(): void }>()
   const bindings = new Map<
@@ -319,11 +382,13 @@ function createPlotInternal(
       scale: ScaleHandle
       direction: Orientation
       binding: ScaleBinding
+      markBinding: ScaleBinding
       scope: ReactiveScope
       stopExtents(): void
     }
   >()
   let localScales: Readonly<Record<string, ScaleBinding>> = Object.freeze({})
+  let markScales: Readonly<Record<string, ScaleBinding>> = Object.freeze({})
   let destroyed = false
   let lastThemeMode: ThemeMode | undefined
   let lastThemeVersion = -1
@@ -334,6 +399,7 @@ function createPlotInternal(
   const element = svgElement('svg', { class: 'fews-chart', role: 'img' })
   element.style.display = 'block'
   const background = svgElement('rect')
+  const polarBackground = svgElement('path', { display: 'none' })
   const gridLayer = svgElement('g', { 'data-layer': 'grid' })
   const marksLayer = svgElement('g', { 'data-layer': 'marks' })
   const axesLayer = svgElement('g', { 'data-layer': 'axes' })
@@ -351,7 +417,7 @@ function createPlotInternal(
     readonly renderer: MarkRenderer<PlotMark>
   }
   let mountedMarks: readonly MountedMark[] = []
-  element.append(background, definitions, gridLayer, marksLayer, axesLayer, title)
+  element.append(background, polarBackground, definitions, gridLayer, marksLayer, axesLayer, title)
 
   function mountMarks(marks: readonly PlotMark[]) {
     if (
@@ -379,9 +445,13 @@ function createPlotInternal(
   function renderMarkGeometry(current: PlotOptions) {
     mountMarks(current.marks)
     const context: MarkRenderContext = {
+      localCoordinates: current.axisLayout === 'inset',
       coordinateSystem,
-      scales: localScales,
-      plot: regions.get().plot,
+      scales: markScales,
+      plot:
+        current.axisLayout === 'inset' && coordinateSystem === 'cartesian'
+          ? { ...regions.get().plot, x: 0, y: 0 }
+          : regions.get().plot,
       direction: (name) => direction(current, name, undefined, undefined, coordinateSystem),
     }
     for (const { mark, renderer } of mountedMarks) renderer.geometry(mark, context)
@@ -427,6 +497,7 @@ function createPlotInternal(
         dispose()
         axisValidators.delete(axis)
         axisWidths.delete(axis)
+        insetWidths.delete(axis)
       }
     }
     for (const axis of current.axes) {
@@ -434,6 +505,19 @@ function createPlotInternal(
         axisValidators.set(
           axis,
           validateAxisUpdates(axis, (candidate) => {
+            const config = options.get().resolved
+            validateAxisAppearance(candidate, axis.scale, config, coordinateSystem)
+            if (coordinateSystem === 'polar') {
+              const appearances = config.axes.map((item) =>
+                item === axis ? candidate : item.options.get().resolved,
+              )
+              if (
+                appearances.some((item) => item.style === 'classic') &&
+                (appearances.length !== 2 || appearances.some((item) => item.style !== 'classic'))
+              ) {
+                throw new Error('Classic polar plots require both angular and radial classic axes.')
+              }
+            }
             direction(
               options.get().resolved,
               axis.scale,
@@ -479,6 +563,18 @@ function createPlotInternal(
         )
         return bindScale(scale, range)
       })
+      const markBinding = bindingScope.run(() =>
+        bindScale(
+          scale,
+          reactive.computed<ScaleRange>(() => {
+            if (options.get().resolved.axisLayout !== 'inset' || coordinateSystem === 'polar') {
+              return binding.range.get()
+            }
+            const plot = regions.get().plot
+            return Object.freeze(orientation === 'x' ? [0, plot.width] : [plot.height, 0])
+          }),
+        ),
+      )
       const stopExtents = registerScaleExtents(scale, (mode) => {
         const config = options.get().resolved
         if (config.scales[name] !== scale) return undefined
@@ -488,6 +584,7 @@ function createPlotInternal(
         scale,
         direction: orientation,
         binding,
+        markBinding,
         scope: bindingScope,
         stopExtents,
       })
@@ -495,9 +592,21 @@ function createPlotInternal(
     localScales = Object.freeze(
       Object.fromEntries([...bindings].map(([name, entry]) => [name, entry.binding])),
     )
+    markScales = Object.freeze(
+      Object.fromEntries(
+        [...bindings].map(([name, entry]) => [
+          name,
+          current.axisLayout === 'inset' && coordinateSystem === 'cartesian'
+            ? entry.markBinding
+            : entry.binding,
+        ]),
+      ),
+    )
   }
 
   function renderLayout(current: PlotOptions, tokens: ThemeTokens) {
+    if (current.axisLayout === 'inset') marksLayer.before(axesLayer)
+    else axesLayer.before(marksLayer)
     const actualSize = Object.freeze({
       width: current.width ?? measured.get().width,
       height: current.height ?? measured.get().height,
@@ -537,7 +646,7 @@ function createPlotInternal(
       return { position: axisOptions.position as CartesianSide, thickness: stable }
     })
     const margins =
-      coordinateSystem === 'polar'
+      coordinateSystem === 'polar' && current.axisLayout !== 'inset'
         ? {
             top: current.margins.top + tokens.fontSize * 2,
             right: current.margins.right + tokens.fontSize * 2,
@@ -545,7 +654,21 @@ function createPlotInternal(
             left: current.margins.left + tokens.fontSize * 2,
           }
         : current.margins
-    regions.set(layout(actualSize, measures, margins, current.title ? tokens.fontSize * 2 : 0))
+    const insetMargins = { ...margins }
+    if (current.axisLayout === 'inset' && current.autoMargins) {
+      for (const axis of cartesianAxes) {
+        const position = axis.options.get().resolved.position as CartesianSide
+        insetMargins[position] = Math.max(insetMargins[position], insetWidths.get(axis) ?? 0)
+      }
+    }
+    regions.set(
+      layout(
+        actualSize,
+        current.axisLayout === 'inset' ? [] : measures,
+        current.axisLayout === 'inset' ? insetMargins : margins,
+        current.title ? tokens.fontSize * 2 : 0,
+      ),
+    )
     element.setAttribute('width', String(actualSize.width))
     element.setAttribute('height', String(actualSize.height))
     element.setAttribute('viewBox', `0 0 ${actualSize.width} ${actualSize.height}`)
@@ -556,8 +679,51 @@ function createPlotInternal(
     title.setAttribute('y', String(titleRegion.y + tokens.fontSize))
     title.textContent = current.title
     const plotRegion = regions.get().plot
-    clipRect.setAttribute('x', String(plotRegion.x))
-    clipRect.setAttribute('y', String(plotRegion.y))
+    if (current.clipMarks) marksLayer.setAttribute('clip-path', `url(#${clipId})`)
+    else marksLayer.removeAttribute('clip-path')
+    const polarFill = coordinateSystem === 'polar' && current.background === 'plot'
+    background.setAttribute('display', polarFill ? 'none' : '')
+    polarBackground.setAttribute('display', polarFill ? '' : 'none')
+    if (polarFill) {
+      const angular = Object.values(localScales).find(
+        (binding) => binding.scale.kind === 'angular',
+      )!
+      const radial = Object.values(localScales).find((binding) => binding.scale.kind === 'radial')!
+      const angularOptions = angular.scale.options.get().resolved
+      const classic = current.axes.some((axis) => axis.options.get().resolved.style === 'classic')
+      const sign = angularOptions.direction === 'anticlockwise' ? -1 : 1
+      const intercept = angularOptions.intercept ?? 0
+      const [start, end] = angular.range.get()
+      polarBackground.setAttribute(
+        'transform',
+        `translate(${plotRegion.x + plotRegion.width / 2},${plotRegion.y + plotRegion.height / 2})`,
+      )
+      polarBackground.setAttribute(
+        'd',
+        arc<null>()
+          .innerRadius(radial.range.get()[0])
+          .outerRadius(radial.range.get()[1])
+          .startAngle(
+            classic ? intercept + start + (sign === -1 ? Math.PI : 0) : intercept + sign * start,
+          )
+          .endAngle(
+            classic ? intercept + end + (sign === -1 ? Math.PI : 0) : intercept + sign * end,
+          )(null) ?? '',
+      )
+    }
+    const localMarks = current.axisLayout === 'inset' && coordinateSystem === 'cartesian'
+    if (localMarks)
+      marksLayer.setAttribute('transform', `translate(${plotRegion.x},${plotRegion.y})`)
+    else marksLayer.removeAttribute('transform')
+    const backgroundRegion =
+      current.background === 'plot'
+        ? plotRegion
+        : { x: 0, y: 0, width: actualSize.width, height: actualSize.height }
+    for (const name of ['x', 'y', 'width', 'height'] as const) {
+      background.setAttribute(name, String(backgroundRegion[name]))
+    }
+    clipRect.setAttribute('x', String(localMarks ? 0 : plotRegion.x))
+    clipRect.setAttribute('y', String(localMarks ? 0 : plotRegion.y))
     clipRect.setAttribute('width', String(plotRegion.width))
     clipRect.setAttribute('height', String(plotRegion.height))
     if (current.title) element.setAttribute('aria-label', current.title)
@@ -573,6 +739,7 @@ function createPlotInternal(
     }
     if (dirty & DirtyLayer.style) {
       background.setAttribute('fill', `var(--fews-chart-background, ${tokens.background})`)
+      polarBackground.setAttribute('fill', `var(--fews-chart-background, ${tokens.background})`)
       element.style.color = `var(--fews-chart-foreground, ${tokens.foreground})`
       element.style.fontFamily = `var(--fews-chart-font-family, ${tokens.fontFamily})`
       element.style.fontSize = `${tokens.fontSize}px`
@@ -584,6 +751,28 @@ function createPlotInternal(
         renderPolarAxes(axesLayer, gridLayer, current.axes, localScales, regions.get(), tokens)
       } else {
         renderAxes(axesLayer, gridLayer, current.axes, localScales, regions.get(), tokens)
+        if (current.axisLayout === 'inset' && current.autoMargins) {
+          let changed = false
+          const groups = [...axesLayer.children]
+          current.axes.forEach((axis, index) => {
+            if (axis.options.get().resolved.crossAt) return
+            const tickGroup = groups[index]?.querySelector('[data-axis-ticks]')
+            if (!tickGroup) return
+            const bounds = tickGroup.getBoundingClientRect()
+            const side = axis.options.get().resolved.position
+            if (!isCartesianSide(side)) return
+            const extent = side === 'top' || side === 'bottom' ? bounds.height : bounds.width
+            const needed = Math.ceil(extent / 10) * 10
+            const previous = Math.max(current.margins[side], insetWidths.get(axis) ?? 0)
+            if (needed <= previous) return
+            insetWidths.set(axis, needed)
+            changed = true
+          })
+          if (changed) {
+            renderLayout(current, tokens)
+            renderAxes(axesLayer, gridLayer, current.axes, localScales, regions.get(), tokens)
+          }
+        }
       }
     }
     if (dirty & (DirtyLayer.layout | DirtyLayer.axes | DirtyLayer.marks)) {
@@ -609,6 +798,10 @@ function createPlotInternal(
         current.width ?? measuredSize.width,
         current.height ?? measuredSize.height,
         current.title,
+        current.axisLayout,
+        current.background,
+        current.autoMargins,
+        current.clipMarks,
         ...marginKeys.map((side) => current.margins[side]),
         ...current.axes.flatMap((axis) => [axis, axis.options.version]),
         ...current.marks,
@@ -624,6 +817,7 @@ function createPlotInternal(
       )
         return
       layoutDependencies = dependencies
+      insetWidths.clear()
       invalidate(render, DirtyLayer.layout | DirtyLayer.axes)
     })
     reactive.effect(() => {
@@ -642,6 +836,7 @@ function createPlotInternal(
         tokens.fontSize !== previous.fontSize || tokens.fontFamily !== previous.fontFamily
       if (fontChanged) {
         axisWidths.clear()
+        insetWidths.clear()
         measurer.clear()
       }
       invalidate(render, DirtyLayer.style | (fontChanged ? DirtyLayer.layout : 0))
@@ -664,6 +859,7 @@ function createPlotInternal(
       themeVersion.update((value) => value + 1)
     }
     axisWidths.clear()
+    insetWidths.clear()
     reconcile()
   }
 
@@ -702,7 +898,9 @@ function createPlotInternal(
       for (const { renderer } of mountedMarks) renderer.destroy()
       mountedMarks = []
       localScales = Object.freeze({})
+      markScales = Object.freeze({})
       axisWidths.clear()
+      insetWidths.clear()
       measurer.clear()
       element.remove()
     },

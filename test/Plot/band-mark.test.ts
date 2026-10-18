@@ -38,6 +38,36 @@ afterEach(() => {
 })
 
 describe('band marks', () => {
+  test('replaces curved paths with interval rectangles for the same mark ID', async () => {
+    const config = {
+      id: 'changing',
+      x: 'x',
+      y: 'y',
+      xValues: [
+        [0, 0],
+        [1, 1],
+      ] as [number, number][],
+      yValues: [
+        [0, 1],
+        [1, 2],
+      ] as [number, number][],
+    }
+    const current = create(host(), {
+      scales: { x: linearScale(), y: linearScale() },
+      directions: { x: 'x' },
+      axisLayout: 'inset',
+      marks: [range({ ...config, curve: 'basis', opacity: 0.3 })],
+    })
+    await frame()
+    const group = current.element.querySelector('[data-mark="band"]')!
+    expect(group.querySelector('[data-mark="band-area"]')?.localName).toBe('path')
+    expect(group.getAttribute('opacity')).toBe('0.3')
+    current.update({ marks: [range(config)] })
+    await frame()
+    expect(group.querySelector('[data-mark="band-area"]')).toBeNull()
+    expect([...group.children].map((node) => node.localName)).toEqual(['rect', 'rect'])
+  })
+
   test('renders x/y intervals as clipped rectangles and contributes their bounds to autoscale', async () => {
     const mark = range({
       id: 'intervals',

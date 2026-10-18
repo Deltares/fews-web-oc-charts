@@ -4,6 +4,7 @@ import {
   axis,
   createPolarPlot,
   linearScale,
+  line,
   radialScale,
   type PolarPlot,
 } from '../../src/index.js'
@@ -37,6 +38,36 @@ afterEach(() => {
 })
 
 describe('createPolarPlot', () => {
+  test('renders polar lines and keeps classic axis updates atomic', async () => {
+    const angular = axis('theta', { position: 'angular', style: 'classic' })
+    const radial = axis('distance', { position: 'radial', style: 'classic' })
+    const current = plot(host(), {
+      axisLayout: 'inset',
+      scales: {
+        theta: angularScale({ domain: [0, 360] }),
+        distance: radialScale({ domain: [0, 10] }),
+      },
+      axes: [angular, radial],
+      marks: [
+        line({
+          x: 'theta',
+          y: 'distance',
+          xValues: [0, 90, 180],
+          yValues: [1, 5, 10],
+          digits: 3,
+          markers: { symbolSize: 16, skip: 2 },
+        }),
+      ],
+    })
+    await frame()
+    expect(current.element.querySelector('[data-mark="line"]')?.getAttribute('d')).toMatch(
+      /^M.+L.+L/,
+    )
+    expect(current.element.querySelector('marker')).not.toBeNull()
+    expect(() => angular.update({ style: 'default' })).toThrow(/both angular and radial/)
+    expect(angular.options.get().resolved.style).toBe('classic')
+  })
+
   test('projects angular and radial values and renders polar axes', async () => {
     const current = plot(host(), {
       scales: {

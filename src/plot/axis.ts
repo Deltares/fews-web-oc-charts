@@ -6,6 +6,8 @@ import type { ScaleValue } from '../scales/scale.js'
 
 export type AxisSide = 'top' | 'right' | 'bottom' | 'left' | 'angular' | 'radial'
 export interface AxisOptions {
+  style: 'default' | 'classic'
+  crossAt?: { scale: string; value: ScaleValue }
   id?: string
   position: AxisSide
   label: string
@@ -43,6 +45,8 @@ export function validateAxisUpdates(
 export function axis(scale: string, initial: OptionPatch<AxisOptions> = {}): AxisHandle {
   if (typeof scale !== 'string' || scale.length === 0) throw new Error('axis.scale must be a name.')
   const keys = [
+    'style',
+    'crossAt',
     'id',
     'position',
     'label',
@@ -58,6 +62,7 @@ export function axis(scale: string, initial: OptionPatch<AxisOptions> = {}): Axi
   validateKeys(initial, keys, 'axis')
   const state = createOptionState<AxisOptions>(initial, {
     defaults: () => ({
+      style: 'default',
       position: 'left',
       label: '',
       unit: '',
@@ -66,6 +71,19 @@ export function axis(scale: string, initial: OptionPatch<AxisOptions> = {}): Axi
       labelAngle: 0,
     }),
     validate(options) {
+      if (!['default', 'classic'].includes(options.style)) {
+        throw new Error('axis.style must be default or classic.')
+      }
+      if (options.crossAt !== undefined) {
+        validateKeys(options.crossAt, ['scale', 'value'], 'axis.crossAt')
+        if (typeof options.crossAt.scale !== 'string' || !options.crossAt.scale) {
+          throw new Error('axis.crossAt.scale must name a plot scale.')
+        }
+        const value = options.crossAt.value
+        if (typeof value !== 'string' && !(typeof value === 'number' && Number.isFinite(value))) {
+          throw new Error('axis.crossAt.value must be a finite number or string.')
+        }
+      }
       if (!['top', 'right', 'bottom', 'left', 'angular', 'radial'].includes(options.position)) {
         throw new Error('axis.position must be a cartesian side, angular or radial.')
       }
