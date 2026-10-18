@@ -227,7 +227,7 @@ describe('createPlot named scales', () => {
     const before = current.scales.q
     current.update({ scales: { q: replacement }, axes: [second, first] })
     await frame()
-    expect(current.scales.q === before).toBe(false)
+    expect(current.scales.q).not.toBe(before)
     expect(current.element.querySelector('[data-layer="axes"] > g')!.textContent).toContain(
       'second',
     )

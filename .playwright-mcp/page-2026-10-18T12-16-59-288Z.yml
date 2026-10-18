@@ -1,0 +1,12 @@
+- generic [active] [ref=e1]:
+  - navigation "Examples" [ref=e2]:
+    - link "All examples" [ref=e3] [cursor=pointer]:
+      - /url: /
+    - link "Basic line" [ref=e4] [cursor=pointer]:
+      - /url: ../v5-basic-line/
+  - 'heading "v5: line, markers and area" [level=1] [ref=e5]'
+  - paragraph [ref=e6]: One static series mark combines a line, point markers and a filled area to a configurable baseline. The missing interval stays a gap in all three layers.
+  - paragraph [ref=e7]: "Phase 2 series marks are static: provide aligned x/y values and replace the mark to change them. Automatic extents, data stores and interactive mark behavior are planned separately."
+  - figure "Observed discharge with sample markers and area filled to zero." [ref=e8]
+  - heading "Public API" [level=2] [ref=e12]
+  - code [ref=e14]: "line({ x: 't', y: 'q', xValues: times, yValues: discharge, markers: { size: 4 }, area: { to: 0, opacity: 0.2 }, })"
