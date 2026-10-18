@@ -9,6 +9,7 @@
     <nav aria-label="Examples">
       <a href="/">All examples</a>
       <a href="../v5-bars/">Grouped and stacked bars</a>
+      <a href="../v5-stacked-area-lod/">Stacked-area LOD</a>
       <a href="../v5-series/">Series</a>
     </nav>
     <h1>v5: stacked areas</h1>
@@ -44,8 +45,9 @@
     </figure>
     <p class="note">
       Both plots share one owned table, retaining the newest twelve samples. All viewport samples
-      and their neighbours are retained, keeping shared boundaries, extrema, sign changes and gaps
-      aligned. Canvas, decimation, tooltips and a built-in legend are not implemented yet.
+      and their neighbours are retained, with shared-boundary pixel-bucket LOD for dense views.
+      Canvas, tooltips and a built-in legend are not implemented yet. See the dedicated LOD example
+      for a 24,000-sample stack and live retained-row metrics.
     </p>
     <h2>Public API</h2>
     <pre><code>const flows = createTable({ t, upstream, lateral })

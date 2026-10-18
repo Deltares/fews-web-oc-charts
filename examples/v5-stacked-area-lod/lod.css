@@ -1,0 +1,28 @@
+.lod-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 1rem 0;
+}
+
+.lod-stats div {
+  min-width: 180px;
+  padding: 12px 16px;
+  border: 1px solid light-dark(#c6d4e0, #476078);
+  border-radius: 8px;
+}
+
+.lod-stats dt {
+  font-size: 0.875rem;
+}
+
+.lod-stats dd {
+  margin: 6px 0 0;
+  font-size: 1.25rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+#window-size {
+  width: min(100%, 420px);
+}
