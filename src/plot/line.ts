@@ -1,4 +1,4 @@
-import type { ScaleValue } from '../scales/scale.js'
+import type { ScaleKind, ScaleValue } from '../scales/scale.js'
 import { validateKeys } from '../core/validation.js'
 
 export type LineValue = ScaleValue | null | undefined
@@ -44,6 +44,25 @@ function validateValues(values: LineValues, name: string) {
       typeof value !== 'string'
     ) {
       throw new Error(`line.${name}[${index}] must be a finite number, string, or gap.`)
+    }
+  }
+}
+
+export function validateLineValuesForScale(
+  mark: LineMark,
+  coordinate: 'x' | 'y',
+  kind: ScaleKind,
+): void {
+  const values = coordinate === 'x' ? mark.xValues : mark.yValues
+  const expected = kind === 'band' ? 'string' : 'number'
+  for (let index = 0; index < values.length; index += 1) {
+    const value = values[index]
+    if (value === null || value === undefined) continue
+    if (typeof value === 'number' && !Number.isFinite(value)) continue
+    if (typeof value !== expected) {
+      throw new Error(
+        `line "${mark.id ?? ''}" ${coordinate}Values[${index}] must be a ${expected} for ${kind} scale "${mark[coordinate]}".`,
+      )
     }
   }
 }
