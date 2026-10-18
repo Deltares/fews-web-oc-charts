@@ -23,6 +23,7 @@ export interface LineOptions {
   y: string
   xValues: LineValues
   yValues: LineValues
+  line?: boolean
   stroke?: string
   strokeWidth?: number
   markers?: boolean | LineMarkerOptions
@@ -35,6 +36,7 @@ export interface LineMark {
   readonly y: string
   readonly xValues: LineValues
   readonly yValues: LineValues
+  readonly line: boolean
   readonly stroke: string | undefined
   readonly strokeWidth: number
   readonly markers: Readonly<Required<LineMarkerOptions>> | undefined
@@ -88,7 +90,7 @@ export function line(options: LineOptions): LineMark {
   if (!options || typeof options !== 'object') throw new Error('line options must be an object.')
   validateKeys(
     options,
-    ['id', 'x', 'y', 'xValues', 'yValues', 'stroke', 'strokeWidth', 'markers', 'area'],
+    ['id', 'x', 'y', 'xValues', 'yValues', 'line', 'stroke', 'strokeWidth', 'markers', 'area'],
     'line',
   )
   if (options.id !== undefined && (typeof options.id !== 'string' || options.id.length === 0)) {
@@ -104,6 +106,9 @@ export function line(options: LineOptions): LineMark {
   validateValues(options.yValues, 'yValues')
   if (options.xValues.length !== options.yValues.length) {
     throw new Error('line.xValues and line.yValues must have equal lengths.')
+  }
+  if (options.line !== undefined && typeof options.line !== 'boolean') {
+    throw new TypeError('line.line must be a boolean.')
   }
   if (options.stroke !== undefined && (typeof options.stroke !== 'string' || !options.stroke)) {
     throw new Error('line.stroke must be a non-empty string.')
@@ -181,6 +186,7 @@ export function line(options: LineOptions): LineMark {
     y: options.y,
     xValues: options.xValues,
     yValues: options.yValues,
+    line: options.line ?? true,
     stroke: options.stroke,
     strokeWidth,
     markers,

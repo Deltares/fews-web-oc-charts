@@ -37,6 +37,31 @@ afterEach(() => {
 })
 
 describe('autoscale policies', () => {
+  test('static lines contribute only when their line, markers or area are enabled', () => {
+    const x = linear()
+    const y = linear()
+    const options = { x: 'x', y: 'y', xValues: [2, 4], yValues: [10, 20], line: false }
+    const current = plot({
+      scales: { x, y },
+      directions: { x: 'x' },
+      marks: [line(options)],
+    })
+    expect(x.domain.get()).toEqual([0, 1])
+    expect(y.domain.get()).toEqual([0, 1])
+
+    current.update({ marks: [line({ ...options, markers: true })] })
+    expect(x.domain.get()).toEqual([2, 4])
+    expect(y.domain.get()).toEqual([10, 20])
+
+    current.update({ marks: [line({ ...options, area: { to: -5 } })] })
+    expect(x.domain.get()).toEqual([2, 4])
+    expect(y.domain.get()).toEqual([-5, 20])
+
+    current.update({ marks: [line({ ...options, line: undefined })] })
+    expect(x.domain.get()).toEqual([2, 4])
+    expect(y.domain.get()).toEqual([10, 20])
+  })
+
   test('unions eligible series and static lines, ignores gaps and includes area baselines', () => {
     const x = time()
     const y = linear()
