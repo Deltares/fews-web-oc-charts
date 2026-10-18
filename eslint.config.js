@@ -4,13 +4,28 @@ import tseslint from 'typescript-eslint'
 import pluginPrettierRecommended from 'eslint-plugin-prettier/recommended'
 
 export default defineConfig(
+  {
+    ignores: ['dist/**', 'lib/**'],
+  },
+  {
+    files: ['scripts/*.mjs'],
+    languageOptions: {
+      globals: {
+        Buffer: 'readonly',
+        console: 'readonly',
+        document: 'readonly',
+        process: 'readonly',
+        window: 'readonly',
+      },
+    },
+  },
   eslint.configs.recommended,
   tseslint.configs.recommendedTypeChecked,
   {
     languageOptions: {
       parserOptions: {
         projectService: {
-          allowDefaultProject: ['*.js'],
+          allowDefaultProject: ['*.js', 'scripts/*.mjs'],
         },
       },
     },

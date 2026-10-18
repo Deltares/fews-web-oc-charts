@@ -118,13 +118,7 @@ export function createReactiveCore(
 
     run<T>(callback: () => T): T {
       if (this.isDisposed) throw new Error('Cannot run a disposed reactive scope.')
-      const previousScope = currentScope
-      currentScope = this
-      try {
-        return callback()
-      } finally {
-        currentScope = previousScope
-      }
+      return runInScope(this, callback)
     }
 
     createScope(): ReactiveScope {
@@ -152,6 +146,16 @@ export function createReactiveCore(
       this.children.clear()
       for (const cleanup of this.cleanups.splice(0).reverse()) safelyRun(cleanup)
       activeScopes -= 1
+    }
+  }
+
+  function runInScope<T>(scope: Scope, callback: () => T): T {
+    const previousScope = currentScope
+    currentScope = scope
+    try {
+      return callback()
+    } finally {
+      currentScope = previousScope
     }
   }
 
@@ -198,7 +202,7 @@ export function createReactiveCore(
     const cell: Cell<T> = { value, version: 0, depth: 0, subscribers: new Set() }
     return {
       get() {
-        track(cell as Cell<unknown>)
+        track(cell)
         return cell.value
       },
       get version() {
@@ -208,10 +212,14 @@ export function createReactiveCore(
         if (equals(cell.value, next)) return
         cell.value = next
         cell.version += 1
-        notify(cell as Cell<unknown>)
+        notify(cell)
       },
       update(updater) {
-        this.set(updater(cell.value))
+        const next = updater(cell.value)
+        if (equals(cell.value, next)) return
+        cell.value = next
+        cell.version += 1
+        notify(cell)
       },
     }
   }
@@ -237,7 +245,7 @@ export function createReactiveCore(
       invalidate() {
         if (disposed || dirty) return
         dirty = true
-        notify(cell as Cell<unknown>)
+        notify(cell)
       },
     }
 
@@ -272,7 +280,7 @@ export function createReactiveCore(
 
     const computedSignal: ComputedSignal<T> = {
       get() {
-        track(cell as Cell<unknown>)
+        track(cell)
         return evaluate()
       },
       get version() {
@@ -355,7 +363,7 @@ export function createReactiveCore(
     }
 
     activeEffects += 1
-    const releaseOwnership = currentScope?.own(handle.dispose) ?? (() => {})
+    const releaseOwnership = currentScope?.own(() => handle.dispose()) ?? (() => {})
     effectObservers.set(execute, observer)
     pendingEffects.add(execute)
     effectsNeedScheduling = true

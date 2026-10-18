@@ -5,7 +5,7 @@ import { createReactiveCore } from '../../src/spike/core/reactive.js'
 function queuedFrames() {
   const callbacks: FrameRequestCallback[] = []
   return {
-    requestFrame(callback: FrameRequestCallback) {
+    requestFrame: (callback: FrameRequestCallback) => {
       callbacks.push(callback)
       return callbacks.length
     },
@@ -77,10 +77,10 @@ describe('phase 0 reactive core and frame scheduler', () => {
     const frames = queuedFrames()
     const scheduler = createFrameScheduler(() => {}, frames.requestFrame)
     const core = createReactiveCore(scheduler)
-    let value: ReturnType<typeof core.computed<number>>
-    value = core.computed(() => value.get() + 1)
+    const value: { current?: ReturnType<typeof core.computed<number>> } = {}
+    value.current = core.computed(() => value.current!.get() + 1)
 
-    expect(() => value.get()).toThrow(/Reactive cycle detected/)
+    expect(() => value.current!.get()).toThrow(/Reactive cycle detected/)
     scheduler.dispose()
   })
 
