@@ -448,75 +448,79 @@ function createPlotInternal(
     )
   }
 
+  function renderLayout(current: PlotOptions, tokens: ThemeTokens) {
+    const actualSize = Object.freeze({
+      width: current.width ?? measured.get().width,
+      height: current.height ?? measured.get().height,
+    })
+    size.set(actualSize)
+    const cartesianAxes = current.axes.filter((axis) =>
+      isCartesianSide(axis.options.get().resolved.position),
+    )
+    const measures = cartesianAxes.map((axis) => {
+      const axisOptions = axis.options.get().resolved
+      const binding = localScales[axis.scale]
+      const labels = axisTickLabels(binding, axis)
+      const maxWidth = Math.max(
+        0,
+        ...labels.flatMap(({ primary, secondary }) =>
+          [primary, secondary]
+            .filter(Boolean)
+            .map((label) => measurer.measure(label, `${tokens.fontSize}px ${tokens.fontFamily}`)),
+        ),
+      )
+      const labelRows = labels.some(({ secondary }) => secondary) ? 2 : 1
+      const angle = Math.abs((axisOptions.labelAngle * Math.PI) / 180)
+      const horizontal = axisOptions.position === 'top' || axisOptions.position === 'bottom'
+      const labelExtent = horizontal
+        ? Math.abs(Math.sin(angle)) * maxWidth +
+          Math.abs(Math.cos(angle)) * tokens.fontSize * labelRows
+        : Math.abs(Math.cos(angle)) * maxWidth +
+          Math.abs(Math.sin(angle)) * tokens.fontSize * labelRows
+      const thickness = Math.ceil(
+        12 + labelExtent + (axisOptions.label || axisOptions.unit ? tokens.fontSize * 2 : 0),
+      )
+      const previous = axisWidths.get(axis)
+      const version = axis.options.version
+      const stable =
+        previous?.version === version ? Math.max(thickness, previous.thickness) : thickness
+      axisWidths.set(axis, { version, thickness: stable })
+      return { position: axisOptions.position as CartesianSide, thickness: stable }
+    })
+    const margins =
+      coordinateSystem === 'polar'
+        ? {
+            top: current.margins.top + tokens.fontSize * 2,
+            right: current.margins.right + tokens.fontSize * 2,
+            bottom: current.margins.bottom + tokens.fontSize * 2,
+            left: current.margins.left + tokens.fontSize * 2,
+          }
+        : current.margins
+    regions.set(layout(actualSize, measures, margins, current.title ? tokens.fontSize * 2 : 0))
+    element.setAttribute('width', String(actualSize.width))
+    element.setAttribute('height', String(actualSize.height))
+    element.setAttribute('viewBox', `0 0 ${actualSize.width} ${actualSize.height}`)
+    background.setAttribute('width', String(actualSize.width))
+    background.setAttribute('height', String(actualSize.height))
+    const titleRegion = regions.get().title
+    title.setAttribute('x', String(titleRegion.x + titleRegion.width / 2))
+    title.setAttribute('y', String(titleRegion.y + tokens.fontSize))
+    title.textContent = current.title
+    const plotRegion = regions.get().plot
+    clipRect.setAttribute('x', String(plotRegion.x))
+    clipRect.setAttribute('y', String(plotRegion.y))
+    clipRect.setAttribute('width', String(plotRegion.width))
+    clipRect.setAttribute('height', String(plotRegion.height))
+    if (current.title) element.setAttribute('aria-label', current.title)
+    else element.removeAttribute('aria-label')
+  }
+
   function render(dirty: DirtyLayers) {
     if (destroyed) return
     const current = options.get().resolved
     const tokens = theme.get()
     if (dirty & DirtyLayer.layout) {
-      const actualSize = Object.freeze({
-        width: current.width ?? measured.get().width,
-        height: current.height ?? measured.get().height,
-      })
-      size.set(actualSize)
-      const cartesianAxes = current.axes.filter((axis) =>
-        isCartesianSide(axis.options.get().resolved.position),
-      )
-      const measures = cartesianAxes.map((axis) => {
-        const axisOptions = axis.options.get().resolved
-        const binding = localScales[axis.scale]
-        const labels = axisTickLabels(binding, axis)
-        const maxWidth = Math.max(
-          0,
-          ...labels.flatMap(({ primary, secondary }) =>
-            [primary, secondary]
-              .filter(Boolean)
-              .map((label) => measurer.measure(label, `${tokens.fontSize}px ${tokens.fontFamily}`)),
-          ),
-        )
-        const labelRows = labels.some(({ secondary }) => secondary) ? 2 : 1
-        const angle = Math.abs((axisOptions.labelAngle * Math.PI) / 180)
-        const horizontal = axisOptions.position === 'top' || axisOptions.position === 'bottom'
-        const labelExtent = horizontal
-          ? Math.abs(Math.sin(angle)) * maxWidth +
-            Math.abs(Math.cos(angle)) * tokens.fontSize * labelRows
-          : Math.abs(Math.cos(angle)) * maxWidth +
-            Math.abs(Math.sin(angle)) * tokens.fontSize * labelRows
-        const thickness = Math.ceil(
-          12 + labelExtent + (axisOptions.label || axisOptions.unit ? tokens.fontSize * 2 : 0),
-        )
-        const previous = axisWidths.get(axis)
-        const version = axis.options.version
-        const stable =
-          previous?.version === version ? Math.max(thickness, previous.thickness) : thickness
-        axisWidths.set(axis, { version, thickness: stable })
-        return { position: axisOptions.position as CartesianSide, thickness: stable }
-      })
-      const margins =
-        coordinateSystem === 'polar'
-          ? {
-              top: current.margins.top + tokens.fontSize * 2,
-              right: current.margins.right + tokens.fontSize * 2,
-              bottom: current.margins.bottom + tokens.fontSize * 2,
-              left: current.margins.left + tokens.fontSize * 2,
-            }
-          : current.margins
-      regions.set(layout(actualSize, measures, margins, current.title ? tokens.fontSize * 2 : 0))
-      element.setAttribute('width', String(actualSize.width))
-      element.setAttribute('height', String(actualSize.height))
-      element.setAttribute('viewBox', `0 0 ${actualSize.width} ${actualSize.height}`)
-      background.setAttribute('width', String(actualSize.width))
-      background.setAttribute('height', String(actualSize.height))
-      const titleRegion = regions.get().title
-      title.setAttribute('x', String(titleRegion.x + titleRegion.width / 2))
-      title.setAttribute('y', String(titleRegion.y + tokens.fontSize))
-      title.textContent = current.title
-      const plotRegion = regions.get().plot
-      clipRect.setAttribute('x', String(plotRegion.x))
-      clipRect.setAttribute('y', String(plotRegion.y))
-      clipRect.setAttribute('width', String(plotRegion.width))
-      clipRect.setAttribute('height', String(plotRegion.height))
-      if (current.title) element.setAttribute('aria-label', current.title)
-      else element.removeAttribute('aria-label')
+      renderLayout(current, tokens)
     }
     if (dirty & DirtyLayer.style) {
       background.setAttribute('fill', `var(--fews-chart-background, ${tokens.background})`)
