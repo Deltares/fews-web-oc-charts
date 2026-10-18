@@ -149,7 +149,7 @@ const mouseOverSelection = new MouseOver({ trace: ['example-1', 'example-3'] })
 axesSelection.accept(mouseOverSelection)
 
 // Add mouseover with custom number formatter that uses the extent, and custom text formatter for the label.
-const mouseOverTextFormatter = (data: number | number[] | any, precision: number) => {
+const mouseOverTextFormatter = (data: number, precision: number) => {
   const formattedValue = data.toFixed(precision)
   return `Value: ${formattedValue} (Precision: ${precision})`
 }

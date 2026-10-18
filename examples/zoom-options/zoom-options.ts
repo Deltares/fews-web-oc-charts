@@ -217,7 +217,7 @@ function dataload(plot: Plot) {
         members[s] = []
       }
       const medianTime = (data.times[0] + data.times[data.times.length - 1]) / 2
-      plot.escalations.forEach(function (el, i) {
+      plot.escalations.forEach(function (el, _i) {
         el.events = []
       })
 
@@ -247,7 +247,7 @@ function dataload(plot: Plot) {
           [chartOptions.y.key]: [perc90[0] + offset, perc90[1] + offset],
         })
 
-        plot.escalations.forEach(function (el, i) {
+        plot.escalations.forEach(function (el, _i) {
           let val = el.levelStart
           if (index > data.times.length / 2) {
             val = el.levelEnd
@@ -281,7 +281,7 @@ function dataload(plot: Plot) {
 
       const escalationsVisitor = new WarningLevels(plot.escalations, {})
       plot.axis.accept(escalationsVisitor)
-      plot.escalations.forEach(function (el, i) {
+      plot.escalations.forEach(function (el, _i) {
         const escLevel = new ChartLine(el.events, {
           curve: CurveType.StepAfter,
           y: { includeInAutoScale: false },

@@ -1,3 +1,4 @@
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-nocheck
 import '@lib/scss/wb-charts.scss'
 import '@shared/shared.css'
@@ -46,7 +47,7 @@ let datafieldWindDirection
 let datafieldWindSpeed
 let datafieldWindStoot
 
-let transitionTime = null
+const transitionTime = null
 
 const unitsSpeedWind = [
   { unit: ' m/s', factor: 1.0 },
@@ -90,7 +91,7 @@ function setupCurrentRose() {
     angular: {
       direction: Direction.CLOCKWISE,
       intercept: Math.PI / 2,
-      format: (value) => `${value}°`,
+      format: (value) => `${String(value)}°`,
     },
     innerRadius: 0.5,
   })
@@ -100,7 +101,7 @@ function setupCurrentRose() {
     angular: {
       direction: Direction.ANTICLOCKWISE,
       intercept: 0,
-      format: (value) => `${value}°`,
+      format: (value) => `${String(value)}°`,
     },
     innerRadius: 0.5,
   })
@@ -110,7 +111,7 @@ function setupCurrentRose() {
     angular: {
       direction: Direction.ANTICLOCKWISE,
       intercept: Math.PI / 3,
-      format: (value) => `${value}°`,
+      format: (value) => `${String(value)}°`,
     },
     innerRadius: 0.5,
   })
@@ -256,7 +257,7 @@ function setupWindRose(
     angular: {
       direction: Direction.CLOCKWISE,
       intercept: Math.PI / 2,
-      format: (value) => `${value}°`,
+      format: (value) => `${String(value)}°`,
     },
     innerRadius: 0.5,
   })
@@ -266,7 +267,7 @@ function setupWindRose(
     angular: {
       direction: Direction.ANTICLOCKWISE,
       intercept: Math.PI,
-      format: (value) => `${value}°`,
+      format: (value) => `${String(value)}°`,
     },
     innerRadius: 0.5,
   })

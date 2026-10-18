@@ -179,7 +179,7 @@ const updateCharts = function () {
   polarAxis.redraw()
 }
 const input = document.getElementById('slider')
-input.onchange = function (event) {
+input.onchange = function (_event) {
   updateCharts()
 }
 

@@ -1,3 +1,4 @@
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-nocheck
 import '@lib/scss/wb-charts.scss'
 import '@shared/shared.css'
@@ -92,12 +93,8 @@ function resetTimeSlider(times, force) {
   const slider = document.getElementById('slider') as HTMLInputElement
   slider.max = (times.length - 1).toString()
   const now = Math.floor(Date.now() / 1000)
-  let t = 0
-  for (t = 0; t < times.length; t++) {
-    if (times[t][0] > now) {
-      break
-    }
-  }
+  let t = times.findIndex(([time]) => time > now)
+  if (t === -1) t = times.length
   if (t > 0) {
     t--
   }

@@ -79,7 +79,7 @@ function onLoad() {
     angular: {
       direction: Direction.CLOCKWISE,
       intercept: Math.PI / 2,
-      format: (value) => `${value}°`,
+      format: (value) => `${String(value)}°`,
     },
     innerRadius: 0.5,
   })
