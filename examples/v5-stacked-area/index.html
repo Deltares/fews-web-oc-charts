@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>v5: stacked areas</title>
+  </head>
+  <body>
+    <nav aria-label="Examples">
+      <a href="/">All examples</a>
+      <a href="../v5-bars/">Grouped and stacked bars</a>
+      <a href="../v5-series/">Series</a>
+    </nav>
+    <h1>v5: stacked areas</h1>
+    <p>
+      Retained SVG layers share diverging data-space endpoints. The first plot has one implicit
+      stack; the second overlays independent observed and forecast stacks. A missing visible value
+      breaks only its own stack, and hiding that layer repairs the gap.
+    </p>
+    <fieldset class="controls" aria-label="Stacked area options">
+      <legend>Update retained handles</legend>
+      <label><input id="lateral" type="checkbox" checked /> Observed lateral inflow</label>
+      <label><input id="forecast" type="checkbox" checked /> Forecast stack</label>
+      <label><input id="step" type="checkbox" /> Step curve</label>
+      <label><input id="reverse" type="checkbox" /> Reverse time scale</label>
+      <button id="reorder" type="button">Reverse stacking order</button>
+      <button id="append" type="button">Append sample</button>
+      <button id="reset" type="button">Reset data</button>
+    </fieldset>
+    <figure>
+      <div id="implicit" class="plot-host"></div>
+      <figcaption>
+        Observed upstream (blue) and lateral inflow (green), stacked from zero. Reversing stacking
+        order changes which band touches zero, even in this single stack.
+      </figcaption>
+    </figure>
+    <figure>
+      <div id="named" class="plot-host"></div>
+      <figcaption>
+        Observed and forecast (cyan/purple) stacks are overlaid, never summed together. Reversing
+        stacking order changes accumulation within each stack and also reverses which stack is
+        painted in front.
+      </figcaption>
+    </figure>
+    <p class="note">
+      Both plots share one owned table, retaining the newest twelve samples. All viewport samples
+      and their neighbours are retained, keeping shared boundaries, extrema, sign changes and gaps
+      aligned. Canvas, decimation, tooltips and a built-in legend are not implemented yet.
+    </p>
+    <h2>Public API</h2>
+    <pre><code>const flows = createTable({ t, upstream, lateral })
+const areas = stackedArea(flows, {
+  x: 't',
+  scales: { x: 't', y: 'q' },
+  layers: [
+    { id: 'upstream', y: 'upstream', fill: '#4477aa' },
+    { id: 'lateral', y: 'lateral', fill: '#228833' },
+  ],
+  curve: 'linear', // or 'step' (midpoint steps)
+})
+// Supply a non-empty stack ID on every layer for independent named stacks.
+areas.update({ curve: 'step' })
+flows.append({ t: [nextTime], upstream: [6], lateral: [-2] })</code></pre>
+    <script type="module" src="./v5-stacked-area.ts"></script>
+  </body>
+</html>

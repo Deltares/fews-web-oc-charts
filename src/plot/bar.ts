@@ -8,21 +8,16 @@ import {
   type TableStore,
   type TableView,
 } from '../data-store/table.js'
-import {
-  computeStackLayout,
-  stackLayout,
-  type StackLayer,
-  type StackLayoutOptions,
-} from '../layout/stack.js'
+import { computeStackLayout, stackLayout, type StackLayoutOptions } from '../layout/stack.js'
 import type { ScaleHandle } from '../scales/scale.js'
+import {
+  retainLayerVisibility,
+  validateCompositeLayers,
+  validateCompositeStyle,
+  type CompositeLayer,
+} from './composite.js'
 
-export interface BarLayer extends StackLayer {
-  readonly label?: string
-  readonly fill?: string
-  readonly opacity?: number
-  readonly stroke?: string
-  readonly strokeWidth?: number
-}
+export interface BarLayer extends CompositeLayer {}
 export interface BarOptions {
   id?: string
   x: string
@@ -194,40 +189,8 @@ export function bar(data: TableStore, initial: OptionPatch<BarOptions>): BarMark
           'bar.interval requires start/end columns and is mutually exclusive with width.',
         )
     }
-    function style(style: {
-      fill?: string
-      stroke?: string
-      opacity?: number
-      strokeWidth?: number
-    }) {
-      for (const key of ['fill', 'stroke'] as const) {
-        if (style[key] !== undefined && (typeof style[key] !== 'string' || !style[key]))
-          throw new Error(`bar.${key} must be a non-empty string.`)
-      }
-      if (
-        style.opacity !== undefined &&
-        (!Number.isFinite(style.opacity) || style.opacity < 0 || style.opacity > 1)
-      )
-        throw new RangeError('bar.opacity must be in [0, 1].')
-      if (
-        style.strokeWidth !== undefined &&
-        (!Number.isFinite(style.strokeWidth) || style.strokeWidth < 0)
-      )
-        throw new RangeError('bar.strokeWidth must be nonnegative.')
-    }
-    style(options)
-    for (const layer of barLayers(options)) {
-      validateKeys(
-        layer,
-        ['id', 'y', 'stack', 'visible', 'label', 'fill', 'opacity', 'stroke', 'strokeWidth'],
-        'bar.layers',
-      )
-      if (layer.visible !== undefined && typeof layer.visible !== 'boolean')
-        throw new Error('Layer visible must be boolean.')
-      if (layer.label !== undefined && typeof layer.label !== 'string')
-        throw new Error('Layer label must be a string.')
-      style(layer)
-    }
+    validateCompositeStyle(options, 'bar')
+    validateCompositeLayers(barLayers(options), 'bar')
     validateData(data, options)
     for (const consumer of consumers) consumer(options)
   }
@@ -268,12 +231,7 @@ export function bar(data: TableStore, initial: OptionPatch<BarOptions>): BarMark
       if (patch.layers) {
         patch = {
           ...patch,
-          layers: patch.layers.map((layer) => {
-            const previous = old.layers?.find((entry) => entry.id === layer.id)
-            return !Object.hasOwn(layer, 'visible') && previous?.visible !== undefined
-              ? { ...layer, visible: previous.visible }
-              : layer
-          }),
+          layers: retainLayerVisibility(patch.layers, old.layers),
         }
       }
       if (state.update(patch)) signals.publish()

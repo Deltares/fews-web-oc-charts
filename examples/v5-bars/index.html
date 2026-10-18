@@ -9,6 +9,7 @@
     <nav aria-label="Examples">
       <a href="/">All examples</a>
       <a href="../v5-series/">Series</a>
+      <a href="../v5-stacked-area/">Stacked areas</a>
       <a href="../v5-autoscale/">Autoscaling</a>
     </nav>
     <h1>v5: grouped and stacked bars</h1>
@@ -47,8 +48,8 @@
     <p class="note">
       The table owns its columns. Appends update all four plots and retain the newest eight
       intervals. Layer visibility and ordering change derived endpoints without changing source
-      values. These controls exercise the public mark API, not a built-in legend or hit testing.
-      Canvas and stacked-area rendering remain separate work.
+      values. These controls exercise the public mark API, not a built-in legend or hit testing. See
+      the stacked areas example for shared area boundaries. Canvas remains separate work.
     </p>
     <h2>Public API</h2>
     <pre><code>const flows = createTable({ t, end, upstream, lateral })

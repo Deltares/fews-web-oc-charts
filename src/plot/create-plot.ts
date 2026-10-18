@@ -36,8 +36,16 @@ import {
   type BarMark,
 } from './bar.js'
 import { renderBars, styleBars } from './render-bars.js'
+import {
+  isStackedAreaMark,
+  validateStackedAreaScales,
+  validateStackedAreaUpdates,
+  stackedAreaEndpoints,
+  type StackedAreaMark,
+} from './stacked-area.js'
+import { renderStackedAreas, styleStackedAreas } from './render-stacked-areas.js'
 
-type PlotMark = LineMark | SeriesMark | BandMark | BarMark
+type PlotMark = LineMark | SeriesMark | BandMark | BarMark | StackedAreaMark
 
 export interface PlotOptions {
   width?: number
@@ -228,9 +236,23 @@ function validatePlotMark(
 ) {
   if (
     !mark ||
-    (!isLineMark(mark) && !isSeriesMark(mark) && !isBandMark(mark) && !isBarMark(mark))
+    (!isLineMark(mark) &&
+      !isSeriesMark(mark) &&
+      !isBandMark(mark) &&
+      !isBarMark(mark) &&
+      !isStackedAreaMark(mark))
   ) {
-    throw new Error('plot.marks accepts line(), series(), band() or bar() marks only.')
+    throw new Error(
+      'plot.marks accepts line(), series(), band(), bar() or stackedArea() marks only.',
+    )
+  }
+  if (isStackedAreaMark(mark)) {
+    if (coordinateSystem !== 'cartesian')
+      throw new Error('stackedArea() supports cartesian plots only.')
+    validateStackedAreaScales(mark.options.get().resolved, options.scales)
+    if (direction(options, mark.x) !== 'x' || direction(options, mark.y) !== 'y')
+      throw new Error('Stacked area scales require x and y directions respectively.')
+    return
   }
   if (isBarMark(mark)) {
     if (coordinateSystem !== 'cartesian') throw new Error('bar() supports cartesian plots only.')
@@ -344,7 +366,8 @@ function createPlotInternal(
       isLineMark(value) ||
       isSeriesMark(value) ||
       isBandMark(value) ||
-      isBarMark(value),
+      isBarMark(value) ||
+      isStackedAreaMark(value),
     validate(options) {
       validatePlotAppearance(options)
       validatePlotCollections(options)
@@ -374,7 +397,7 @@ function createPlotInternal(
   const measurer = createTextMeasurer()
   const axisWidths = new Map<AxisHandle, { version: number; thickness: number }>()
   const axisValidators = new Map<AxisHandle, () => void>()
-  const markValidators = new Map<SeriesMark | BarMark, { dispose(): void }>()
+  const markValidators = new Map<SeriesMark | BarMark | StackedAreaMark, { dispose(): void }>()
   const bindings = new Map<
     string,
     {
@@ -416,6 +439,9 @@ function createPlotInternal(
   const barGroups = new Map<BarMark, SVGGElement>()
   const barGeometryKeys = new Map<BarMark, readonly unknown[]>()
   const barStyleKeys = new Map<BarMark, readonly unknown[]>()
+  const stackedAreaGroups = new Map<StackedAreaMark, SVGGElement>()
+  const stackedAreaGeometryKeys = new Map<StackedAreaMark, readonly unknown[]>()
+  const stackedAreaStyleKeys = new Map<StackedAreaMark, readonly unknown[]>()
   const geometryKeys: (readonly unknown[])[] = []
   const styleKeys: (readonly unknown[] | undefined)[] = []
   let renderedMarks: PlotOptions['marks'] = []
@@ -434,16 +460,38 @@ function createPlotInternal(
       const claimed = new Set<number>()
       const staleBands = new Map(bandGroups)
       const staleBars = new Map(barGroups)
+      const staleStackedAreas = new Map(stackedAreaGroups)
       const matches = current.marks.map((mark) =>
         renderedMarks.findIndex(
           (previous) =>
             isBandMark(mark) === isBandMark(previous) &&
             isBarMark(mark) === isBarMark(previous) &&
+            isStackedAreaMark(mark) === isStackedAreaMark(previous) &&
             (mark.id ? previous.id === mark.id : previous === mark),
         ),
       )
       for (const index of matches) if (index >= 0) claimed.add(index)
       current.marks.forEach((mark, index) => {
+        if (isStackedAreaMark(mark)) {
+          const source = matches[index]
+          const previous = source >= 0 ? renderedMarks[source] : undefined
+          let group = stackedAreaGroups.get(mark)
+          if (!group && previous && isStackedAreaMark(previous)) {
+            group = stackedAreaGroups.get(previous)
+            staleStackedAreas.delete(previous)
+          }
+          group ??= svgElement('g', { 'data-mark': 'stacked-area' })
+          stackedAreaGroups.set(mark, group)
+          if (mark.id) group.dataset.markId = mark.id
+          staleStackedAreas.delete(mark)
+          marksLayer.append(group)
+          linePaths[index] = undefined
+          areaPaths[index] = undefined
+          markerGroups[index] = undefined
+          geometryKeys[index] = []
+          styleKeys[index] = undefined
+          return
+        }
         if (isBarMark(mark)) {
           let group = barGroups.get(mark)
           if (!group && mark.id) {
@@ -510,6 +558,14 @@ function createPlotInternal(
       })
       for (const group of staleBands.values()) group.remove()
       for (const group of staleBars.values()) group.remove()
+      for (const group of staleStackedAreas.values()) group.remove()
+      for (const mark of stackedAreaGroups.keys()) {
+        if (!current.marks.includes(mark)) {
+          stackedAreaGroups.delete(mark)
+          stackedAreaGeometryKeys.delete(mark)
+          stackedAreaStyleKeys.delete(mark)
+        }
+      }
       for (const mark of barGroups.keys()) {
         if (!current.marks.includes(mark)) {
           barGroups.delete(mark)
@@ -529,6 +585,35 @@ function createPlotInternal(
     current.marks.forEach((mark, markIndex) => {
       const xScale = localScales[mark.x]
       const yScale = localScales[mark.y]
+      if (isStackedAreaMark(mark)) {
+        const config = mark.options.get().resolved
+        const key = [
+          stackedAreaEndpoints(mark),
+          config.visible,
+          config.curve,
+          xScale,
+          yScale,
+          xScale.scale.domain.version,
+          yScale.scale.domain.version,
+          xScale.scale.options.version,
+          yScale.scale.options.version,
+          ...xScale.range.get(),
+          ...yScale.range.get(),
+        ]
+        const previous = stackedAreaGeometryKeys.get(mark)
+        if (
+          previous &&
+          key.length === previous.length &&
+          key.every((value, index) => value === previous[index])
+        )
+          return
+        const group = stackedAreaGroups.get(mark)
+        if (!group) throw new Error('Missing stackedArea renderer.')
+        renderStackedAreas(group, mark, localScales)
+        stackedAreaGeometryKeys.set(mark, key)
+        stackedAreaStyleKeys.delete(mark)
+        return
+      }
       if (isBarMark(mark)) {
         const config = mark.options.get().resolved
         const key = [
@@ -778,6 +863,16 @@ function createPlotInternal(
 
   function renderMarkStyles(current: PlotOptions, tokens: ThemeTokens) {
     current.marks.forEach((mark, markIndex) => {
+      if (isStackedAreaMark(mark)) {
+        const key = [mark.options.version, tokens.accent]
+        const previous = stackedAreaStyleKeys.get(mark)
+        if (previous && key.every((value, index) => value === previous[index])) return
+        const group = stackedAreaGroups.get(mark)
+        if (!group) throw new Error('Missing stackedArea renderer.')
+        styleStackedAreas(group, mark, tokens.accent)
+        stackedAreaStyleKeys.set(mark, key)
+        return
+      }
       if (isBarMark(mark)) {
         const key = [mark.options.version, tokens.accent]
         const previous = barStyleKeys.get(mark)
@@ -840,7 +935,11 @@ function createPlotInternal(
       }
     }
     for (const mark of current.marks) {
-      if ((!isSeriesMark(mark) && !isBarMark(mark)) || markValidators.has(mark)) continue
+      if (
+        (!isSeriesMark(mark) && !isBarMark(mark) && !isStackedAreaMark(mark)) ||
+        markValidators.has(mark)
+      )
+        continue
       const markScope = scope.createScope()
       const stopValidation = isBarMark(mark)
         ? validateBarUpdates(mark, (candidate) => {
@@ -851,9 +950,19 @@ function createPlotInternal(
             if (direction(current, x) !== 'x' || direction(current, y) !== 'y')
               throw new Error('Bar scale directions do not match its orientation.')
           })
-        : validateSeriesUpdates(mark, (candidate) =>
-            validatePlotMark(candidate, options.get().resolved, coordinateSystem, true),
-          )
+        : isStackedAreaMark(mark)
+          ? validateStackedAreaUpdates(mark, (candidate) => {
+              const current = options.get().resolved
+              validateStackedAreaScales(candidate, current.scales)
+              if (
+                direction(current, candidate.scales.x) !== 'x' ||
+                direction(current, candidate.scales.y) !== 'y'
+              )
+                throw new Error('Stacked area scales require x and y directions respectively.')
+            })
+          : validateSeriesUpdates(mark, (candidate) =>
+              validatePlotMark(candidate, options.get().resolved, coordinateSystem, true),
+            )
       markScope.run(() => {
         reactive.effect(() => {
           mark.options.get()
