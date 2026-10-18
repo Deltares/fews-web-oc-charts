@@ -1143,7 +1143,7 @@ Run `npm run dev` and use the example index, or open these public-API demos:
 - [Polar range marks](./examples/v5-polar-range/index.html): angular/radial intervals rendered
   as annular sectors, with multiple independently styled layers.
 - [Zoom interaction](./examples/v5-zoom/index.html): pointer-anchored wheel zoom with axis,
-  modifier and reset controls.
+  modifier and reset controls, plus visible-data y autoscaling that resumes on reset.
 
 The scale, theme and polar demos remain axes-only; the polar example also reports projected
 coordinates using the public `project` API. The basic-line demo uses the narrow static `line()`
