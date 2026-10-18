@@ -278,6 +278,32 @@ describe('static line marks', () => {
     expect(current.element.querySelector('[data-mark="markers"]')).toBeNull()
   })
 
+  test('can hide the line while retaining markers and area', async () => {
+    const current = plot(host(), {
+      scales: { x: linear({ domain: [0, 1] }), y: linear({ domain: [0, 1] }) },
+      directions: { x: 'x' },
+      marks: [
+        line({
+          id: 'series',
+          x: 'x',
+          y: 'y',
+          xValues: [0, 1],
+          yValues: [0, 1],
+          line: false,
+          markers: true,
+          area: { to: 0 },
+        }),
+      ],
+    })
+    await frame()
+
+    expect(current.element.querySelector('[data-mark="line"]')?.getAttribute('display')).toBe(
+      'none',
+    )
+    expect(current.element.querySelectorAll('[data-mark="marker"]')).toHaveLength(2)
+    expect(current.element.querySelector('[data-mark="area"]')?.getAttribute('d')).not.toBe('')
+  })
+
   test('updates and removes marks atomically with plot configuration', async () => {
     const mark = line({ id: 'one', x: 'x', y: 'y', xValues: [0, 1], yValues: [1, 2] })
     const current = plot(host(), {
