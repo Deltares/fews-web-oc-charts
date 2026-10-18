@@ -1523,6 +1523,38 @@ fontSize?, fontWeight?, textAnchor?, dominantBaseline?, id? })` renders one SVG 
   parity remain their respective roadmap work. Raw SVG DOM serialization alone
   does not capture live canvas bitmaps; the fixture harness explicitly embeds them.
 
+### Phase 2 histogram (implemented SVG/canvas foundation)
+
+- `histogram(table, { x, scales: { x, y }, bins?, domain?, normalization? })`
+  reads a numeric/time sample column from `createTable`. Samples need not be
+  ordered; use a separate ordered row/time key when the sample column is unsorted
+  or contains NaN. Source columns are never reordered or modified.
+- `bins` defaults to 10 and is either an exact positive integer equal-width bin
+  count or a complete array of finite, strictly increasing edges (including both
+  outer edges). Explicit edges and `domain` are mutually exclusive. A count uses
+  `domain` when supplied, otherwise the finite sample extent. Constant samples
+  expand symmetrically by `max(0.5, abs(value) * 0.01)`. Nonrepresentable or
+  nonfinite widths/densities are rejected explicitly, before rendering.
+- Bins are `[start, end)`, except the final bin includes its upper edge.
+  Duplicates count individually; NaN and out-of-domain values do not contribute.
+  Empty bins are retained. Empty/all-NaN input without fixed bounds has no bins;
+  fixed bounds retain zero-valued bins. `mark.bins` exposes immutable
+  `{ start, end, count, value }` results, cached by source version and bin options.
+- `normalization` is `count` (default), `probability` (count / included samples)
+  or `density` (probability / bin width). Empty distributions normalize to zero.
+  Irregular density bins integrate to one when there are included samples.
+- Derived interval tables feed the existing bar geometry, extent and SVG/canvas
+  renderers with zero padding and baseline zero. Linear/time sample scales,
+  linear frequency scales, vertical/horizontal orientation, reversal, visibility,
+  visible-window autoscaling, live table mutations and style-only reuse follow
+  the bar contracts. Rebinning uses the full retained source, not the viewport.
+  Polar histograms, weights, cumulative distributions and interaction/legend
+  adapters are not included in this increment.
+- `examples/v5-histogram/` demonstrates irregular/equal-width bins, normalization,
+  SVG/canvas switching, orientation, reversal and live/empty data. Browser tests
+  cover bin edges, invalid/degenerate inputs, normalization, mutation/retention,
+  autoscale, shared geometry, exact SVG/canvas pixels and keyed renderer lifecycle.
+
 ### Target composed API
 
 ```ts

@@ -55,6 +55,8 @@ export type {
 } from './data-store/table.js'
 export { bar } from './plot/bar.js'
 export type { BarMark, BarOptions, BarLayer } from './plot/bar.js'
+export { histogram } from './plot/histogram.js'
+export type { HistogramMark, HistogramOptions, HistogramBin } from './plot/histogram.js'
 export { stackedArea } from './plot/stacked-area.js'
 export type { StackedAreaMark, StackedAreaOptions, StackedAreaLayer } from './plot/stacked-area.js'
 export type {

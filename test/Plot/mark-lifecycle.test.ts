@@ -4,6 +4,7 @@ import {
   createPlot,
   createSeries,
   createTable,
+  histogram,
   line,
   linear,
   range,
@@ -93,6 +94,17 @@ const kinds: { name: string; create(id?: string): PlotMark }[] = [
         }),
     })),
   ),
+  ...(['svg', 'canvas'] as const).map((renderer) => ({
+    name: `histogram (${renderer})`,
+    create: (id?: string) =>
+      histogram(createTable({ sample: [1, 2] }), {
+        id,
+        renderer,
+        x: 'sample',
+        scales: { x: 'x', y: 'y' },
+        bins: [0, 1, 3],
+      }),
+  })),
 ]
 
 afterEach(() => {

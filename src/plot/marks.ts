@@ -1,5 +1,6 @@
 import { bandDefinition } from './band-mark.js'
 import { barDefinition } from './bar-mark.js'
+import { histogramDefinition } from './histogram-mark.js'
 import { lineDefinition, seriesDefinition } from './line-mark.js'
 import type { MarkDefinition } from './mark-definition.js'
 import { ruleDefinition } from './rule-mark.js'
@@ -12,6 +13,7 @@ const markDefinitions = [
   seriesDefinition,
   bandDefinition,
   barDefinition,
+  histogramDefinition,
   stackedAreaDefinition,
   ruleDefinition,
   textDefinition,
