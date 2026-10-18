@@ -75,7 +75,7 @@ export function axis(scale: string, initial: OptionPatch<AxisOptions> = {}): Axi
       }
       if (!Number.isFinite(options.labelAngle)) throw new Error('axis.labelAngle must be finite.')
       if (typeof options.label !== 'string' || typeof options.unit !== 'string') {
-        throw new Error('axis.label and axis.unit must be strings.')
+        throw new TypeError('axis.label and axis.unit must be strings.')
       }
       if (typeof options.grid !== 'boolean') throw new Error('axis.grid must be boolean.')
       if (options.id !== undefined && (typeof options.id !== 'string' || !options.id)) {
@@ -91,7 +91,7 @@ export function axis(scale: string, initial: OptionPatch<AxisOptions> = {}): Axi
         throw new Error('axis.timeZone must be a string.')
       }
       if (options.locale !== undefined || options.timeZone !== undefined) {
-        new Intl.DateTimeFormat(options.locale, { timeZone: options.timeZone })
+        new Intl.DateTimeFormat(options.locale, { timeZone: options.timeZone }).resolvedOptions()
       }
       for (const validate of consumers) validate(options)
     },
