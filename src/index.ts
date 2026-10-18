@@ -18,6 +18,14 @@ export type {
 } from './plot/create-plot.js'
 export { axis } from './plot/axis.js'
 export type { AxisHandle, AxisOptions, AxisSide } from './plot/axis.js'
+export { zoom } from './plot/zoom.js'
+export type {
+  ZoomHandle,
+  ZoomMode,
+  ZoomOptions,
+  ZoomResetMode,
+  ZoomWheelMode,
+} from './plot/zoom.js'
 export { line } from './plot/line.js'
 export { rule } from './plot/rule.js'
 export type { RuleMark, RuleOptions } from './plot/rule.js'

@@ -11,6 +11,7 @@ import {
   degreesScale,
   sharedScale,
   line,
+  zoom,
   batch,
   type Plot,
 } from '../../src/index.js'
@@ -200,6 +201,89 @@ describe('createPlot named scales', () => {
     await frame()
     expect(current.pointer.get().x.get('bearing')).toBeCloseTo(90)
     expect(current.pointer.get().x.get('distance')).toBeCloseTo(50)
+  })
+
+  test('zooms selected Cartesian domains at the pointer and resets to initial domains', async () => {
+    const x = linearScale({ domain: [0, 100] })
+    const y = linearScale({ domain: [0, 100] })
+    const interaction = zoom({ mode: 'x', wheel: 'x', modifier: 'ctrl' })
+    const current = plot(host(), {
+      width: 500,
+      height: 300,
+      directions: { x: 'x', y: 'y' },
+      scales: { x, y },
+      plugins: [interaction],
+    })
+    await frame()
+    vi.spyOn(current.element, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 500, 300))
+    const wheel = (ctrlKey: boolean) =>
+      new WheelEvent('wheel', {
+        clientX: 250,
+        clientY: 150,
+        deltaY: -100,
+        ctrlKey,
+        cancelable: true,
+      })
+    const unmodified = wheel(false)
+    current.element.dispatchEvent(unmodified)
+    expect(unmodified.defaultPrevented).toBe(false)
+    expect(x.domain.get()).toEqual([0, 100])
+
+    const modified = wheel(true)
+    current.element.dispatchEvent(modified)
+    expect(modified.defaultPrevented).toBe(true)
+    const zoomed = x.domain.get()
+    expect(zoomed[0]).toBeGreaterThan(0)
+    expect(zoomed[1]).toBeLessThan(100)
+    expect((zoomed[0] + zoomed[1]) / 2).toBeCloseTo(50)
+    expect(y.domain.get()).toEqual([0, 100])
+
+    current.element.dispatchEvent(
+      new MouseEvent('dblclick', {
+        clientX: 250,
+        clientY: 150,
+        button: 0,
+        cancelable: true,
+      }),
+    )
+    expect(x.domain.get()).toEqual([0, 100])
+    expect(y.domain.get()).toEqual([0, 100])
+  })
+
+  test('stops wheel zoom when its plugin is removed or disabled', async () => {
+    const x = linearScale({ domain: [0, 100] })
+    const interaction = zoom({ mode: 'x', wheel: 'x' })
+    const current = plot(host(), {
+      width: 500,
+      height: 300,
+      directions: { x: 'x' },
+      scales: { x },
+      plugins: [interaction],
+    })
+    await frame()
+    vi.spyOn(current.element, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 500, 300))
+    interaction.update({ wheel: 'none' })
+    const disabled = new WheelEvent('wheel', {
+      clientX: 250,
+      clientY: 150,
+      deltaY: 100,
+      cancelable: true,
+    })
+    current.element.dispatchEvent(disabled)
+    expect(disabled.defaultPrevented).toBe(false)
+    expect(x.domain.get()).toEqual([0, 100])
+
+    interaction.update({ wheel: 'x' })
+    current.update({ plugins: [] })
+    const removed = new WheelEvent('wheel', {
+      clientX: 250,
+      clientY: 150,
+      deltaY: 100,
+      cancelable: true,
+    })
+    current.element.dispatchEvent(removed)
+    expect(removed.defaultPrevented).toBe(false)
+    expect(x.domain.get()).toEqual([0, 100])
   })
 
   test('shares domains but never ranges or derived scales between differently sized plots', async () => {
