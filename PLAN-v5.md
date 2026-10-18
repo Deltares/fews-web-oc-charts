@@ -1867,8 +1867,17 @@ and the outstanding exact matches are still needed before closing Phase 2.
 with plot-local pixel coordinates, named-scale values and an `inside` flag. Pointer
 events are coalesced per animation frame, support primary mouse/pen/touch pointers, and
 are detached with plot destruction. Cartesian continuous and band scales and polar
-angular/radial scales are inverted from the pointer position. Hit testing and interaction
-plugins remain subsequent Phase 3 work.
+angular/radial scales are inverted from the pointer position.
+
+### Phase 3 zoom foundation
+
+**Status: wheel zoom and reset implemented.** Install one `zoom()` handle through
+`createPlot({ plugins: [zoom({ mode: 'x', wheel: 'x' })] })`. Wheel zoom is anchored
+under the pointer, supports x/y/xy selection and an optional Ctrl/Shift modifier, and
+skips band scales. Double-click applies the handle's `reset` policy (`initial`, `full`
+or `toggle`). Removing the plugin or destroying the plot releases its event listeners.
+The current zoom plugin supports Cartesian plots; drag-zoom, pan and brush are later
+Phase 3 work.
 
 ## 8. Additional improvements to consider
 

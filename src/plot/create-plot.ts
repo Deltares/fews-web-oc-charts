@@ -48,6 +48,8 @@ import {
   supportedMarks,
   type PlotMark,
 } from './marks.js'
+import { isZoomHandle, type ZoomHandle, type ZoomMode, type ZoomResetMode } from './zoom.js'
+import { matchesModifierKey } from '../Utils/modifierKey.js'
 
 export interface PlotOptions {
   clipMarks: boolean
@@ -64,15 +66,17 @@ export interface PlotOptions {
   directions: Record<string, 'x' | 'y'>
   axes: readonly AxisHandle[]
   marks: readonly PlotMark[]
+  plugins: readonly ZoomHandle[]
 }
 
 export type PlotConfig = Omit<
   OptionPatch<PlotOptions>,
-  'scales' | 'axes' | 'marks' | 'themeElement'
+  'scales' | 'axes' | 'marks' | 'plugins' | 'themeElement'
 > & {
   scales?: Record<string, ScaleHandle | undefined>
   axes?: readonly AxisHandle[]
   marks?: readonly PlotMark[]
+  plugins?: readonly ZoomHandle[]
   themeElement?: Element
 }
 
@@ -131,6 +135,7 @@ const optionKeys = [
   'directions',
   'axes',
   'marks',
+  'plugins',
 ]
 const marginKeys = ['top', 'right', 'bottom', 'left'] as const
 let nextClipId = 0
@@ -207,9 +212,22 @@ function validatePlotAppearance(options: PlotOptions) {
   for (const side of marginKeys) finiteNonnegative(options.margins[side], `plot.margins.${side}`)
 }
 
-function validatePlotCollections(options: PlotOptions) {
+function validatePlotCollections(
+  options: PlotOptions,
+  coordinateSystem: CoordinateSystem = 'cartesian',
+) {
   if (!Array.isArray(options.axes)) throw new Error('plot.axes must be an array.')
   if (!Array.isArray(options.marks)) throw new Error('plot.marks must be an array.')
+  if (!Array.isArray(options.plugins)) throw new Error('plot.plugins must be an array.')
+  if (options.plugins.some((plugin) => !isZoomHandle(plugin))) {
+    throw new Error('plot.plugins must contain zoom handles.')
+  }
+  if (options.plugins.length > 1) {
+    throw new Error('A plot can install at most one zoom plugin.')
+  }
+  if (coordinateSystem === 'polar' && options.plugins.length > 0) {
+    throw new Error('The zoom plugin currently supports Cartesian plots only.')
+  }
   for (const key of ['scales', 'directions'] as const) {
     const value = options[key]
     if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -351,11 +369,13 @@ function createPlotInternal(
       directions: {},
       axes: [],
       marks: [],
+      plugins: [],
     }),
-    isAtomicReference: (value) => isScaleHandle(value) || isAxisHandle(value) || isPlotMark(value),
+    isAtomicReference: (value) =>
+      isScaleHandle(value) || isAxisHandle(value) || isPlotMark(value) || isZoomHandle(value),
     validate(options) {
       validatePlotAppearance(options)
-      validatePlotCollections(options)
+      validatePlotCollections(options, coordinateSystem)
       validatePlotAxes(options, coordinateSystem)
       validatePlotScales(options, coordinateSystem)
       validatePlotMarks(options, coordinateSystem)
@@ -428,6 +448,18 @@ function createPlotInternal(
     readonly renderer: MarkRenderer<PlotMark>
   }
   let mountedMarks: readonly MountedMark[] = []
+  type MountedZoom = {
+    handle: ZoomHandle
+    onWheel(event: WheelEvent): void
+    onDoubleClick(event: MouseEvent): void
+    initialDomains: ReadonlyMap<
+      string,
+      { scale: ScaleHandle; domain: readonly ScaleValue[] | undefined }
+    >
+    toggledDomains: Map<string, readonly ScaleValue[]>
+    toggled: boolean
+  }
+  let mountedZoom: MountedZoom | undefined
   element.append(background, polarBackground, definitions, gridLayer, marksLayer, axesLayer, title)
 
   function mountMarks(marks: readonly PlotMark[]) {
@@ -470,6 +502,145 @@ function createPlotInternal(
 
   function renderMarkStyles(tokens: ThemeTokens) {
     for (const { mark, renderer } of mountedMarks) renderer.style(mark, tokens)
+  }
+
+  function removeZoom() {
+    if (!mountedZoom) return
+    element.removeEventListener('wheel', mountedZoom.onWheel)
+    element.removeEventListener('dblclick', mountedZoom.onDoubleClick)
+    mountedZoom = undefined
+  }
+
+  function reconcileZoom(plugins: readonly ZoomHandle[]) {
+    const handle = plugins[0]
+    if (mountedZoom?.handle === handle) return
+    removeZoom()
+    if (!handle) return
+    if (coordinateSystem !== 'cartesian') {
+      throw new Error('The zoom plugin currently supports Cartesian plots only.')
+    }
+    const initialDomains = new Map(
+      Object.entries(options.get().resolved.scales).map(([name, scale]) => [
+        name,
+        { scale, domain: scale.options.get().explicit.domain },
+      ]),
+    )
+    const installed: MountedZoom = {
+      handle,
+      initialDomains,
+      toggledDomains: new Map(),
+      toggled: false,
+      onWheel: () => {},
+      onDoubleClick: () => {},
+    }
+    installed.onWheel = (event) => {
+      const config = handle.options.get().resolved
+      if (config.wheel === 'none' || !matchesModifierKey(event, config.modifier)) return
+      const rect = element.getBoundingClientRect()
+      const actualSize = size.get()
+      if (rect.width <= 0 || rect.height <= 0 || actualSize.width <= 0 || actualSize.height <= 0)
+        return
+      const svgX = ((event.clientX - rect.left) / rect.width) * actualSize.width
+      const svgY = ((event.clientY - rect.top) / rect.height) * actualSize.height
+      const region = regions.get().plot
+      if (
+        svgX < region.x ||
+        svgY < region.y ||
+        svgX > region.x + region.width ||
+        svgY > region.y + region.height
+      ) {
+        return
+      }
+      const activeAxes = new Set<'x' | 'y'>()
+      if (config.mode.includes('x') && config.wheel.includes('x')) activeAxes.add('x')
+      if (config.mode.includes('y') && config.wheel.includes('y')) activeAxes.add('y')
+      if (activeAxes.size === 0) return
+      const factor = Math.exp(Math.max(-1, Math.min(1, event.deltaY * 0.002)))
+      let changed = false
+      for (const [name, binding] of Object.entries(localScales)) {
+        const orientation = direction(
+          options.get().resolved,
+          name,
+          undefined,
+          undefined,
+          coordinateSystem,
+        )
+        if (
+          (orientation !== 'x' && orientation !== 'y') ||
+          !activeAxes.has(orientation) ||
+          binding.scale.kind === 'band'
+        ) {
+          continue
+        }
+        const pixel = orientation === 'x' ? svgX : svgY
+        const anchor = binding.invert(pixel)
+        const domain = binding.scale.domain.get()
+        const low = Number(domain[0])
+        const high = Number(domain[1])
+        const nextDomain = [
+          anchor + (low - anchor) * factor,
+          anchor + (high - anchor) * factor,
+        ] as const
+        if (
+          nextDomain.some((value) => !Number.isFinite(value)) ||
+          (binding.scale.kind === 'time' && nextDomain.some((value) => Math.abs(value) > 8.64e15))
+        ) {
+          continue
+        }
+        binding.scale.update({ domain: nextDomain })
+        changed = true
+      }
+      if (changed) {
+        event.preventDefault()
+        installed.toggled = false
+      }
+    }
+    installed.onDoubleClick = (event) => {
+      if (event.button !== 0) return
+      const config = handle.options.get().resolved
+      const region = regions.get().plot
+      const rect = element.getBoundingClientRect()
+      if (rect.width <= 0 || rect.height <= 0) return
+      const svgX = ((event.clientX - rect.left) / rect.width) * size.get().width
+      const svgY = ((event.clientY - rect.top) / rect.height) * size.get().height
+      if (
+        svgX < region.x ||
+        svgY < region.y ||
+        svgX > region.x + region.width ||
+        svgY > region.y + region.height
+      ) {
+        return
+      }
+      const currentOptions = options.get().resolved
+      for (const [name, binding] of Object.entries(localScales)) {
+        const orientation = direction(currentOptions, name, undefined, undefined, coordinateSystem)
+        if (
+          (orientation !== 'x' && orientation !== 'y') ||
+          !config.mode.includes(orientation) ||
+          binding.scale.kind === 'band'
+        )
+          continue
+        if (config.reset === 'toggle' && installed.toggled) {
+          const previous = installed.toggledDomains.get(name)
+          if (previous) binding.scale.update({ domain: previous })
+          installed.toggledDomains.delete(name)
+          continue
+        }
+        if (config.reset === 'toggle')
+          installed.toggledDomains.set(name, binding.scale.domain.get())
+        const initial = installed.initialDomains.get(name)
+        if (config.reset === 'initial' && initial?.scale === binding.scale) {
+          binding.scale.update({ domain: initial.domain })
+        } else {
+          binding.scale.update({ domain: undefined })
+        }
+      }
+      installed.toggled = config.reset === 'toggle' && !installed.toggled
+      event.preventDefault()
+    }
+    mountedZoom = installed
+    element.addEventListener('wheel', installed.onWheel, { passive: false })
+    element.addEventListener('dblclick', installed.onDoubleClick)
   }
 
   function reconcile() {
@@ -613,6 +784,7 @@ function createPlotInternal(
         ]),
       ),
     )
+    reconcileZoom(current.plugins)
   }
 
   function renderLayout(current: PlotOptions, tokens: ThemeTokens) {
