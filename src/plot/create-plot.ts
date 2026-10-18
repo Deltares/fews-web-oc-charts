@@ -25,12 +25,12 @@ import { svgElement, renderAxes, renderPolarAxes, axisTickLabels } from './rende
 import { isLineMark, validateLineValuesForScale, type LineMark } from './line.js'
 
 export interface PlotOptions {
-  width?: number | undefined
-  height?: number | undefined
+  width?: number
+  height?: number
   title: string
   margins: Margins
   theme: ThemeMode
-  themeElement?: Element | undefined
+  themeElement?: Element
   scales: Record<string, ScaleHandle>
   directions: Record<string, 'x' | 'y'>
   axes: readonly AxisHandle[]
@@ -41,10 +41,10 @@ export type PlotConfig = Omit<
   OptionPatch<PlotOptions>,
   'scales' | 'axes' | 'marks' | 'themeElement'
 > & {
-  scales?: Record<string, ScaleHandle | undefined> | undefined
-  axes?: readonly AxisHandle[] | undefined
-  marks?: readonly LineMark[] | undefined
-  themeElement?: Element | undefined
+  scales?: Record<string, ScaleHandle | undefined>
+  axes?: readonly AxisHandle[]
+  marks?: readonly LineMark[]
+  themeElement?: Element
 }
 
 export type PolarPlotConfig = Omit<PlotConfig, 'directions'>

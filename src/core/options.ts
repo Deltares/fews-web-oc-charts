@@ -1,11 +1,11 @@
 export type OptionPatch<T> = {
   [K in keyof T]?: T[K] extends readonly unknown[]
-    ? T[K] | undefined
+    ? T[K]
     : T[K] extends (...args: never[]) => unknown
-      ? T[K] | undefined
+      ? T[K]
       : T[K] extends object
-        ? OptionPatch<T[K]> | undefined
-        : T[K] | undefined
+        ? OptionPatch<T[K]>
+        : T[K]
 }
 
 export interface OptionStateSnapshot<T extends object> {

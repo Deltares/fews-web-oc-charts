@@ -13,7 +13,7 @@ export type PixelRange = ScaleRange
 export type PolarDirection = 'clockwise' | 'anticlockwise'
 
 export interface ScaleOptions {
-  domain?: readonly ScaleValue[] | undefined
+  domain?: readonly ScaleValue[]
   defaultDomain: readonly ScaleValue[]
   reverse: boolean
   nice: boolean
@@ -22,10 +22,10 @@ export interface ScaleOptions {
   padding: number
   timeZone: string
   locale: string
-  direction?: PolarDirection | undefined
-  intercept?: number | undefined
-  range?: readonly [number, number] | undefined
-  innerRadius?: number | undefined
+  direction?: PolarDirection
+  intercept?: number
+  range?: readonly [number, number]
+  innerRadius?: number
 }
 
 export type CartesianScaleOptions = Omit<
@@ -33,12 +33,12 @@ export type CartesianScaleOptions = Omit<
   'direction' | 'intercept' | 'range' | 'innerRadius'
 >
 export interface AngularScaleOptions extends CartesianScaleOptions {
-  direction?: PolarDirection | undefined
-  intercept?: number | undefined
-  range?: readonly [number, number] | undefined
+  direction?: PolarDirection
+  intercept?: number
+  range?: readonly [number, number]
 }
 export interface RadialScaleOptions extends CartesianScaleOptions {
-  innerRadius?: number | undefined
+  innerRadius?: number
 }
 
 export interface ScaleHandle {

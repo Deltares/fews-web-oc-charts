@@ -6,16 +6,16 @@ import type { ScaleValue } from '../scales/scale.js'
 
 export type AxisSide = 'top' | 'right' | 'bottom' | 'left' | 'angular' | 'radial'
 export interface AxisOptions {
-  id?: string | undefined
+  id?: string
   position: AxisSide
   label: string
   unit: string
   grid: boolean
   tickCount: number
   labelAngle: number
-  locale?: string | undefined
-  timeZone?: string | undefined
-  format?: ((value: ScaleValue) => string) | undefined
+  locale?: string
+  timeZone?: string
+  format?: (value: ScaleValue) => string
 }
 
 export interface AxisHandle {
