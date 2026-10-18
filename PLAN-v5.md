@@ -1123,8 +1123,9 @@ Run `npm run dev` and use the example index, or open these public-API demos:
 
 The scale, theme and polar demos remain axes-only; the polar example also reports projected
 coordinates using the public `project` API. The basic-line demo uses the narrow static `line()`
-foundation for visual fixtures; general series, live data and data-driven autoscaling remain
-phase 2 work. The `v5-spike-*` examples remain separate phase 0 prototypes, not examples of the
+foundation for visual fixtures. The [series demo](./examples/v5-series/index.html) now uses
+the data-backed foundation described below; data-driven autoscaling remains future work.
+The `v5-spike-*` examples remain separate phase 0 prototypes, not examples of the
 public v5 API.
 
 The package root now exports `createPlot`, `createPolarPlot`, `linear`, `time`, `band`,
@@ -1217,7 +1218,7 @@ The minimal cartesian `line()` mark renders aligned
 array-like x/y values against named x/y scales, preserves gaps, and is clipped to the
 plot region. Plot configuration synchronously rejects non-gap values that do not match
 their bound scale kind (strings for band scales, numbers otherwise). It is a static fixture primitive: replace the mark to change its values;
-polar marks, general series, data-driven autoscaling and interaction APIs follow in
+polar marks, data-driven autoscaling and interaction APIs follow in
 their respective phases. The deterministic per-engine visual regression gate remains
 part of the phase 1 exit criteria.
 `npm run test:visual` renders the basic-line (including the secondary axis),
@@ -1244,6 +1245,64 @@ const polar = createPolarPlot(container, {
 })
 const point = polar.project(90, 50)
 ```
+
+### Data-backed series foundation
+
+The package root exports `createSeries`, `fromObjects` and `series`. This is a
+cartesian SVG foundation, not completion of phase 2 or the live/sync roadmap.
+
+```ts
+const data = createSeries(
+  { x: new Float64Array([0, 1, 2]), y: new Float64Array([10, NaN, 30]) },
+  { capacity: 256, maxPoints: 1000, maxAge: 86_400_000 },
+)
+const observed = series(data, {
+  id: 'observed',
+  x: 't',
+  y: 'q',
+  line: { stroke: '#1677a6', width: 2 },
+  markers: { symbol: 'circle', size: 4 },
+  area: { to: 0, opacity: 0.2 },
+})
+// Bind observed through createPlot({ scales, axes, marks: [observed] }).
+data.append({ x: [3], y: [40] })
+observed.update({ line: { stroke: undefined }, markers: false })
+```
+
+- Stores own copied numeric columns, expose checked `xAt`/`yAt` logical accessors,
+  and never expose mutable canonical buffers. X accepts finite numbers or valid Dates
+  within the JavaScript Date range, ordered nondecreasingly; y accepts finite numbers
+  or `NaN`. Optional `precision: 'float32'` applies only to y and rejects overflow.
+- `capacity` is an initial allocation hint, not an ingestion limit. Append uses a
+  growable ring; `maxPoints` keeps the newest samples and `maxAge` includes every
+  duplicate at the cutoff. Prepend/upsert/replace rebuild owned typed columns;
+  incremental indexes and caches are not implemented yet.
+- Columnar mutations are `append({ x, y })`, `prepend({ x, y })`,
+  `upsert({ from, to, rows: { x, y } })`, `replace({ x, y })` and `clear()`.
+  Validation is atomic, append/prepend preserve duplicate boundary ordering, and
+  upsert replaces the closed range. `version` is a reactive numeric counter;
+  `change` reports an immutable `{ version, from, to }` with conservative bounds
+  including the old and incoming extents, so retention is covered. Empty append/
+  prepend and clearing an empty store do not publish.
+- `fromObjects(rows, { x: 'time', y: 'value' }, options)` converts once without
+  retaining caller rows. Its mutations accept object rows with the same mapping;
+  upsert uses `{ from, to, rows }`. It also accepts legacy `{ x: Date, y: number }`
+  rows with the corresponding mapping.
+- `series` retains one store reference for line/markers/baseline area and supports
+  runtime `update`, nested patch/unset, `visible` and `label` metadata. Defaults are
+  line enabled, markers/area disabled. `{}` enables default component options;
+  `false` disables; `undefined` restores defaults. IDs are immutable; x/y rebindings
+  validate against every live plot before commit. Numeric/time scales only;
+  categorical series and polar series are rejected synchronously.
+- Store changes schedule only their consumers, coalesced per frame. Geometry keys
+  skip unrelated marks and style-only updates; explicit IDs preserve DOM resources
+  across membership changes. Removed/destroyed plots release their effects and
+  validators without disposing shared stores or mark handles.
+- Scale domains remain explicit. Autoscale/extent unions, block indexes, LOD,
+  shared time columns, tables, ensembles, borrowed buffers, non-circle markers,
+  curves/dashes, canvas, hit testing and legend rendering remain roadmap work.
+  The new store temporarily lives in `src/data-store/` to coexist with legacy
+  `src/Data/` on case-insensitive filesystems.
 
 ### Target composed API
 

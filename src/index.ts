@@ -18,6 +18,20 @@ export type {
 export { axis } from './plot/axis.js'
 export type { AxisHandle, AxisOptions, AxisSide } from './plot/axis.js'
 export { line } from './plot/line.js'
+export { createSeries, fromObjects } from './data-store/series.js'
+export type {
+  SeriesInput,
+  SeriesStoreOptions,
+  SeriesStore,
+  SeriesChange,
+} from './data-store/series.js'
+export { series } from './plot/series.js'
+export type {
+  SeriesMark,
+  SeriesOptions,
+  SeriesLineOptions,
+  SeriesMarkerOptions,
+} from './plot/series.js'
 export type {
   LineAreaOptions,
   LineMarkerOptions,

@@ -1,12 +1,14 @@
 export type OptionPatch<T> = {
-  [K in keyof T]?: T[K] extends readonly unknown[]
-    ? T[K]
-    : T[K] extends (...args: never[]) => unknown
-      ? T[K]
-      : T[K] extends object
-        ? OptionPatch<T[K]>
-        : T[K]
+  [K in keyof T]?: OptionPatchValue<T[K]> | undefined
 }
+
+type OptionPatchValue<T> = T extends readonly unknown[]
+  ? T
+  : T extends (...args: never[]) => unknown
+    ? T
+    : T extends object
+      ? OptionPatch<T>
+      : T
 
 export interface OptionStateSnapshot<T extends object> {
   readonly explicit: DeepReadonly<OptionPatch<T>>
@@ -107,8 +109,7 @@ function applyPatch(
     if (isPlainRecord(value, isAtomicReference)) {
       const previous = isPlainRecord(next[key], isAtomicReference) ? next[key] : {}
       const nested = applyPatch(previous, value, isAtomicReference)
-      if (Object.keys(nested).length === 0) delete next[key]
-      else next[key] = nested
+      next[key] = nested
       continue
     }
     next[key] = copyPlainValue(value, isAtomicReference)
