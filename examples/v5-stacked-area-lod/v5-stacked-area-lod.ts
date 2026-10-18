@@ -23,6 +23,9 @@ const adjustment = xValues.map((index) => {
 })
 const data = createTable({ sample: xValues, base, adjustment })
 const curveControl = required<HTMLInputElement>('#step')
+const renderer = required<HTMLSelectElement>('#renderer')
+renderer.value =
+  new URLSearchParams(location.search).get('renderer') === 'canvas' ? 'canvas' : 'svg'
 const windowControl = required<HTMLInputElement>('#window-size')
 const windowValue = required<HTMLOutputElement>('#window-value')
 const sourceCount = required<HTMLElement>('#source-count')
@@ -30,6 +33,7 @@ const pathCount = required<HTMLElement>('#path-count')
 const rowCount = required<HTMLElement>('#row-count')
 const host = required('#chart')
 const mark = stackedArea(data, {
+  renderer: renderer.value === 'canvas' ? 'canvas' : 'svg',
   id: 'lod-stack',
   x: 'sample',
   scales: { x: 'sample', y: 'flow' },
@@ -65,12 +69,17 @@ function updateWindow() {
 function updateStats() {
   const domain = plot.scales.sample.scale.domain.get()
   const visible = Math.min(sampleCount, Math.floor(Number(domain[1]) - Number(domain[0]) + 1))
+  sourceCount.textContent = visible.toLocaleString()
+  if (mark.options.get().resolved.renderer === 'canvas') {
+    pathCount.textContent = 'N/A (canvas)'
+    rowCount.textContent = 'N/A (canvas)'
+    return
+  }
   const paths = Array.from(
     host.querySelectorAll<SVGPathElement>('[data-mark="stacked-area-layer"]'),
   )
   const commands = paths.map((path) => (path.getAttribute('d')?.match(/[ML]/g) ?? []).length)
   const rows = commands.length ? Math.min(...commands) / 2 : 0
-  sourceCount.textContent = visible.toLocaleString()
   pathCount.textContent = commands.length
     ? commands.map((count) => count.toLocaleString()).join(' / ')
     : '0'
@@ -78,6 +87,14 @@ function updateStats() {
 }
 
 const events = new AbortController()
+renderer.addEventListener(
+  'change',
+  () => {
+    mark.update({ renderer: renderer.value === 'canvas' ? 'canvas' : 'svg' })
+    requestAnimationFrame(() => requestAnimationFrame(updateStats))
+  },
+  events,
+)
 windowControl.addEventListener('input', updateWindow, events)
 curveControl.addEventListener(
   'change',

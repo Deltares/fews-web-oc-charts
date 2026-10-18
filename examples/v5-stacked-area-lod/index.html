@@ -21,6 +21,13 @@
     </p>
     <fieldset class="controls" aria-label="LOD controls">
       <legend>Change the visible sample window</legend>
+      <label>
+        Renderer
+        <select id="renderer">
+          <option value="svg">SVG</option>
+          <option value="canvas">Canvas</option>
+        </select>
+      </label>
       <label for="window-size">Samples in view</label>
       <input id="window-size" type="range" min="500" max="24000" step="500" value="24000" />
       <output id="window-value" for="window-size"></output>
@@ -51,7 +58,8 @@
       Both boundaries of this implicit stack use exactly the same retained sample rows. Drag the
       slider to compare a sparse view with a dense full-series view; resize the page to see the
       pixel-bucket budget adapt to plot width. Linear and midpoint-step curves share the selected
-      rows. The displayed row count is estimated from the SVG path commands.
+      rows in both SVG and canvas. Switch renderers without replacing the data. The displayed row
+      count is estimated from SVG path commands and is unavailable in canvas mode.
     </p>
     <h2>Public API</h2>
     <pre><code>const areas = stackedArea(data, {
@@ -63,7 +71,8 @@
   ],
 })
 // Dense stacks automatically share screen-space retained rows.
-areas.update({ curve: 'step' })</code></pre>
+areas.update({ curve: 'step' })
+areas.update({ renderer: 'canvas' }) // undefined restores SVG</code></pre>
     <script type="module" src="./v5-stacked-area-lod.ts"></script>
   </body>
 </html>
