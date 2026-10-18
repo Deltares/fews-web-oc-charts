@@ -20,6 +20,10 @@ export type { AxisHandle, AxisOptions, AxisSide } from './plot/axis.js'
 export { line } from './plot/line.js'
 export { rule } from './plot/rule.js'
 export type { RuleMark, RuleOptions } from './plot/rule.js'
+export { arrows } from './plot/arrows.js'
+export type { ArrowsMark, ArrowsOptions, VectorValue, VectorValues } from './plot/arrows.js'
+export { direction } from './plot/direction.js'
+export type { DirectionMark, DirectionOptions } from './plot/direction.js'
 export { text } from './plot/text.js'
 export type {
   TextAnchor,
