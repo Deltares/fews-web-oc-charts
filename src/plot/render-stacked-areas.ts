@@ -3,6 +3,7 @@ import type { TableView } from '../data-store/table.js'
 import type { ScaleBinding, ScaleValue } from '../scales/scale.js'
 import { stackedAreaEndpoints, type StackedAreaMark } from './stacked-area.js'
 import { svgElement } from './render-axes.js'
+import type { StackEndpoints } from '../layout/stack.js'
 
 function viewportRows(data: TableView, x: string, domain: readonly ScaleValue[]) {
   const low = Number(domain[0])
@@ -30,6 +31,110 @@ function viewportRows(data: TableView, x: string, domain: readonly ScaleValue[])
   return Array.from({ length: end - start + 1 }, (_, index) => start + index)
 }
 
+function stackLodRows(
+  data: TableView,
+  xColumn: string,
+  rows: readonly number[],
+  layers: readonly StackEndpoints[],
+  x: ScaleBinding,
+) {
+  const range = x.range.get()
+  const width = Math.max(1, Math.round(Math.abs(range[1] - range[0])))
+  if (rows.length === 0 || rows.length <= width * 4) return rows
+
+  const visibleLayers = layers.filter((layer) =>
+    rows.some((row) => Number.isFinite(layer.lowerAt(row)) || Number.isFinite(layer.upperAt(row))),
+  )
+  if (visibleLayers.length === 0) return rows
+
+  const boundaries = visibleLayers.flatMap((layer) => [
+    (row: number) => layer.lowerAt(row),
+    (row: number) => layer.upperAt(row),
+  ])
+  const selected = new Uint8Array(data.length)
+  const minima = new Int32Array(boundaries.length)
+  const maxima = new Int32Array(boundaries.length)
+  let bucket = -1
+  let first = -1
+  let last = -1
+  let previous = -1
+  const rangeLow = Math.min(...range)
+  const rangeWidth = Math.abs(range[1] - range[0])
+
+  const retain = (row: number) => {
+    selected[row] = 1
+  }
+  const flush = () => {
+    if (first < 0) return
+    retain(first)
+    retain(last)
+    for (let boundary = 0; boundary < boundaries.length; boundary += 1) {
+      retain(minima[boundary])
+      retain(maxima[boundary])
+    }
+    first = -1
+    last = -1
+  }
+  const screenBucket = (row: number) => {
+    const pixel = x.project(data.valueAt(xColumn, row))
+    return Math.max(
+      0,
+      Math.min(width - 1, Math.floor(((pixel - rangeLow) / (rangeWidth || 1)) * width)),
+    )
+  }
+
+  for (const row of rows) {
+    const valid = Number.isFinite(visibleLayers[0].lowerAt(row))
+    if (!valid) {
+      flush()
+      if (previous < 0 || Number.isFinite(visibleLayers[0].lowerAt(previous))) retain(row)
+      previous = row
+      bucket = -1
+      continue
+    }
+
+    if (previous >= 0 && Number.isFinite(visibleLayers[0].lowerAt(previous))) {
+      let crossed = false
+      for (const boundary of boundaries) {
+        const before = boundary(previous)
+        const current = boundary(row)
+        if (
+          (before <= 0 && current >= 0 && before !== current) ||
+          (before >= 0 && current <= 0 && before !== current)
+        ) {
+          crossed = true
+          break
+        }
+      }
+      if (crossed) {
+        retain(previous)
+        retain(row)
+      }
+    }
+
+    const currentBucket = screenBucket(row)
+    if (first < 0 || currentBucket !== bucket) {
+      flush()
+      first = row
+      bucket = currentBucket
+      for (let boundary = 0; boundary < boundaries.length; boundary += 1) {
+        minima[boundary] = row
+        maxima[boundary] = row
+      }
+    } else {
+      for (let boundary = 0; boundary < boundaries.length; boundary += 1) {
+        const value = boundaries[boundary](row)
+        if (value < boundaries[boundary](minima[boundary])) minima[boundary] = row
+        if (value > boundaries[boundary](maxima[boundary])) maxima[boundary] = row
+      }
+    }
+    last = row
+    previous = row
+  }
+  flush()
+  return rows.filter((row) => selected[row] === 1)
+}
+
 export function renderStackedAreas(
   group: SVGGElement,
   mark: StackedAreaMark,
@@ -39,7 +144,21 @@ export function renderStackedAreas(
   const layout = stackedAreaEndpoints(mark)
   const x = scales[mark.x]
   const y = scales[mark.y]
-  const rows = options.visible ? viewportRows(mark.data, options.x, x.scale.domain.get()) : []
+  const visibleRows = options.visible
+    ? viewportRows(mark.data, options.x, x.scale.domain.get())
+    : []
+  const stacks = new Map<string | undefined, StackEndpoints[]>()
+  for (const layer of layout.layers) {
+    const stack = stacks.get(layer.stack) ?? []
+    stack.push(layer)
+    stacks.set(layer.stack, stack)
+  }
+  const rowsByStack = new Map(
+    [...stacks].map(([stack, layers]) => [
+      stack,
+      stackLodRows(mark.data, options.x, visibleRows, layers, x),
+    ]),
+  )
   const existing = new Map(
     Array.from(group.children, (node) => [node.getAttribute('data-layer-id')!, node]),
   )
@@ -58,7 +177,7 @@ export function renderStackedAreas(
       .y0((row) => y.project(layer.lowerAt(row)))
       .y1((row) => y.project(layer.upperAt(row)))
       .curve(options.curve === 'step' ? curveStep : curveLinear)
-    node.setAttribute('d', path(rows) ?? '')
+    node.setAttribute('d', path(rowsByStack.get(layer.stack) ?? []) ?? '')
     group.append(node)
   }
   for (const node of existing.values()) node.remove()

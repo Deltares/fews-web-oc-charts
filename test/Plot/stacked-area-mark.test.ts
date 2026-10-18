@@ -171,6 +171,37 @@ describe('stacked areas', () => {
     expect(path.getAttribute('d')).toBe('')
   })
 
+  test('decimates dense stacks with one shared index set while preserving extrema, sign changes and gaps', async () => {
+    const a = Array.from({ length: 10_000 }, (_, index) =>
+      index === 101 ? 40 : index === 5000 ? -10 : index === 7000 ? NaN : 10,
+    )
+    const b = Array.from({ length: 10_000 }, (_, index) => (index === 300 ? 80 : 2))
+    const data = createTable({ t: Array.from({ length: 10_000 }, (_, index) => index), a, b })
+    const mark = stackedArea(data, options)
+    const current = plot({
+      ...fixed,
+      scales: { t: linear({ domain: [0, 9999] }), q: linear({ domain: [-20, 100] }) },
+      directions: { t: 'x' },
+      marks: [mark],
+    })
+    await frame()
+
+    const pathA = current.element.querySelector('[data-layer-id="a"]')!
+    const pathB = current.element.querySelector('[data-layer-id="b"]')!
+    const pathXs = (path: Element) =>
+      Array.from(path.getAttribute('d')!.matchAll(/[ML](-?[\d.]+),/g), (match) => Number(match[1]))
+    const xsA = pathXs(pathA)
+    const xsB = pathXs(pathB)
+    const hasSample = (xs: number[], sample: number) =>
+      xs.some((pixel) => Math.abs(pixel - (sample / 9999) * 100) < 0.001)
+
+    expect(xsA).toEqual(xsB)
+    expect(xsA.length).toBeLessThan(2000)
+    for (const sample of [101, 300, 4999, 5000]) expect(hasSample(xsA, sample)).toBe(true)
+    expect(pathA.getAttribute('d')?.match(/M/g)).toHaveLength(2)
+    expect(pathB.getAttribute('d')?.match(/M/g)).toHaveLength(2)
+  })
+
   test('style-only updates reuse endpoints and geometry; resize and data updates redraw retained paths', async () => {
     const data = createTable({ t: [0, 1], a: [3, 4], b: [2, 3] }, { maxPoints: 3 })
     const mark = stackedArea(data, { ...options, id: 'flow' })
