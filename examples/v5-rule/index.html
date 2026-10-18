@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>v5: rule marks</title>
+  </head>
+  <body>
+    <nav aria-label="Examples">
+      <a href="/">All examples</a>
+      <a href="../v5-basic-line/">Basic line</a>
+    </nav>
+    <h1>v5: rule marks</h1>
+    <p>
+      Horizontal and vertical reference lines bind to continuous scales. Their axis direction
+      determines their orientation, and rules do not affect autoscaling.
+    </p>
+    <figure>
+      <div id="chart" class="plot-host"></div>
+      <figcaption>
+        The horizontal rule marks a discharge threshold; the vertical rule marks an event time.
+      </figcaption>
+    </figure>
+    <h2>Public API</h2>
+    <pre><code>rule({ scale: 'q', value: 60, stroke: '#c45508', strokeWidth: 2 })
+rule({ scale: 't', value: eventTime })</code></pre>
+    <script type="module" src="./v5-rule.ts"></script>
+  </body>
+</html>

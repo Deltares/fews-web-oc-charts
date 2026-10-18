@@ -18,6 +18,8 @@ export type {
 export { axis } from './plot/axis.js'
 export type { AxisHandle, AxisOptions, AxisSide } from './plot/axis.js'
 export { line } from './plot/line.js'
+export { rule } from './plot/rule.js'
+export type { RuleMark, RuleOptions } from './plot/rule.js'
 export { band as bandMark, band as range } from './plot/band.js'
 export type {
   BandMark,

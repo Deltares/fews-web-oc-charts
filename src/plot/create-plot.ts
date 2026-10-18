@@ -45,8 +45,9 @@ import {
 } from './stacked-area.js'
 import { renderStackedAreas, styleStackedAreas } from './render-stacked-areas.js'
 import { clearCompositeCanvas, watchCanvasPixelRatio } from './render-composite-canvas.js'
+import { isRuleMark, type RuleMark } from './rule.js'
 
-type PlotMark = LineMark | SeriesMark | BandMark | BarMark | StackedAreaMark
+type PlotMark = LineMark | SeriesMark | BandMark | BarMark | StackedAreaMark | RuleMark
 
 export interface PlotOptions {
   width?: number
@@ -241,11 +242,22 @@ function validatePlotMark(
       !isSeriesMark(mark) &&
       !isBandMark(mark) &&
       !isBarMark(mark) &&
-      !isStackedAreaMark(mark))
+      !isStackedAreaMark(mark) &&
+      !isRuleMark(mark))
   ) {
     throw new Error(
-      'plot.marks accepts line(), series(), band(), bar() or stackedArea() marks only.',
+      'plot.marks accepts line(), series(), band(), bar(), stackedArea() or rule() marks only.',
     )
+  }
+  if (isRuleMark(mark)) {
+    if (coordinateSystem !== 'cartesian') throw new Error('rule() supports cartesian plots only.')
+    const scale = options.scales[mark.scale]
+    if (!scale) throw new Error(`rule "${mark.id ?? ''}" references a missing scale.`)
+    if (scale.kind !== 'linear' && scale.kind !== 'time') {
+      throw new Error(`rule "${mark.id ?? ''}" requires a continuous linear or time scale.`)
+    }
+    direction(options, mark.scale, undefined, undefined, coordinateSystem)
+    return
   }
   if (isStackedAreaMark(mark)) {
     if (coordinateSystem !== 'cartesian')
@@ -368,7 +380,8 @@ function createPlotInternal(
       isSeriesMark(value) ||
       isBandMark(value) ||
       isBarMark(value) ||
-      isStackedAreaMark(value),
+      isStackedAreaMark(value) ||
+      isRuleMark(value),
     validate(options) {
       validatePlotAppearance(options)
       validatePlotCollections(options)
@@ -443,6 +456,9 @@ function createPlotInternal(
   const stackedAreaGroups = new Map<StackedAreaMark, SVGGElement>()
   const stackedAreaGeometryKeys = new Map<StackedAreaMark, readonly unknown[]>()
   const stackedAreaStyleKeys = new Map<StackedAreaMark, readonly unknown[]>()
+  const ruleLines = new Map<RuleMark, SVGLineElement>()
+  const ruleGeometryKeys = new Map<RuleMark, readonly unknown[]>()
+  const ruleStyleKeys = new Map<RuleMark, readonly unknown[]>()
   const geometryKeys: (readonly unknown[])[] = []
   const styleKeys: (readonly unknown[] | undefined)[] = []
   let renderedMarks: PlotOptions['marks'] = []
@@ -462,6 +478,7 @@ function createPlotInternal(
       const staleBands = new Map(bandGroups)
       const staleBars = new Map(barGroups)
       const staleStackedAreas = new Map(stackedAreaGroups)
+      const staleRules = new Map(ruleLines)
       const matches = current.marks.map((mark) =>
         renderedMarks.findIndex(
           (previous) =>
@@ -486,6 +503,24 @@ function createPlotInternal(
           if (mark.id) group.dataset.markId = mark.id
           staleStackedAreas.delete(mark)
           marksLayer.append(group)
+          linePaths[index] = undefined
+          areaPaths[index] = undefined
+          markerGroups[index] = undefined
+          geometryKeys[index] = []
+          styleKeys[index] = undefined
+          return
+        }
+        if (isRuleMark(mark)) {
+          let line = ruleLines.get(mark)
+          line ??= svgElement('line', {
+            'vector-effect': 'non-scaling-stroke',
+            'data-mark': 'rule',
+          })
+          ruleLines.set(mark, line)
+          if (mark.id) line.dataset.markId = mark.id
+          else delete line.dataset.markId
+          staleRules.delete(mark)
+          marksLayer.append(line)
           linePaths[index] = undefined
           areaPaths[index] = undefined
           markerGroups[index] = undefined
@@ -562,6 +597,12 @@ function createPlotInternal(
         clearCompositeCanvas(group)
         group.remove()
       }
+      for (const [mark, line] of staleRules) {
+        line.remove()
+        ruleLines.delete(mark)
+        ruleGeometryKeys.delete(mark)
+        ruleStyleKeys.delete(mark)
+      }
       for (const mark of stackedAreaGroups.keys()) {
         if (!current.marks.includes(mark)) {
           stackedAreaGroups.delete(mark)
@@ -586,6 +627,46 @@ function createPlotInternal(
       renderedMarks = [...current.marks]
     }
     current.marks.forEach((mark, markIndex) => {
+      if (isRuleMark(mark)) {
+        const scale = localScales[mark.scale]
+        const orientation = direction(current, mark.scale)
+        const region = regions.get().plot
+        const key = [
+          mark,
+          scale,
+          scale.scale.domain.version,
+          scale.scale.options.version,
+          ...scale.range.get(),
+          region.x,
+          region.y,
+          region.width,
+          region.height,
+        ]
+        const previous = ruleGeometryKeys.get(mark)
+        if (
+          previous &&
+          key.length === previous.length &&
+          key.every((value, index) => value === previous[index])
+        )
+          return
+        const line = ruleLines.get(mark)
+        if (!line) throw new Error('Missing rule renderer.')
+        const position = scale.project(mark.value)
+        if (orientation === 'x') {
+          line.setAttribute('x1', String(position))
+          line.setAttribute('x2', String(position))
+          line.setAttribute('y1', String(region.y))
+          line.setAttribute('y2', String(region.y + region.height))
+        } else {
+          line.setAttribute('x1', String(region.x))
+          line.setAttribute('x2', String(region.x + region.width))
+          line.setAttribute('y1', String(position))
+          line.setAttribute('y2', String(position))
+        }
+        ruleGeometryKeys.set(mark, key)
+        ruleStyleKeys.delete(mark)
+        return
+      }
       const xScale = localScales[mark.x]
       const yScale = localScales[mark.y]
       if (isStackedAreaMark(mark)) {
@@ -870,6 +951,17 @@ function createPlotInternal(
 
   function renderMarkStyles(current: PlotOptions, tokens: ThemeTokens) {
     current.marks.forEach((mark, markIndex) => {
+      if (isRuleMark(mark)) {
+        const key = [mark, mark.stroke, mark.strokeWidth, tokens.accent]
+        const previous = ruleStyleKeys.get(mark)
+        if (previous && key.every((value, index) => value === previous[index])) return
+        const line = ruleLines.get(mark)
+        if (!line) throw new Error('Missing rule renderer.')
+        line.setAttribute('stroke', mark.stroke ?? `var(--fews-chart-accent, ${tokens.accent})`)
+        line.setAttribute('stroke-width', String(mark.strokeWidth))
+        ruleStyleKeys.set(mark, key)
+        return
+      }
       if (isStackedAreaMark(mark)) {
         const key = [
           mark.options.version,
