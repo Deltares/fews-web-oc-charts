@@ -202,7 +202,10 @@ export function renderPolarAxes(
   const angularBinding = angularAxis ? bindings[angularAxis.scale] : undefined
   const radialBinding = radialAxis ? bindings[radialAxis.scale] : undefined
   const outerRadius = radialBinding?.range.get()[1] ?? radius
-  const axisGroup = svgElement('g', { 'data-coordinate-system': 'polar' })
+  const axisGroup = svgElement('g', {
+    'data-coordinate-system': 'polar',
+    fill: 'currentColor',
+  })
   axesLayer.append(axisGroup)
 
   if (radialAxis && radialBinding) {

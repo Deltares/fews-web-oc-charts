@@ -100,6 +100,24 @@ describe('createPolarPlot', () => {
     expect(element.isConnected).toBe(true)
   })
 
+  test('inherits the dark theme foreground for polar axis labels', async () => {
+    const current = plot(host(), {
+      theme: 'dark',
+      scales: {
+        theta: angular({ domain: [0, 360] }),
+        distance: radial({ domain: [0, 10] }),
+      },
+      axes: [axis('theta', { position: 'angular' }), axis('distance', { position: 'radial' })],
+    })
+    await frame()
+
+    const axisGroup = current.element.querySelector<SVGGElement>('[data-coordinate-system="polar"]')
+    const label = axisGroup?.querySelector('text')
+    expect(axisGroup?.getAttribute('fill')).toBe('currentColor')
+    expect(label).not.toBeNull()
+    expect(getComputedStyle(label!).fill).toBe('rgb(237, 242, 244)')
+  })
+
   test('rejects cartesian scales, mismatched axes, extra polar scales and cartesian directions', () => {
     expect(() => plot(host(), { scales: { theta: linear(), distance: radial() } })).toThrow(
       /angular or radial scales/,
