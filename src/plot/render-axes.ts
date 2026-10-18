@@ -78,110 +78,130 @@ export function renderAxes(
 ) {
   axesLayer.replaceChildren()
   gridLayer.replaceChildren()
-  const plot = regions.plot
   axes.forEach((axis, index) => {
-    const options = axis.options.get().resolved
-    const binding = bindings[axis.scale]
-    const ticks = axisTickLabels(binding, axis)
-    const band = regions.axes[index]
-    const horizontal = options.position === 'top' || options.position === 'bottom'
-    const sign = options.position === 'top' || options.position === 'left' ? -1 : 1
-    const horizontalBaseline = options.position === 'top' ? band.y + band.height : band.y
-    const verticalBaseline = options.position === 'left' ? band.x + band.width : band.x
-    const baseline = horizontal ? horizontalBaseline : verticalBaseline
-    let textAnchor = 'middle'
-    let dominantBaseline = 'middle'
-    if (horizontal) {
-      dominantBaseline = sign > 0 ? 'hanging' : 'auto'
-    } else {
-      textAnchor = sign < 0 ? 'end' : 'start'
-    }
     const group = svgElement('g', {
       'data-scale': axis.scale,
-      'data-position': options.position,
+      'data-position': axis.options.get().resolved.position,
       fill: 'currentColor',
     })
+    renderCartesianAxis(group, gridLayer, axis, bindings[axis.scale], regions, index, theme)
+    axesLayer.append(group)
+  })
+}
+
+interface CartesianAxisGeometry {
+  horizontal: boolean
+  sign: 1 | -1
+  baseline: number
+  textAnchor: string
+  dominantBaseline: string
+}
+
+function cartesianGeometry(position: string, band: PlotLayout['plot']): CartesianAxisGeometry {
+  const horizontal = position === 'top' || position === 'bottom'
+  const sign = position === 'top' || position === 'left' ? -1 : 1
+  const horizontalBaseline = position === 'top' ? band.y + band.height : band.y
+  const verticalBaseline = position === 'left' ? band.x + band.width : band.x
+  const baseline = horizontal ? horizontalBaseline : verticalBaseline
+  let textAnchor = 'middle'
+  let dominantBaseline = 'middle'
+  if (horizontal) {
+    dominantBaseline = sign > 0 ? 'hanging' : 'auto'
+  } else {
+    textAnchor = sign < 0 ? 'end' : 'start'
+  }
+  return { horizontal, sign, baseline, textAnchor, dominantBaseline }
+}
+
+function rotatedText(
+  text: string,
+  x: number,
+  y: number,
+  angle: number | undefined,
+  attributes: Record<string, string | number>,
+): SVGTextElement {
+  const element = svgElement('text', { x, y, ...attributes })
+  if (angle) element.setAttribute('transform', `rotate(${angle} ${x} ${y})`)
+  element.textContent = text
+  return element
+}
+
+function renderCartesianAxis(
+  group: SVGGElement,
+  gridLayer: SVGGElement,
+  axis: AxisHandle,
+  binding: ScaleBinding,
+  regions: PlotLayout,
+  index: number,
+  theme: ThemeTokens,
+) {
+  const options = axis.options.get().resolved
+  const plot = regions.plot
+  const band = regions.axes[index]
+  const { horizontal, sign, baseline, textAnchor, dominantBaseline } = cartesianGeometry(
+    options.position,
+    band,
+  )
+  const textAttributes = { 'text-anchor': textAnchor, 'dominant-baseline': dominantBaseline }
+  group.append(
+    svgElement('line', {
+      x1: horizontal ? plot.x : baseline,
+      x2: horizontal ? plot.x + plot.width : baseline,
+      y1: horizontal ? baseline : plot.y,
+      y2: horizontal ? baseline : plot.y + plot.height,
+      stroke: 'currentColor',
+    }),
+  )
+  for (const { value, primary, secondary } of axisTickLabels(binding, axis)) {
+    const pixel = binding.project(value) + binding.bandwidth / 2
+    const x = horizontal ? pixel : baseline
+    const y = horizontal ? baseline : pixel
     group.append(
       svgElement('line', {
-        x1: horizontal ? plot.x : baseline,
-        x2: horizontal ? plot.x + plot.width : baseline,
-        y1: horizontal ? baseline : plot.y,
-        y2: horizontal ? baseline : plot.y + plot.height,
+        x1: x,
+        y1: y,
+        x2: x + (horizontal ? 0 : sign * 5),
+        y2: y + (horizontal ? sign * 5 : 0),
         stroke: 'currentColor',
       }),
     )
-    for (const tick of ticks) {
-      const { value, primary, secondary } = tick
-      const pixel = binding.project(value) + binding.bandwidth / 2
-      const x = horizontal ? pixel : baseline
-      const y = horizontal ? baseline : pixel
+    const labelX = x + (horizontal ? 0 : sign * 9)
+    const labelY = y + (horizontal ? sign * 9 : 0)
+    group.append(rotatedText(primary, labelX, labelY, options.labelAngle, textAttributes))
+    if (secondary) {
+      const contextY = labelY + sign * theme.fontSize
       group.append(
-        svgElement('line', {
-          x1: x,
-          y1: y,
-          x2: x + (horizontal ? 0 : sign * 5),
-          y2: y + (horizontal ? sign * 5 : 0),
-          stroke: 'currentColor',
+        rotatedText(secondary, labelX, contextY, options.labelAngle, {
+          ...textAttributes,
+          'data-tick-context': '',
         }),
       )
-      const labelX = x + (horizontal ? 0 : sign * 9)
-      const labelY = y + (horizontal ? sign * 9 : 0)
-      const label = svgElement('text', {
-        x: labelX,
-        y: labelY,
-        'text-anchor': textAnchor,
-        'dominant-baseline': dominantBaseline,
-      })
-      if (options.labelAngle)
-        label.setAttribute('transform', `rotate(${options.labelAngle} ${labelX} ${labelY})`)
-      label.textContent = primary
-      group.append(label)
-      if (secondary) {
-        const context = svgElement('text', {
-          x: labelX,
-          y: labelY + sign * theme.fontSize,
-          'text-anchor': textAnchor,
-          'dominant-baseline': dominantBaseline,
-          'data-tick-context': '',
-        })
-        if (options.labelAngle)
-          context.setAttribute(
-            'transform',
-            `rotate(${options.labelAngle} ${labelX} ${labelY + sign * theme.fontSize})`,
-          )
-        context.textContent = secondary
-        group.append(context)
-      }
-      if (options.grid) {
-        gridLayer.append(
-          svgElement('line', {
-            x1: horizontal ? pixel : plot.x,
-            x2: horizontal ? pixel : plot.x + plot.width,
-            y1: horizontal ? plot.y : pixel,
-            y2: horizontal ? plot.y + plot.height : pixel,
-            stroke: 'inherit',
-          }),
-        )
-      }
     }
-    const caption = [options.label, options.unit && `(${options.unit})`].filter(Boolean).join(' ')
-    if (caption) {
-      const xOffset = sign < 0 ? theme.fontSize : band.width - theme.fontSize
-      const yOffset = sign > 0 ? band.height - theme.fontSize : theme.fontSize
-      const x = horizontal ? plot.x + plot.width / 2 : band.x + xOffset
-      const y = horizontal ? band.y + yOffset : plot.y + plot.height / 2
-      const label = svgElement('text', {
-        x,
-        y,
+    if (options.grid) {
+      gridLayer.append(
+        svgElement('line', {
+          x1: horizontal ? pixel : plot.x,
+          x2: horizontal ? pixel : plot.x + plot.width,
+          y1: horizontal ? plot.y : pixel,
+          y2: horizontal ? plot.y + plot.height : pixel,
+          stroke: 'inherit',
+        }),
+      )
+    }
+  }
+  const caption = [options.label, options.unit && `(${options.unit})`].filter(Boolean).join(' ')
+  if (caption) {
+    const xOffset = sign < 0 ? theme.fontSize : band.width - theme.fontSize
+    const yOffset = sign > 0 ? band.height - theme.fontSize : theme.fontSize
+    const x = horizontal ? plot.x + plot.width / 2 : band.x + xOffset
+    const y = horizontal ? band.y + yOffset : plot.y + plot.height / 2
+    group.append(
+      rotatedText(caption, x, y, horizontal ? undefined : -90, {
         'text-anchor': 'middle',
         'dominant-baseline': 'middle',
-      })
-      if (!horizontal) label.setAttribute('transform', `rotate(-90 ${x} ${y})`)
-      label.textContent = caption
-      group.append(label)
-    }
-    axesLayer.append(group)
-  })
+      }),
+    )
+  }
 }
 
 interface PolarAxisGeometry {
