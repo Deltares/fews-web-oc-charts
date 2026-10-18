@@ -4,6 +4,7 @@ import {
   band,
   createPlot,
   createTable,
+  histogram,
   linear,
   stackedArea,
   type Plot,
@@ -89,6 +90,43 @@ function expectParity(svg: Plot, canvasPlot: Plot) {
 }
 
 describe('composite canvas parity', () => {
+  test.each(['vertical', 'horizontal'] as const)(
+    'histogram %s intervals share pixels through normalization, rebinning and reversal',
+    async (orientation) => {
+      const data = createTable({ row: [0, 1, 2, 3, 4], sample: [3, NaN, 0, 1, 1] })
+      const options = {
+        x: 'sample',
+        scales: { x: 'x', y: 'y' },
+        bins: [0, 1, 3],
+        fill: '#ff0000',
+        opacity: 0.5,
+        stroke: '#222222',
+        strokeWidth: 1,
+        orientation,
+      }
+      const svgMark = histogram(data, options)
+      const canvasMark = histogram(data, { ...options, renderer: 'canvas' })
+      const x = linear({ domain: [0, 3] })
+      const y = linear({ domain: [0, 3] })
+      const directions =
+        orientation === 'vertical'
+          ? { x: 'x' as const, y: 'y' as const }
+          : { x: 'y' as const, y: 'x' as const }
+      const svg = plot({ scales: { x, y }, directions, marks: [svgMark] })
+      const canvas = plot({ scales: { x, y }, directions, marks: [canvasMark] })
+      await frame()
+      expectParity(svg, canvas)
+      for (const mark of [svgMark, canvasMark])
+        mark.update({ bins: [0, 0.5, 1, 3], normalization: 'density', fill: '#0000ff' })
+      data.append({ row: [5], sample: [2] })
+      await frame()
+      expectParity(svg, canvas)
+      x.update({ reverse: true })
+      await frame()
+      expectParity(svg, canvas)
+    },
+  )
+
   test.each(['grouped', 'stacked', 'named'] as const)(
     '%s bars share exact geometry through visibility, reverse, resize, retention and renderer resets',
     async (kind) => {

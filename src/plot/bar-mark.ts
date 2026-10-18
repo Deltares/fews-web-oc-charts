@@ -20,8 +20,8 @@ import {
   type MarkRenderer,
 } from './mark-definition.js'
 
-function createBarRenderer(): MarkRenderer<BarMark> {
-  const group = svgElement('g', { 'data-mark': 'bar' })
+export function createBarRenderer(kind = 'bar'): MarkRenderer<BarMark> {
+  const group = svgElement('g', { 'data-mark': kind })
   const geometryKey = createKeyCache()
   const styleKey = createKeyCache()
   return {

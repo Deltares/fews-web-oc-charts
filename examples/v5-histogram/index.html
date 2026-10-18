@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>v5: histogram</title>
+  </head>
+  <body>
+    <nav aria-label="Examples">
+      <a href="/">All examples</a>
+      <a href="../v5-bars/">Bars</a>
+      <a href="../v5-autoscale/">Autoscaling</a>
+    </nav>
+    <h1>v5: histogram</h1>
+    <p>
+      Unsorted observations are binned into irregular intervals. Interior boundaries belong to the
+      following bin; the final boundary is included. NaN and out-of-domain observations are ignored.
+      Empty bins remain visible in the domain. Both renderers use the existing interval bar path.
+    </p>
+    <fieldset class="controls">
+      <legend>Update retained histogram</legend>
+      <label
+        >Renderer
+        <select id="renderer">
+          <option value="svg">SVG</option>
+          <option value="canvas">Canvas</option>
+        </select>
+      </label>
+      <label
+        >Normalization
+        <select id="normalization">
+          <option value="count">Count</option>
+          <option value="probability">Probability</option>
+          <option value="density">Density</option>
+        </select>
+      </label>
+      <label><input id="horizontal" type="checkbox" /> Horizontal</label>
+      <label><input id="reverse" type="checkbox" /> Reverse sample scale</label>
+      <button id="append" type="button">Append observations</button>
+      <button id="rebin" type="button">Toggle equal-width bins</button>
+      <button id="clear" type="button">Clear data</button>
+      <button id="reset" type="button">Reset data</button>
+    </fieldset>
+    <figure>
+      <div id="histogram" class="plot-host"></div>
+      <figcaption id="summary"></figcaption>
+    </figure>
+    <h2>Public API</h2>
+    <pre><code>const data = createTable({ row: [0, 1, 2, 3], sample: [3, 0, 1, NaN] })
+const distribution = histogram(data, {
+  x: 'sample',
+  scales: { x: 'sample', y: 'frequency' },
+  bins: [0, 1, 3], // complete bin edges, not interior thresholds
+})
+distribution.update({ normalization: 'density' })
+distribution.update({ bins: 6, domain: [0, 3] })
+data.append({ row: [4], sample: [2] })
+console.table(distribution.bins)</code></pre>
+    <script type="module" src="./v5-histogram.ts"></script>
+  </body>
+</html>
