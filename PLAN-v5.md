@@ -369,8 +369,15 @@ format tokens, and DST transition search (`DstIndicator`). Replacement:
   No automatic switching (`'auto'`) for now – keeps output predictable; may be revisited
   once benchmarks exist. Both use the same d3 generators (`d3.line().context(ctx)` for
   canvas). With LOD decimation SVG stays fast up to ~1M source points per series.
-- SVG: one `<path>` per series/stroke, keyed joins only for discrete marks (bars, text);
-  `vector-effect: non-scaling-stroke`.
+- SVG: one `<path>` per series/stroke; use keyed D3 joins only for discrete marks (bars,
+  text), not one DOM element per point for continuous series. Bind stable mark/sample
+  identifiers or source indices that resolve to store data, never copied `{ x, y }`
+  objects, array positions or reusable ring-buffer slots. Define enter, update and exit
+  behavior explicitly: enter creates elements and applies initial attributes; update
+  refreshes geometry, style and accessibility attributes; exit removes obsolete elements
+  and releases bound references to obsolete views. Reorder joined elements to match
+  configured draw order. Test entering, updating, removing and reordering, including that
+  removed nodes release obsolete data views. Set `vector-effect: non-scaling-stroke`.
 - **Gesture fast path**: during pan/zoom apply a transform to cached layers
   (CSS/SVG transform or canvas `drawImage`) and do the full LOD re-render throttled /
   at gesture end.
