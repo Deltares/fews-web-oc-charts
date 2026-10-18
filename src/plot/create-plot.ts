@@ -22,7 +22,7 @@ import { resolveTheme, watchTheme, type ThemeMode, type ThemeTokens } from '../t
 import { isAxisHandle, validateAxisUpdates, type AxisHandle, type AxisSide } from './axis.js'
 import { observeSize } from './resize.js'
 import { svgElement, renderAxes, renderPolarAxes, axisTickLabels } from './render-axes.js'
-import { isLineMark, type LineMark } from './line.js'
+import { isLineMark, validateLineValuesForScale, type LineMark } from './line.js'
 
 export interface PlotOptions {
   width?: number | undefined
@@ -227,6 +227,8 @@ function createPlotInternal(
         if (direction(options, mark.y, undefined, undefined, coordinateSystem) !== 'y') {
           throw new Error(`line "${mark.id ?? ''}" requires a y-direction scale.`)
         }
+        validateLineValuesForScale(mark, 'x', options.scales[mark.x].kind)
+        validateLineValuesForScale(mark, 'y', options.scales[mark.y].kind)
         if (mark.id && markIds.has(mark.id)) throw new Error(`Duplicate line id "${mark.id}".`)
         if (mark.id) markIds.add(mark.id)
       }

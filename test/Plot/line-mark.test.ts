@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from 'vitest'
 import {
   angular,
   axis,
+  band,
   createPlot,
   createPolarPlot,
   line,
@@ -116,6 +117,45 @@ describe('static line marks', () => {
     current.update({ marks: [] })
     await frame()
     expect(current.element.querySelectorAll('[data-mark="line"]')).toHaveLength(0)
+  })
+
+  test('synchronously rejects values that do not match their bound scale kind', async () => {
+    const mark = line({ id: 'one', x: 'x', y: 'y', xValues: [0, 1], yValues: [1, 2] })
+    const current = plot(host(), {
+      scales: { x: linear({ domain: [0, 1] }), y: linear({ domain: [0, 2] }) },
+      directions: { x: 'x' },
+      marks: [mark],
+    })
+    await frame()
+    const path = current.element.querySelector('[data-mark="line"]')!
+    const rendered = path.getAttribute('d')
+
+    expect(() =>
+      current.update({
+        marks: [line({ id: 'bad', x: 'x', y: 'y', xValues: [0, 1], yValues: [1, 'high'] })],
+      }),
+    ).toThrow(/line "bad" yValues\[1\] must be a number for linear scale "y"/)
+    expect(current.options.get().resolved.marks).toEqual([mark])
+    await frame()
+    expect(path.getAttribute('d')).toBe(rendered)
+
+    expect(() => current.update({ scales: { x: band({ domain: ['a', 'b'] }) } })).toThrow(
+      /xValues\[0\] must be a string for band scale "x"/,
+    )
+    expect(() =>
+      plot(host(), {
+        scales: { x: time({ domain: [0, 1] }), y: linear() },
+        directions: { x: 'x' },
+        marks: [line({ x: 'x', y: 'y', xValues: ['2024-01-01'], yValues: [1] })],
+      }),
+    ).toThrow(/xValues\[0\] must be a number for time scale "x"/)
+
+    current.update({
+      scales: { x: band({ domain: ['a', 'b'] }) },
+      marks: [line({ x: 'x', y: 'y', xValues: ['a', null, 'b'], yValues: [1, 2, Number.NaN] })],
+    })
+    await frame()
+    expect(path.getAttribute('d')).toMatch(/^M[^L]+$/)
   })
 
   test('validates line values and rejects polar use', () => {

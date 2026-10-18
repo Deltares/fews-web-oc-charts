@@ -1207,7 +1207,8 @@ coordinates to SVG coordinates. Angular scales default to a clockwise bearing fr
 north and may configure direction, intercept and angular range; radial scales may
 configure an inner-radius fraction. The minimal cartesian `line()` mark renders aligned
 array-like x/y values against named x/y scales, preserves gaps, and is clipped to the
-plot region. It is a static fixture primitive: replace the mark to change its values;
+plot region. Plot configuration synchronously rejects non-gap values that do not match
+their bound scale kind (strings for band scales, numbers otherwise). It is a static fixture primitive: replace the mark to change its values;
 polar marks, general series, data-driven autoscaling and interaction APIs follow in
 their respective phases. The deterministic per-engine visual regression gate remains
 part of the phase 1 exit criteria.
