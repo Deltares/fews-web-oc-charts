@@ -1411,10 +1411,46 @@ observed.update({ line: { stroke: undefined }, markers: false })
 - Exact tests cover diverging endpoints, independent stack totals/gaps, union extents,
   hidden slots, reorder/reassignment/removal, resets, malformed input, atomic mutations,
   categorical/time geometry, horizontal/reversed scales, padding, culling, resizing,
-  visible autoscale, retained SVG identity and cleanup. Stacked-area rendering and
-  shared-boundary LOD, canvas, interaction/tooltip/legend adapters, block indexes and
+  visible autoscale, retained SVG identity and cleanup. Shared-boundary LOD, canvas,
+  interaction/tooltip/legend adapters, block indexes and
   incremental table/stack updates remain separate roadmap work; this is not completion
   of every phase 2 exit gate.
+
+### Phase 2 stacked-area rendering (implemented SVG foundation)
+
+- [Stacked areas demo](./examples/v5-stacked-area/index.html) compares an implicit
+  observed stack with independent named observed/forecast stacks over one aligned
+  table. Controls exercise visibility, linear/midpoint-step curves, stacking
+  order, reversed time scales, append/retention and reset. "Reverse stacking order"
+  changes accumulation within each stack (including the single-stack plot), not
+  just paint order; it also reverses the named stacks' front-to-back order.
+- `stackedArea(table, { x, scales: { x, y }, layers, curve? })` requires numeric/time
+  x columns with strictly increasing unique keys, a linear/time x scale and a linear
+  value scale. It is cartesian-only. Unsupported curves, offsets, scale bindings,
+  malformed layers and mixed named/unnamed stacks are rejected before commit.
+- Areas reuse the same bounded columnar endpoint cache as stacked bars. Positive and
+  negative values accumulate independently from zero within each stack; extents union
+  independent totals rather than summing stacks. Missing visible values break every
+  band in the affected stack, while other stacks remain continuous. Hidden layers
+  do not contribute to totals or gaps, and zero remains a valid value. Visible value
+  autoscale includes interpolated boundaries at viewport edges, including windows
+  between source rows, without interpolating across gaps.
+- SVG retains one path per layer ID, including hidden layers with empty geometry.
+  Named stacks paint in first-appearance order, with relative layer order preserved
+  inside each stack. Visibility is retained across descriptor replacement unless
+  explicitly overridden; `visible: undefined` restores default visibility. Styling
+  falls back from layer to mark to theme accent; opacity defaults to `1`, stroke to
+  `none` and stroke width to `0`. Style-only changes reuse endpoints and paths
+  without reprojecting geometry.
+- Viewport culling retains every in-window row and the adjacent samples outside
+  the window, using the same rows and curve for all boundaries. No decimation is
+  performed: gaps, sign changes and extrema are preserved at full resolution.
+  Shared-boundary LOD/index budgets, canvas and interaction/tooltip/legend adapters
+  remain roadmap work, not claimed as completed phase 2 exit gates.
+- Browser tests cover exact diverging geometry, per-stack gaps, named paint order,
+  shared endpoint identity with bars, visibility/reset/reassignment/removal, curves,
+  viewport neighbours, reverse/resize, style-only reuse, live table mutations and
+  retention, autoscale, atomic rejection and plot lifecycle cleanup.
 
 ### Target composed API
 

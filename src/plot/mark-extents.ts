@@ -4,6 +4,8 @@ import { isLineMark, type LineMark, type LineValue } from './line.js'
 import { isSeriesMark, type SeriesMark } from './series.js'
 import { isBarMark, type BarMark } from './bar.js'
 import { barExtent } from './bar-geometry.js'
+import { isStackedAreaMark, type StackedAreaMark } from './stacked-area.js'
+import { stackedAreaExtent } from './render-stacked-areas.js'
 
 function valid(value: LineValue): value is ScaleValue {
   return typeof value === 'string' || (typeof value === 'number' && Number.isFinite(value))
@@ -16,7 +18,7 @@ function within(value: ScaleValue, domain: readonly ScaleValue[]) {
 }
 
 export function markExtents(
-  marks: readonly (LineMark | SeriesMark | BandMark | BarMark)[],
+  marks: readonly (LineMark | SeriesMark | BandMark | BarMark | StackedAreaMark)[],
   scales: Readonly<Record<string, ScaleHandle>>,
   name: string,
   mode: 'data' | 'visible',
@@ -32,6 +34,14 @@ export function markExtents(
     }
   }
   for (const mark of marks) {
+    if (isStackedAreaMark(mark)) {
+      const coordinate = mark.x === name ? 'x' : mark.y === name ? 'y' : undefined
+      if (!coordinate) continue
+      const opposite = coordinate === 'x' ? mark.y : mark.x
+      const window = mode === 'visible' ? autoscaleWindow(scales[opposite]) : undefined
+      stackedAreaExtent(mark, coordinate, window)?.forEach(add)
+      continue
+    }
     if (isBarMark(mark)) {
       const options = mark.options.get().resolved
       const coordinate =
