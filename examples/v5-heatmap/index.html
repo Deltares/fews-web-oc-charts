@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>v5: heatmap</title>
+  </head>
+  <body>
+    <nav aria-label="Examples"><a href="/">All examples</a></nav>
+    <h1>v5: heatmap</h1>
+    <p>
+      A time-by-level matrix with explicit irregular cell edges and row-major values. Missing values
+      are transparent. Both plots share one colour scale with a fixed domain: changing its palette
+      recolours both without changing their cell geometry.
+    </p>
+    <fieldset class="controls">
+      <legend>Update heatmaps</legend>
+      <label
+        >Renderer
+        <select id="renderer">
+          <option value="svg">SVG</option>
+          <option value="canvas">Canvas</option>
+        </select></label
+      >
+      <label><input id="reverse" type="checkbox" /> Reverse levels</label>
+      <button id="palette" type="button">Toggle palette</button>
+      <button id="replace" type="button">Replace values</button>
+    </fieldset>
+    <figure>
+      <div id="heatmap" class="plot-host"></div>
+      <figcaption>Observed temperature (0–20 degrees)</figcaption>
+    </figure>
+    <figure>
+      <div id="comparison" class="plot-host"></div>
+      <figcaption>Comparison using the same colour domain</figcaption>
+    </figure>
+    <h2>Public API</h2>
+    <pre><code>const color = colorScale({ domain: [0, 20], colors: ['#2166ac', '#f7f7f7', '#b2182b'] })
+const grid = createGrid({
+  xEdges: [0, 1, 4], yEdges: [0, 2, 8],
+  values: new Float32Array([0, 10, NaN, 20]),
+})
+const mark = heatmap(grid, { scales: { x: 'time', y: 'level' }, color })
+color.update({ domain: [0, 30] }) // shared with other heatmaps (and future colorBar)</code></pre>
+    <script type="module" src="./v5-heatmap.ts"></script>
+  </body>
+</html>

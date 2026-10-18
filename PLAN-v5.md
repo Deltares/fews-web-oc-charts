@@ -1555,6 +1555,57 @@ fontSize?, fontWeight?, textAnchor?, dominantBaseline?, id? })` renders one SVG 
   cover bin edges, invalid/degenerate inputs, normalization, mutation/retention,
   autoscale, shared geometry, exact SVG/canvas pixels and keyed renderer lifecycle.
 
+### Phase 2 heatmap (implemented SVG/canvas foundation)
+
+- `createGrid({ xEdges, yEdges, values })` owns a dense rectangular matrix.
+  Edges are complete, finite, strictly increasing numeric boundaries with finite
+  span; time edges are epoch milliseconds. `columns = xEdges.length - 1`,
+  `rows = yEdges.length - 1`,
+  and `values.length` must equal `columns * rows`. Values are row-major:
+  `values[row * columns + column]`. Typed arrays and ordinary numeric arrays are
+  accepted, copied, and never mutated. Values use private Float64 storage; edge
+  arrays and snapshots are frozen. NaN denotes a missing cell; infinities and
+  nonnumeric values are rejected. A single edge allows a zero-cell dimension.
+- `grid.snapshot()` exposes dimensions, edges and bounds-checked `valueAt(index)`.
+  `grid.replace(input)` validates and publishes an atomic replacement, including
+  shape changes. Old snapshots remain stable; `grid.version` is reactive.
+  Appending rows/columns, sparse cells, categorical grids and inferred boundaries
+  are not part of this increment.
+- `heatmap(grid, { scales: { x, y }, color, renderer?, visible?, opacity?, id? })`
+  binds explicit edges to Cartesian linear/time scales. A cell spans adjacent
+  x and y edges with no implicit padding or centering. Projected minima and
+  absolute differences preserve geometry under reversed axes. SVG rectangles
+  and canvas paths use identical geometry and plot clipping; wholly offscreen
+  cells are culled. Polar, band and other scale kinds are rejected before rendering.
+  Time edges must be within the JavaScript Date range, including replacements
+  while mounted. Bindings and identity stay fixed; replace a mark to rebind it.
+- Positional autoscaling uses the full grid footprint, including NaN cells;
+  visible-window autoscaling includes the footprint when the opposite interval
+  overlaps the viewport. Empty or hidden grids contribute no extent. Missing
+  values use the colour scale's `unknown` colour (transparent by default), rather
+  than zero. Data, visibility, resize, reversal, renderer and device-pixel-ratio
+  changes invalidate geometry. Colour-only changes reuse retained geometry.
+- **Colour is shared infrastructure**, separate from positional `ScaleHandle`s:
+  `colorScale({ domain?, colors?, clamp?, unknown? })` returns a reactive handle
+  with `map(value)`, `options` and `update(patch)`. Heatmaps share it directly;
+  the planned `colorBar` should consume the same handle, not duplicate a palette.
+  This increment does not implement `colorBar` itself or register colour scales
+  in `plot.scales`, which remains exclusively positional.
+- Colour domains are explicit ascending finite pairs (default `[0, 1]`) with
+  finite span, intentionally independent of each grid's extent so comparisons
+  are stable across plots. Two or more CSS colour literals are equally spaced
+  across the domain and interpolated piecewise in RGB. CSS variables and callbacks
+  are not supported. `clamp` defaults to true; false enables extrapolation through
+  the endpoint segments. A constant domain maps finite values to the palette
+  midpoint. NaN/nonfinite mapped values use `unknown` (default `transparent`).
+  Invalid updates are atomic; `undefined` restores the constructor's defaults.
+- `examples/v5-heatmap/` demonstrates irregular time/level cells, NaN gaps,
+  shared palettes, SVG/canvas switching, axis reversal and grid replacement.
+  Browser tests cover ownership, shape/edge validation, exact projection and
+  canvas pixels, colour mapping, shared invalidation, footprint autoscaling,
+  supported bindings, atomic updates and lifecycle cleanup. Tooltip, hit-testing
+  and legend adapters remain deferred with the other Phase 2 foundations.
+
 ### Target composed API
 
 ```ts
