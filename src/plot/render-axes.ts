@@ -86,13 +86,16 @@ export function renderAxes(
     const band = regions.axes[index]
     const horizontal = options.position === 'top' || options.position === 'bottom'
     const sign = options.position === 'top' || options.position === 'left' ? -1 : 1
-    const baseline = horizontal
-      ? options.position === 'top'
-        ? band.y + band.height
-        : band.y
-      : options.position === 'left'
-        ? band.x + band.width
-        : band.x
+    const horizontalBaseline = options.position === 'top' ? band.y + band.height : band.y
+    const verticalBaseline = options.position === 'left' ? band.x + band.width : band.x
+    const baseline = horizontal ? horizontalBaseline : verticalBaseline
+    let textAnchor = 'middle'
+    let dominantBaseline = 'middle'
+    if (horizontal) {
+      dominantBaseline = sign > 0 ? 'hanging' : 'auto'
+    } else {
+      textAnchor = sign < 0 ? 'end' : 'start'
+    }
     const group = svgElement('g', {
       'data-scale': axis.scale,
       'data-position': options.position,
@@ -126,8 +129,8 @@ export function renderAxes(
       const label = svgElement('text', {
         x: labelX,
         y: labelY,
-        'text-anchor': horizontal ? 'middle' : sign < 0 ? 'end' : 'start',
-        'dominant-baseline': horizontal ? (sign > 0 ? 'hanging' : 'auto') : 'middle',
+        'text-anchor': textAnchor,
+        'dominant-baseline': dominantBaseline,
       })
       if (options.labelAngle)
         label.setAttribute('transform', `rotate(${options.labelAngle} ${labelX} ${labelY})`)
@@ -137,8 +140,8 @@ export function renderAxes(
         const context = svgElement('text', {
           x: labelX,
           y: labelY + sign * theme.fontSize,
-          'text-anchor': horizontal ? 'middle' : sign < 0 ? 'end' : 'start',
-          'dominant-baseline': horizontal ? (sign > 0 ? 'hanging' : 'auto') : 'middle',
+          'text-anchor': textAnchor,
+          'dominant-baseline': dominantBaseline,
           'data-tick-context': '',
         })
         if (options.labelAngle)
@@ -163,12 +166,10 @@ export function renderAxes(
     }
     const caption = [options.label, options.unit && `(${options.unit})`].filter(Boolean).join(' ')
     if (caption) {
-      const x = horizontal
-        ? plot.x + plot.width / 2
-        : band.x + (sign < 0 ? theme.fontSize : band.width - theme.fontSize)
-      const y = horizontal
-        ? band.y + (sign > 0 ? band.height - theme.fontSize : theme.fontSize)
-        : plot.y + plot.height / 2
+      const xOffset = sign < 0 ? theme.fontSize : band.width - theme.fontSize
+      const yOffset = sign > 0 ? band.height - theme.fontSize : theme.fontSize
+      const x = horizontal ? plot.x + plot.width / 2 : band.x + xOffset
+      const y = horizontal ? band.y + yOffset : plot.y + plot.height / 2
       const label = svgElement('text', {
         x,
         y,
@@ -266,11 +267,16 @@ export function renderPolarAxes(
       })
       axisGroup.append(line)
       if (angularAxis.options.get().resolved.grid) gridLayer.append(line.cloneNode(true))
+      let textAnchor = 'middle'
+      if (Math.sin(angle) > 0.15) {
+        textAnchor = 'start'
+      } else if (Math.sin(angle) < -0.15) {
+        textAnchor = 'end'
+      }
       const label = svgElement('text', {
         x: centerX + (outerRadius + 12) * Math.sin(angle),
         y: centerY - (outerRadius + 12) * Math.cos(angle),
-        'text-anchor':
-          Math.sin(angle) > 0.15 ? 'start' : Math.sin(angle) < -0.15 ? 'end' : 'middle',
+        'text-anchor': textAnchor,
         'dominant-baseline': 'middle',
       })
       label.textContent = tick.primary
