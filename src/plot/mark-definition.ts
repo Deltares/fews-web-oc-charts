@@ -17,6 +17,7 @@ export interface MarkValidationContext {
 }
 
 export interface MarkRenderContext {
+  readonly localCoordinates?: boolean
   readonly coordinateSystem: CoordinateSystem
   readonly scales: Readonly<Record<string, ScaleBinding>>
   readonly plot: Readonly<Region>

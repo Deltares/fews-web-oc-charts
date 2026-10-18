@@ -19,6 +19,12 @@ import {
 
 export interface BarLayer extends CompositeLayer {}
 export interface BarOptions {
+  text?: {
+    format: (value: number, layerId: string, row: number) => string
+    dx?: number
+    dy?: number
+    fill?: string
+  }
   renderer: 'svg' | 'canvas'
   id?: string
   x: string
@@ -128,6 +134,7 @@ export function validateBarScales(
 export function bar(data: TableStore, initial: OptionPatch<BarOptions>): BarMark {
   if (!data || !isTableStore(data)) throw new TypeError('bar requires a createTable store.')
   const keys = [
+    'text',
     'renderer',
     'id',
     'x',
@@ -149,6 +156,22 @@ export function bar(data: TableStore, initial: OptionPatch<BarOptions>): BarMark
   ]
   const consumers = new Set<(options: Readonly<BarOptions>) => void>()
   function validate(options: Readonly<BarOptions>) {
+    if (options.text !== undefined) {
+      validateKeys(options.text, ['format', 'dx', 'dy', 'fill'], 'bar.text')
+      if (typeof options.text.format !== 'function')
+        throw new Error('bar.text.format must be a function.')
+      for (const key of ['dx', 'dy'] as const) {
+        if (options.text[key] !== undefined && !Number.isFinite(options.text[key])) {
+          throw new Error(`bar.text.${key} must be finite.`)
+        }
+      }
+      if (
+        options.text.fill !== undefined &&
+        (typeof options.text.fill !== 'string' || !options.text.fill)
+      ) {
+        throw new Error('bar.text.fill must be a non-empty string.')
+      }
+    }
     if (options.renderer !== 'svg' && options.renderer !== 'canvas')
       throw new Error('bar.renderer must be svg or canvas.')
     if (options.id !== undefined && (typeof options.id !== 'string' || !options.id))

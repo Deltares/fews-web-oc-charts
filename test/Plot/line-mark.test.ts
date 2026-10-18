@@ -384,7 +384,7 @@ describe('static line marks', () => {
     )
   })
 
-  test('validates line values and rejects polar use', () => {
+  test('validates line values and rejects polar areas', () => {
     expect(() => line({ x: 'x', y: 'y', xValues: [0], yValues: [] })).toThrow(/equal lengths/)
     expect(() => line({ x: 'x', y: 'y', xValues: [0], yValues: [1], strokeWidth: 0 })).toThrow(
       /positive finite/,
@@ -408,8 +408,8 @@ describe('static line marks', () => {
     expect(() =>
       createPolarPlot(element, {
         scales: { theta: angularScale(), radius: radialScale() },
-        marks: [line({ x: 'theta', y: 'radius', xValues: [0], yValues: [1] })],
+        marks: [line({ x: 'theta', y: 'radius', xValues: [0], yValues: [1], area: { to: 0 } })],
       }),
-    ).toThrow(/cartesian plots only/)
+    ).toThrow(/Polar series areas require band/)
   })
 })

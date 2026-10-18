@@ -3,9 +3,18 @@ import type { ReadonlySignal } from '../core/reactive.js'
 import { optionSignal } from '../core/runtime.js'
 import { validateKeys } from '../core/validation.js'
 import { isSeriesStore, type SeriesStore } from '../data-store/series.js'
-import { line, type LineAreaOptions, type LineMarkerOptions, type LineMark } from './line.js'
+import {
+  line,
+  type LineAreaOptions,
+  type LineMarkerOptions,
+  type LineMark,
+  type LineOptions,
+} from './line.js'
 
-export interface SeriesLineOptions {
+export interface SeriesLineOptions extends Pick<
+  LineOptions,
+  'strokeDasharray' | 'strokeLinecap' | 'strokeLinejoin' | 'digits' | 'vectorEffect'
+> {
   stroke?: string
   width?: number
 }
@@ -51,14 +60,26 @@ function visual(options: Readonly<SeriesOptions>): LineMark {
   if (options.line !== false) {
     if (!options.line || typeof options.line !== 'object' || Array.isArray(options.line))
       throw new TypeError('series.line must be false or options.')
-    validateKeys(options.line, ['stroke', 'width'], 'series.line')
+    validateKeys(
+      options.line,
+      [
+        'stroke',
+        'width',
+        'strokeDasharray',
+        'strokeLinecap',
+        'strokeLinejoin',
+        'digits',
+        'vectorEffect',
+      ],
+      'series.line',
+    )
   }
   if (options.markers !== false) {
     if (!options.markers || typeof options.markers !== 'object' || Array.isArray(options.markers))
       throw new TypeError('series.markers must be false or options.')
     validateKeys(
       options.markers,
-      ['symbol', 'size', 'fill', 'stroke', 'strokeWidth'],
+      ['symbol', 'size', 'fill', 'stroke', 'strokeWidth', 'symbolSize', 'skip'],
       'series.markers',
     )
     if (options.markers.symbol !== undefined && options.markers.symbol !== 'circle') {
@@ -73,6 +94,8 @@ function visual(options: Readonly<SeriesOptions>): LineMark {
           fill: options.markers.fill,
           stroke: options.markers.stroke,
           strokeWidth: options.markers.strokeWidth,
+          symbolSize: options.markers.symbolSize,
+          skip: options.markers.skip,
         }
   return line({
     id: options.id,
@@ -83,6 +106,11 @@ function visual(options: Readonly<SeriesOptions>): LineMark {
     line: options.line !== false,
     stroke: options.line === false ? undefined : options.line.stroke,
     strokeWidth: options.line === false ? undefined : options.line.width,
+    strokeDasharray: options.line === false ? undefined : options.line.strokeDasharray,
+    strokeLinecap: options.line === false ? undefined : options.line.strokeLinecap,
+    strokeLinejoin: options.line === false ? undefined : options.line.strokeLinejoin,
+    digits: options.line === false ? undefined : options.line.digits,
+    vectorEffect: options.line === false ? undefined : options.line.vectorEffect,
     markers,
     area: options.area === false ? undefined : options.area,
   })
@@ -131,6 +159,21 @@ export function series(
     },
     get strokeWidth() {
       return rendered.strokeWidth
+    },
+    get strokeDasharray() {
+      return rendered.strokeDasharray
+    },
+    get strokeLinecap() {
+      return rendered.strokeLinecap
+    },
+    get strokeLinejoin() {
+      return rendered.strokeLinejoin
+    },
+    get digits() {
+      return rendered.digits
+    },
+    get vectorEffect() {
+      return rendered.vectorEffect
     },
     get line() {
       return rendered.line

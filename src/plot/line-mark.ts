@@ -1,4 +1,5 @@
 import type { ThemeTokens } from '../theme/theme.js'
+import { symbol, symbolCircle } from 'd3'
 import { isLineMark, validateLineValuesForScale, type LineMark } from './line.js'
 import { isSeriesMark, validateSeriesUpdates, type SeriesMark } from './series.js'
 import { svgElement } from './render-axes.js'
@@ -18,20 +19,21 @@ import {
 } from './mark-definition.js'
 
 type LineLikeMark = LineMark | SeriesMark
+let nextSymbolId = 0
 
 function validateLineLike(mark: LineLikeMark, context: MarkValidationContext, dataBacked: boolean) {
-  if (context.coordinateSystem === 'polar') {
-    throw new Error('line() marks are supported on cartesian plots only.')
-  }
+  const polar = context.coordinateSystem === 'polar'
   const { scales } = context
   if (!Object.hasOwn(scales, mark.x) || !Object.hasOwn(scales, mark.y)) {
     throw new Error(`line "${mark.id ?? ''}" references a missing x or y scale.`)
   }
-  if (context.direction(mark.x) !== 'x') {
-    throw new Error(`line "${mark.id ?? ''}" requires an x-direction scale.`)
+  if (context.direction(mark.x) !== (polar ? 'angular' : 'x')) {
+    throw new Error(
+      `line "${mark.id ?? ''}" requires an ${polar ? 'angular' : 'x'}-direction scale.`,
+    )
   }
-  if (context.direction(mark.y) !== 'y') {
-    throw new Error(`line "${mark.id ?? ''}" requires a y-direction scale.`)
+  if (context.direction(mark.y) !== (polar ? 'radial' : 'y')) {
+    throw new Error(`line "${mark.id ?? ''}" requires a ${polar ? 'radial' : 'y'}-direction scale.`)
   }
   if (isLineMark(mark)) {
     validateLineValuesForScale(mark, 'x', scales[mark.x].kind)
@@ -43,6 +45,7 @@ function validateLineLike(mark: LineLikeMark, context: MarkValidationContext, da
     )
   }
   if (mark.area) {
+    if (polar) throw new Error('Polar series areas require band() interval marks.')
     const expected = scales[mark.y].kind === 'band' ? 'string' : 'number'
     if (typeof mark.area.to !== expected) {
       throw new TypeError(
@@ -93,6 +96,8 @@ function createLineRenderer(): MarkRenderer<LineLikeMark> {
   })
   let areaPath: SVGPathElement | undefined
   let markerGroup: SVGGElement | undefined
+  const symbolId = `fews-line-symbol-${nextSymbolId++}`
+  let symbolPath: SVGPathElement | undefined
   const geometryKey = createKeyCache()
   const styleKey = createKeyCache()
 
@@ -124,19 +129,34 @@ function createLineRenderer(): MarkRenderer<LineLikeMark> {
       const store = isSeriesMark(mark) ? mark.data : undefined
       const staticMark = isLineMark(mark) ? mark : undefined
       const visible = !isSeriesMark(mark) || mark.visible
+      const polar = context.coordinateSystem === 'polar'
+      const angular = xScale.scale.options.get().resolved
       const key = [
         mark,
         store?.version,
         visible,
         mark.line,
         Boolean(mark.markers),
+        mark.markers?.symbolSize,
+        mark.markers?.skip,
+        mark.digits,
         mark.area?.to,
         ...scaleKey(xScale),
         ...scaleKey(yScale),
+        ...(polar ? [context.plot.x, context.plot.y, context.plot.width, context.plot.height] : []),
       ]
       if (!geometryKey.changed(key)) return
       styleKey.clear()
       syncOptionalNodes(mark)
+      for (const node of [path, markerGroup]) {
+        if (!node) continue
+        if (polar) {
+          node.setAttribute(
+            'transform',
+            `translate(${context.plot.x + context.plot.width / 2},${context.plot.y + context.plot.height / 2}) rotate(${((angular.intercept ?? 0) * 180) / Math.PI}) scale(${angular.direction === 'anticlockwise' ? -1 : 1},1)`,
+          )
+        } else node.removeAttribute('transform')
+      }
       let data = ''
       let areaData = ''
       let drawingSegment = false
@@ -144,6 +164,39 @@ function createLineRenderer(): MarkRenderer<LineLikeMark> {
       let lastX = 0
       const baseline = mark.area ? yScale.project(mark.area.to) : 0
       let markerIndex = 0
+      let symbolData = ''
+      const symbolSize = mark.markers?.symbolSize
+      if (markerGroup && symbolSize !== undefined) {
+        markerGroup.replaceChildren()
+        const definitions = svgElement('defs')
+        const marker = svgElement('marker', {
+          id: symbolId,
+          fill: 'context-fill',
+          stroke: 'context-stroke',
+          markerWidth: symbolSize,
+          markerHeight: symbolSize,
+          refX: symbolSize / 2,
+          refY: symbolSize / 2,
+        })
+        marker.append(
+          svgElement('path', {
+            d: symbol(symbolCircle, symbolSize)() ?? '',
+            transform: `translate(${symbolSize / 2},${symbolSize / 2})`,
+          }),
+        )
+        definitions.append(marker)
+        symbolPath = svgElement('path', {
+          'fill-opacity': 0,
+          'stroke-opacity': 0,
+          'marker-start': `url(#${symbolId})`,
+          'marker-mid': `url(#${symbolId})`,
+          'marker-end': `url(#${symbolId})`,
+        })
+        markerGroup.append(definitions, symbolPath)
+      } else {
+        symbolPath = undefined
+        if (markerGroup?.querySelector('defs')) markerGroup.replaceChildren()
+      }
       const length = visible ? (store?.length ?? staticMark?.xValues.length ?? 0) : 0
       for (let index = 0; index < length; index += 1) {
         const xValue = store ? store.xAt(index) : staticMark?.xValues[index]
@@ -154,8 +207,12 @@ function createLineRenderer(): MarkRenderer<LineLikeMark> {
           segmentCount = 0
           continue
         }
-        const x = xScale.project(xValue)
-        const y = yScale.project(yValue)
+        const round = (value: number) =>
+          mark.digits === undefined ? value : Number(value.toFixed(mark.digits))
+        const angle = polar ? xScale.project(xValue) : 0
+        const radius = polar ? yScale.project(yValue) : 0
+        const x = round(polar ? radius * Math.sin(angle) : xScale.project(xValue))
+        const y = round(polar ? -radius * Math.cos(angle) : yScale.project(yValue))
         data += `${drawingSegment ? 'L' : 'M'}${x},${y}`
         if (mark.area) {
           if (drawingSegment) {
@@ -167,14 +224,18 @@ function createLineRenderer(): MarkRenderer<LineLikeMark> {
           }
           lastX = x
         }
-        if (markerGroup) {
-          let marker = markerGroup.children[markerIndex] as SVGCircleElement | undefined
-          if (!marker) {
-            marker = svgElement('circle', { 'data-mark': 'marker' })
-            markerGroup.append(marker)
+        if (markerGroup && index % (mark.markers?.skip ?? 1) === 0) {
+          if (symbolPath) {
+            symbolData += `${markerIndex ? 'L' : 'M'}${x},${y}`
+          } else {
+            let marker = markerGroup.children[markerIndex] as SVGCircleElement | undefined
+            if (!marker) {
+              marker = svgElement('circle', { 'data-mark': 'marker' })
+              markerGroup.append(marker)
+            }
+            marker.setAttribute('cx', String(x))
+            marker.setAttribute('cy', String(y))
           }
-          marker.setAttribute('cx', String(x))
-          marker.setAttribute('cy', String(y))
           markerIndex += 1
         }
         drawingSegment = true
@@ -184,7 +245,9 @@ function createLineRenderer(): MarkRenderer<LineLikeMark> {
       path.setAttribute('display', mark.line ? '' : 'none')
       areaPath?.setAttribute('d', areaData)
       if (markerGroup) {
-        while (markerGroup.children.length > markerIndex) markerGroup.lastElementChild?.remove()
+        if (symbolPath) symbolPath.setAttribute('d', symbolData + (markerIndex === 1 ? 'Z' : ''))
+        else
+          while (markerGroup.children.length > markerIndex) markerGroup.lastElementChild?.remove()
       }
     },
     style(mark: LineLikeMark, tokens: ThemeTokens) {
@@ -192,13 +255,23 @@ function createLineRenderer(): MarkRenderer<LineLikeMark> {
       if (!styleKey.changed(key)) return
       path.setAttribute('stroke', mark.stroke ?? accent(tokens))
       path.setAttribute('stroke-width', String(mark.strokeWidth))
+      for (const [name, value] of [
+        ['vector-effect', mark.vectorEffect ?? 'non-scaling-stroke'],
+        ['stroke-linecap', mark.strokeLinecap ?? 'round'],
+        ['stroke-linejoin', mark.strokeLinejoin ?? 'round'],
+      ]) {
+        if (path.getAttribute(name) !== value) path.setAttribute(name, value)
+      }
+      if (mark.strokeDasharray === undefined) path.removeAttribute('stroke-dasharray')
+      else path.setAttribute('stroke-dasharray', mark.strokeDasharray)
       if (areaPath) {
         areaPath.setAttribute('fill', mark.area?.fill || mark.stroke || accent(tokens))
         areaPath.setAttribute('fill-opacity', String(mark.area?.opacity ?? 0))
         areaPath.setAttribute('stroke', 'none')
       }
       if (markerGroup) {
-        for (const marker of markerGroup.children) {
+        const markers = symbolPath ? [symbolPath] : markerGroup.children
+        for (const marker of markers) {
           marker.setAttribute('r', String(mark.markers?.size ?? 0))
           marker.setAttribute('fill', mark.markers?.fill || mark.stroke || accent(tokens))
           marker.setAttribute('stroke', mark.markers?.stroke ?? 'none')

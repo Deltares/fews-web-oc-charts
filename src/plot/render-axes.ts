@@ -3,17 +3,11 @@ import type { PlotLayout } from '../layout/layout.js'
 import type { ScaleBinding, ScaleValue } from '../scales/scale.js'
 import type { ThemeTokens } from '../theme/theme.js'
 import { formatZonedTickLabels } from '../time/zoned-time.js'
+import { renderClassicAxis } from './classic-axis.js'
+import { renderClassicPolarAxes } from './classic-polar-axis.js'
 
-export const svgNamespace = 'http://www.w3.org/2000/svg'
-
-export function svgElement<K extends keyof SVGElementTagNameMap>(
-  tag: K,
-  attributes: Record<string, string | number> = {},
-): SVGElementTagNameMap[K] {
-  const element = document.createElementNS(svgNamespace, tag)
-  for (const [name, value] of Object.entries(attributes)) element.setAttribute(name, String(value))
-  return element
-}
+import { svgElement } from './svg.js'
+export { svgElement, svgNamespace } from './svg.js'
 
 export function tickFormatter(
   binding: ScaleBinding,
@@ -84,7 +78,20 @@ export function renderAxes(
       'data-position': axis.options.get().resolved.position,
       fill: 'currentColor',
     })
-    renderCartesianAxis(group, gridLayer, axis, bindings[axis.scale], regions, index, theme)
+    if (axis.options.get().resolved.style === 'classic') {
+      renderClassicAxis(group, gridLayer, axis, bindings[axis.scale], regions, bindings)
+    } else {
+      renderCartesianAxis(
+        group,
+        gridLayer,
+        axis,
+        bindings[axis.scale],
+        regions,
+        index,
+        theme,
+        bindings,
+      )
+    }
     axesLayer.append(group)
   })
 }
@@ -207,11 +214,15 @@ function renderCartesianAxis(
   regions: PlotLayout,
   index: number,
   theme: ThemeTokens,
+  bindings: Readonly<Record<string, ScaleBinding>>,
 ) {
   const options = axis.options.get().resolved
   const plot = regions.plot
   const band = regions.axes[index]
   const geometry = cartesianGeometry(options.position, band)
+  if (options.crossAt) {
+    geometry.baseline = bindings[options.crossAt.scale].project(options.crossAt.value)
+  }
   const { horizontal, baseline } = geometry
   group.append(
     svgElement('line', {
@@ -340,6 +351,10 @@ export function renderPolarAxes(
 ) {
   axesLayer.replaceChildren()
   gridLayer.replaceChildren()
+  if (axes.some((axis) => axis.options.get().resolved.style === 'classic')) {
+    renderClassicPolarAxes(axesLayer, gridLayer, axes, bindings, regions)
+    return
+  }
   const plot = regions.plot
   const angularAxis = axes.find((axis) => axis.options.get().resolved.position === 'angular')
   const radialAxis = axes.find((axis) => axis.options.get().resolved.position === 'radial')

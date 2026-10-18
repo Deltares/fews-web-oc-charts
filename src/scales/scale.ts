@@ -31,6 +31,8 @@ export interface ScaleOptions {
   includeZero: boolean
   symmetric: boolean
   padding: number
+  paddingInner?: number
+  paddingOuter?: number
   timeZone: string
   locale: string
   direction?: PolarDirection
@@ -159,6 +161,12 @@ function createScale(kind: ScaleKind, initial: OptionPatch<ScaleOptions>): Scale
     }
     finiteNonnegative(options.padding, 'scale.padding')
     if (options.padding >= 1) throw new Error('scale.padding must be less than 1.')
+    for (const key of ['paddingInner', 'paddingOuter'] as const) {
+      if (options[key] === undefined) continue
+      if (kind !== 'band') throw new Error(`scale.${key} requires a band scale.`)
+      finiteNonnegative(options[key], `scale.${key}`)
+      if (options[key] >= 1) throw new Error(`scale.${key} must be less than 1.`)
+    }
     if (kind !== 'linear' && (options.includeZero || options.symmetric)) {
       throw new Error('scale.includeZero and scale.symmetric require a linear scale.')
     }
@@ -181,7 +189,7 @@ function createScale(kind: ScaleKind, initial: OptionPatch<ScaleOptions>): Scale
       : {}),
     ...(kind === 'radial' ? { innerRadius: 0 } : {}),
   })
-  const keys = [...Object.keys(defaults()), 'domain']
+  const keys = [...Object.keys(defaults()), 'domain', 'paddingInner', 'paddingOuter']
   validateKeys(initial, keys, 'scale')
   const state = createOptionState<ScaleOptions>(initial, { defaults, validate })
   const optionState = optionSignal(state)
@@ -327,6 +335,8 @@ export function bindScale(scale: ScaleHandle, range: ReadonlySignal<ScaleRange>)
         .domain([...domain])
         .range(pixels)
         .padding(config.padding)
+        .paddingInner(config.paddingInner ?? config.padding)
+        .paddingOuter(config.paddingOuter ?? config.padding)
     }
     return scaleLinear().domain(domain.map(Number)).range(pixels)
   })

@@ -14,6 +14,7 @@ export function renderBars(
   scales: Readonly<Record<string, ScaleBinding>>,
 ) {
   const rectangles = barRectangles(mark, scales)
+  group.querySelectorAll('[data-mark="bar-label"]').forEach((node) => node.remove())
   if (mark.options.get().resolved.renderer === 'canvas') {
     renderCompositeCanvas(
       group,
@@ -23,6 +24,7 @@ export function renderBars(
         return { layerId: rectangle.layerId, path }
       }),
     )
+    renderBarLabels(group, mark, rectangles)
     return
   }
   clearCompositeCanvas(group)
@@ -42,6 +44,35 @@ export function renderBars(
     group.append(node)
   }
   for (const node of existing.values()) node.remove()
+  renderBarLabels(group, mark, rectangles)
+}
+
+function renderBarLabels(
+  group: SVGGElement,
+  mark: BarMark,
+  rectangles: ReturnType<typeof barRectangles>,
+) {
+  const options = mark.options.get().resolved
+  if (!options.text) return
+  const layers = new Map(barLayers(options).map((layer) => [layer.id, layer]))
+  for (const rectangle of rectangles) {
+    const layer = layers.get(rectangle.layerId)!
+    const value = Number(mark.data.valueAt(layer.y, rectangle.row))
+    const text = options.text.format(value, layer.id, rectangle.row)
+    if (typeof text !== 'string') throw new Error('bar.text.format must return a string.')
+    const horizontal = options.orientation === 'horizontal'
+    const label = svgElement('text', {
+      'data-mark': 'bar-label',
+      x: horizontal ? rectangle.x + rectangle.width : rectangle.x + rectangle.width / 2,
+      y: horizontal ? rectangle.y + rectangle.height / 2 : rectangle.y,
+      dx: options.text.dx ?? 0,
+      dy: options.text.dy ?? 0,
+      'text-anchor': horizontal ? 'start' : 'middle',
+      fill: options.text.fill ?? 'currentColor',
+    })
+    label.textContent = text
+    group.append(label)
+  }
 }
 
 export function styleBars(group: SVGGElement, mark: BarMark, accent: string) {
@@ -49,6 +80,7 @@ export function styleBars(group: SVGGElement, mark: BarMark, accent: string) {
   const layers = new Map(barLayers(options).map((layer) => [layer.id, layer]))
   if (styleCompositeCanvas(group, layers, options, accent)) return
   for (const node of group.children) {
+    if (node.getAttribute('data-mark') === 'bar-label') continue
     const layer = layers.get(node.getAttribute('data-layer-id')!)
     if (!layer) throw new Error('Missing bar layer for rendered segment.')
     node.setAttribute('fill', layer.fill ?? options.fill ?? `var(--fews-chart-accent, ${accent})`)

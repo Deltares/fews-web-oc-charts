@@ -8,6 +8,7 @@ import exampleDataComplete from './example-data.json'
 
 import { AxisType, CartesianAxes, ChartMatrix, TooltipAnchor } from '@lib'
 import { generateExampleTimeSeriesData } from '@shared'
+import { exampleRandom } from '@shared/random'
 
 interface ExampleMatrixData {
   i: number
@@ -20,9 +21,10 @@ function generateExampleMatrix(
   fractionNull: number,
 ): ExampleMatrixData[] {
   const data = []
+  const random = exampleRandom()
   for (let i = 0; i < numRows; i++) {
     for (let j = 0; j < numCols; j++) {
-      const value = Math.random() < fractionNull ? null : Math.random()
+      const value = random() < fractionNull ? null : random()
       data.push({ i, j, value })
     }
   }
