@@ -227,13 +227,21 @@ function validatePlotMark(
   }
   validateLineValuesForScale(mark, 'x', options.scales[mark.x].kind)
   validateLineValuesForScale(mark, 'y', options.scales[mark.y].kind)
+  if (mark.area) {
+    const expected = options.scales[mark.y].kind === 'band' ? 'string' : 'number'
+    if (typeof mark.area.to !== expected) {
+      throw new TypeError(
+        `line "${mark.id ?? ''}" area.to must be a ${expected} for ${options.scales[mark.y].kind} scale "${mark.y}".`,
+      )
+    }
+  }
 }
 
 function validatePlotMarks(options: PlotOptions, coordinateSystem: CoordinateSystem) {
   const markIds = new Set<string>()
   for (const mark of options.marks) {
     validatePlotMark(mark, options, coordinateSystem)
-    if (mark.id && markIds.has(mark.id)) throw new Error(`Duplicate line id "${mark.id}".`)
+    if (mark.id && markIds.has(mark.id)) throw new Error(`Duplicate mark id "${mark.id}".`)
     if (mark.id) markIds.add(mark.id)
   }
 }
@@ -329,7 +337,9 @@ function createPlotInternal(
   clipPath.append(clipRect)
   definitions.append(clipPath)
   marksLayer.setAttribute('clip-path', `url(#${clipId})`)
+  const areaPaths: (SVGPathElement | undefined)[] = []
   const linePaths: SVGPathElement[] = []
+  const markerGroups: (SVGGElement | undefined)[] = []
   element.append(background, definitions, gridLayer, marksLayer, axesLayer, title)
 
   function renderMarkGeometry(current: PlotOptions) {
@@ -344,14 +354,51 @@ function createPlotInternal(
           'data-mark': 'line',
         })
         linePaths.push(path)
+        areaPaths.push(undefined)
+        markerGroups.push(undefined)
         marksLayer.append(path)
+      }
+      let areaPath = areaPaths[markIndex]
+      if (mark.area && !areaPath) {
+        areaPath = svgElement('path', {
+          'data-mark': 'area',
+          'fill-rule': 'evenodd',
+        })
+        areaPaths[markIndex] = areaPath
+        marksLayer.insertBefore(areaPath, path)
+      } else if (!mark.area && areaPath) {
+        areaPath.remove()
+        areaPaths[markIndex] = undefined
+        areaPath = undefined
+      }
+      let markerGroup = markerGroups[markIndex]
+      if (mark.markers && !markerGroup) {
+        markerGroup = svgElement('g', { 'data-mark': 'markers' })
+        markerGroups[markIndex] = markerGroup
+        path.after(markerGroup)
+      } else if (!mark.markers && markerGroup) {
+        markerGroup.remove()
+        markerGroups[markIndex] = undefined
+        markerGroup = undefined
       }
       if (mark.id) path.dataset.markId = mark.id
       else delete path.dataset.markId
+      if (mark.id) {
+        if (areaPath) areaPath.dataset.markId = mark.id
+        if (markerGroup) markerGroup.dataset.markId = mark.id
+      } else {
+        if (areaPath) delete areaPath.dataset.markId
+        if (markerGroup) delete markerGroup.dataset.markId
+      }
       const xScale = localScales[mark.x]
       const yScale = localScales[mark.y]
       let data = ''
+      let areaData = ''
       let drawingSegment = false
+      let segmentCount = 0
+      let lastX = 0
+      const baseline = mark.area ? yScale.project(mark.area.to) : 0
+      let markerIndex = 0
       for (let index = 0; index < mark.xValues.length; index += 1) {
         const xValue = mark.xValues[index]
         const yValue = mark.yValues[index]
@@ -364,16 +411,47 @@ function createPlotInternal(
           (typeof yValue === 'number' && !Number.isFinite(yValue))
         ) {
           drawingSegment = false
+          if (segmentCount > 1) areaData += `L${lastX},${baseline}Z`
+          segmentCount = 0
           continue
         }
         const x = xScale.project(xValue)
         const y = yScale.project(yValue)
         data += `${drawingSegment ? 'L' : 'M'}${x},${y}`
+        if (mark.area) {
+          if (drawingSegment) {
+            areaData += `L${x},${y}`
+            segmentCount += 1
+          } else {
+            segmentCount = 1
+            areaData += `M${x},${baseline}L${x},${y}`
+          }
+          lastX = x
+        }
+        if (mark.markers && markerGroup) {
+          let marker = markerGroup.children[markerIndex] as SVGCircleElement | undefined
+          if (!marker) {
+            marker = svgElement('circle', { 'data-mark': 'marker' })
+            markerGroup.append(marker)
+          }
+          marker.setAttribute('cx', String(x))
+          marker.setAttribute('cy', String(y))
+          markerIndex += 1
+        }
         drawingSegment = true
       }
+      if (segmentCount > 1) areaData += `L${lastX},${baseline}Z`
       path.setAttribute('d', data)
+      areaPath?.setAttribute('d', areaData)
+      if (markerGroup) {
+        while (markerGroup.children.length > markerIndex) markerGroup.lastElementChild?.remove()
+      }
     })
-    while (linePaths.length > current.marks.length) linePaths.pop()?.remove()
+    while (linePaths.length > current.marks.length) {
+      linePaths.pop()?.remove()
+      areaPaths.pop()
+      markerGroups.pop()
+    }
   }
 
   function renderMarkStyles(current: PlotOptions, tokens: ThemeTokens) {
@@ -381,6 +459,27 @@ function createPlotInternal(
       const path = linePaths[markIndex]
       path.setAttribute('stroke', mark.stroke ?? `var(--fews-chart-accent, ${tokens.accent})`)
       path.setAttribute('stroke-width', String(mark.strokeWidth))
+      const areaPath = areaPaths[markIndex]
+      if (areaPath) {
+        areaPath.setAttribute(
+          'fill',
+          mark.area?.fill || mark.stroke || `var(--fews-chart-accent, ${tokens.accent})`,
+        )
+        areaPath.setAttribute('fill-opacity', String(mark.area?.opacity ?? 0))
+        areaPath.setAttribute('stroke', 'none')
+      }
+      const markerGroup = markerGroups[markIndex]
+      if (markerGroup) {
+        for (const marker of markerGroup.children) {
+          marker.setAttribute('r', String(mark.markers?.size ?? 0))
+          marker.setAttribute(
+            'fill',
+            mark.markers?.fill || mark.stroke || `var(--fews-chart-accent, ${tokens.accent})`,
+          )
+          marker.setAttribute('stroke', mark.markers?.stroke ?? 'none')
+          marker.setAttribute('stroke-width', String(mark.markers?.strokeWidth ?? 0))
+        }
+      }
     })
   }
 
@@ -646,7 +745,9 @@ function createPlotInternal(
       axisValidators.clear()
       cancelRender(render)
       bindings.clear()
+      areaPaths.length = 0
       linePaths.length = 0
+      markerGroups.length = 0
       localScales = Object.freeze({})
       axisWidths.clear()
       measurer.clear()

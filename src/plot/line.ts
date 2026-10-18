@@ -4,6 +4,19 @@ import { validateKeys } from '../core/validation.js'
 export type LineValue = ScaleValue | null | undefined
 export type LineValues = ArrayLike<LineValue>
 
+export interface LineMarkerOptions {
+  size?: number
+  fill?: string
+  stroke?: string
+  strokeWidth?: number
+}
+
+export interface LineAreaOptions {
+  to: ScaleValue
+  fill?: string
+  opacity?: number
+}
+
 export interface LineOptions {
   id?: string
   x: string
@@ -12,6 +25,8 @@ export interface LineOptions {
   yValues: LineValues
   stroke?: string
   strokeWidth?: number
+  markers?: boolean | LineMarkerOptions
+  area?: LineAreaOptions
 }
 
 export interface LineMark {
@@ -22,6 +37,8 @@ export interface LineMark {
   readonly yValues: LineValues
   readonly stroke: string | undefined
   readonly strokeWidth: number
+  readonly markers: Readonly<Required<LineMarkerOptions>> | undefined
+  readonly area: Readonly<Required<LineAreaOptions>> | undefined
 }
 
 const lineMarks = new WeakSet<object>()
@@ -69,7 +86,11 @@ export function validateLineValuesForScale(
 
 export function line(options: LineOptions): LineMark {
   if (!options || typeof options !== 'object') throw new Error('line options must be an object.')
-  validateKeys(options, ['id', 'x', 'y', 'xValues', 'yValues', 'stroke', 'strokeWidth'], 'line')
+  validateKeys(
+    options,
+    ['id', 'x', 'y', 'xValues', 'yValues', 'stroke', 'strokeWidth', 'markers', 'area'],
+    'line',
+  )
   if (options.id !== undefined && (typeof options.id !== 'string' || options.id.length === 0)) {
     throw new Error('line.id must be a non-empty string.')
   }
@@ -91,6 +112,68 @@ export function line(options: LineOptions): LineMark {
   if (!Number.isFinite(strokeWidth) || strokeWidth <= 0) {
     throw new Error('line.strokeWidth must be a positive finite number.')
   }
+  let markers: Readonly<Required<LineMarkerOptions>> | undefined
+  if (options.markers !== undefined && options.markers !== false) {
+    const markerOptions = options.markers === true ? {} : options.markers
+    if (!markerOptions || typeof markerOptions !== 'object' || Array.isArray(markerOptions)) {
+      throw new Error('line.markers must be a boolean or an options object.')
+    }
+    validateKeys(markerOptions, ['size', 'fill', 'stroke', 'strokeWidth'], 'line.markers')
+    const size = markerOptions.size ?? 4
+    const markerStrokeWidth = markerOptions.strokeWidth ?? 0
+    for (const [key, value] of [
+      ['size', size],
+      ['strokeWidth', markerStrokeWidth],
+    ] as const) {
+      if (!Number.isFinite(value) || value < 0 || (key === 'size' && value === 0)) {
+        throw new Error(
+          `line.markers.${key} must be a ${key === 'size' ? 'positive' : 'nonnegative'} finite number.`,
+        )
+      }
+    }
+    for (const key of ['fill', 'stroke'] as const) {
+      if (
+        markerOptions[key] !== undefined &&
+        (typeof markerOptions[key] !== 'string' || !markerOptions[key])
+      ) {
+        throw new Error(`line.markers.${key} must be a non-empty string.`)
+      }
+    }
+    markers = Object.freeze({
+      size,
+      fill: markerOptions.fill ?? '',
+      stroke: markerOptions.stroke ?? 'none',
+      strokeWidth: markerStrokeWidth,
+    })
+  }
+  let area: Readonly<Required<LineAreaOptions>> | undefined
+  if (options.area !== undefined) {
+    if (!options.area || typeof options.area !== 'object' || Array.isArray(options.area)) {
+      throw new Error('line.area must be an options object.')
+    }
+    validateKeys(options.area, ['to', 'fill', 'opacity'], 'line.area')
+    if (
+      (typeof options.area.to !== 'number' && typeof options.area.to !== 'string') ||
+      (typeof options.area.to === 'number' && !Number.isFinite(options.area.to))
+    ) {
+      throw new Error('line.area.to must be a finite number or string.')
+    }
+    if (
+      options.area.fill !== undefined &&
+      (typeof options.area.fill !== 'string' || !options.area.fill)
+    ) {
+      throw new Error('line.area.fill must be a non-empty string.')
+    }
+    const opacity = options.area.opacity ?? 0.2
+    if (!Number.isFinite(opacity) || opacity < 0 || opacity > 1) {
+      throw new Error('line.area.opacity must be between 0 and 1.')
+    }
+    area = Object.freeze({
+      to: options.area.to,
+      fill: options.area.fill ?? '',
+      opacity,
+    })
+  }
 
   const mark = Object.freeze({
     id: options.id,
@@ -100,6 +183,8 @@ export function line(options: LineOptions): LineMark {
     yValues: options.yValues,
     stroke: options.stroke,
     strokeWidth,
+    markers,
+    area,
   })
   lineMarks.add(mark)
   return mark

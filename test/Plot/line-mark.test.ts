@@ -201,6 +201,83 @@ describe('static line marks', () => {
     expect(first.getAttribute('d')).toContain(`${current.scales.t.project(1)}`)
   })
 
+  test('renders line, baseline area and markers together while preserving data gaps', async () => {
+    const current = plot(host(), {
+      scales: {
+        x: linear({ domain: [0, 4] }),
+        y: linear({ domain: [0, 10] }),
+      },
+      directions: { x: 'x' },
+      marks: [
+        line({
+          id: 'observed',
+          x: 'x',
+          y: 'y',
+          xValues: [0, 1, 2, 3, 4],
+          yValues: [1, 2, Number.NaN, 4, 5],
+          stroke: '#1677a6',
+          markers: { size: 5, fill: '#ffffff', stroke: '#1677a6', strokeWidth: 1 },
+          area: { to: 0, opacity: 0.3 },
+        }),
+      ],
+    })
+    await frame()
+
+    const linePath = current.element.querySelector<SVGPathElement>('[data-mark="line"]')!
+    const areaPath = current.element.querySelector<SVGPathElement>('[data-mark="area"]')!
+    const markerGroup = current.element.querySelector<SVGGElement>('[data-mark="markers"]')!
+    const x0 = current.scales.x.project(0)
+    const x1 = current.scales.x.project(1)
+    const x3 = current.scales.x.project(3)
+    const x4 = current.scales.x.project(4)
+    const baseline = current.scales.y.project(0)
+
+    expect(linePath.getAttribute('d')).toBe(
+      `M${x0},${current.scales.y.project(1)}L${x1},${current.scales.y.project(2)}` +
+        `M${x3},${current.scales.y.project(4)}L${x4},${current.scales.y.project(5)}`,
+    )
+    expect(areaPath.getAttribute('d')).toBe(
+      `M${x0},${baseline}L${x0},${current.scales.y.project(1)}` +
+        `L${x1},${current.scales.y.project(2)}L${x1},${baseline}Z` +
+        `M${x3},${baseline}L${x3},${current.scales.y.project(4)}` +
+        `L${x4},${current.scales.y.project(5)}L${x4},${baseline}Z`,
+    )
+    expect(areaPath.getAttribute('fill-opacity')).toBe('0.3')
+    expect(markerGroup.querySelectorAll('circle')).toHaveLength(4)
+    expect(markerGroup.querySelector('circle')?.getAttribute('r')).toBe('5')
+    expect(markerGroup.querySelector('circle')?.getAttribute('fill')).toBe('#ffffff')
+    expect(markerGroup.querySelector('circle')?.getAttribute('stroke')).toBe('#1677a6')
+  })
+
+  test('removes optional series layers when replacing a marked line', async () => {
+    const current = plot(host(), {
+      scales: { x: linear({ domain: [0, 1] }), y: linear({ domain: [0, 1] }) },
+      directions: { x: 'x' },
+      marks: [
+        line({
+          id: 'series',
+          x: 'x',
+          y: 'y',
+          xValues: [0, 1],
+          yValues: [0, 1],
+          markers: true,
+          area: { to: 0 },
+        }),
+      ],
+    })
+    await frame()
+    expect(current.element.querySelector('[data-mark="area"]')).not.toBeNull()
+    expect(current.element.querySelector('[data-mark="markers"]')).not.toBeNull()
+
+    current.update({
+      marks: [line({ id: 'series', x: 'x', y: 'y', xValues: [0, 1], yValues: [1, 0] })],
+    })
+    await frame()
+    expect(current.element.querySelectorAll('[data-mark="line"]')).toHaveLength(1)
+    expect(current.element.querySelector('[data-mark="area"]')).toBeNull()
+    expect(current.element.querySelector('[data-mark="markers"]')).toBeNull()
+  })
+
   test('updates and removes marks atomically with plot configuration', async () => {
     const mark = line({ id: 'one', x: 'x', y: 'y', xValues: [0, 1], yValues: [1, 2] })
     const current = plot(host(), {
@@ -275,6 +352,12 @@ describe('static line marks', () => {
       unexpected: true,
     }
     expect(() => line(invalid)).toThrow(/line.unexpected/)
+    expect(() =>
+      line({ x: 'x', y: 'y', xValues: [0], yValues: [1], markers: { size: 0 } }),
+    ).toThrow(/markers.size/)
+    expect(() =>
+      line({ x: 'x', y: 'y', xValues: [0], yValues: [1], area: { to: 0, opacity: 2 } }),
+    ).toThrow(/area.opacity/)
 
     const element = host()
     expect(() =>
