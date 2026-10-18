@@ -423,8 +423,7 @@ support Cartesian and polar coordinate systems.
 The range `band` mark accepts aligned `xValues` and `yValues` of ascending numeric
 `[min, max]` pairs (with `null`/`undefined` gaps), drawing one rectangle per pair on
 cartesian numeric/time scales or one annular sector per pair on polar angular/radial
-scales. Its public constructor is exported as `range` and `bandMark`, because `band`
-is already the public band-scale constructor.
+scales. Its public constructor is `band` (also exported as `range`).
 
 ```ts
 interface Mark {
@@ -1150,10 +1149,10 @@ cartesian and polar interval mark implementations.
 The `v5-spike-*` examples remain separate phase 0 prototypes, not examples of the
 public v5 API.
 
-The package root now exports `createPlot`, `createPolarPlot`, `linear`, `time`, `band`,
-`degrees`, `angular`, `radial`, `sharedScale`, `axis`, `line`, `range`, `bandMark`, `layout`,
-`batch` and `untracked`, alongside the existing v4 exports. (`band` remains the band-scale
-constructor; `range` and `bandMark` construct range marks.) The tested phase 0 reactive primitives
+The package root now exports `createPlot`, `createPolarPlot`, `linearScale`, `timeScale`,
+`bandScale`, `degreesScale`, `angularScale`, `radialScale`, `sharedScale`, `axis`, `line`,
+`band` (also `range`), `layout`, `batch` and `untracked`, alongside the existing v4 exports.
+The tested phase 0 reactive primitives
 have moved into `src/core`; the spike imports remain forwarding modules so the phase 0
 fixtures keep working.
 
