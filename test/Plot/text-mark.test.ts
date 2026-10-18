@@ -133,6 +133,17 @@ describe('text marks', () => {
     expect(updatedGroup.children[0]).toBe(original)
     expect(updatedGroup.children[0].textContent).toBe('Updated')
     expect(updatedGroup.children).toHaveLength(2)
+
+    current.update({
+      marks: [text({ id: 'notes', x: 'x', y: 'y', xValues: [], yValues: [], textValues: [] })],
+    })
+    await frame()
+    expect(current.element.querySelector('[data-mark="text"]')).toBe(group)
+    expect(group.children).toHaveLength(0)
+    current.update({ marks: [] })
+    await frame()
+    expect(group.isConnected).toBe(false)
+    expect(current.element.querySelector('[data-layer="marks"]')?.children).toHaveLength(0)
   })
 
   test('validates coordinates, labels, style and cartesian scale bindings', () => {

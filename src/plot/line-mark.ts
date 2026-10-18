@@ -217,7 +217,6 @@ function createLineRenderer(): MarkRenderer<LineLikeMark> {
 export const lineDefinition: MarkDefinition<LineMark> = {
   name: 'line',
   is: isLineMark,
-  reuseByPosition: true,
   validate: (mark, context) => validateLineLike(mark, context, false),
   extents: lineExtents,
   createRenderer: createLineRenderer,
@@ -226,7 +225,6 @@ export const lineDefinition: MarkDefinition<LineMark> = {
 export const seriesDefinition: MarkDefinition<SeriesMark> = {
   name: 'series',
   is: isSeriesMark,
-  reuseByPosition: true,
   validate: (mark, context) => validateLineLike(mark, context, true),
   extents: lineExtents,
   createRenderer: createLineRenderer,

@@ -1310,7 +1310,12 @@ observed.update({ line: { stroke: undefined }, markers: false })
   categorical series and polar series are rejected synchronously.
 - Store changes schedule only their consumers, coalesced per frame. Geometry keys
   skip unrelated marks and style-only updates; explicit IDs preserve DOM resources
-  across membership changes. Removed/destroyed plots release their effects and
+  across membership changes for replacements of the same mark kind, consistently
+  for every kind. Without an ID, only the same mark handle preserves its renderer;
+  plot position never determines identity. Changing an ID or kind creates a new
+  renderer and destroys the old one's resources. Replacements rebind effects and
+  validators to the new handle even when the renderer is reused, and remove obsolete
+  child nodes (including text labels). Removed/destroyed plots release their effects and
   validators without disposing shared stores or mark handles.
 - Scale domains support shared autoscaling as described below. Block indexes, LOD,
   shared time columns across stores, ensembles, borrowed buffers, non-circle markers,
