@@ -4,6 +4,7 @@ import { reactive, optionSignal } from '../core/runtime.js'
 import type { ReadonlySignal, Signal } from '../core/reactive.js'
 import { finiteNonnegative, validateKeys } from '../core/validation.js'
 import { niceDegreeSteps } from '../Utils/niceDegreeSteps.js'
+import { zonedTicks } from '../time/zoned-time.js'
 
 export type ScaleValue = number | string
 export type ScaleKind = 'linear' | 'time' | 'band' | 'degrees'
@@ -33,7 +34,7 @@ export interface ScaleBinding {
   readonly range: ReadonlySignal<PixelRange>
   project(value: ScaleValue): number
   invert(pixel: number): number
-  ticks(count?: number): readonly ScaleValue[]
+  ticks(count?: number, timeZone?: string): readonly ScaleValue[]
   readonly bandwidth: number
 }
 
@@ -194,12 +195,13 @@ export function bindScale(scale: ScaleHandle, range: ReadonlySignal<PixelRange>)
       if (!('invert' in current)) throw new Error('Cannot invert a band scale.')
       return current.invert(pixel)
     },
-    ticks(count = 10) {
+    ticks(count = 10, timeZone = scale.options.get().resolved.timeZone) {
       if (!Number.isInteger(count) || count <= 0)
         throw new Error('scale.tickCount must be a positive integer.')
       const current = derived.get()
       if (scale.kind === 'time') {
-        return scaleUtc().domain(scale.domain.get().map(Number)).ticks(count).map(Number)
+        const [start, end] = scale.domain.get().map(Number)
+        return zonedTicks(timeZone, start, end, count)
       }
       if (scale.kind === 'degrees') {
         const [low, high] = scale.domain.get().map(Number)
