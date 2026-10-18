@@ -297,17 +297,17 @@ function createScale(kind: ScaleKind, initial: OptionPatch<ScaleOptions>): Scale
   return Object.freeze(handle)
 }
 
-export const linear = (options: OptionPatch<CartesianScaleOptions> = {}) =>
+export const linearScale = (options: OptionPatch<CartesianScaleOptions> = {}) =>
   createScale('linear', options)
-export const time = (options: OptionPatch<CartesianScaleOptions> = {}) =>
+export const timeScale = (options: OptionPatch<CartesianScaleOptions> = {}) =>
   createScale('time', options)
-export const band = (options: OptionPatch<CartesianScaleOptions> = {}) =>
+export const bandScale = (options: OptionPatch<CartesianScaleOptions> = {}) =>
   createScale('band', options)
-export const degrees = (options: OptionPatch<CartesianScaleOptions> = {}) =>
+export const degreesScale = (options: OptionPatch<CartesianScaleOptions> = {}) =>
   createScale('degrees', options)
-export const angular = (options: OptionPatch<AngularScaleOptions> = {}) =>
+export const angularScale = (options: OptionPatch<AngularScaleOptions> = {}) =>
   createScale('angular', options)
-export const radial = (options: OptionPatch<RadialScaleOptions> = {}) =>
+export const radialScale = (options: OptionPatch<RadialScaleOptions> = {}) =>
   createScale('radial', options)
 
 /** Scales are shareable by default; this documents ownership without copying state. */

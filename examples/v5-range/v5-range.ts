@@ -1,5 +1,5 @@
 import '../shared/v5.css'
-import { axis, createPlot, linear, range, time } from '@lib'
+import { axis, createPlot, linearScale, range, timeScale } from '@lib'
 
 const host = document.querySelector<HTMLElement>('#chart')
 if (!host) throw new Error('The cartesian range example is missing its chart host.')
@@ -22,8 +22,8 @@ const upperValues = Array.from({ length: 12 }, (_, index) => {
 const plot = createPlot(host, {
   title: 'Forecast ranges',
   scales: {
-    t: time({ timeZone: 'UTC' }),
-    q: linear({ includeZero: true, nice: true }),
+    t: timeScale({ timeZone: 'UTC' }),
+    q: linearScale({ includeZero: true, nice: true }),
   },
   axes: [
     axis('t', { position: 'bottom', label: 'Time (UTC)', tickCount: 5 }),

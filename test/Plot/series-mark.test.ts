@@ -1,14 +1,14 @@
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import {
   axis,
-  band,
+  bandScale,
   batch,
   createPlot,
   createSeries,
   fromObjects,
-  linear,
+  linearScale,
   series,
-  time,
+  timeScale,
   type Plot,
 } from '../../src/index.js'
 import { reactive } from '../../src/core/runtime.js'
@@ -60,7 +60,7 @@ describe('data-backed series marks', () => {
     const current = plot(host(), {
       width: 640,
       height: 360,
-      scales: { t: time({ domain: [0, 4] }), q: linear({ domain: [0, 5] }) },
+      scales: { t: timeScale({ domain: [0, 4] }), q: linearScale({ domain: [0, 5] }) },
       axes: [axis('t', { position: 'bottom' }), axis('q')],
       marks: [mark],
     })
@@ -95,7 +95,7 @@ describe('data-backed series marks', () => {
       width: 400,
       height: 200,
       directions: { x: 'x' as const },
-      scales: { x: linear({ domain: [0, 4] }), y: linear({ domain: [0, 4] }) },
+      scales: { x: linearScale({ domain: [0, 4] }), y: linearScale({ domain: [0, 4] }) },
       marks: [first, second],
     }
     const a = plot(host(), config)
@@ -141,7 +141,7 @@ describe('data-backed series marks', () => {
       width: 400,
       height: 200,
       directions: { x: 'x' },
-      scales: { x: linear(), y: linear() },
+      scales: { x: linearScale(), y: linearScale() },
       marks: [mark],
     })
     await frame()
@@ -176,10 +176,10 @@ describe('data-backed series marks', () => {
     const current = plot(host(), {
       directions: { x: 'x' },
       scales: {
-        x: linear(),
-        y: linear(),
-        y2: linear({ domain: [0, 10] }),
-        categories: band({ domain: ['a'] }),
+        x: linearScale(),
+        y: linearScale(),
+        y2: linearScale({ domain: [0, 10] }),
+        categories: bandScale({ domain: ['a'] }),
       },
       marks: [mark],
     })
@@ -193,7 +193,7 @@ describe('data-backed series marks', () => {
     expect(path(current, 'obs').getAttribute('d')).toContain(String(current.scales.y2.project(2)))
     const second = plot(host(), {
       directions: { x: 'x' },
-      scales: { x: linear(), y2: linear() },
+      scales: { x: linearScale(), y2: linearScale() },
       marks: [mark],
     })
     expect(() => mark.update({ y: 'y' })).toThrow(/missing/)
@@ -209,7 +209,7 @@ describe('data-backed series marks', () => {
     const b = series(data, { id: 'b', x: 'x', y: 'y', markers: {}, area: { to: 0 } })
     const config = {
       directions: { x: 'x' as const },
-      scales: { x: linear(), y: linear() },
+      scales: { x: linearScale(), y: linearScale() },
       marks: [a, b],
     }
     const current = plot(host(), config)

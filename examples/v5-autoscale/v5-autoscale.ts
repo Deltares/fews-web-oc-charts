@@ -4,9 +4,9 @@ import {
   batch,
   createPlot,
   createSeries,
-  linear,
+  linearScale,
   series,
-  time,
+  timeScale,
   type AutoscalePolicy,
 } from '@lib'
 
@@ -73,8 +73,8 @@ const orange = series(peakData, {
   line: { stroke: '#c45508', width: 2 },
   markers: { size: 3 },
 })
-const t = time({ domain: [start, start + 6 * hour] })
-const q = linear({ autoscale: 'visible', defaultDomain: [-20, 120] })
+const t = timeScale({ domain: [start, start + 6 * hour] })
+const q = linearScale({ autoscale: 'visible', defaultDomain: [-20, 120] })
 const plot = createPlot(host, {
   title: 'Automatic value domains',
   scales: { t, q },

@@ -1,4 +1,4 @@
-import { angular, axis, createPolarPlot, progress, radial } from '@lib'
+import { angularScale, axis, createPolarPlot, progress, radialScale } from '@lib'
 
 const host = document.querySelector<HTMLElement>('#chart')
 if (!host) throw new Error('The progress example is missing its chart host.')
@@ -7,8 +7,8 @@ const tracks = [25, 50, 75]
 const plot = createPolarPlot(host, {
   title: 'Completion progress',
   scales: {
-    completion: angular({ domain: [0, 100], range: [0, 2 * Math.PI] }),
-    track: radial({ domain: [0, 100], innerRadius: 0.22 }),
+    completion: angularScale({ domain: [0, 100], range: [0, 2 * Math.PI] }),
+    track: radialScale({ domain: [0, 100], innerRadius: 0.22 }),
   },
   axes: [axis('completion', { position: 'angular', grid: true })],
   marks: [

@@ -1,5 +1,5 @@
 import '../shared/v5.css'
-import { axis, createPlot, line, linear, time } from '@lib'
+import { axis, createPlot, line, linearScale, timeScale } from '@lib'
 
 const host = document.querySelector<HTMLElement>('#chart')
 if (!host) throw new Error('The basic-line example is missing its chart host.')
@@ -18,9 +18,9 @@ const rainfall = Float64Array.from(
 const plot = createPlot(host, {
   title: 'Discharge and rainfall',
   scales: {
-    t: time({ domain: [start, start + 12 * hour], timeZone: 'UTC' }),
-    q: linear({ domain: [0, 80], includeZero: true }),
-    rain: linear({ domain: [0, 10], includeZero: true }),
+    t: timeScale({ domain: [start, start + 12 * hour], timeZone: 'UTC' }),
+    q: linearScale({ domain: [0, 80], includeZero: true }),
+    rain: linearScale({ domain: [0, 10], includeZero: true }),
   },
   axes: [
     axis('t', { position: 'bottom', label: 'Time (UTC)', tickCount: 5 }),

@@ -1,5 +1,5 @@
 import '../shared/v5.css'
-import { axis, colorScale, createGrid, createPlot, heatmap, linear, time } from '@lib'
+import { axis, colorScale, createGrid, createPlot, heatmap, linearScale, timeScale } from '@lib'
 
 function required<T extends HTMLElement>(selector: string) {
   const element = document.querySelector<T>(selector)
@@ -24,11 +24,11 @@ const marks = [data, comparison].map((grid) =>
     renderer: renderer.value === 'canvas' ? 'canvas' : 'svg',
   }),
 )
-const levels = [linear(), linear()]
+const levels = [linearScale(), linearScale()]
 const plots = marks.map((mark, index) =>
   createPlot(required(index ? '#comparison' : '#heatmap'), {
     height: 300,
-    scales: { time: time(), level: levels[index] },
+    scales: { time: timeScale(), level: levels[index] },
     axes: [
       axis('time', { position: 'bottom' }),
       axis('level', { position: 'left', label: 'Level' }),

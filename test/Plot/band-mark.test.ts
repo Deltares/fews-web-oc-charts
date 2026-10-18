@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, test } from 'vitest'
 import {
-  angular,
+  angularScale,
   createPlot,
   createPolarPlot,
-  linear,
-  radial,
+  linearScale,
+  radialScale,
   range,
   type Plot,
 } from '../../src/index.js'
@@ -55,7 +55,7 @@ describe('band marks', () => {
     const plot = create(host(), {
       width: 400,
       height: 240,
-      scales: { x: linear(), y: linear() },
+      scales: { x: linearScale(), y: linearScale() },
       directions: { x: 'x' },
       marks: [mark],
     })
@@ -87,8 +87,8 @@ describe('band marks', () => {
       width: 400,
       height: 240,
       scales: {
-        x: linear({ domain: [0, 10] }),
-        y: linear({ domain: [0, 10] }),
+        x: linearScale({ domain: [0, 10] }),
+        y: linearScale({ domain: [0, 10] }),
       },
       directions: { x: 'x' },
       marks: [
@@ -116,8 +116,8 @@ describe('band marks', () => {
       width: 400,
       height: 240,
       scales: {
-        theta: angular({ domain: [0, 360] }),
-        distance: radial({ domain: [0, 10] }),
+        theta: angularScale({ domain: [0, 360] }),
+        distance: radialScale({ domain: [0, 10] }),
       },
       marks: [
         range({
@@ -148,7 +148,7 @@ describe('band marks', () => {
 
     expect(() =>
       create(host(), {
-        scales: { x: linear(), y: linear() },
+        scales: { x: linearScale(), y: linearScale() },
         directions: { x: 'x', y: 'x' },
         marks: [range({ x: 'x', y: 'y', xValues: [[0, 1]], yValues: [[0, 1]] })],
       }),
@@ -156,7 +156,7 @@ describe('band marks', () => {
 
     expect(() =>
       create(host(), {
-        scales: { x: linear(), y: linear() },
+        scales: { x: linearScale(), y: linearScale() },
         directions: { x: 'x' },
         marks: [range({ x: 'x', y: 'missing', xValues: [[0, 1]], yValues: [[0, 1]] })],
       }),

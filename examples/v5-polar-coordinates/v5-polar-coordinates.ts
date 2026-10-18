@@ -1,6 +1,6 @@
 import '../shared/v5.css'
 import './polar.css'
-import { angular, axis, createPolarPlot, radial, type PolarPlot } from '@lib'
+import { angularScale, axis, createPolarPlot, radialScale, type PolarPlot } from '@lib'
 
 function requiredElement<T extends Element>(selector: string): T {
   const element = document.querySelector<T>(selector)
@@ -25,12 +25,12 @@ const coordinateLabels = [
 ]
 
 const toRadians = (degrees: number) => (degrees * Math.PI) / 180
-const compassAngle = angular({ domain: [0, 360] })
-const compassRadius = radial({ domain: [0, 100] })
-const sectorAngle = angular({ domain: [0, 360] })
-const sectorRadius = radial({ domain: [0, 100] })
-const innerAngle = angular({ domain: [0, 360] })
-const innerDistance = radial({ domain: [0, 100] })
+const compassAngle = angularScale({ domain: [0, 360] })
+const compassRadius = radialScale({ domain: [0, 100] })
+const sectorAngle = angularScale({ domain: [0, 360] })
+const sectorRadius = radialScale({ domain: [0, 100] })
+const innerAngle = angularScale({ domain: [0, 360] })
+const innerDistance = radialScale({ domain: [0, 100] })
 
 function makePlot(
   host: HTMLElement,

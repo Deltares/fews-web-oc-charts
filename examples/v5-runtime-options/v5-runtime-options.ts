@@ -1,11 +1,11 @@
 import '../shared/v5.css'
 import {
   axis,
-  band,
+  bandScale,
   batch,
   createPlot,
-  degrees,
-  linear,
+  degreesScale,
+  linearScale,
   type PlotConfig,
   type ThemeMode,
 } from '@lib'
@@ -41,10 +41,10 @@ if (
   throw new Error('The runtime-option example is missing required elements.')
 }
 
-const station = band({ domain: ['Lobith', 'Nijmegen', 'Arnhem'] })
-const level = linear({ domain: [-2, 12] })
-const flow = linear({ domain: [0, 1000], includeZero: true })
-const direction = degrees()
+const station = bandScale({ domain: ['Lobith', 'Nijmegen', 'Arnhem'] })
+const level = linearScale({ domain: [-2, 12] })
+const flow = linearScale({ domain: [0, 1000], includeZero: true })
+const direction = degreesScale()
 const stationAxis = axis('station', { id: 'station', position: 'bottom', label: 'Station' })
 const levelAxis = axis('level', {
   id: 'level',

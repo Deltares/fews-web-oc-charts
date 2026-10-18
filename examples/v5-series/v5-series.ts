@@ -1,5 +1,5 @@
 import '../shared/v5.css'
-import { axis, createPlot, createSeries, linear, series, time } from '@lib'
+import { axis, createPlot, createSeries, linearScale, series, timeScale } from '@lib'
 
 const host = document.querySelector<HTMLElement>('#chart')
 const showLine = document.querySelector<HTMLInputElement>('#show-line')
@@ -34,12 +34,12 @@ const observed = series(data, {
   area: showArea.checked ? { to: 0, fill: '#1677a6', opacity: 0.18 } : false,
 })
 
-const t = time({ timeZone: 'UTC' })
+const t = timeScale({ timeZone: 'UTC' })
 const plot = createPlot(host, {
   title: 'Observed discharge',
   scales: {
     t,
-    q: linear({ autoscale: 'visible', includeZero: true, nice: true }),
+    q: linearScale({ autoscale: 'visible', includeZero: true, nice: true }),
   },
   axes: [
     axis('t', { position: 'bottom', label: 'Time (UTC)', tickCount: 5 }),

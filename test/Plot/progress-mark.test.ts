@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, test } from 'vitest'
 import {
-  angular,
+  angularScale,
   createPlot,
   createPolarPlot,
-  linear,
+  linearScale,
   progress,
-  radial,
+  radialScale,
   type Plot,
 } from '../../src/index.js'
 
@@ -35,8 +35,8 @@ describe('progress mark', () => {
   test('renders polar intervals at radial values and contributes eligible extents', async () => {
     const current = createPolarPlot(host(), {
       scales: {
-        angle: angular({ autoscale: 'data' }),
-        radius: radial(),
+        angle: angularScale({ autoscale: 'data' }),
+        radius: radialScale(),
       },
       marks: [
         progress({
@@ -76,8 +76,8 @@ describe('progress mark', () => {
     })
     const current = createPolarPlot(host(), {
       scales: {
-        angle: angular({ domain: [0, 100] }),
-        radius: radial({ domain: [0, 100] }),
+        angle: angularScale({ domain: [0, 100] }),
+        radius: radialScale({ domain: [0, 100] }),
       },
       marks: [initial],
     })
@@ -116,14 +116,14 @@ describe('progress mark', () => {
 
     expect(() =>
       createPlot(host(), {
-        scales: { angle: linear(), radius: linear() },
+        scales: { angle: linearScale(), radius: linearScale() },
         directions: { angle: 'x' },
         marks: [progress({ x: 'angle', y: 'radius', xValues: [[0, 10]], yValues: [1] })],
       }),
     ).toThrow(/polar plots only/)
     expect(() =>
       createPolarPlot(host(), {
-        scales: { angle: angular(), radius: radial() },
+        scales: { angle: angularScale(), radius: radialScale() },
         marks: [progress({ x: 'radius', y: 'angle', xValues: [[0, 10]], yValues: [1] })],
       }),
     ).toThrow(/angular and radial scales/)

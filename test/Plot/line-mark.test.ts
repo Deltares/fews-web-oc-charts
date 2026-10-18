@@ -1,14 +1,14 @@
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import {
-  angular,
+  angularScale,
   axis,
-  band,
+  bandScale,
   createPlot,
   createPolarPlot,
   line,
-  linear,
-  radial,
-  time,
+  linearScale,
+  radialScale,
+  timeScale,
   type Plot,
 } from '../../src/index.js'
 
@@ -59,7 +59,7 @@ describe('static line marks', () => {
     const current = plot(element, {
       theme: 'light',
       themeElement: element,
-      scales: { x: linear(), y: linear() },
+      scales: { x: linearScale(), y: linearScale() },
       directions: { x: 'x' },
       marks: [
         line({ x: 'x', y: 'y', xValues: [0, 1], yValues: [0, 1] }),
@@ -104,11 +104,11 @@ describe('static line marks', () => {
 
   test('rebuilds geometry and applies styles for layout and coalesced scale/theme changes', async () => {
     const element = host()
-    const x = linear()
+    const x = linearScale()
     const current = plot(element, {
       theme: 'light',
       themeElement: element,
-      scales: { x, y: linear() },
+      scales: { x, y: linearScale() },
       axes: [axis('x', { position: 'bottom' }), axis('y')],
       marks: [line({ x: 'x', y: 'y', xValues: [0, 1], yValues: [0, 1] })],
     })
@@ -161,9 +161,9 @@ describe('static line marks', () => {
   })
 
   test('renders named time/value scales, a secondary axis, and missing-value gaps', async () => {
-    const t = time({ domain: [0, 3], timeZone: 'UTC' })
-    const q = linear({ domain: [0, 100] })
-    const rain = linear({ domain: [0, 10] })
+    const t = timeScale({ domain: [0, 3], timeZone: 'UTC' })
+    const q = linearScale({ domain: [0, 100] })
+    const rain = linearScale({ domain: [0, 10] })
     const discharge = line({
       id: 'discharge',
       x: 't',
@@ -220,8 +220,8 @@ describe('static line marks', () => {
   test('renders line, baseline area and markers together while preserving data gaps', async () => {
     const current = plot(host(), {
       scales: {
-        x: linear({ domain: [0, 4] }),
-        y: linear({ domain: [0, 10] }),
+        x: linearScale({ domain: [0, 4] }),
+        y: linearScale({ domain: [0, 10] }),
       },
       directions: { x: 'x' },
       marks: [
@@ -267,7 +267,7 @@ describe('static line marks', () => {
 
   test('removes optional series layers when replacing a marked line', async () => {
     const current = plot(host(), {
-      scales: { x: linear({ domain: [0, 1] }), y: linear({ domain: [0, 1] }) },
+      scales: { x: linearScale({ domain: [0, 1] }), y: linearScale({ domain: [0, 1] }) },
       directions: { x: 'x' },
       marks: [
         line({
@@ -296,7 +296,7 @@ describe('static line marks', () => {
 
   test('can hide the line while retaining markers and area', async () => {
     const current = plot(host(), {
-      scales: { x: linear({ domain: [0, 1] }), y: linear({ domain: [0, 1] }) },
+      scales: { x: linearScale({ domain: [0, 1] }), y: linearScale({ domain: [0, 1] }) },
       directions: { x: 'x' },
       marks: [
         line({
@@ -323,7 +323,7 @@ describe('static line marks', () => {
   test('updates and removes marks atomically with plot configuration', async () => {
     const mark = line({ id: 'one', x: 'x', y: 'y', xValues: [0, 1], yValues: [1, 2] })
     const current = plot(host(), {
-      scales: { x: linear({ domain: [0, 1] }), y: linear({ domain: [0, 2] }) },
+      scales: { x: linearScale({ domain: [0, 1] }), y: linearScale({ domain: [0, 2] }) },
       directions: { x: 'x' },
       marks: [mark],
     })
@@ -345,7 +345,7 @@ describe('static line marks', () => {
   test('synchronously rejects values that do not match their bound scale kind', async () => {
     const mark = line({ id: 'one', x: 'x', y: 'y', xValues: [0, 1], yValues: [1, 2] })
     const current = plot(host(), {
-      scales: { x: linear({ domain: [0, 1] }), y: linear({ domain: [0, 2] }) },
+      scales: { x: linearScale({ domain: [0, 1] }), y: linearScale({ domain: [0, 2] }) },
       directions: { x: 'x' },
       marks: [mark],
     })
@@ -362,19 +362,19 @@ describe('static line marks', () => {
     await frame()
     expect(path.getAttribute('d')).toBe(rendered)
 
-    expect(() => current.update({ scales: { x: band({ domain: ['a', 'b'] }) } })).toThrow(
+    expect(() => current.update({ scales: { x: bandScale({ domain: ['a', 'b'] }) } })).toThrow(
       /xValues\[0\] must be a string for band scale "x"/,
     )
     expect(() =>
       plot(host(), {
-        scales: { x: time({ domain: [0, 1] }), y: linear() },
+        scales: { x: timeScale({ domain: [0, 1] }), y: linearScale() },
         directions: { x: 'x' },
         marks: [line({ x: 'x', y: 'y', xValues: ['2024-01-01'], yValues: [1] })],
       }),
     ).toThrow(/xValues\[0\] must be a number for time scale "x"/)
 
     current.update({
-      scales: { x: band({ domain: ['a', 'b'] }) },
+      scales: { x: bandScale({ domain: ['a', 'b'] }) },
       marks: [line({ x: 'x', y: 'y', xValues: ['a', null, 'b'], yValues: [1, 2, Number.NaN] })],
     })
     await frame()
@@ -407,7 +407,7 @@ describe('static line marks', () => {
     const element = host()
     expect(() =>
       createPolarPlot(element, {
-        scales: { theta: angular(), radius: radial() },
+        scales: { theta: angularScale(), radius: radialScale() },
         marks: [line({ x: 'theta', y: 'radius', xValues: [0], yValues: [1] })],
       }),
     ).toThrow(/cartesian plots only/)

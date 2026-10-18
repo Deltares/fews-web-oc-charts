@@ -3,9 +3,9 @@ import {
   axis,
   createPlot,
   createTable,
-  linear,
+  linearScale,
   stackedArea,
-  time,
+  timeScale,
   type Plot,
   type StackedAreaLayer,
   type StackedAreaMark,
@@ -68,7 +68,7 @@ const marks: { mark: StackedAreaMark; named: boolean }[] = []
 const timeScales: ReturnType<typeof time>[] = []
 for (const named of [false, true]) {
   const id = named ? 'named' : 'implicit'
-  const t = time({ timeZone: 'UTC' })
+  const t = timeScale({ timeZone: 'UTC' })
   timeScales.push(t)
   const mark = stackedArea(data, {
     renderer: renderer.value === 'canvas' ? 'canvas' : 'svg',
@@ -82,7 +82,7 @@ for (const named of [false, true]) {
   plots.push(
     createPlot(required(`#${id}`), {
       title: named ? 'Independent named stacks (overlaid)' : 'One implicit stack',
-      scales: { t, q: linear({ nice: true }) },
+      scales: { t, q: linearScale({ nice: true }) },
       axes: [
         axis('t', { position: 'bottom', label: 'Time (UTC)', tickCount: 6 }),
         axis('q', { position: 'left', label: 'Flow', grid: true }),

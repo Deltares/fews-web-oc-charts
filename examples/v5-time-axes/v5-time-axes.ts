@@ -1,5 +1,5 @@
 import '../shared/v5.css'
-import { axis, createPlot, linear, time } from '@lib'
+import { axis, createPlot, linearScale, timeScale } from '@lib'
 
 const host = document.querySelector<HTMLElement>('#plot')
 const period = document.querySelector<HTMLSelectElement>('#period')
@@ -15,8 +15,8 @@ const windows: Record<string, readonly [number, number]> = {
   fall: [Date.UTC(2026, 9, 25), Date.UTC(2026, 9, 25, 5)],
   week: [Date.UTC(2026, 2, 23), Date.UTC(2026, 2, 30)],
 } as const
-const t = time({ domain: windows.spring, timeZone: 'UTC' })
-const q = linear({ domain: [0, 10] })
+const t = timeScale({ domain: windows.spring, timeZone: 'UTC' })
+const q = linearScale({ domain: [0, 10] })
 const tAxis = axis('t', {
   position: 'bottom',
   label: 'Local time',

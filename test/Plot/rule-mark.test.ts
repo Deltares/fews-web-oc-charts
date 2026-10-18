@@ -1,13 +1,13 @@
 import { afterEach, describe, expect, test } from 'vitest'
 import {
-  angular,
-  band,
+  angularScale,
+  bandScale,
   createPlot,
   createPolarPlot,
-  linear,
-  radial,
+  linearScale,
+  radialScale,
   rule,
-  time,
+  timeScale,
   type Plot,
 } from '../../src/index.js'
 
@@ -45,8 +45,8 @@ describe('rule marks', () => {
       width: 400,
       height: 240,
       scales: {
-        x: time({ domain: [0, 10], timeZone: 'UTC' }),
-        y: linear({ domain: [0, 100] }),
+        x: timeScale({ domain: [0, 10], timeZone: 'UTC' }),
+        y: linearScale({ domain: [0, 100] }),
       },
       directions: { x: 'x' },
       marks: [
@@ -74,8 +74,8 @@ describe('rule marks', () => {
   })
 
   test('reprojects rules on domain changes without changing autoscale domains', async () => {
-    const x = linear()
-    const y = linear()
+    const x = linearScale()
+    const y = linearScale()
     const current = plot(host(), {
       scales: { x, y },
       directions: { x: 'x' },
@@ -102,19 +102,19 @@ describe('rule marks', () => {
 
     expect(() =>
       plot(host(), {
-        scales: { y: band({ domain: ['low', 'high'] }) },
+        scales: { y: bandScale({ domain: ['low', 'high'] }) },
         marks: [rule({ scale: 'y', value: 1 })],
       }),
     ).toThrow(/continuous linear or time scale/)
     expect(() =>
       plot(host(), {
-        scales: { y: time() },
+        scales: { y: timeScale() },
         marks: [rule({ scale: 'missing', value: 1 })],
       }),
     ).toThrow(/missing scale/)
     expect(() =>
       createPolarPlot(host(), {
-        scales: { theta: angular(), radius: radial() },
+        scales: { theta: angularScale(), radius: radialScale() },
         marks: [rule({ scale: 'radius', value: 1 })],
       }),
     ).toThrow(/cartesian plots only/)

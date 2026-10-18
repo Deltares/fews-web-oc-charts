@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, test } from 'vitest'
 import {
-  angular,
-  band,
+  angularScale,
+  bandScale,
   createPlot,
   createPolarPlot,
-  linear,
-  radial,
+  linearScale,
+  radialScale,
   text,
   type Plot,
 } from '../../src/index.js'
@@ -42,8 +42,8 @@ describe('text marks', () => {
   test('renders aligned labels with projected positions, offsets, rotation and styling', async () => {
     const current = plot(host(), {
       scales: {
-        x: linear({ domain: [0, 10] }),
-        y: linear({ domain: [0, 100] }),
+        x: linearScale({ domain: [0, 10] }),
+        y: linearScale({ domain: [0, 100] }),
       },
       directions: { x: 'x' },
       marks: [
@@ -94,7 +94,7 @@ describe('text marks', () => {
 
   test('preserves aligned gaps, autoscale extents, and label nodes on id-matched updates', async () => {
     const current = plot(host(), {
-      scales: { x: linear(), y: linear() },
+      scales: { x: linearScale(), y: linearScale() },
       directions: { x: 'x' },
       marks: [
         text({
@@ -166,27 +166,27 @@ describe('text marks', () => {
 
     expect(() =>
       plot(host(), {
-        scales: { x: linear(), y: linear() },
+        scales: { x: linearScale(), y: linearScale() },
         directions: { x: 'x' },
         marks: [text({ x: 'x', y: 'y', xValues: ['bad'], yValues: [1], textValues: ['A'] })],
       }),
     ).toThrow(/must be a number/)
     expect(() =>
       plot(host(), {
-        scales: { x: band({ domain: ['a', 'b'] }), y: linear({ domain: [0, 1] }) },
+        scales: { x: bandScale({ domain: ['a', 'b'] }), y: linearScale({ domain: [0, 1] }) },
         directions: { x: 'x' },
         marks: [text({ x: 'x', y: 'y', xValues: ['a'], yValues: [0.5], textValues: ['A'] })],
       }),
     ).not.toThrow()
     expect(() =>
       plot(host(), {
-        scales: { x: linear(), y: linear() },
+        scales: { x: linearScale(), y: linearScale() },
         marks: [text({ x: 'missing', y: 'y', xValues: [1], yValues: [1], textValues: ['A'] })],
       }),
     ).toThrow(/missing x scale/)
     expect(() =>
       createPolarPlot(host(), {
-        scales: { theta: angular(), radius: radial() },
+        scales: { theta: angularScale(), radius: radialScale() },
         marks: [
           text({
             x: 'theta',

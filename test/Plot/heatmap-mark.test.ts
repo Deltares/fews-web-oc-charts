@@ -1,14 +1,14 @@
 import { afterEach, expect, test, vi } from 'vitest'
 import {
   axis,
-  band,
+  bandScale,
   colorScale,
   createGrid,
   createPlot,
   createPolarPlot,
   heatmap,
-  linear,
-  time,
+  linearScale,
+  timeScale,
   type GridInput,
   type Plot,
 } from '../../src/index.js'
@@ -35,8 +35,8 @@ function setup(renderer: 'svg' | 'canvas' = 'svg') {
   const data = createGrid(input())
   const color = colors()
   const mark = heatmap(data, { id: 'grid', scales: { x: 'x', y: 'y' }, color, renderer })
-  const x = linear()
-  const y = linear()
+  const x = linearScale()
+  const y = linearScale()
   const plot = createPlot(host, {
     width: 400,
     height: 300,
@@ -218,7 +218,7 @@ test('canvas pixels match SVG colours and renderer switches remove obsolete surf
 test('grid footprints include missing cells and visible autoscaling uses interval overlap', () => {
   const data = createGrid({ ...input(), values: [NaN, NaN, NaN, NaN] })
   const mark = heatmap(data, { scales: { x: 'x', y: 'y' }, color: colors() })
-  const scales = { x: linear({ domain: [1, 2] }), y: linear({ autoscale: 'visible' }) }
+  const scales = { x: linearScale({ domain: [1, 2] }), y: linearScale({ autoscale: 'visible' }) }
   expect(markExtents([mark], scales, 'y', 'visible')).toEqual([10, 18])
   scales.x.update({ domain: [5, 6] })
   expect(markExtents([mark], scales, 'y', 'visible')).toBeUndefined()
@@ -313,15 +313,15 @@ test('validates scale kinds, time boundaries, updates and lifecycle cleanup', as
       coordinateSystem: 'cartesian',
       direction: (name) => (name === 'x' ? 'x' : 'y'),
     })
-  expect(() => validate({ x: band(), y: linear() })).toThrow(/linear or time/)
-  expect(() => validate({ x: time() })).toThrow()
+  expect(() => validate({ x: bandScale(), y: linearScale() })).toThrow(/linear or time/)
+  expect(() => validate({ x: timeScale() })).toThrow()
   const host = document.createElement('div')
   expect(() => createPolarPlot(host, { scales: {}, marks: [mark] })).toThrow(/cartesian/)
   const before = mark.options.get()
   expect(() => mark.update({ opacity: -1 })).toThrow()
   expect(() => mark.update({ scales: { x: 'missing' } })).toThrow()
   expect(mark.options.get()).toEqual(before)
-  plot.update({ scales: { x: time(), y: linear() } })
+  plot.update({ scales: { x: timeScale(), y: linearScale() } })
   await frame()
   expect(() => data.replace({ xEdges: [0, 9e15], yEdges: [0, 1], values: [1] })).toThrow(
     /Date range/,

@@ -1,5 +1,5 @@
 import '../shared/v5.css'
-import { axis, createPlot, createTable, linear, stackedArea } from '@lib'
+import { axis, createPlot, createTable, linearScale, stackedArea } from '@lib'
 
 function required<T extends HTMLElement>(selector: string) {
   const node = document.querySelector<T>(selector)
@@ -46,8 +46,8 @@ const mark = stackedArea(data, {
 const plot = createPlot(host, {
   title: 'Diverging stack · 24,000 source samples',
   scales: {
-    sample: linear({ domain: [0, sampleCount - 1] }),
-    flow: linear({ domain: [-28, 60] }),
+    sample: linearScale({ domain: [0, sampleCount - 1] }),
+    flow: linearScale({ domain: [-28, 60] }),
   },
   axes: [
     axis('sample', { position: 'bottom', label: 'Sample index', tickCount: 7 }),

@@ -292,9 +292,9 @@ This contract is a **phase-0 acceptance requirement**, not a later optimisation.
 
 - Named scales, unlimited count:
   ```ts
-  scales: { t: time({ timeZone: 'Europe/Amsterdam' }),
-            q: linear({ nice: true, includeZero: true }),
-            h: linear({ reverse: true }), dir: degrees() }
+  scales: { t: timeScale({ timeZone: 'Europe/Amsterdam' }),
+            q: linearScale({ nice: true, includeZero: true }),
+            h: linearScale({ reverse: true }), dir: degreesScale() }
   ```
 - Shared scale state = `{ domain signal, options, autoscale policy }`; each plot binds
   it to `{ range signal, d3 scale (derived) }`. Different-width plots share domains,
@@ -307,7 +307,7 @@ tickCount, labelAngle })`. Multiple axes on the same side stack automatically.
 - Time axis: `Intl`-based multi-level ticks (e.g. hour row + day row), locale/timezone per
   axis, no global `d3.formatDefaultLocale` (number formatting via `d3.formatLocale`
   instance per plot).
-- Polar: `angular(...)` & `radial(...)` scales with direction/intercept/range; Beaufort and
+- Polar: `angularScale(...)` & `radialScale(...)` scales with direction/intercept/range; Beaufort and
   colour bar become axis variants.
 
 #### 3.3.1 Replacing luxon (`time/`)
@@ -754,12 +754,12 @@ Domain/selection state is shareable; sync = sharing the same signal. Scale bindi
 pointer pixels remain plot-local.
 
 ```ts
-const time = sharedScale(time({ timeZone })) // one domain signal
+const time = sharedScale(timeScale({ timeZone })) // one domain signal
 const pointer = sharedPointer({ by: 'x' }) // crosshair across plots
 const sel = sharedSelection()
 
-createPlot(elA, { scales: { t: time, q: linear() }, plugins: [crosshair({ pointer })] })
-createPlot(elB, { scales: { t: time, h: linear() }, plugins: [crosshair({ pointer })] })
+createPlot(elA, { scales: { t: time, q: linearScale() }, plugins: [crosshair({ pointer })] })
+createPlot(elB, { scales: { t: time, h: linearScale() }, plugins: [crosshair({ pointer })] })
 ```
 
 - Works for any scale (x **or** y), any number of plots, no feedback loops (single source
@@ -775,7 +775,7 @@ createPlot(elB, { scales: { t: time, h: linear() }, plugins: [crosshair({ pointe
 
 - `series.append(rows)` → incremental extent (block index), dirty only for marks using the
   series, LOD cache invalidated for the affected x-range.
-- Scale `follow` mode: `time({ follow: { window: '48h', lead: '6h' } })` keeps the window
+- Scale `follow` mode: `timeScale({ follow: { window: '48h', lead: '6h' } })` keeps the window
   sliding with new data; automatically suspended when user zooms/pans, resumed on reset.
 - Back-pressure: updates coalesced per frame; `plot.pause()`/`resume()` when not visible
   (IntersectionObserver) – no rendering for off-screen plots.
@@ -827,8 +827,8 @@ React, Angular or FEWS Web OC config-driven pages without a framework adapter.
   const el = document.getElementById('q')
   el.config = {
     scales: {
-      t: time({ timeZone: 'Europe/Amsterdam' }),
-      q: linear({ nice: true, includeZero: true }),
+      t: timeScale({ timeZone: 'Europe/Amsterdam' }),
+      q: linearScale({ nice: true, includeZero: true }),
     },
     axes: [
       axis('t', { position: 'bottom', grid: true }),
@@ -1158,8 +1158,8 @@ have moved into `src/core`; the spike imports remain forwarding modules so the p
 fixtures keep working.
 
 ```ts
-const t = time({ domain: [Date.UTC(2026, 0, 1), Date.UTC(2026, 0, 2)] })
-const q = linear({ domain: [0, 100], includeZero: true })
+const t = timeScale({ domain: [Date.UTC(2026, 0, 1), Date.UTC(2026, 0, 2)] })
+const q = linearScale({ domain: [0, 100], includeZero: true })
 const plot = createPlot(container, {
   title: 'Discharge',
   scales: { t, q },
@@ -1260,8 +1260,8 @@ itself a reason to regenerate a baseline.
 ```ts
 const polar = createPolarPlot(container, {
   scales: {
-    bearing: angular({ domain: [0, 360], direction: 'clockwise' }),
-    distance: radial({ domain: [0, 100], innerRadius: 0.15 }),
+    bearing: angularScale({ domain: [0, 360], direction: 'clockwise' }),
+    distance: radialScale({ domain: [0, 100], innerRadius: 0.15 }),
   },
   axes: [
     axis('bearing', { position: 'angular', grid: true }),
@@ -1633,18 +1633,18 @@ fontSize?, fontWeight?, textAnchor?, dominantBaseline?, id? })` renders one SVG 
 ### Target composed API
 
 ```ts
-import { createPlot, time, linear, axis, series, ensemble, band,
+import { createPlot, timeScale, linearScale, axis, series, ensemble, bandScale,
          zoom, pan, crosshair, tooltip, legend, currentTime,
          sharedScale, sharedPointer, fromObjects } from '@deltares/fews-web-oc-charts'
 
-const t = sharedScale(time({ timeZone: 'Europe/Amsterdam', follow: { window: '3d' } }))
+const t = sharedScale(timeScale({ timeZone: 'Europe/Amsterdam', follow: { window: '3d' } }))
 const pointer = sharedPointer()
 
 const obs = fromObjects(observations, { x: 'time', y: 'value' })
 const fc  = createEnsemble({ x: fcTimes, members: fcMatrix })
 
 const plot = createPlot(el, {
-  scales: { t, q: linear({ nice: true, includeZero: true }) },
+  scales: { t, q: linearScale({ nice: true, includeZero: true }) },
   axes:   [axis('t', { position: 'bottom', grid: true }),
            axis('q', { position: 'left', label: 'Discharge', unit: 'm³/s', grid: true })],
   marks:  [ensemble(fc, { x: 't', y: 'q', show: { spread: [[5,95],[25,75]], median: {} } }),
