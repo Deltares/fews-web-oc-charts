@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>v5: direction</title>
+    <link rel="stylesheet" href="./direction.css" />
+  </head>
+  <body>
+    <nav aria-label="Examples">
+      <a href="/">All examples</a>
+      <a href="../v5-arrows/">Endpoint-based arrows</a>
+      <a href="../wind-direction/">v4 wind direction</a>
+    </nav>
+    <h1>v5: direction</h1>
+    <p>
+      Direction marks place fixed-size bearing glyphs at Cartesian or polar positions. Bearings are
+      degrees clockwise from north and represent where wind comes from, so each glyph points in the
+      opposite direction. Increase <code>every</code> to thin dense series.
+    </p>
+    <div class="example-grid">
+      <figure>
+        <h2>Wind direction over time</h2>
+        <div id="cartesian" class="plot-host"></div>
+        <figcaption>
+          Glyph lengths are fixed in pixels; positions use time and wind speed scales.
+        </figcaption>
+      </figure>
+      <figure>
+        <h2>Compass bearings</h2>
+        <div id="polar" class="plot-host"></div>
+        <figcaption>
+          Positions show speed and bearing; arrowheads indicate the direction from.
+        </figcaption>
+      </figure>
+    </div>
+    <h2>Public API</h2>
+    <pre><code>direction({
+  x: 'time', y: 'speed',
+  xValues: times, yValues: speeds,
+  directionValues: bearings, // degrees clockwise from north
+  size: 14, every: 1,
+})</code></pre>
+    <script type="module" src="./v5-direction.ts"></script>
+  </body>
+</html>
