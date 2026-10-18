@@ -60,7 +60,7 @@ export function validateLineValuesForScale(
     if (value === null || value === undefined) continue
     if (typeof value === 'number' && !Number.isFinite(value)) continue
     if (typeof value !== expected) {
-      throw new Error(
+      throw new TypeError(
         `line "${mark.id ?? ''}" ${coordinate}Values[${index}] must be a ${expected} for ${kind} scale "${mark[coordinate]}".`,
       )
     }
