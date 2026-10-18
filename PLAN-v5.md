@@ -1096,6 +1096,82 @@ defineProps<{ config: PlotConfig }>()
 
 ## 4. Proposed public API sketch
 
+### Phase 1: plot and named-scale foundation
+
+The package root now exports `createPlot`, `linear`, `time`, `band`, `degrees`,
+`sharedScale`, `axis`, `layout`, `batch` and `untracked`, alongside the existing v4
+exports. The tested phase 0 reactive primitives have moved into `src/core`; the spike
+imports remain forwarding modules so the phase 0 fixtures keep working.
+
+```ts
+const t = time({ domain: [Date.UTC(2026, 0, 1), Date.UTC(2026, 0, 2)] })
+const q = linear({ domain: [0, 100], includeZero: true })
+const plot = createPlot(container, {
+  title: 'Discharge',
+  scales: { t, q },
+  axes: [
+    axis('t', { position: 'bottom' }),
+    axis('q', { position: 'left', label: 'Discharge', grid: true }),
+  ],
+  theme: 'auto',
+  themeElement: container, // optional: observe class/style changes on this element
+})
+const detail = createPlot(otherContainer, { scales: { t, q } })
+t.domain.set([Date.UTC(2026, 0, 1, 6), Date.UTC(2026, 0, 1, 18)])
+plot.update({ margins: { left: 16 } })
+plot.update({ margins: { left: undefined } }) // current default, not constructor value
+plot.setConfig({ scales: { t, q } }) // removes axes/title; retains shared domains
+plot.destroy()
+detail.destroy()
+```
+
+- Scale handles are already shareable; `sharedScale(handle)` returns the same handle.
+  Their `domain` signal contains an immutable numeric pair (epoch milliseconds for
+  time), or an ordered string array for band scales. `domain.set`, `domain.update`
+  and `scale.update` validate synchronously and publish through the shared scheduler.
+  Explicit domains or `defaultDomain` supply extents in this foundation; data-driven
+  autoscale/extent unions will be wired when marks are introduced.
+- Each plot owns separate `plot.scales[name]` bindings exposing `range.get()`,
+  `project(value)`, `invert(pixel)`, `ticks(count)` and `bandwidth`. No mutable D3
+  instance is exposed or shared. Axes determine x/y orientation; without axes, time
+  and band scales default to x, and linear/degrees scales to y. Override this locally
+  using `directions: { q: 'x' }`. A name cannot represent both directions in one plot.
+- The SVG container uses the host's content size, observed by one shared
+  `ResizeObserver`; `width`/`height` override individual dimensions, including zero.
+  Give the host a height, or provide an explicit height. Rendering is asynchronous
+  and coalesced into one animation frame. `plot.size`, `plot.regions`, `plot.theme`
+  and handle `options` expose read-only signals; `options.get()` includes immutable
+  `explicit` and `resolved` snapshots.
+- The pure `layout(size, axes, margins, titleHeight)` function stacks axis bands from
+  the plot outwards in collection order. Plot text measurement is cached and bounded;
+  margins grow rather than jitter when domain changes alter label widths, and are
+  remeasured on resize, axis-option or font changes.
+- `theme` accepts `auto` (default), `light` and `dark`. CSS properties
+  `--fews-chart-background`, `--fews-chart-foreground`, `--fews-chart-grid`,
+  `--fews-chart-accent`, `--fews-chart-font-family` and `--fews-chart-font-size`
+  override tokens. Font size is a positive pixel value. Tokens are cached at creation
+  and theme changes, never during projection. Colour-only changes preserve axis DOM;
+  font changes remeasure layout. Theme observation is opt-in on `themeElement`, never
+  implicitly on the document root; system colour-scheme changes are also observed.
+- Plot/scale/axis updates support set, recursive patch and explicit `undefined` reset.
+  Arrays replace membership/order; omitted scale names remain, while `undefined`
+  removes a binding. Removing a scale used by an axis requires removing/rebinding that
+  axis in the same plot update. Plot `setConfig` replaces configuration, but does not
+  reset reused handle options or live domains. Axis IDs are immutable, duplicate IDs
+  are rejected, and invalid patches leave prior state intact.
+- `destroy()` is idempotent, removes only the owned SVG, releases local computed
+  scales, effects, theme listeners/observers and resize subscriptions, and cancels
+  pending plot rendering. It never disposes shared scale/axis handles. Updating a
+  destroyed plot throws.
+
+This is the plot/scale foundation, not completion of every roadmap phase 1 exit gate.
+Time ticks currently use UTC boundaries with `Intl` labels in the configured locale/
+zone (including offset disambiguation). Civil-calendar/multi-level time axes, polar
+coordinates and the migrated basic-line visual fixtures remain to be implemented;
+marks, data-driven autoscaling and interaction APIs follow in their respective phases.
+
+### Target composed API
+
 ```ts
 import { createPlot, time, linear, axis, series, ensemble, band,
          zoom, pan, crosshair, tooltip, legend, currentTime,
