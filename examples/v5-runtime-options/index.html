@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>v5: runtime options and themes</title>
+  </head>
+  <body>
+    <nav aria-label="Examples">
+      <a href="/">All examples</a>
+      <a href="../v5-shared-scales/">Shared domains, local ranges</a>
+    </nav>
+    <h1>v5: runtime options and themes</h1>
+    <p>
+      Named band, linear and degree scales with stacked secondary axes. Edit retained handles
+      without recreating the plot, unset overrides to restore defaults, or replace the complete plot
+      configuration while preserving handle state.
+    </p>
+    <p class="note">
+      Phase 1 public API: this example intentionally shows only axes and layout, not data marks. The
+      snapshot below displays the actual explicit and resolved plot options.
+    </p>
+    <div class="controls">
+      <label for="theme">
+        Theme
+        <select id="theme">
+          <option value="auto">System</option>
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
+      </label>
+      <label for="accent">
+        Foreground CSS token
+        <input id="accent" type="color" value="#16789b" />
+      </label>
+      <button id="clear-token" type="button">Unset CSS token</button>
+      <label for="title">Title <input id="title" value="Station overview" /></label>
+      <label for="reverse">
+        <input id="reverse" type="checkbox" />
+        Reverse level scale
+      </label>
+      <label for="secondary">
+        <input id="secondary" type="checkbox" checked />
+        Show stacked secondary axis
+      </label>
+    </div>
+    <div class="controls">
+      <button id="patch" type="button">Patch title, margin and axis format</button>
+      <button id="unset" type="button">Unset those overrides</button>
+      <button id="replace" type="button">Replace plot configuration</button>
+      <button id="toggle-plot" type="button">Destroy plot</button>
+    </div>
+    <figure>
+      <div id="plot" class="plot-host"></div>
+      <figcaption>
+        Bottom: station categories. Left: water level and optional flow. Right: direction in
+        degrees. CSS token observation is scoped to the plot host, not the document root.
+      </figcaption>
+    </figure>
+    <p id="status" class="status" role="status"></p>
+    <h2>Plot option snapshot</h2>
+    <pre id="snapshot"></pre>
+    <script type="module" src="./v5-runtime-options.ts"></script>
+  </body>
+</html>

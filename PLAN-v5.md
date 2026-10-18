@@ -1098,6 +1098,18 @@ defineProps<{ config: PlotConfig }>()
 
 ### Phase 1: plot and named-scale foundation
 
+Run `npm run dev` and use the example index, or open these public-API demos:
+
+- [Shared domains and plot-local ranges](./examples/v5-shared-scales/index.html):
+  shared time/discharge scales, independent resizing, domain updates and destroying/
+  recreating one consumer while the other stays live.
+- [Runtime options and themes](./examples/v5-runtime-options/index.html): band,
+  linear and degree scales, stacked axes, handle updates, nested option unsetting,
+  configuration replacement, scoped CSS tokens and explicit cleanup.
+
+These phase 1 demos intentionally render axes without data marks. The `v5-spike-*`
+examples remain separate phase 0 prototypes, not examples of the public v5 API.
+
 The package root now exports `createPlot`, `linear`, `time`, `band`, `degrees`,
 `sharedScale`, `axis`, `layout`, `batch` and `untracked`, alongside the existing v4
 exports. The tested phase 0 reactive primitives have moved into `src/core`; the spike

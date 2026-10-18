@@ -1,0 +1,37 @@
+@import './spike.css';
+
+.plot-host {
+  height: 320px;
+  min-width: 0;
+}
+
+.plot-host svg {
+  width: auto;
+  height: auto;
+  background: none;
+}
+
+.plot-host:empty {
+  display: grid;
+  place-items: center;
+}
+
+.plot-host:empty::after {
+  content: 'Plot destroyed. Recreate it to resume.';
+}
+
+.plot-width {
+  width: 100%;
+}
+
+output {
+  font-variant-numeric: tabular-nums;
+}
+
+pre {
+  overflow-x: auto;
+  padding: 16px;
+  border: 1px solid light-dark(#c6d4e0, #476078);
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
