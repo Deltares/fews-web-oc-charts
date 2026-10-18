@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>v5: shared domains, local ranges</title>
+  </head>
+  <body>
+    <nav aria-label="Examples">
+      <a href="/">All examples</a>
+      <a href="../v5-runtime-options/">Runtime options and themes</a>
+    </nav>
+    <h1>v5: shared domains, local ranges</h1>
+    <p>
+      Both plots use the same time and discharge handles. Changing a domain updates both plots;
+      resizing the detail plot changes only its pixel ranges. Destroying the overview leaves the
+      detail plot and shared handles alive.
+    </p>
+    <p class="note">
+      Phase 1 public API: plots and axes only. Data marks and gesture interactions are not yet
+      available. The controls below update scale state programmatically.
+    </p>
+    <div class="controls">
+      <label for="start-hour">
+        Window start (UTC)
+        <input id="start-hour" type="range" min="0" max="18" value="0" />
+        <output id="start-value" for="start-hour">00:00</output>
+      </label>
+      <label for="maximum">
+        Discharge maximum
+        <select id="maximum">
+          <option value="100">100</option>
+          <option value="250">250</option>
+          <option value="500">500</option>
+        </select>
+      </label>
+      <label for="detail-width">
+        Detail width
+        <input id="detail-width" type="range" min="55" max="100" value="70" />
+        <output id="width-value" for="detail-width">70%</output>
+      </label>
+      <button id="toggle-overview" type="button">Destroy overview</button>
+      <button id="reset" type="button">Reset domains</button>
+    </div>
+    <figure>
+      <div id="overview" class="plot-host"></div>
+      <figcaption>Overview: full available width.</figcaption>
+    </figure>
+    <figure>
+      <div id="detail-width-container" class="plot-width" style="width: 70%">
+        <div id="detail" class="plot-host"></div>
+      </div>
+      <figcaption>Detail: independently sized, with the same domain state.</figcaption>
+    </figure>
+    <p id="status" class="status" role="status"></p>
+    <h2>Public API</h2>
+    <pre><code>const t = time({ domain: [start, end] })
+const q = linear({ domain: [0, 100] })
+const overview = createPlot(elA, { scales: { t, q }, axes: [...] })
+const detail = createPlot(elB, { scales: { t, q }, axes: [...] })
+
+t.domain.set([nextStart, nextEnd]) // both plots, independent ranges
+overview.destroy()              // detail and shared handles survive</code></pre>
+    <script type="module" src="./v5-shared-scales.ts"></script>
+  </body>
+</html>

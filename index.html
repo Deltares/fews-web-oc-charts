@@ -4,50 +4,250 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite Examples</title>
+    <title>FEWS Charts | Examples</title>
+    <link rel="stylesheet" href="/examples/shared/gallery.css" />
   </head>
   <body>
-    <h1>Vite Examples</h1>
-    <ul>
-      <li><a href="/examples/alert-lines/">alert-lines</a></li>
-      <li><a href="/examples/area/">area</a></li>
-      <li><a href="/examples/bar/">bar</a></li>
-      <li><a href="/examples/basic-line/">basic-line</a></li>
-      <li><a href="/examples/brush/">brush</a></li>
-      <li><a href="/examples/chart-text/">chart-text</a></li>
-      <li><a href="/examples/colourbar/">colourbar</a></li>
-      <li><a href="/examples/domain-events/">domain-events</a></li>
-      <li><a href="/examples/extent-filter/">extent-filter</a></li>
-      <li><a href="/examples/legend/">legend</a></li>
-      <li><a href="/examples/marker/">marker</a></li>
-      <li><a href="/examples/matrix/">matrix</a></li>
-      <li><a href="/examples/mouseover/">mouseover</a></li>
-      <li><a href="/examples/panning/">panning</a></li>
-      <li><a href="/examples/polar-axes-options/">polar-axes-options</a></li>
-      <li><a href="/examples/polar-line-marker/">polar-line-marker</a></li>
-      <li><a href="/examples/polar-range/">polar-range</a></li>
-      <li><a href="/examples/progress/">progress</a></li>
-      <li><a href="/examples/range/">range</a></li>
-      <li><a href="/examples/reverse/">reverse</a></li>
-      <li><a href="/examples/rule/">rule</a></li>
-      <li><a href="/examples/secondary-axis/">secondary-axis</a></li>
-      <li><a href="/examples/shared-panning/">shared-panning</a></li>
-      <li><a href="/examples/shared-zoom/">shared-zoom</a></li>
-      <li><a href="/examples/spectrum/">spectrum</a></li>
-      <li><a href="/examples/time-axes/">time-axes</a></li>
-      <li><a href="/examples/update-chart/">update-chart</a></li>
-      <li><a href="/examples/v5-spike-line/">v5-spike-line</a></li>
-      <li><a href="/examples/v5-spike-live/">v5-spike-live</a></li>
-      <li><a href="/examples/v5-spike-time/">v5-spike-time</a></li>
-      <li><a href="/examples/vertical/">vertical</a></li>
-      <li><a href="/examples/warning-levels/">warning-levels</a></li>
-      <li><a href="/examples/wheel-zoom/">wheel-zoom</a></li>
-      <li><a href="/examples/wind-current-roses/">wind-current-roses</a></li>
-      <li><a href="/examples/wind-direction/">wind-direction</a></li>
-      <li><a href="/examples/windrose-wbviewer/">windrose-wbviewer</a></li>
-      <li><a href="/examples/xlevel/">xlevel</a></li>
-      <li><a href="/examples/zoom-events/">zoom-events</a></li>
-      <li><a href="/examples/zoom-options/">zoom-options</a></li>
-    </ul>
+    <header class="page-header">
+      <p class="eyebrow">Deltares / FEWS Web OC Charts</p>
+      <h1>Chart examples</h1>
+      <p>Explore chart types, shared state and interactions across library versions.</p>
+      <nav aria-label="Library versions">
+        <a href="#v5">v5 examples</a>
+        <a href="#v4">v4 examples</a>
+      </nav>
+    </header>
+    <main>
+      <section id="v5" aria-labelledby="v5-heading">
+        <div class="section-heading">
+          <h2 id="v5-heading">v5 <span class="badge">In development</span></h2>
+          <span class="example-count">5 examples</span>
+        </div>
+        <p>
+          New functional API: named scales, shared domains, runtime options and lifecycle. Phase 0
+          prototypes are labelled separately and do not use the public v5 API.
+        </p>
+        <ul class="example-grid">
+          <li>
+            <a href="/examples/v5-runtime-options/">
+              <span>runtime options</span>
+            </a>
+          </li>
+          <li>
+            <a href="/examples/v5-shared-scales/">
+              <span>shared scales</span>
+            </a>
+          </li>
+          <li>
+            <a href="/examples/v5-spike-line/">
+              <span>spike line</span>
+              <span class="badge">Phase 0 prototype</span>
+            </a>
+          </li>
+          <li>
+            <a href="/examples/v5-spike-live/">
+              <span>spike live</span>
+              <span class="badge">Phase 0 prototype</span>
+            </a>
+          </li>
+          <li>
+            <a href="/examples/v5-spike-time/">
+              <span>spike time</span>
+              <span class="badge">Phase 0 prototype</span>
+            </a>
+          </li>
+        </ul>
+      </section>
+      <section id="v4" aria-labelledby="v4-heading">
+        <div class="section-heading">
+          <h2 id="v4-heading">v4 <span class="badge">Current release</span></h2>
+          <span class="example-count">36 examples</span>
+        </div>
+        <p>Established class-based API: chart types, axes, overlays and interactions.</p>
+        <ul class="example-grid">
+          <li>
+            <a href="/examples/alert-lines/">
+              <span>alert lines</span>
+            </a>
+          </li>
+          <li>
+            <a href="/examples/area/">
+              <span>area</span>
+            </a>
+          </li>
+          <li>
+            <a href="/examples/bar/">
+              <span>bar</span>
+            </a>
+          </li>
+          <li>
+            <a href="/examples/basic-line/">
+              <span>basic line</span>
+            </a>
+          </li>
+          <li>
+            <a href="/examples/brush/">
+              <span>brush</span>
+            </a>
+          </li>
+          <li>
+            <a href="/examples/chart-text/">
+              <span>chart text</span>
+            </a>
+          </li>
+          <li>
+            <a href="/examples/colourbar/">
+              <span>colourbar</span>
+            </a>
+          </li>
+          <li>
+            <a href="/examples/domain-events/">
+              <span>domain events</span>
+            </a>
+          </li>
+          <li>
+            <a href="/examples/extent-filter/">
+              <span>extent filter</span>
+            </a>
+          </li>
+          <li>
+            <a href="/examples/legend/">
+              <span>legend</span>
+            </a>
+          </li>
+          <li>
+            <a href="/examples/marker/">
+              <span>marker</span>
+            </a>
+          </li>
+          <li>
+            <a href="/examples/matrix/">
+              <span>matrix</span>
+            </a>
+          </li>
+          <li>
+            <a href="/examples/mouseover/">
+              <span>mouseover</span>
+            </a>
+          </li>
+          <li>
+            <a href="/examples/panning/">
+              <span>panning</span>
+            </a>
+          </li>
+          <li>
+            <a href="/examples/polar-axes-options/">
+              <span>polar axes options</span>
+            </a>
+          </li>
+          <li>
+            <a href="/examples/polar-line-marker/">
+              <span>polar line marker</span>
+            </a>
+          </li>
+          <li>
+            <a href="/examples/polar-range/">
+              <span>polar range</span>
+            </a>
+          </li>
+          <li>
+            <a href="/examples/progress/">
+              <span>progress</span>
+            </a>
+          </li>
+          <li>
+            <a href="/examples/range/">
+              <span>range</span>
+            </a>
+          </li>
+          <li>
+            <a href="/examples/reverse/">
+              <span>reverse</span>
+            </a>
+          </li>
+          <li>
+            <a href="/examples/rule/">
+              <span>rule</span>
+            </a>
+          </li>
+          <li>
+            <a href="/examples/secondary-axis/">
+              <span>secondary axis</span>
+            </a>
+          </li>
+          <li>
+            <a href="/examples/shared-panning/">
+              <span>shared panning</span>
+            </a>
+          </li>
+          <li>
+            <a href="/examples/shared-zoom/">
+              <span>shared zoom</span>
+            </a>
+          </li>
+          <li>
+            <a href="/examples/spectrum/">
+              <span>spectrum</span>
+            </a>
+          </li>
+          <li>
+            <a href="/examples/time-axes/">
+              <span>time axes</span>
+            </a>
+          </li>
+          <li>
+            <a href="/examples/update-chart/">
+              <span>update chart</span>
+            </a>
+          </li>
+          <li>
+            <a href="/examples/vertical/">
+              <span>vertical</span>
+            </a>
+          </li>
+          <li>
+            <a href="/examples/warning-levels/">
+              <span>warning levels</span>
+            </a>
+          </li>
+          <li>
+            <a href="/examples/wheel-zoom/">
+              <span>wheel zoom</span>
+            </a>
+          </li>
+          <li>
+            <a href="/examples/wind-current-roses/">
+              <span>wind current roses</span>
+            </a>
+          </li>
+          <li>
+            <a href="/examples/wind-direction/">
+              <span>wind direction</span>
+            </a>
+          </li>
+          <li>
+            <a href="/examples/windrose-wbviewer/">
+              <span>windrose wbviewer</span>
+            </a>
+          </li>
+          <li>
+            <a href="/examples/xlevel/">
+              <span>xlevel</span>
+            </a>
+          </li>
+          <li>
+            <a href="/examples/zoom-events/">
+              <span>zoom events</span>
+            </a>
+          </li>
+          <li>
+            <a href="/examples/zoom-options/">
+              <span>zoom options</span>
+            </a>
+          </li>
+        </ul>
+      </section>
+    </main>
+    <footer>Examples run locally against the library source.</footer>
   </body>
 </html>
