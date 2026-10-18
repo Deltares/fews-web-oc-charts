@@ -1306,6 +1306,9 @@ observed.update({ line: { stroke: undefined }, markers: false })
 
 ### Phase 2 autoscaling (implemented)
 
+- [Autoscaling demo](./examples/v5-autoscale/index.html): compare data, visible,
+  fixed and custom policies; move a six-hour window, toggle series/area eligibility,
+  append higher samples, and override/resume automatic domains with live readouts.
 - Scale option `autoscale` accepts `'data'`, `'visible'`, `'fixed'` or a callback.
   Linear, time, band and radial scales default to `'data'`; degree/angular scales
   default to `'fixed'` to retain their full-circle domain. Explicit `domain` values,

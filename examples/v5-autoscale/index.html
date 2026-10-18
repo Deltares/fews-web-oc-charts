@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>v5: autoscaling</title>
+  </head>
+  <body>
+    <nav aria-label="Examples">
+      <a href="/">All examples</a>
+      <a href="../v5-series/">Line, markers and area</a>
+    </nav>
+    <h1>v5: autoscaling</h1>
+    <p>
+      Compare full-data and visible-window extents without recreating scales or marks. The blue
+      series contains a gap; the orange series has a peak at hour 18, outside the initial six-hour
+      window. Choose Data to include that peak, or Visible and move the window to find it.
+    </p>
+    <fieldset class="controls">
+      <legend>Value domain</legend>
+      <label for="policy">
+        Autoscale policy
+        <select id="policy">
+          <option value="visible" selected>Visible: samples in the time window</option>
+          <option value="data">Data: all eligible samples</option>
+          <option value="fixed">Fixed: default domain [-20, 120]</option>
+          <option value="custom">Custom: symmetric full-data extent</option>
+        </select>
+      </label>
+      <label><input id="zero" type="checkbox" /> Include zero</label>
+      <label><input id="nice" type="checkbox" /> Nice ticks</label>
+      <label><input id="padding" type="checkbox" /> 10% padding</label>
+      <label><input id="pin" type="checkbox" /> Explicit override [-25, 50]</label>
+    </fieldset>
+    <fieldset class="controls">
+      <legend>Time window and eligible marks</legend>
+      <label><input id="windowed" type="checkbox" checked /> Use a six-hour time window</label>
+      <label for="window-start">
+        Start hour
+        <input id="window-start" type="range" min="0" max="18" step="1" value="0" />
+        <output id="window-label" for="window-start"></output>
+      </label>
+      <label><input id="observed" type="checkbox" checked /> Blue observations</label>
+      <label><input id="peak" type="checkbox" checked /> Orange peak series</label>
+      <label><input id="area" type="checkbox" /> Blue area to zero</label>
+      <button id="append" type="button">Append a higher sample</button>
+      <button id="reset" type="button">Reset demo</button>
+    </fieldset>
+    <figure>
+      <div id="chart" class="plot-host"></div>
+      <figcaption>
+        Hidden series and gaps do not contribute extents. The area baseline contributes only when
+        blue observations have eligible samples. Appending pans the window to the newest sample.
+      </figcaption>
+    </figure>
+    <p id="status" class="status" role="status"></p>
+    <h2>Live domain snapshot</h2>
+    <pre id="snapshot" aria-label="Live scale domains"></pre>
+    <p class="note">
+      Explicit domains take precedence over every policy. Uncheck the override to resume the
+      selected policy. Disable the time window to let time autoscale too. Visible extents use
+      samples inside inclusive window boundaries, without interpolating between samples.
+    </p>
+    <h2>Public API</h2>
+    <pre><code>const t = time()
+const q = linear({ autoscale: 'visible', defaultDomain: [-20, 120] })
+// Bind scales and series through createPlot.
+t.domain.set([windowStart, windowEnd])
+q.update({ autoscale: 'data' })
+q.domain.set([-25, 50]) // explicit override
+q.update({ domain: undefined }) // resume the selected policy
+t.update({ domain: undefined }) // resume time autoscaling
+q.update({
+  autoscale: ({ data }) => {
+    if (!data) return undefined // use defaultDomain
+    const limit = Math.max(...data.map((value) => Math.abs(Number(value))))
+    return [-limit, limit]
+  },
+})</code></pre>
+    <script type="module" src="./v5-autoscale.ts"></script>
+  </body>
+</html>
