@@ -1,4 +1,5 @@
 import { autoscaleWindow, type ScaleHandle, type ScaleValue } from '../scales/scale.js'
+import { isBandMark, type BandMark } from './band.js'
 import { isLineMark, type LineMark, type LineValue } from './line.js'
 import { isSeriesMark, type SeriesMark } from './series.js'
 
@@ -13,7 +14,7 @@ function within(value: ScaleValue, domain: readonly ScaleValue[]) {
 }
 
 export function markExtents(
-  marks: readonly (LineMark | SeriesMark)[],
+  marks: readonly (LineMark | SeriesMark | BandMark)[],
   scales: Readonly<Record<string, ScaleHandle>>,
   name: string,
   mode: 'data' | 'visible',
@@ -29,6 +30,25 @@ export function markExtents(
     }
   }
   for (const mark of marks) {
+    if (isBandMark(mark)) {
+      const coordinate = mark.x === name ? 'x' : mark.y === name ? 'y' : undefined
+      if (!coordinate) continue
+      const oppositeName = coordinate === 'x' ? mark.y : mark.x
+      const window = mode === 'visible' ? autoscaleWindow(scales[oppositeName]) : undefined
+      for (let index = 0; index < mark.xValues.length; index += 1) {
+        const x = mark.xValues[index]
+        const y = mark.yValues[index]
+        if (!x || !y) continue
+        const extent = coordinate === 'x' ? x : y
+        const opposite = coordinate === 'x' ? y : x
+        if (window && (opposite[1] < Number(window[0]) || opposite[0] > Number(window[1]))) {
+          continue
+        }
+        add(extent[0])
+        add(extent[1])
+      }
+      continue
+    }
     const store = isSeriesMark(mark) ? mark.data : undefined
     if (isSeriesMark(mark)) {
       mark.options.get()
