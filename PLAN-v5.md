@@ -1311,7 +1311,7 @@ observed.update({ line: { stroke: undefined }, markers: false })
   across membership changes. Removed/destroyed plots release their effects and
   validators without disposing shared stores or mark handles.
 - Scale domains support shared autoscaling as described below. Block indexes, LOD,
-  shared time columns, tables, ensembles, borrowed buffers, non-circle markers,
+  shared time columns across stores, ensembles, borrowed buffers, non-circle markers,
   curves/dashes, canvas, hit testing and legend rendering remain roadmap work.
   The new store temporarily lives in `src/data-store/` to coexist with legacy
   `src/Data/` on case-insensitive filesystems.
@@ -1355,6 +1355,66 @@ observed.update({ line: { stroke: undefined }, markers: false })
 - The series example now autoscales on append, reset and layer toggles. Indexes,
   cached extents and visible-window acceleration remain future work; this foundation
   scans eligible samples without copying or re-ingesting canonical columns.
+
+### Phase 2 grouped/stacked bars and shared layout (implemented SVG foundation)
+
+- [Bars demo](./examples/v5-bars/index.html) compares grouped, implicit stacked,
+  side-by-side named stacks and horizontal bars using one aligned table. Controls
+  exercise visibility, layer ordering, reversed time scales, append/retention and reset.
+- `createTable(columns, { x?, maxPoints?, maxAge? })` owns copied Float64 numeric
+  columns (Dates become epoch milliseconds) and dictionary-encoded string columns.
+  `x` defaults to the first column and is the ordering/upsert/age-retention key.
+  Numeric keys are finite, nondecreasing and within the JavaScript Date range;
+  categorical keys retain input order. Column kinds are established on ingestion
+  (empty initial columns default to numeric); subsequent mutations preserve them.
+  `valueAt(column, row)`, `kind(column)` and `sampleId(row)` are checked accessors,
+  not mutable buffer views.
+- `append`, `prepend`, `replace`, `upsert({ from, to, rows })` and `clear` update all
+  aligned columns atomically. Mutations require exactly the original column names
+  and equal lengths. Upsert replaces a closed numeric key range; retention preserves
+  surviving sample IDs. Composite constraints also validate before commit, including
+  duplicate keys, overlapping intervals and stack overflow. Table mutations currently
+  rebuild columns; incremental/ring-based table updates remain phase 4 work.
+- `bar(table, { x, scales: { x, y }, y | layers, ... })` separates the table's x
+  column from category/value scale names. Single bars accept `y`; composite bars
+  require `layers` and `layout: 'grouped' | 'stacked'`. All bars require a linear
+  value scale. Category scales support band, linear and time. Numeric/time bars
+  require `interval: { start, end }` or positive pixel `width`; band bars use the
+  scale bandwidth. Intervals are finite, ascending and non-overlapping (touching
+  boundaries are allowed), and full bounds participate in extents/window overlap.
+  Width is centred on x; pixel widths do not expand data-space x extents.
+- `orientation` defaults to `'vertical'`; `'horizontal'` swaps physical axes while
+  keeping `scales.x` the category binding and `scales.y` the value binding. Bind
+  those scales to the matching axis positions or explicit plot directions.
+  `groupPadding` defaults to `0.1`: that fraction of the outer band/interval is
+  removed equally from both ends. `layerPadding` defaults to `0.05`: the gap is
+  that fraction of slot step, with no outer slot gap and no gap between stacked
+  segments. It has no effect on a single slot. Both fractions must be in `[0, 1)`.
+- The shared data-space layout in `src/layout/stack.ts` computes columnar lower/
+  upper endpoints with independent positive/negative accumulators per stack.
+  Missing visible values gap only their stack; hidden layers do not affect totals
+  or gaps. Zero is valid. All-missing/hidden/empty composites contribute no extent.
+  Named stacks require non-empty IDs on every layer; grouped bars reject stack IDs.
+  Full layer order determines stable layer/stack slots, including hidden slots.
+  Replacement layers retain prior visibility for unchanged IDs unless explicitly
+  overridden; `visible: undefined` restores default visibility.
+- Endpoint buffers are shared by equivalent table/version/layout consumers, not
+  projected geometry. The per-table LRU holds at most eight layouts and 32 MiB of
+  endpoint/total/gap buffers; oversized layouts are computed but not retained.
+  Data changes invalidate the version cache; style-only changes reuse endpoints
+  and SVG geometry. This is an endpoint cache, not an extent index or LOD system.
+- SVG segments are keyed by layer ID and stable source sample ID, interval-culled
+  and plot-clipped. Reversed scales and resizing preserve group membership. Data
+  and visible autoscale include zero/cumulative endpoints, union independent stacks
+  and include intervals overlapping the category window. Live plot validators reject
+  incompatible mark updates atomically; removed/destroyed plots release subscriptions.
+- Exact tests cover diverging endpoints, independent stack totals/gaps, union extents,
+  hidden slots, reorder/reassignment/removal, resets, malformed input, atomic mutations,
+  categorical/time geometry, horizontal/reversed scales, padding, culling, resizing,
+  visible autoscale, retained SVG identity and cleanup. Stacked-area rendering and
+  shared-boundary LOD, canvas, interaction/tooltip/legend adapters, block indexes and
+  incremental table/stack updates remain separate roadmap work; this is not completion
+  of every phase 2 exit gate.
 
 ### Target composed API
 

@@ -25,7 +25,6 @@ export interface LineOptions {
   yValues: LineValues
   stroke?: string
   strokeWidth?: number
-  line?: boolean
   markers?: boolean | LineMarkerOptions
   area?: LineAreaOptions
 }
@@ -38,7 +37,6 @@ export interface LineMark {
   readonly yValues: LineValues
   readonly stroke: string | undefined
   readonly strokeWidth: number
-  readonly line: boolean
   readonly markers: Readonly<Required<LineMarkerOptions>> | undefined
   readonly area: Readonly<Required<LineAreaOptions>> | undefined
 }
@@ -90,7 +88,7 @@ export function line(options: LineOptions): LineMark {
   if (!options || typeof options !== 'object') throw new Error('line options must be an object.')
   validateKeys(
     options,
-    ['id', 'x', 'y', 'xValues', 'yValues', 'stroke', 'strokeWidth', 'line', 'markers', 'area'],
+    ['id', 'x', 'y', 'xValues', 'yValues', 'stroke', 'strokeWidth', 'markers', 'area'],
     'line',
   )
   if (options.id !== undefined && (typeof options.id !== 'string' || options.id.length === 0)) {
@@ -114,8 +112,6 @@ export function line(options: LineOptions): LineMark {
   if (!Number.isFinite(strokeWidth) || strokeWidth <= 0) {
     throw new Error('line.strokeWidth must be a positive finite number.')
   }
-  const showLine = options.line ?? true
-  if (typeof showLine !== 'boolean') throw new Error('line.line must be boolean.')
   let markers: Readonly<Required<LineMarkerOptions>> | undefined
   if (options.markers !== undefined && options.markers !== false) {
     const markerOptions = options.markers === true ? {} : options.markers
@@ -160,7 +156,7 @@ export function line(options: LineOptions): LineMark {
       (typeof options.area.to !== 'number' && typeof options.area.to !== 'string') ||
       (typeof options.area.to === 'number' && !Number.isFinite(options.area.to))
     ) {
-      throw new Error('line.area.to must be a finite number or string.')
+      throw new TypeError('line.area.to must be a finite number or string.')
     }
     if (
       options.area.fill !== undefined &&
@@ -187,7 +183,6 @@ export function line(options: LineOptions): LineMark {
     yValues: options.yValues,
     stroke: options.stroke,
     strokeWidth,
-    line: showLine,
     markers,
     area,
   })

@@ -34,6 +34,16 @@ export type {
   SeriesChange,
 } from './data-store/series.js'
 export { series } from './plot/series.js'
+export { createTable } from './data-store/table.js'
+export type {
+  TableStore,
+  TableView,
+  TableInput,
+  TableValue,
+  TableOptions,
+} from './data-store/table.js'
+export { bar } from './plot/bar.js'
+export type { BarMark, BarOptions, BarLayer } from './plot/bar.js'
 export type {
   SeriesMark,
   SeriesOptions,

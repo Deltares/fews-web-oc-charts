@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>v5: grouped and stacked bars</title>
+  </head>
+  <body>
+    <nav aria-label="Examples">
+      <a href="/">All examples</a>
+      <a href="../v5-series/">Series</a>
+      <a href="../v5-autoscale/">Autoscaling</a>
+    </nav>
+    <h1>v5: grouped and stacked bars</h1>
+    <p>
+      Four SVG plots share one aligned table of irregular time intervals. Positive and negative
+      values accumulate independently. A missing visible layer gaps only its own stack; hiding it
+      repairs that stack. Grouped layers and named stacks keep their slots when hidden.
+    </p>
+    <fieldset class="controls" aria-label="Bar options">
+      <legend>Update retained handles</legend>
+      <label><input id="lateral" type="checkbox" checked /> Observed lateral inflow</label>
+      <label><input id="forecast" type="checkbox" checked /> Forecast stack</label>
+      <label><input id="reverse" type="checkbox" /> Reverse time scale</label>
+      <button id="reorder" type="button">Reverse layer order</button>
+      <button id="append" type="button">Append interval</button>
+      <button id="reset" type="button">Reset data</button>
+    </fieldset>
+    <figure>
+      <div id="grouped" class="plot-host"></div>
+      <figcaption>Grouped observed and forecast layers, each starting at zero.</figcaption>
+    </figure>
+    <figure>
+      <div id="stacked" class="plot-host"></div>
+      <figcaption>One implicit observed stack, including diverging negative inflow.</figcaption>
+    </figure>
+    <figure>
+      <div id="named" class="plot-host"></div>
+      <figcaption>Independent observed and forecast stacks side by side.</figcaption>
+    </figure>
+    <figure>
+      <div id="horizontal" class="plot-host"></div>
+      <figcaption>
+        The same named stacks with horizontal orientation and swapped scale directions.
+      </figcaption>
+    </figure>
+    <p class="note">
+      The table owns its columns. Appends update all four plots and retain the newest eight
+      intervals. Layer visibility and ordering change derived endpoints without changing source
+      values. These controls exercise the public mark API, not a built-in legend or hit testing.
+      Canvas and stacked-area rendering remain separate work.
+    </p>
+    <h2>Public API</h2>
+    <pre><code>const flows = createTable({ t, end, upstream, lateral })
+const bars = bar(flows, {
+  x: 't',
+  scales: { x: 't', y: 'q' },
+  layout: 'stacked',
+  interval: { start: 't', end: 'end' },
+  layers: [
+    { id: 'upstream', y: 'upstream', stack: 'observed', fill: '#4477aa' },
+    { id: 'lateral', y: 'lateral', stack: 'observed', fill: '#228833' },
+  ],
+})
+// Omit all stack IDs for one implicit stack.
+// Use layout: 'grouped' (without stack IDs) for independent layer slots.
+// Horizontal bars keep scales.x as the category binding and scales.y as value.
+bars.update({ groupPadding: 0.2 })
+flows.append({ t: [nextStart], end: [nextEnd], upstream: [6], lateral: [-2] })</code></pre>
+    <script type="module" src="./v5-bars.ts"></script>
+  </body>
+</html>
