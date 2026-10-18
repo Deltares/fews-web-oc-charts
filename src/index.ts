@@ -17,6 +17,8 @@ export type {
 } from './plot/create-plot.js'
 export { axis } from './plot/axis.js'
 export type { AxisHandle, AxisOptions, AxisSide } from './plot/axis.js'
+export { line } from './plot/line.js'
+export type { LineMark, LineOptions, LineValue, LineValues } from './plot/line.js'
 export { linear, time, band, degrees, angular, radial, sharedScale } from './scales/scale.js'
 export type {
   ScaleHandle,

@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>v5: basic line and secondary axis</title>
+  </head>
+  <body>
+    <nav aria-label="Examples">
+      <a href="/">All examples</a>
+      <a href="../v5-time-axes/">Civil-time axes</a>
+    </nav>
+    <h1>v5: basic line and secondary axis</h1>
+    <p>
+      A static SVG line fixture uses named time, value and secondary-value scales. The axes keep
+      their own units and ranges while sharing the same civil-time domain.
+    </p>
+    <p class="note">
+      Phase 1 line marks are static: replace a mark to change its values. Data stores, automatic
+      extents and interactive mark behavior are planned for later phases.
+    </p>
+    <figure>
+      <div id="chart" class="plot-host"></div>
+      <figcaption>Discharge (left) and rainfall (right), both over UTC time.</figcaption>
+    </figure>
+    <script type="module" src="./v5-basic-line.ts"></script>
+  </body>
+</html>
