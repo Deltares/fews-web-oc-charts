@@ -1358,6 +1358,16 @@ observed.update({ line: { stroke: undefined }, markers: false })
   cached extents and visible-window acceleration remain future work; this foundation
   scans eligible samples without copying or re-ingesting canonical columns.
 
+### Phase 2 rule marks (implemented)
+
+- [Rule demo](./examples/v5-rule/index.html) shows horizontal and vertical continuous-scale rules.
+- `rule({ scale, value, stroke?, strokeWidth?, id? })` renders a full-plot reference line;
+  the bound scale's x/y direction determines whether it is vertical or horizontal.
+  Linear and time scales are supported on cartesian plots. Rules are annotations and
+  do not contribute to autoscale extents.
+- Browser tests cover orientation, scale projection updates, default/custom styling,
+  autoscale exclusion and rejection of unsupported scale/coordinate bindings.
+
 ### Phase 2 grouped/stacked bars and shared layout (implemented SVG/canvas foundation)
 
 - [Bars demo](./examples/v5-bars/index.html) compares grouped, implicit stacked,
