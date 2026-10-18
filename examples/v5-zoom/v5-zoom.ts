@@ -1,23 +1,14 @@
 import '../shared/v5.css'
-import {
-  axis,
-  createPlot,
-  line,
-  linearScale,
-  ModifierKey,
-  timeScale,
-  zoom,
-  type ZoomWheelMode,
-} from '@lib'
+import { axis, createPlot, line, linearScale, ModifierKey, timeScale, zoom } from '@lib'
 
 const host = document.querySelector<HTMLElement>('#chart')
 const mode = document.querySelector<HTMLSelectElement>('#mode')
-const wheel = document.querySelector<HTMLSelectElement>('#wheel')
+const wheelEnabled = document.querySelector<HTMLInputElement>('#wheel-enabled')
 const modifier = document.querySelector<HTMLSelectElement>('#modifier')
 const reset = document.querySelector<HTMLButtonElement>('#reset')
 const status = document.querySelector<HTMLElement>('#status')
 const snapshot = document.querySelector<HTMLElement>('#snapshot')
-if (!host || !mode || !wheel || !modifier || !reset || !status || !snapshot) {
+if (!host || !mode || !wheelEnabled || !modifier || !reset || !status || !snapshot) {
   throw new Error('The zoom example is missing required elements.')
 }
 
@@ -30,11 +21,11 @@ const values = Float64Array.from(
   (_, index) => 44 + 22 * Math.sin(index / 3) + 13 * Math.cos(index / 7),
 )
 const t = timeScale({ domain: [start, end], timeZone: 'UTC' })
-const q = linearScale({ domain: [0, 100] })
+const q = linearScale({ autoscale: 'visible', defaultDomain: [0, 100] })
 const interaction = zoom({
   mode: 'x',
   wheel: 'x',
-  modifier: ModifierKey.Ctrl,
+  modifier: ModifierKey.None,
   reset: 'initial',
 })
 const plot = createPlot(host, {
@@ -63,10 +54,9 @@ function updateStatus() {
   const xDomain = t.domain.get().map((value) => new Date(Number(value)).toISOString())
   const yDomain = q.domain.get()
   snapshot.textContent = JSON.stringify({ time: xDomain, value: yDomain }, null, 2)
-  status.textContent =
-    wheel.value === 'none'
-      ? 'Wheel zoom is disabled.'
-      : `${modifier.value === 'none' ? 'No modifier' : `${modifier.value} required`}; zoom ${mode.value} with the wheel on ${wheel.value}.`
+  status.textContent = !wheelEnabled.checked
+    ? 'Wheel zoom is disabled.'
+    : `${modifier.value === 'none' ? 'No modifier' : `${modifier.value} required`}; wheel zoom affects ${mode.value}. The y scale ${q.options.get().explicit.domain ? 'has a manual domain' : 'autoscale is following visible data'}.`
 }
 
 function selectedMode(value: string, name: string): 'x' | 'y' | 'xy' {
@@ -87,28 +77,24 @@ function selectedModifier(value: string): ModifierKey {
   }
 }
 
-function selectedWheel(value: string): ZoomWheelMode {
-  if (value === 'none') return value
-  return selectedMode(value, 'wheel mode')
-}
-
 function updateOptions() {
+  const selected = selectedMode(mode.value, 'zoom mode')
   interaction.update({
-    mode: selectedMode(mode.value, 'zoom mode'),
-    wheel: selectedWheel(wheel.value),
+    mode: selected,
+    wheel: wheelEnabled.checked ? selected : 'none',
     modifier: selectedModifier(modifier.value),
   })
   updateStatus()
 }
 
-for (const control of [mode, wheel, modifier]) {
+for (const control of [mode, wheelEnabled, modifier]) {
   control.addEventListener('change', updateOptions, events)
 }
 reset.addEventListener(
   'click',
   () => {
     t.domain.set([start, end])
-    q.domain.set([0, 100])
+    q.update({ domain: undefined })
     updateStatus()
   },
   events,
