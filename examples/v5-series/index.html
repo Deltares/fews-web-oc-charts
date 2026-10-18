@@ -17,8 +17,9 @@
     </p>
     <p class="note">
       Toggle layers through the retained mark handle, or append and replace data through its
-      columnar store. The time domain is updated explicitly; automatic extents, canvas rendering and
-      interactive mark behavior remain separate work.
+      columnar store. Time autoscales to eligible data, and discharge autoscales within the time
+      window. Both domains update automatically when data or visible layers change. Canvas rendering
+      and interactive mark behavior remain separate work.
     </p>
     <fieldset class="controls" aria-label="Series layers">
       <legend>Visible layers</legend>
@@ -42,7 +43,12 @@ const observed = series(data, {
   area: { to: 0, opacity: 0.2 },
 })
 observed.update({ markers: false })
-data.append({ x: [nextTime], y: [nextValue] })</code></pre>
+data.append({ x: [nextTime], y: [nextValue] })
+const t = time()
+const q = linear({ autoscale: 'visible', includeZero: true, nice: true })
+// Bind t, q and observed through createPlot.
+t.domain.set([windowStart, windowEnd]) // override time; discharge follows this window
+t.update({ domain: undefined }) // resume time autoscaling</code></pre>
     <script type="module" src="./v5-series.ts"></script>
   </body>
 </html>

@@ -1124,7 +1124,7 @@ Run `npm run dev` and use the example index, or open these public-API demos:
 The scale, theme and polar demos remain axes-only; the polar example also reports projected
 coordinates using the public `project` API. The basic-line demo uses the narrow static `line()`
 foundation for visual fixtures. The [series demo](./examples/v5-series/index.html) now uses
-the data-backed foundation described below; data-driven autoscaling remains future work.
+the data-backed foundation and autoscaling described below.
 The `v5-spike-*` examples remain separate phase 0 prototypes, not examples of the
 public v5 API.
 
@@ -1160,8 +1160,8 @@ detail.destroy()
   Their `domain` signal contains an immutable numeric pair (epoch milliseconds for
   time), or an ordered string array for band scales. `domain.set`, `domain.update`
   and `scale.update` validate synchronously and publish through the shared scheduler.
-  Explicit domains or `defaultDomain` supply extents in this foundation; data-driven
-  autoscale/extent unions will be wired when marks are introduced.
+  Explicit domains override autoscaling until unset. Otherwise, live mark extents are
+  combined across plot bindings, falling back to `defaultDomain` when empty.
 - Each plot owns separate `plot.scales[name]` bindings exposing `range.get()`,
   `project(value)`, `invert(pixel)`, `ticks(count)` and `bandwidth`. No mutable D3
   instance is exposed or shared. Axes determine x/y orientation; without axes, time
@@ -1218,7 +1218,7 @@ The minimal cartesian `line()` mark renders aligned
 array-like x/y values against named x/y scales, preserves gaps, and is clipped to the
 plot region. Plot configuration synchronously rejects non-gap values that do not match
 their bound scale kind (strings for band scales, numbers otherwise). It is a static fixture primitive: replace the mark to change its values;
-polar marks, data-driven autoscaling and interaction APIs follow in
+polar marks and interaction APIs follow in
 their respective phases. The deterministic per-engine visual regression gate remains
 part of the phase 1 exit criteria.
 `npm run test:visual` renders the basic-line (including the secondary axis),
@@ -1298,11 +1298,48 @@ observed.update({ line: { stroke: undefined }, markers: false })
   skip unrelated marks and style-only updates; explicit IDs preserve DOM resources
   across membership changes. Removed/destroyed plots release their effects and
   validators without disposing shared stores or mark handles.
-- Scale domains remain explicit. Autoscale/extent unions, block indexes, LOD,
+- Scale domains support shared autoscaling as described below. Block indexes, LOD,
   shared time columns, tables, ensembles, borrowed buffers, non-circle markers,
   curves/dashes, canvas, hit testing and legend rendering remain roadmap work.
   The new store temporarily lives in `src/data-store/` to coexist with legacy
   `src/Data/` on case-insensitive filesystems.
+
+### Phase 2 autoscaling (implemented)
+
+- Scale option `autoscale` accepts `'data'`, `'visible'`, `'fixed'` or a callback.
+  Linear, time, band and radial scales default to `'data'`; degree/angular scales
+  default to `'fixed'` to retain their full-circle domain. Explicit `domain` values,
+  including `domain.set`/`update`, take precedence over every policy; unset with
+  `scale.update({ domain: undefined })` to resume automatic domains.
+- Each live plot binding contributes eligible extents to one shared scale-domain
+  computation. Domains union across plots regardless of local scale names or pixel
+  ranges. Membership changes, mark rebindings, visibility/layer updates, store
+  mutations and retention invalidate the union. Removing bindings or destroying
+  plots removes their contributions and subscriptions, without disposing shared
+  scales, stores or marks.
+- Both static `line` and data-backed `series` contribute finite paired samples.
+  Gaps, hidden series and marks with all components disabled are excluded. An area
+  baseline contributes to its y extent only when the mark has eligible samples.
+  Band domains use first-seen category order with duplicates removed.
+- `'visible'` includes samples inside the other scale's current domain, with
+  inclusive numeric boundaries or band-category membership. This is sample-based:
+  it does not interpolate segments at window edges. Each plot uses its own opposing
+  scale window before the shared union. If both opposing scales use `'visible'`
+  without explicit domains, each uses the other's full-data domain as its window,
+  avoiding cyclic domain evaluation.
+- Callbacks receive a read-only `AutoscaleContext` with `kind`, `data`, `visible`
+  and `defaultDomain`. `data`/`visible` provide immutable union extents on demand,
+  or `undefined` when empty. Return a valid domain, or `undefined` for the default.
+  Callbacks must not introduce circular dependencies between scale domains.
+  Invalid callback output throws on domain evaluation.
+- Empty/all-gap unions use `defaultDomain`. Singleton numeric data expands by
+  `max(abs(value) * 0.01, 1)` on each side (one millisecond for time), within finite/
+  Date bounds. Explicit and default singleton domains remain unchanged.
+  `includeZero`, `symmetric`, proportional `padding` and `nice` apply once after
+  the union, in that order; radial padding never produces negative domains.
+- The series example now autoscales on append, reset and layer toggles. Indexes,
+  cached extents and visible-window acceleration remain future work; this foundation
+  scans eligible samples without copying or re-ingesting canonical columns.
 
 ### Target composed API
 

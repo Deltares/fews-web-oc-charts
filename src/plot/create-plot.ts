@@ -6,6 +6,7 @@ import { finiteNonnegative, validateKeys } from '../core/validation.js'
 import {
   bindScale,
   isScaleHandle,
+  registerScaleExtents,
   type ScaleBinding,
   type ScaleHandle,
   type ScaleRange,
@@ -24,6 +25,7 @@ import { observeSize } from './resize.js'
 import { svgElement, renderAxes, renderPolarAxes, axisTickLabels } from './render-axes.js'
 import { isLineMark, validateLineValuesForScale, type LineMark } from './line.js'
 import { isSeriesMark, validateSeriesUpdates, type SeriesMark } from './series.js'
+import { markExtents } from './mark-extents.js'
 
 export interface PlotOptions {
   width?: number
@@ -330,7 +332,13 @@ function createPlotInternal(
   const markValidators = new Map<SeriesMark, { dispose(): void }>()
   const bindings = new Map<
     string,
-    { scale: ScaleHandle; direction: Orientation; binding: ScaleBinding; scope: ReactiveScope }
+    {
+      scale: ScaleHandle
+      direction: Orientation
+      binding: ScaleBinding
+      scope: ReactiveScope
+      stopExtents(): void
+    }
   >()
   let localScales: Readonly<Record<string, ScaleBinding>> = Object.freeze({})
   let destroyed = false
@@ -632,6 +640,7 @@ function createPlotInternal(
         entry.scale !== current.scales[name] ||
         entry.direction !== direction(current, name, undefined, undefined, coordinateSystem)
       ) {
+        entry.stopExtents()
         entry.scope.dispose()
         bindings.delete(name)
       }
@@ -660,7 +669,18 @@ function createPlotInternal(
         )
         return bindScale(scale, range)
       })
-      bindings.set(name, { scale, direction: orientation, binding, scope: bindingScope })
+      const stopExtents = registerScaleExtents(scale, (mode) => {
+        const config = options.get().resolved
+        if (config.scales[name] !== scale) return undefined
+        return markExtents(config.marks, config.scales, name, mode)
+      })
+      bindings.set(name, {
+        scale,
+        direction: orientation,
+        binding,
+        scope: bindingScope,
+        stopExtents,
+      })
     }
     localScales = Object.freeze(
       Object.fromEntries([...bindings].map(([name, entry]) => [name, entry.binding])),
@@ -859,6 +879,7 @@ function createPlotInternal(
       destroyed = true
       stopSize()
       stopTheme()
+      for (const entry of bindings.values()) entry.stopExtents()
       scope.dispose()
       for (const dispose of axisValidators.values()) dispose()
       axisValidators.clear()
