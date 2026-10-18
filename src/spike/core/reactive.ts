@@ -14,37 +14,173 @@ export interface Signal<T> extends ReadonlySignal<T> {
 
 export interface EffectHandle {
   dispose(): void
+  readonly runCount: number
 }
 
 interface Observer {
   dependencies: Set<Cell<unknown>>
   invalidate(): void
+  depth: number
+  order: number
 }
 
 interface Cell<T> {
   value: T
   version: number
+  depth: number
   subscribers: Set<Observer>
+}
+
+export interface ReactiveScope {
+  run<T>(callback: () => T): T
+  createScope(): ReactiveScope
+  dispose(): void
+  readonly disposed: boolean
+}
+
+export interface ComputedSignal<T> extends ReadonlySignal<T> {
+  dispose(): void
+}
+
+export interface ReactiveDiagnostics {
+  effectRuns: number
+  activeEffects: number
+  activeComputeds: number
+  activeScopes: number
+}
+
+export interface ReactiveCoreOptions {
+  onError?: (error: unknown) => void
 }
 
 export interface ReactiveCore {
   signal<T>(value: T, equals?: (left: T, right: T) => boolean): Signal<T>
-  computed<T>(calculate: () => T, equals?: (left: T, right: T) => boolean): ReadonlySignal<T>
+  computed<T>(calculate: () => T, equals?: (left: T, right: T) => boolean): ComputedSignal<T>
   effect(run: () => void | (() => void)): EffectHandle
+  createScope(): ReactiveScope
+  getDiagnostics(): ReactiveDiagnostics
   batch<T>(run: () => T): T
   untracked<T>(run: () => T): T
 }
 
-export function createReactiveCore(scheduler: EffectScheduler): ReactiveCore {
+export function createReactiveCore(
+  scheduler: EffectScheduler,
+  options: ReactiveCoreOptions = {},
+): ReactiveCore {
   let currentObserver: Observer | undefined
+  let currentScope: Scope | undefined
   let batchDepth = 0
   let effectsNeedScheduling = false
+  let nextObserverOrder = 0
+  let effectRuns = 0
+  let activeEffects = 0
+  let activeComputeds = 0
+  let activeScopes = 0
   const pendingEffects = new Set<() => void>()
+  const effectObservers = new Map<() => void, Observer>()
+  const currentlyScheduledEffects = new Set<() => void>()
+
+  function reportError(error: unknown) {
+    if (!options.onError) {
+      console.error('Reactive core error:', error)
+      return
+    }
+    try {
+      options.onError(error)
+    } catch (reportingError) {
+      console.error('Reactive core error handler failed:', reportingError, error)
+    }
+  }
+
+  function safelyRun(callback: () => void) {
+    try {
+      callback()
+    } catch (error) {
+      reportError(error)
+    }
+  }
+
+  class Scope implements ReactiveScope {
+    private cleanups: (() => void)[] = []
+    private children = new Set<Scope>()
+    private isDisposed = false
+    private readonly parent: Scope | undefined
+
+    constructor(parent: Scope | undefined) {
+      this.parent = parent
+      parent?.children.add(this)
+      activeScopes += 1
+    }
+
+    get disposed() {
+      return this.isDisposed
+    }
+
+    run<T>(callback: () => T): T {
+      if (this.isDisposed) throw new Error('Cannot run a disposed reactive scope.')
+      const previousScope = currentScope
+      currentScope = this
+      try {
+        return callback()
+      } finally {
+        currentScope = previousScope
+      }
+    }
+
+    createScope(): ReactiveScope {
+      if (this.isDisposed) throw new Error('Cannot create a scope from a disposed scope.')
+      return new Scope(this)
+    }
+
+    own(cleanup: () => void) {
+      if (this.isDisposed) {
+        safelyRun(cleanup)
+        return () => {}
+      }
+      this.cleanups.push(cleanup)
+      return () => {
+        const index = this.cleanups.indexOf(cleanup)
+        if (index !== -1) this.cleanups.splice(index, 1)
+      }
+    }
+
+    dispose() {
+      if (this.isDisposed) return
+      this.isDisposed = true
+      this.parent?.children.delete(this)
+      for (const child of [...this.children]) safelyRun(() => child.dispose())
+      this.children.clear()
+      for (const cleanup of this.cleanups.splice(0).reverse()) safelyRun(cleanup)
+      activeScopes -= 1
+    }
+  }
 
   function scheduleEffects() {
     if (batchDepth !== 0 || !effectsNeedScheduling) return
     effectsNeedScheduling = false
-    for (const effect of pendingEffects) scheduler.enqueueEffect(effect)
+    scheduler.enqueueEffect(flushEffects)
+  }
+
+  function flushEffects() {
+    const currentEffects = [...pendingEffects]
+    pendingEffects.clear()
+    for (const execute of currentEffects) currentlyScheduledEffects.add(execute)
+    currentEffects.sort((left, right) => {
+      const leftObserver = effectObservers.get(left)
+      const rightObserver = effectObservers.get(right)
+      return (
+        (leftObserver?.depth ?? 0) - (rightObserver?.depth ?? 0) ||
+        (leftObserver?.order ?? 0) - (rightObserver?.order ?? 0)
+      )
+    })
+    for (const execute of currentEffects) {
+      currentlyScheduledEffects.delete(execute)
+      safelyRun(execute)
+    }
+    if (pendingEffects.size > 0) {
+      effectsNeedScheduling = true
+      scheduleEffects()
+    }
   }
 
   function track(cell: Cell<unknown>) {
@@ -59,7 +195,7 @@ export function createReactiveCore(scheduler: EffectScheduler): ReactiveCore {
   }
 
   function signal<T>(value: T, equals: (left: T, right: T) => boolean = Object.is): Signal<T> {
-    const cell: Cell<T> = { value, version: 0, subscribers: new Set() }
+    const cell: Cell<T> = { value, version: 0, depth: 0, subscribers: new Set() }
     return {
       get() {
         track(cell as Cell<unknown>)
@@ -83,21 +219,30 @@ export function createReactiveCore(scheduler: EffectScheduler): ReactiveCore {
   function computed<T>(
     calculate: () => T,
     equals: (left: T, right: T) => boolean = Object.is,
-  ): ReadonlySignal<T> {
-    const cell: Cell<T> = { value: undefined as T, version: 0, subscribers: new Set() }
+  ): ComputedSignal<T> {
+    const cell: Cell<T> = {
+      value: undefined as T,
+      version: 0,
+      depth: 0,
+      subscribers: new Set(),
+    }
     let dirty = true
     let evaluating = false
     let initialized = false
+    let disposed = false
     const observer: Observer = {
       dependencies: new Set(),
+      depth: 0,
+      order: nextObserverOrder++,
       invalidate() {
-        if (dirty) return
+        if (disposed || dirty) return
         dirty = true
         notify(cell as Cell<unknown>)
       },
     }
 
     function evaluate(): T {
+      if (disposed) throw new Error('Cannot read a disposed computed value.')
       if (!dirty) return cell.value
       if (evaluating) throw new Error('Reactive cycle detected while evaluating a computed value.')
       evaluating = true
@@ -111,6 +256,11 @@ export function createReactiveCore(scheduler: EffectScheduler): ReactiveCore {
           cell.value = next
           cell.version += 1
         }
+        cell.depth = Math.max(
+          0,
+          ...[...observer.dependencies].map((dependency) => dependency.depth + 1),
+        )
+        observer.depth = cell.depth
         initialized = true
         dirty = false
         return cell.value
@@ -120,7 +270,7 @@ export function createReactiveCore(scheduler: EffectScheduler): ReactiveCore {
       }
     }
 
-    return {
+    const computedSignal: ComputedSignal<T> = {
       get() {
         track(cell as Cell<unknown>)
         return evaluate()
@@ -129,18 +279,38 @@ export function createReactiveCore(scheduler: EffectScheduler): ReactiveCore {
         evaluate()
         return cell.version
       },
+      dispose() {
+        if (disposed) return
+        disposed = true
+        for (const dependency of observer.dependencies) dependency.subscribers.delete(observer)
+        observer.dependencies.clear()
+        for (const subscriber of [...cell.subscribers]) subscriber.invalidate()
+        cell.subscribers.clear()
+        scheduleEffects()
+        activeComputeds -= 1
+        releaseOwnership()
+      },
     }
+    activeComputeds += 1
+    const releaseOwnership =
+      currentScope?.own(computedSignal.dispose.bind(computedSignal)) ?? (() => {})
+    return computedSignal
   }
 
   function effect(run: () => void | (() => void)): EffectHandle {
     let active = true
     let cleanup: void | (() => void)
+    let runCount = 0
     const observer: Observer = {
       dependencies: new Set(),
+      depth: 0,
+      order: nextObserverOrder++,
       invalidate() {
         if (!active) return
-        pendingEffects.add(execute)
-        effectsNeedScheduling = true
+        if (!currentlyScheduledEffects.has(execute)) {
+          pendingEffects.add(execute)
+          effectsNeedScheduling = true
+        }
       },
     }
 
@@ -149,36 +319,61 @@ export function createReactiveCore(scheduler: EffectScheduler): ReactiveCore {
       pendingEffects.delete(execute)
       for (const dependency of observer.dependencies) dependency.subscribers.delete(observer)
       observer.dependencies.clear()
-      cleanup?.()
+      safelyRun(() => cleanup?.())
+      cleanup = undefined
       const previousObserver = currentObserver
       currentObserver = observer
       try {
+        runCount += 1
+        effectRuns += 1
         cleanup = run()
       } finally {
+        observer.depth = Math.max(
+          0,
+          ...[...observer.dependencies].map((dependency) => dependency.depth + 1),
+        )
         currentObserver = previousObserver
       }
     }
 
-    pendingEffects.add(execute)
-    effectsNeedScheduling = true
-    scheduleEffects()
-
-    return {
+    const handle: EffectHandle = {
+      get runCount() {
+        return runCount
+      },
       dispose() {
         if (!active) return
         active = false
         pendingEffects.delete(execute)
         for (const dependency of observer.dependencies) dependency.subscribers.delete(observer)
         observer.dependencies.clear()
-        cleanup?.()
+        safelyRun(() => cleanup?.())
+        cleanup = undefined
+        activeEffects -= 1
+        effectObservers.delete(execute)
+        releaseOwnership()
       },
     }
+
+    activeEffects += 1
+    const releaseOwnership = currentScope?.own(handle.dispose) ?? (() => {})
+    effectObservers.set(execute, observer)
+    pendingEffects.add(execute)
+    effectsNeedScheduling = true
+    scheduleEffects()
+
+    return handle
   }
 
   return {
     signal,
     computed,
     effect,
+    createScope() {
+      return new Scope(currentScope)
+    },
+    getDiagnostics() {
+      return { effectRuns, activeEffects, activeComputeds, activeScopes }
+    },
     batch(run) {
       batchDepth += 1
       try {

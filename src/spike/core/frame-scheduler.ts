@@ -19,6 +19,7 @@ export interface FrameScheduler {
 export function createFrameScheduler(
   draw: (layers: DirtyLayers) => void,
   requestFrame: FrameCallback = (callback) => requestAnimationFrame(callback),
+  onError: (error: unknown) => void = (error) => console.error('Frame scheduler error:', error),
 ): FrameScheduler {
   let dirtyLayers = 0
   let framePending = false
@@ -37,16 +38,34 @@ export function createFrameScheduler(
       const currentEffects = [...effects]
       effects.clear()
       let nextEffect = 0
+      function reportError(error: unknown) {
+        try {
+          onError(error)
+        } catch (reportingError) {
+          console.error('Frame scheduler error handler failed:', reportingError, error)
+        }
+      }
+
       try {
         while (nextEffect < currentEffects.length) {
           const effect = currentEffects[nextEffect]
           nextEffect += 1
-          effect()
+          try {
+            effect()
+          } catch (error) {
+            reportError(error)
+          }
         }
 
         const layers = dirtyLayers
         dirtyLayers = 0
-        if (layers !== 0) draw(layers)
+        if (layers !== 0) {
+          try {
+            draw(layers)
+          } catch (error) {
+            reportError(error)
+          }
+        }
       } finally {
         for (; nextEffect < currentEffects.length; nextEffect += 1) {
           effects.add(currentEffects[nextEffect])
