@@ -144,6 +144,117 @@ function direction(
   return result
 }
 
+function validatePlotAppearance(options: PlotOptions) {
+  for (const dimension of ['width', 'height'] as const) {
+    if (options[dimension] !== undefined) finiteNonnegative(options[dimension], `plot.${dimension}`)
+  }
+  if (typeof options.title !== 'string') throw new Error('plot.title must be a string.')
+  if (!['auto', 'light', 'dark'].includes(options.theme))
+    throw new Error('plot.theme must be auto, light or dark.')
+  if (options.themeElement !== undefined && !(options.themeElement instanceof Element)) {
+    throw new Error('plot.themeElement must be an Element.')
+  }
+  if (!options.margins || typeof options.margins !== 'object')
+    throw new Error('plot.margins must be an object.')
+  for (const side of marginKeys) finiteNonnegative(options.margins[side], `plot.margins.${side}`)
+}
+
+function validatePlotCollections(options: PlotOptions) {
+  if (!Array.isArray(options.axes)) throw new Error('plot.axes must be an array.')
+  if (!Array.isArray(options.marks)) throw new Error('plot.marks must be an array.')
+  for (const key of ['scales', 'directions'] as const) {
+    const value = options[key]
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      throw new Error(`plot.${key} must be a named map.`)
+    }
+  }
+}
+
+function validateAxisPosition(position: AxisSide, coordinateSystem: CoordinateSystem) {
+  if (coordinateSystem === 'cartesian' && (position === 'angular' || position === 'radial')) {
+    throw new Error('Cartesian plots require top, right, bottom or left axes.')
+  }
+  if (coordinateSystem === 'polar' && position !== 'angular' && position !== 'radial') {
+    throw new Error('Polar plots require angular or radial axes.')
+  }
+}
+
+function validatePlotAxes(options: PlotOptions, coordinateSystem: CoordinateSystem) {
+  const ids = new Set<string>()
+  const axes = new Set<AxisHandle>()
+  for (const axis of options.axes) {
+    if (!axis || !isAxisHandle(axis)) throw new Error('plot.axes requires axis handles.')
+    const position = axis.options.get().resolved.position
+    validateAxisPosition(position, coordinateSystem)
+    if (axes.has(axis)) throw new Error('Duplicate axis handle in plot.axes.')
+    axes.add(axis)
+    const id = axis.options.get().resolved.id
+    if (id && ids.has(id)) throw new Error(`Duplicate axis id "${id}".`)
+    if (id) ids.add(id)
+    if (!Object.hasOwn(options.scales, axis.scale))
+      throw new Error(`plot.axes references missing scale "${axis.scale}".`)
+  }
+}
+
+function validatePlotScales(options: PlotOptions, coordinateSystem: CoordinateSystem) {
+  for (const [name, scale] of Object.entries(options.scales)) {
+    if (!name || !scale || !isScaleHandle(scale))
+      throw new Error(`plot.scales.${name} requires a scale handle.`)
+    direction(options, name, undefined, undefined, coordinateSystem)
+  }
+}
+
+function validatePlotMark(
+  mark: LineMark,
+  options: PlotOptions,
+  coordinateSystem: CoordinateSystem,
+) {
+  if (!mark || !isLineMark(mark)) {
+    throw new Error('plot.marks currently accepts line() marks only.')
+  }
+  if (coordinateSystem === 'polar') {
+    throw new Error('line() marks are supported on cartesian plots only.')
+  }
+  if (!Object.hasOwn(options.scales, mark.x) || !Object.hasOwn(options.scales, mark.y)) {
+    throw new Error(`line "${mark.id ?? ''}" references a missing x or y scale.`)
+  }
+  if (direction(options, mark.x, undefined, undefined, coordinateSystem) !== 'x') {
+    throw new Error(`line "${mark.id ?? ''}" requires an x-direction scale.`)
+  }
+  if (direction(options, mark.y, undefined, undefined, coordinateSystem) !== 'y') {
+    throw new Error(`line "${mark.id ?? ''}" requires a y-direction scale.`)
+  }
+  validateLineValuesForScale(mark, 'x', options.scales[mark.x].kind)
+  validateLineValuesForScale(mark, 'y', options.scales[mark.y].kind)
+}
+
+function validatePlotMarks(options: PlotOptions, coordinateSystem: CoordinateSystem) {
+  const markIds = new Set<string>()
+  for (const mark of options.marks) {
+    validatePlotMark(mark, options, coordinateSystem)
+    if (mark.id && markIds.has(mark.id)) throw new Error(`Duplicate line id "${mark.id}".`)
+    if (mark.id) markIds.add(mark.id)
+  }
+}
+
+function validatePlotDirections(options: PlotOptions, coordinateSystem: CoordinateSystem) {
+  if (coordinateSystem === 'polar') {
+    const angularScales = Object.values(options.scales).filter((scale) => scale.kind === 'angular')
+    const radialScales = Object.values(options.scales).filter((scale) => scale.kind === 'radial')
+    if (angularScales.length !== 1 || radialScales.length !== 1) {
+      throw new Error('Polar plots require exactly one angular scale and one radial scale.')
+    }
+    if (Object.keys(options.directions).length > 0) {
+      throw new Error('Polar plots do not support cartesian plot.directions.')
+    }
+  }
+  for (const [name, value] of Object.entries(options.directions)) {
+    if (!Object.hasOwn(options.scales, name))
+      throw new Error(`plot.directions.${name} references a missing scale.`)
+    if (value !== 'x' && value !== 'y') throw new Error(`plot.directions.${name} must be x or y.`)
+  }
+}
+
 function createPlotInternal(
   host: HTMLElement,
   config: PlotConfig,
@@ -163,95 +274,12 @@ function createPlotInternal(
     }),
     isAtomicReference: (value) => isScaleHandle(value) || isAxisHandle(value) || isLineMark(value),
     validate(options) {
-      for (const dimension of ['width', 'height'] as const) {
-        if (options[dimension] !== undefined)
-          finiteNonnegative(options[dimension], `plot.${dimension}`)
-      }
-      if (typeof options.title !== 'string') throw new Error('plot.title must be a string.')
-      if (!['auto', 'light', 'dark'].includes(options.theme))
-        throw new Error('plot.theme must be auto, light or dark.')
-      if (options.themeElement !== undefined && !(options.themeElement instanceof Element)) {
-        throw new Error('plot.themeElement must be an Element.')
-      }
-      if (!options.margins || typeof options.margins !== 'object')
-        throw new Error('plot.margins must be an object.')
-      for (const side of marginKeys)
-        finiteNonnegative(options.margins[side], `plot.margins.${side}`)
-      if (!Array.isArray(options.axes)) throw new Error('plot.axes must be an array.')
-      if (!Array.isArray(options.marks)) throw new Error('plot.marks must be an array.')
-      for (const key of ['scales', 'directions'] as const) {
-        const value = options[key]
-        if (!value || typeof value !== 'object' || Array.isArray(value)) {
-          throw new Error(`plot.${key} must be a named map.`)
-        }
-      }
-
-      const ids = new Set<string>()
-      const axes = new Set<AxisHandle>()
-      for (const axis of options.axes) {
-        if (!axis || !isAxisHandle(axis)) throw new Error('plot.axes requires axis handles.')
-        const position = axis.options.get().resolved.position
-        if (coordinateSystem === 'cartesian' && (position === 'angular' || position === 'radial')) {
-          throw new Error('Cartesian plots require top, right, bottom or left axes.')
-        }
-        if (coordinateSystem === 'polar' && position !== 'angular' && position !== 'radial') {
-          throw new Error('Polar plots require angular or radial axes.')
-        }
-        if (axes.has(axis)) throw new Error('Duplicate axis handle in plot.axes.')
-        axes.add(axis)
-        const id = axis.options.get().resolved.id
-        if (id && ids.has(id)) throw new Error(`Duplicate axis id "${id}".`)
-        if (id) ids.add(id)
-        if (!Object.hasOwn(options.scales, axis.scale))
-          throw new Error(`plot.axes references missing scale "${axis.scale}".`)
-      }
-      for (const [name, scale] of Object.entries(options.scales)) {
-        if (!name || !scale || !isScaleHandle(scale))
-          throw new Error(`plot.scales.${name} requires a scale handle.`)
-        direction(options, name, undefined, undefined, coordinateSystem)
-      }
-      const markIds = new Set<string>()
-      for (const mark of options.marks) {
-        if (!mark || !isLineMark(mark)) {
-          throw new Error('plot.marks currently accepts line() marks only.')
-        }
-        if (coordinateSystem === 'polar') {
-          throw new Error('line() marks are supported on cartesian plots only.')
-        }
-        if (!Object.hasOwn(options.scales, mark.x) || !Object.hasOwn(options.scales, mark.y)) {
-          throw new Error(`line "${mark.id ?? ''}" references a missing x or y scale.`)
-        }
-        if (direction(options, mark.x, undefined, undefined, coordinateSystem) !== 'x') {
-          throw new Error(`line "${mark.id ?? ''}" requires an x-direction scale.`)
-        }
-        if (direction(options, mark.y, undefined, undefined, coordinateSystem) !== 'y') {
-          throw new Error(`line "${mark.id ?? ''}" requires a y-direction scale.`)
-        }
-        validateLineValuesForScale(mark, 'x', options.scales[mark.x].kind)
-        validateLineValuesForScale(mark, 'y', options.scales[mark.y].kind)
-        if (mark.id && markIds.has(mark.id)) throw new Error(`Duplicate line id "${mark.id}".`)
-        if (mark.id) markIds.add(mark.id)
-      }
-      if (coordinateSystem === 'polar') {
-        const angularScales = Object.values(options.scales).filter(
-          (scale) => scale.kind === 'angular',
-        )
-        const radialScales = Object.values(options.scales).filter(
-          (scale) => scale.kind === 'radial',
-        )
-        if (angularScales.length !== 1 || radialScales.length !== 1) {
-          throw new Error('Polar plots require exactly one angular scale and one radial scale.')
-        }
-        if (Object.keys(options.directions).length > 0) {
-          throw new Error('Polar plots do not support cartesian plot.directions.')
-        }
-      }
-      for (const [name, value] of Object.entries(options.directions)) {
-        if (!Object.hasOwn(options.scales, name))
-          throw new Error(`plot.directions.${name} references a missing scale.`)
-        if (value !== 'x' && value !== 'y')
-          throw new Error(`plot.directions.${name} must be x or y.`)
-      }
+      validatePlotAppearance(options)
+      validatePlotCollections(options)
+      validatePlotAxes(options, coordinateSystem)
+      validatePlotScales(options, coordinateSystem)
+      validatePlotMarks(options, coordinateSystem)
+      validatePlotDirections(options, coordinateSystem)
     },
   })
   const optionState = optionSignal(state)
