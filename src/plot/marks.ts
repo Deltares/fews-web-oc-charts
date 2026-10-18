@@ -1,5 +1,6 @@
 import { bandDefinition } from './band-mark.js'
 import { barDefinition } from './bar-mark.js'
+import { arrowsDefinition, directionDefinition } from './vector-mark.js'
 import { histogramDefinition } from './histogram-mark.js'
 import { heatmapDefinition } from './heatmap-mark.js'
 import { lineDefinition, seriesDefinition } from './line-mark.js'
@@ -19,6 +20,8 @@ const markDefinitions = [
   stackedAreaDefinition,
   ruleDefinition,
   textDefinition,
+  arrowsDefinition,
+  directionDefinition,
 ] as const
 
 type MarkOf<D> = D extends MarkDefinition<infer M> ? M : never

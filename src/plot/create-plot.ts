@@ -24,6 +24,7 @@ import { isAxisHandle, validateAxisUpdates, type AxisHandle, type AxisSide } fro
 import { observeSize } from './resize.js'
 import { svgElement, renderAxes, renderPolarAxes, axisTickLabels } from './render-axes.js'
 import { markExtents } from './mark-extents.js'
+import { projectPolarPoint } from './polar-geometry.js'
 import { watchCanvasPixelRatio } from './render-composite-canvas.js'
 import type {
   CoordinateSystem,
@@ -723,17 +724,14 @@ export function createPolarPlot(host: HTMLElement, config: PolarPlotConfig = {})
       if (!angularName || !radialName) {
         throw new Error('Polar plots require exactly one angular scale and one radial scale.')
       }
-      const angularScale = plot.options.get().resolved.scales[angularName]
-      const angleDirection =
-        angularScale.options.get().resolved.direction === 'anticlockwise' ? -1 : 1
-      const intercept = angularScale.options.get().resolved.intercept ?? 0
-      const angle = intercept + angleDirection * plot.scales[angularName].project(angularValue)
-      const radius = plot.scales[radialName].project(radialValue)
       const region = plot.regions.get().plot
-      return Object.freeze({
-        x: region.x + region.width / 2 + radius * Math.sin(angle),
-        y: region.y + region.height / 2 - radius * Math.cos(angle),
-      })
+      return projectPolarPoint(
+        plot.scales[angularName],
+        plot.scales[radialName],
+        region,
+        angularValue,
+        radialValue,
+      )
     },
   })
 }

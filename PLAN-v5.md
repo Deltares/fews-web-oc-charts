@@ -409,6 +409,17 @@ Other marks: `band` (range / min-max), `bar` (single/grouped/stacked, step bars)
 `progress`, `rule` (horizontal/vertical), `text`, `thresholds` (warning levels as a mark),
 `colorBar`. Each mark implements:
 
+`arrows({ x, y, xValues, yValues, xEndValues, yEndValues })` draws one vector from
+each aligned start coordinate to its end coordinate. Cartesian plots bind `x` and `y`
+to continuous x/y scales; polar plots bind them to angular/radial scales and interpret
+the endpoint pairs through the plot's clockwise-from-north angular convention.
+`direction({ x, y, xValues, yValues, directionValues })` draws a fixed-size bearing
+glyph at each aligned position. Bearings are degrees clockwise from north and indicate
+the direction a wind/current vector comes **from**, so the glyph points 180° opposite
+the bearing; `every` can thin dense glyphs. Both marks accept `null`/`undefined` gaps,
+contribute their rendered coordinates to autoscale extents, use SVG by default, and
+support Cartesian and polar coordinate systems.
+
 The range `band` mark accepts aligned `xValues` and `yValues` of ascending numeric
 `[min, max]` pairs (with `null`/`undefined` gaps), drawing one rectangle per pair on
 cartesian numeric/time scales or one annular sector per pair on polar angular/radial
