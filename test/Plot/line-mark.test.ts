@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from 'vitest'
+import { afterEach, describe, expect, test, vi } from 'vitest'
 import {
   angular,
   axis,
@@ -38,9 +38,113 @@ async function frame() {
 afterEach(() => {
   for (const current of plots.splice(0)) current.destroy()
   for (const element of hosts.splice(0)) element.remove()
+  vi.restoreAllMocks()
 })
 
 describe('static line marks', () => {
+  test('updates theme and colour attributes without projecting points or rewriting paths', async () => {
+    const element = host()
+    const current = plot(element, {
+      theme: 'light',
+      themeElement: element,
+      scales: { x: linear(), y: linear() },
+      directions: { x: 'x' },
+      marks: [
+        line({ x: 'x', y: 'y', xValues: [0, 1], yValues: [0, 1] }),
+        line({
+          x: 'x',
+          y: 'y',
+          xValues: [0, 1],
+          yValues: [1, 0],
+          stroke: '#1677a6',
+          strokeWidth: 3,
+        }),
+      ],
+    })
+    await frame()
+    const paths = [...current.element.querySelectorAll<SVGPathElement>('[data-mark="line"]')]
+    const geometry = paths.map((path) => path.getAttribute('d'))
+    const attributes = paths.map((path) => vi.spyOn(path, 'setAttribute'))
+    const projectX = vi.spyOn(current.scales.x, 'project')
+    const projectY = vi.spyOn(current.scales.y, 'project')
+
+    current.update({ theme: 'dark' })
+    await frame()
+    expect(paths[0].getAttribute('stroke')).toContain('#66c2ff')
+    expect(paths[1].getAttribute('stroke')).toBe('#1677a6')
+    expect(paths[1].getAttribute('stroke-width')).toBe('3')
+
+    element.style.setProperty('--fews-chart-accent', '#ff0000')
+    await vi.waitFor(() => expect(paths[0].getAttribute('stroke')).toContain('#ff0000'))
+    expect(paths[1].getAttribute('stroke')).toBe('#1677a6')
+    expect(projectX).not.toHaveBeenCalled()
+    expect(projectY).not.toHaveBeenCalled()
+    expect(paths.map((path) => path.getAttribute('d'))).toEqual(geometry)
+    paths.forEach((path, index) => {
+      expect(current.element.querySelectorAll('[data-mark="line"]')[index]).toBe(path)
+      expect(
+        attributes[index].mock.calls.every(
+          ([name]) => name === 'stroke' || name === 'stroke-width',
+        ),
+      ).toBe(true)
+    })
+  })
+
+  test('rebuilds geometry and applies styles for layout and coalesced scale/theme changes', async () => {
+    const element = host()
+    const x = linear()
+    const current = plot(element, {
+      theme: 'light',
+      themeElement: element,
+      scales: { x, y: linear() },
+      axes: [axis('x', { position: 'bottom' }), axis('y')],
+      marks: [line({ x: 'x', y: 'y', xValues: [0, 1], yValues: [0, 1] })],
+    })
+    await frame()
+    const path = current.element.querySelector<SVGPathElement>('[data-mark="line"]')!
+    const original = path.getAttribute('d')
+    const attributes = vi.spyOn(path, 'setAttribute')
+    const projectX = vi.spyOn(current.scales.x, 'project')
+
+    element.style.setProperty('--fews-chart-font-size', '24px')
+    await vi.waitFor(() => expect(path.getAttribute('d')).not.toBe(original))
+    expect(projectX).toHaveBeenCalled()
+    expect(attributes.mock.calls.some(([name]) => name === 'd')).toBe(true)
+
+    attributes.mockClear()
+    x.domain.set([0, 2])
+    current.update({ theme: 'dark' })
+    await frame()
+    expect(path.getAttribute('d')).toBe(
+      `M${current.scales.x.project(0)},${current.scales.y.project(0)}` +
+        `L${current.scales.x.project(1)},${current.scales.y.project(1)}`,
+    )
+    expect(attributes.mock.calls.filter(([name]) => name === 'd')).toHaveLength(1)
+    expect(path.getAttribute('stroke')).toContain('#66c2ff')
+
+    current.update({
+      marks: [
+        line({
+          id: 'replacement',
+          x: 'x',
+          y: 'y',
+          xValues: [0, 2],
+          yValues: [1, 0],
+          stroke: '#1677a6',
+          strokeWidth: 3,
+        }),
+      ],
+    })
+    await frame()
+    expect(path.getAttribute('data-mark-id')).toBe('replacement')
+    expect(path.getAttribute('stroke')).toBe('#1677a6')
+    expect(path.getAttribute('stroke-width')).toBe('3')
+    expect(path.getAttribute('d')).toBe(
+      `M${current.scales.x.project(0)},${current.scales.y.project(1)}` +
+        `L${current.scales.x.project(2)},${current.scales.y.project(0)}`,
+    )
+  })
+
   test('renders named time/value scales, a secondary axis, and missing-value gaps', async () => {
     const t = time({ domain: [0, 3], timeZone: 'UTC' })
     const q = linear({ domain: [0, 100] })

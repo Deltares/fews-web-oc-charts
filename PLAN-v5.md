@@ -1184,8 +1184,10 @@ detail.destroy()
   `--fews-chart-background`, `--fews-chart-foreground`, `--fews-chart-grid`,
   `--fews-chart-accent`, `--fews-chart-font-family` and `--fews-chart-font-size`
   override tokens. Font size is a positive pixel value. Tokens are cached at creation
-  and theme changes, never during projection. Colour-only changes preserve axis DOM;
-  font changes remeasure layout. Theme observation is opt-in on `themeElement`, never
+  and theme changes, never during projection. Colour-only changes preserve axis DOM
+  and line geometry, updating only style attributes without reprojecting line points
+  or rebuilding SVG paths; font changes remeasure layout and rebuild line geometry.
+  Theme observation is opt-in on `themeElement`, never
   implicitly on the document root; system colour-scheme changes are also observed.
 - Plot/scale/axis updates support set, recursive patch and explicit `undefined` reset.
   Arrays replace membership/order; omitted scale names remain, while `undefined`
