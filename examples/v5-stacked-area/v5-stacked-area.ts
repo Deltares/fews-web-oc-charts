@@ -20,6 +20,9 @@ const lateral = required<HTMLInputElement>('#lateral')
 const forecast = required<HTMLInputElement>('#forecast')
 const step = required<HTMLInputElement>('#step')
 const reverse = required<HTMLInputElement>('#reverse')
+const renderer = required<HTMLSelectElement>('#renderer')
+renderer.value =
+  new URLSearchParams(location.search).get('renderer') === 'canvas' ? 'canvas' : 'svg'
 const events = new AbortController()
 const hour = 3_600_000
 const start = Date.UTC(2026, 1, 12)
@@ -68,6 +71,7 @@ for (const named of [false, true]) {
   const t = time({ timeZone: 'UTC' })
   timeScales.push(t)
   const mark = stackedArea(data, {
+    renderer: renderer.value === 'canvas' ? 'canvas' : 'svg',
     id,
     x: 't',
     scales: { x: 't', y: 'q' },
@@ -90,6 +94,14 @@ for (const named of [false, true]) {
 function updateLayers() {
   for (const { mark, named } of marks) mark.update({ layers: layers(named) })
 }
+renderer.addEventListener(
+  'change',
+  () => {
+    for (const { mark } of marks)
+      mark.update({ renderer: renderer.value === 'canvas' ? 'canvas' : 'svg' })
+  },
+  events,
+)
 for (const control of [lateral, forecast]) control.addEventListener('change', updateLayers, events)
 step.addEventListener(
   'change',

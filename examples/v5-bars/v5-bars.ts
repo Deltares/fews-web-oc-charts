@@ -19,6 +19,9 @@ function required<T extends HTMLElement>(selector: string) {
 const lateral = required<HTMLInputElement>('#lateral')
 const forecast = required<HTMLInputElement>('#forecast')
 const reverse = required<HTMLInputElement>('#reverse')
+const renderer = required<HTMLSelectElement>('#renderer')
+renderer.value =
+  new URLSearchParams(location.search).get('renderer') === 'canvas' ? 'canvas' : 'svg'
 const events = new AbortController()
 const hour = 3_600_000
 const start = Date.UTC(2026, 1, 12)
@@ -75,6 +78,7 @@ for (const [id, layout, named, horizontal] of [
   const t = time({ timeZone: 'UTC' })
   timeScales.push(t)
   const mark = bar(data, {
+    renderer: renderer.value === 'canvas' ? 'canvas' : 'svg',
     id,
     x: 't',
     scales: { x: 't', y: 'q' },
@@ -101,6 +105,14 @@ function updateLayers() {
   for (const { mark, named, observedOnly } of marks)
     mark.update({ layers: layers(named, observedOnly) })
 }
+renderer.addEventListener(
+  'change',
+  () => {
+    for (const { mark } of marks)
+      mark.update({ renderer: renderer.value === 'canvas' ? 'canvas' : 'svg' })
+  },
+  events,
+)
 for (const control of [lateral, forecast]) control.addEventListener('change', updateLayers, events)
 reverse.addEventListener(
   'change',

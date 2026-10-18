@@ -4,6 +4,12 @@ import type { ScaleBinding, ScaleValue } from '../scales/scale.js'
 import { stackedAreaEndpoints, type StackedAreaMark } from './stacked-area.js'
 import { svgElement } from './render-axes.js'
 import type { StackEndpoints } from '../layout/stack.js'
+import {
+  clearCompositeCanvas,
+  renderCompositeCanvas,
+  styleCompositeCanvas,
+  type CanvasShape,
+} from './render-composite-canvas.js'
 
 function viewportRows(data: TableView, x: string, domain: readonly ScaleValue[]) {
   const low = Number(domain[0])
@@ -159,11 +165,24 @@ export function renderStackedAreas(
       stackLodRows(mark.data, options.x, visibleRows, layers, x),
     ]),
   )
+  if (options.renderer === 'svg') clearCompositeCanvas(group)
   const existing = new Map(
     Array.from(group.children, (node) => [node.getAttribute('data-layer-id')!, node]),
   )
   const layers = [...layout.layers].sort((a, b) => a.slot - b.slot)
+  const shapes: CanvasShape[] = []
   for (const layer of layers) {
+    const path = area<number>()
+      .defined((row) => Number.isFinite(layer.lowerAt(row)) && Number.isFinite(layer.upperAt(row)))
+      .x((row) => x.project(mark.data.valueAt(options.x, row)))
+      .y0((row) => y.project(layer.lowerAt(row)))
+      .y1((row) => y.project(layer.upperAt(row)))
+      .curve(options.curve === 'step' ? curveStep : curveLinear)
+    const d = path(rowsByStack.get(layer.stack) ?? []) ?? ''
+    if (options.renderer === 'canvas') {
+      shapes.push({ layerId: layer.id, path: new Path2D(d) })
+      continue
+    }
     let node = existing.get(layer.id)
     if (!node)
       node = svgElement('path', {
@@ -171,21 +190,17 @@ export function renderStackedAreas(
         'data-layer-id': layer.id,
       })
     existing.delete(layer.id)
-    const path = area<number>()
-      .defined((row) => Number.isFinite(layer.lowerAt(row)) && Number.isFinite(layer.upperAt(row)))
-      .x((row) => x.project(mark.data.valueAt(options.x, row)))
-      .y0((row) => y.project(layer.lowerAt(row)))
-      .y1((row) => y.project(layer.upperAt(row)))
-      .curve(options.curve === 'step' ? curveStep : curveLinear)
-    node.setAttribute('d', path(rowsByStack.get(layer.stack) ?? []) ?? '')
+    node.setAttribute('d', d)
     group.append(node)
   }
-  for (const node of existing.values()) node.remove()
+  if (options.renderer === 'canvas') renderCompositeCanvas(group, shapes)
+  else for (const node of existing.values()) node.remove()
 }
 
 export function styleStackedAreas(group: SVGGElement, mark: StackedAreaMark, accent: string) {
   const options = mark.options.get().resolved
   const layers = new Map(options.layers.map((layer) => [layer.id, layer]))
+  if (styleCompositeCanvas(group, layers, options, accent)) return
   for (const node of group.children) {
     const layer = layers.get(node.getAttribute('data-layer-id')!)
     if (!layer) throw new Error('Missing stackedArea layer for rendered path.')

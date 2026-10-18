@@ -14,12 +14,19 @@
     </nav>
     <h1>v5: stacked areas</h1>
     <p>
-      Retained SVG layers share diverging data-space endpoints. The first plot has one implicit
+      SVG and canvas layers share diverging data-space endpoints. The first plot has one implicit
       stack; the second overlays independent observed and forecast stacks. A missing visible value
       breaks only its own stack, and hiding that layer repairs the gap.
     </p>
     <fieldset class="controls" aria-label="Stacked area options">
       <legend>Update retained handles</legend>
+      <label
+        >Renderer
+        <select id="renderer">
+          <option value="svg">SVG</option>
+          <option value="canvas">Canvas</option>
+        </select></label
+      >
       <label><input id="lateral" type="checkbox" checked /> Observed lateral inflow</label>
       <label><input id="forecast" type="checkbox" checked /> Forecast stack</label>
       <label><input id="step" type="checkbox" /> Step curve</label>
@@ -46,8 +53,8 @@
     <p class="note">
       Both plots share one owned table, retaining the newest twelve samples. All viewport samples
       and their neighbours are retained, with shared-boundary pixel-bucket LOD for dense views.
-      Canvas, tooltips and a built-in legend are not implemented yet. See the dedicated LOD example
-      for a 24,000-sample stack and live retained-row metrics.
+      Tooltips and a built-in legend are not implemented yet. See the dedicated LOD example for a
+      24,000-sample stack and live retained-row metrics.
     </p>
     <h2>Public API</h2>
     <pre><code>const flows = createTable({ t, upstream, lateral })
@@ -62,6 +69,7 @@ const areas = stackedArea(flows, {
 })
 // Supply a non-empty stack ID on every layer for independent named stacks.
 areas.update({ curve: 'step' })
+areas.update({ renderer: 'canvas' }) // undefined restores SVG
 flows.append({ t: [nextTime], upstream: [6], lateral: [-2] })</code></pre>
     <script type="module" src="./v5-stacked-area.ts"></script>
   </body>
