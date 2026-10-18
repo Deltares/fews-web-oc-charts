@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>v5: polar range marks</title>
+    <link rel="stylesheet" href="./polar-range.css" />
+  </head>
+  <body>
+    <nav aria-label="Examples">
+      <a href="/">All examples</a>
+      <a href="../v5-range/">Cartesian range marks</a>
+      <a href="../v5-polar-coordinates/">Polar coordinates</a>
+    </nav>
+    <h1>v5: polar range marks</h1>
+    <p>
+      Polar range marks map angular and radial interval pairs to annular sectors. Multiple marks can
+      be layered with independent fill and opacity.
+    </p>
+    <p class="note">
+      Interval endpoints contribute to autoscaling on both polar scales. The angles below are
+      bearings in degrees; the radial intervals use the configured numeric scale.
+    </p>
+    <figure>
+      <div id="chart" class="plot-host"></div>
+      <figcaption>
+        Directional forecast envelopes, shown as sectors around the compass axes.
+      </figcaption>
+    </figure>
+    <h2>Public API</h2>
+    <pre><code>const sector = range({
+  x: 'bearing',
+  y: 'distance',
+  xValues: [[20, 75], [120, 175]],
+  yValues: [[25, 65], [40, 85]],
+  fill: '#1677a6',
+  opacity: 0.3,
+})
+const plot = createPolarPlot(element, {
+  scales: { bearing: angular(), distance: radial() },
+  marks: [sector],
+})</code></pre>
+    <script type="module" src="./v5-polar-range.ts"></script>
+  </body>
+</html>
