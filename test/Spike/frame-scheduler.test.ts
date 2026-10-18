@@ -83,4 +83,126 @@ describe('phase 0 reactive core and frame scheduler', () => {
     expect(() => value.get()).toThrow(/Reactive cycle detected/)
     scheduler.dispose()
   })
+
+  test('disposes effects and computeds owned by nested scopes', () => {
+    const frames = queuedFrames()
+    const scheduler = createFrameScheduler(() => {}, frames.requestFrame)
+    const core = createReactiveCore(scheduler, {
+      onError: (error) => {
+        throw error
+      },
+    })
+    const source = core.signal(1)
+    const events: string[] = []
+    const parent = core.createScope()
+    let derived!: ReturnType<typeof core.computed<number>>
+
+    parent.run(() => {
+      derived = core.computed(() => source.get() * 2)
+      core.effect(() => {
+        derived.get()
+        return () => events.push('parent-cleanup')
+      })
+
+      const child = parent.createScope()
+      child.run(() => {
+        core.effect(() => {
+          source.get()
+          return () => events.push('child-cleanup')
+        })
+      })
+    })
+    frames.flush()
+    expect(core.getDiagnostics()).toEqual({
+      effectRuns: 2,
+      activeEffects: 2,
+      activeComputeds: 1,
+      activeScopes: 2,
+    })
+
+    parent.dispose()
+    parent.dispose()
+    expect(events).toEqual(['child-cleanup', 'parent-cleanup'])
+    expect(parent.disposed).toBe(true)
+    expect(core.getDiagnostics()).toEqual({
+      effectRuns: 2,
+      activeEffects: 0,
+      activeComputeds: 0,
+      activeScopes: 0,
+    })
+    source.set(2)
+    expect(frames.length).toBe(0)
+    expect(() => derived.get()).toThrow(/disposed computed/)
+    scheduler.dispose()
+  })
+
+  test('evaluates computed dependencies before effects and recovers after errors', () => {
+    const frames = queuedFrames()
+    const errors: unknown[] = []
+    const scheduler = createFrameScheduler(
+      () => {},
+      frames.requestFrame,
+      (error) => errors.push(error),
+    )
+    const core = createReactiveCore(scheduler, { onError: (error) => errors.push(error) })
+    const source = core.signal(1)
+    let leftRuns = 0
+    let rightRuns = 0
+    const left = core.computed(() => {
+      leftRuns += 1
+      return source.get() * 2
+    })
+    const right = core.computed(() => {
+      rightRuns += 1
+      return source.get() + 1
+    })
+    const total = core.computed(() => left.get() + right.get())
+    const observed: number[] = []
+    let shouldThrow = true
+    const failing = core.effect(() => {
+      source.get()
+      if (shouldThrow) throw new Error('effect failed')
+    })
+    const observer = core.effect(() => {
+      observed.push(total.get())
+    })
+
+    frames.flush()
+    expect(errors).toHaveLength(1)
+    expect(failing.runCount).toBe(1)
+    expect(observed).toEqual([4])
+
+    shouldThrow = false
+    source.set(2)
+    frames.flush()
+    expect(failing.runCount).toBe(2)
+    expect(observed).toEqual([4, 7])
+    expect(leftRuns).toBe(2)
+    expect(rightRuns).toBe(2)
+    expect(core.getDiagnostics().effectRuns).toBe(4)
+    failing.dispose()
+    observer.dispose()
+    scheduler.dispose()
+  })
+
+  test('continues running scheduled effects after one effect fails', () => {
+    const frames = queuedFrames()
+    const errors: unknown[] = []
+    const scheduler = createFrameScheduler(
+      () => {},
+      frames.requestFrame,
+      (error) => errors.push(error),
+    )
+    const events: string[] = []
+    scheduler.enqueueEffect(() => {
+      events.push('first')
+      throw new Error('scheduled effect failed')
+    })
+    scheduler.enqueueEffect(() => events.push('second'))
+
+    frames.flush()
+    expect(events).toEqual(['first', 'second'])
+    expect(errors).toHaveLength(1)
+    scheduler.dispose()
+  })
 })
