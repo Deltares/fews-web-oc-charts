@@ -1,5 +1,6 @@
 import type { ThemeTokens } from '../theme/theme.js'
 import { symbol, symbolCircle } from 'd3'
+import { projectSkewTPoint } from './skew-t-geometry.js'
 import { isLineMark, validateLineValuesForScale, type LineMark } from './line.js'
 import { isSeriesMark, validateSeriesUpdates, type SeriesMark } from './series.js'
 import { svgElement } from './render-axes.js'
@@ -45,6 +46,9 @@ function validateLineLike(mark: LineLikeMark, context: MarkValidationContext, da
     )
   }
   if (mark.area) {
+    if (context.coordinateSystem === 'skewT') {
+      throw new Error('Skew-T plots support sounding lines and markers, not area fills.')
+    }
     if (polar) throw new Error('Polar series areas require band() interval marks.')
     const expected = scales[mark.y].kind === 'band' ? 'string' : 'number'
     if (typeof mark.area.to !== expected) {
@@ -130,6 +134,7 @@ function createLineRenderer(): MarkRenderer<LineLikeMark> {
       const staticMark = isLineMark(mark) ? mark : undefined
       const visible = !isSeriesMark(mark) || mark.visible
       const polar = context.coordinateSystem === 'polar'
+      const skewT = context.coordinateSystem === 'skewT'
       const angular = xScale.scale.options.get().resolved
       const key = [
         mark,
@@ -141,6 +146,7 @@ function createLineRenderer(): MarkRenderer<LineLikeMark> {
         mark.markers?.skip,
         mark.digits,
         mark.area?.to,
+        context.skew,
         ...scaleKey(xScale),
         ...scaleKey(yScale),
         ...(polar ? [context.plot.x, context.plot.y, context.plot.width, context.plot.height] : []),
@@ -211,8 +217,15 @@ function createLineRenderer(): MarkRenderer<LineLikeMark> {
           mark.digits === undefined ? value : Number(value.toFixed(mark.digits))
         const angle = polar ? xScale.project(xValue) : 0
         const radius = polar ? yScale.project(yValue) : 0
-        const x = round(polar ? radius * Math.sin(angle) : xScale.project(xValue))
-        const y = round(polar ? -radius * Math.cos(angle) : yScale.project(yValue))
+        const sounding = skewT
+          ? projectSkewTPoint(xScale, yScale, Number(xValue), Number(yValue), context.skew!)
+          : undefined
+        const x = round(
+          sounding ? sounding.x : polar ? radius * Math.sin(angle) : xScale.project(xValue),
+        )
+        const y = round(
+          sounding ? sounding.y : polar ? -radius * Math.cos(angle) : yScale.project(yValue),
+        )
         data += `${drawingSegment ? 'L' : 'M'}${x},${y}`
         if (mark.area) {
           if (drawingSegment) {

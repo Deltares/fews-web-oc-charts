@@ -94,6 +94,11 @@ export function validateLineValuesForScale(
     const value = values[index]
     if (value === null || value === undefined) continue
     if (typeof value === 'number' && !Number.isFinite(value)) continue
+    if (kind === 'log' && typeof value === 'number' && value <= 0) {
+      throw new TypeError(
+        `line "${mark.id ?? ''}" ${coordinate}Values[${index}] must be positive for log scale "${mark[coordinate]}".`,
+      )
+    }
     if (typeof value !== expected) {
       throw new TypeError(
         `line "${mark.id ?? ''}" ${coordinate}Values[${index}] must be a ${expected} for ${kind} scale "${mark[coordinate]}".`,

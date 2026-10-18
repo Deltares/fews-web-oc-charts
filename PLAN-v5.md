@@ -69,7 +69,7 @@ legend; domain-change events.
 │  ring buffer,│  dirty flags,│  margins →   │  per layer)  │  hit-testing, │
 │  LOD index)  │  rAF batch)  │  regions)    │              │  gestures)    │
 ├──────────────┴──────────────┴──────────────┴──────────────┴───────────────┤
-│ Coordinate systems: cartesian(project x,y) | polar(project θ,r)            │
+│ Coordinate systems: cartesian | polar | skew-T/log-P                       │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -1226,6 +1226,67 @@ detail.destroy()
   scales, effects, theme listeners/observers and resize subscriptions, and cancels
   pending plot rendering. It never disposes shared scale/axis handles. Updating a
   destroyed plot throws.
+
+#### Supported skew-T/log-P sounding charts
+
+`createSkewTPlot(host, config)` is a dedicated coordinate system, not a
+pre-transformed Cartesian dataset. Supply exactly one named `linearScale` for
+temperature in Celsius and one named positive `logScale` for pressure in hPa.
+Use ascending pressure domains with `reverse: true` to put high pressure at the
+bottom. Directions are inferred from scale kinds. A temperature domain describes
+the bottom-edge temperature range; cold upper-air temperatures can project into
+the viewport even when outside that bottom-edge domain.
+
+```ts
+const sounding = createSkewTPlot(host, {
+  scales: {
+    temperature: linearScale({ domain: [-40, 50] }),
+    pressure: logScale({ domain: [100, 1000], reverse: true }),
+  },
+  axes: [
+    axis('temperature', { position: 'bottom', unit: 'C', grid: true }),
+    axis('pressure', { position: 'left', unit: 'hPa', grid: true }),
+  ],
+  marks: [
+    line({
+      x: 'temperature',
+      y: 'pressure',
+      xValues: temperatures,
+      yValues: pressures,
+    }),
+  ],
+})
+```
+
+- Raw aligned values stay in sounding-level order, with gaps preserved; no
+  temperature sorting or logarithmic preprocessing is needed. Use a second line
+  for dew point, optionally with a different dash pattern.
+- The shared projection is `x = temperatureScale(T + skew * ln(pBottom / p))`,
+  `y = pressureScale(p)`, where `pBottom` is the pressure at the bottom edge.
+  `skewT.skew` defaults to `30` Celsius per unit of natural-log pressure, **not**
+  degrees of screen angle; zero gives an unskewed log-pressure plot.
+- Lines, markers, isotherms, isobars, `plot.project(T, p)`,
+  `plot.invert(svgX, svgY)` and the named values in `plot.pointer` use the same
+  projection/inverse. Public pixel coordinates are SVG coordinates, including
+  margins; pointer `px`/`py` remain plot-local, as on other plots.
+- Grid flags on the temperature/pressure axes enable isotherms/isobars. The grid
+  includes cold isotherms entering from the left and is always clipped to the
+  viewport; sounding marks use the existing `clipMarks` option.
+- Scale domains, plot size, theme and `plot.update({ skewT: { skew: 20 } })` remain
+  reactive. `skewT: undefined` resets the default skew, while `setConfig` replaces
+  the configuration using the normal v5 contract. Temperature autoscale extents
+  include the shear, and visible-domain policies filter against the projected
+  temperature window rather than the raw upper-air temperatures.
+- Initial supported marks are static `line()` traces and their markers. Axes must
+  use default styling, outside layout, bottom temperature and left/right pressure.
+  Other marks, area fills, axis crossings and zoom plugins are explicitly rejected,
+  not silently rendered with Cartesian geometry. Adiabats, mixing-ratio curves,
+  parcel diagnostics and wind barbs are not included in this simple sounding chart.
+- `logScale()` is also usable on Cartesian plots. Domains and projected values
+  must be strictly positive; logarithmic padding, nice domains, ticks, inversion,
+  autoscale and multiplicative wheel zoom preserve physical scale values.
+- [Sounding example](./examples/v5-skew-t/index.html) demonstrates temperature,
+  dew point, runtime skew changes and a physical-coordinate readout.
 
 This is the plot/scale foundation, not completion of every roadmap phase 1 exit gate.
 Time ticks use local civil-calendar boundaries with `Intl` labels in the configured

@@ -1,4 +1,4 @@
-import { scaleBand, scaleLinear, scaleUtc } from 'd3-scale'
+import { scaleBand, scaleLinear, scaleLog, scaleUtc } from 'd3-scale'
 import { createOptionState, type OptionPatch, type OptionStateSnapshot } from '../core/options.js'
 import { reactive, optionSignal } from '../core/runtime.js'
 import type { ReadonlySignal, Signal } from '../core/reactive.js'
@@ -7,7 +7,7 @@ import { niceDegreeSteps } from '../Utils/niceDegreeSteps.js'
 import { zonedTicks } from '../time/zoned-time.js'
 
 export type ScaleValue = number | string
-export type ScaleKind = 'linear' | 'time' | 'band' | 'degrees' | 'angular' | 'radial'
+export type ScaleKind = 'linear' | 'log' | 'time' | 'band' | 'degrees' | 'angular' | 'radial'
 export type ScaleRange = readonly [number, number]
 export type PixelRange = ScaleRange
 export type PolarDirection = 'clockwise' | 'anticlockwise'
@@ -117,6 +117,9 @@ function createScale(kind: ScaleKind, initial: OptionPatch<ScaleOptions>): Scale
     if (kind === 'radial' && values.some((value) => Number(value) < 0)) {
       throw new Error(`${path.replace('scale.', 'radial.')} must contain nonnegative values.`)
     }
+    if (kind === 'log' && values.some((value) => Number(value) <= 0)) {
+      throw new Error(`${path} must contain strictly positive values for a log scale.`)
+    }
     if (kind === 'time' && values.some((value) => Math.abs(Number(value)) > 8.64e15)) {
       throw new Error(`${path} must be within the JavaScript Date range.`)
     }
@@ -175,7 +178,13 @@ function createScale(kind: ScaleKind, initial: OptionPatch<ScaleOptions>): Scale
   }
   const defaults = (): ScaleOptions => ({
     defaultDomain:
-      kind === 'band' ? [] : kind === 'degrees' || kind === 'angular' ? [0, 360] : [0, 1],
+      kind === 'band'
+        ? []
+        : kind === 'degrees' || kind === 'angular'
+          ? [0, 360]
+          : kind === 'log'
+            ? [1, 10]
+            : [0, 1],
     autoscale: kind === 'degrees' || kind === 'angular' ? 'fixed' : 'data',
     reverse: false,
     nice: false,
@@ -204,10 +213,15 @@ function createScale(kind: ScaleKind, initial: OptionPatch<ScaleOptions>): Scale
     let low = Number(source[0])
     let high = Number(source[1])
     if (fromData && low === high) {
-      const delta = kind === 'time' ? 1 : Math.max(Math.abs(low) * 0.01, 1)
-      const limit = kind === 'time' ? 8.64e15 : Number.MAX_VALUE
-      low = Math.max(-limit, low - delta)
-      high = Math.min(limit, high + delta)
+      if (kind === 'log') {
+        low /= 1.01
+        high *= 1.01
+      } else {
+        const delta = kind === 'time' ? 1 : Math.max(Math.abs(low) * 0.01, 1)
+        const limit = kind === 'time' ? 8.64e15 : Number.MAX_VALUE
+        low = Math.max(-limit, low - delta)
+        high = Math.min(limit, high + delta)
+      }
     }
     if (config.includeZero) {
       low = Math.min(low, 0)
@@ -217,16 +231,29 @@ function createScale(kind: ScaleKind, initial: OptionPatch<ScaleOptions>): Scale
       high = Math.max(Math.abs(low), Math.abs(high))
       low = -high
     }
-    const pad = config.padding === 0 ? 0 : (high - low) * config.padding
-    low = kind === 'radial' ? Math.max(0, low - pad) : low - pad
-    high += pad
+    if (kind === 'log' && config.padding > 0) {
+      const pad = (Math.log(high) - Math.log(low)) * config.padding
+      low = Math.exp(Math.log(low) - pad)
+      high = Math.exp(Math.log(high) + pad)
+    } else if (kind !== 'log') {
+      const pad = config.padding === 0 ? 0 : (high - low) * config.padding
+      low = kind === 'radial' ? Math.max(0, low - pad) : low - pad
+      high += pad
+    }
     const numeric =
-      kind === 'time' ? scaleUtc().domain([low, high]) : scaleLinear().domain([low, high])
+      kind === 'time'
+        ? scaleUtc().domain([low, high])
+        : kind === 'log'
+          ? scaleLog().domain([low, high])
+          : scaleLinear().domain([low, high])
     if (config.nice) numeric.nice()
     const result = numeric.domain().map(Number)
     if (
       result.some(
-        (value) => !Number.isFinite(value) || (kind === 'time' && Math.abs(value) > 8.64e15),
+        (value) =>
+          !Number.isFinite(value) ||
+          (kind === 'log' && value <= 0) ||
+          (kind === 'time' && Math.abs(value) > 8.64e15),
       )
     ) {
       throw new Error('scale.domain resolution overflowed.')
@@ -307,6 +334,8 @@ function createScale(kind: ScaleKind, initial: OptionPatch<ScaleOptions>): Scale
 
 export const linearScale = (options: OptionPatch<CartesianScaleOptions> = {}) =>
   createScale('linear', options)
+export const logScale = (options: OptionPatch<CartesianScaleOptions> = {}) =>
+  createScale('log', options)
 export const timeScale = (options: OptionPatch<CartesianScaleOptions> = {}) =>
   createScale('time', options)
 export const bandScale = (options: OptionPatch<CartesianScaleOptions> = {}) =>
@@ -338,7 +367,9 @@ export function bindScale(scale: ScaleHandle, range: ReadonlySignal<ScaleRange>)
         .paddingInner(config.paddingInner ?? config.padding)
         .paddingOuter(config.paddingOuter ?? config.padding)
     }
-    return scaleLinear().domain(domain.map(Number)).range(pixels)
+    return (scale.kind === 'log' ? scaleLog() : scaleLinear())
+      .domain(domain.map(Number))
+      .range(pixels)
   })
   return {
     scale,
@@ -347,6 +378,9 @@ export function bindScale(scale: ScaleHandle, range: ReadonlySignal<ScaleRange>)
       const current = derived.get()
       if (!('bandwidth' in current) && typeof value !== 'number') {
         throw new Error(`Cannot project "${value}" on ${scale.kind} scale.`)
+      }
+      if (scale.kind === 'log' && Number(value) <= 0) {
+        throw new Error(`Cannot project "${value}" on a positive log scale.`)
       }
       const pixel = 'bandwidth' in current ? current(value) : current(Number(value))
       if (pixel === undefined || !Number.isFinite(pixel)) {
