@@ -1,4 +1,3 @@
-import { arc } from 'd3'
 import { createOptionState, type OptionPatch, type OptionStateSnapshot } from '../core/options.js'
 import { DirtyLayer, type DirtyLayers } from '../core/frame-scheduler.js'
 import { reactive, invalidate, cancelRender, optionSignal } from '../core/runtime.js'
@@ -24,36 +23,23 @@ import { resolveTheme, watchTheme, type ThemeMode, type ThemeTokens } from '../t
 import { isAxisHandle, validateAxisUpdates, type AxisHandle, type AxisSide } from './axis.js'
 import { observeSize } from './resize.js'
 import { svgElement, renderAxes, renderPolarAxes, axisTickLabels } from './render-axes.js'
-import { isBandMark, type BandMark } from './band.js'
-import { isLineMark, validateLineValuesForScale, type LineMark } from './line.js'
-import { isSeriesMark, validateSeriesUpdates, type SeriesMark } from './series.js'
 import { markExtents } from './mark-extents.js'
+import { watchCanvasPixelRatio } from './render-composite-canvas.js'
+import type {
+  CoordinateSystem,
+  MarkDefinition,
+  MarkRenderContext,
+  MarkRenderer,
+  MarkValidationContext,
+  Orientation,
+} from './mark-definition.js'
 import {
-  isBarMark,
-  validateBarScales,
-  validateBarUpdates,
-  barEndpoints,
-  type BarMark,
-} from './bar.js'
-import { renderBars, styleBars } from './render-bars.js'
-import {
-  isStackedAreaMark,
-  validateStackedAreaScales,
-  validateStackedAreaUpdates,
-  stackedAreaEndpoints,
-  type StackedAreaMark,
-} from './stacked-area.js'
-import { renderStackedAreas, styleStackedAreas } from './render-stacked-areas.js'
-import { clearCompositeCanvas, watchCanvasPixelRatio } from './render-composite-canvas.js'
-import { isRuleMark, type RuleMark } from './rule.js'
-import {
-  isTextMark,
-  isValidTextCoordinate,
-  validateTextValuesForScale,
-  type TextMark,
-} from './text.js'
-
-type PlotMark = LineMark | SeriesMark | BandMark | BarMark | StackedAreaMark | RuleMark | TextMark
+  findMarkDefinition,
+  isPlotMark,
+  markDefinition,
+  supportedMarks,
+  type PlotMark,
+} from './marks.js'
 
 export interface PlotOptions {
   width?: number
@@ -104,8 +90,6 @@ export interface PolarPlot extends Omit<Plot, 'update' | 'setConfig'> {
   project(angularValue: ScaleValue, radialValue: ScaleValue): PolarPoint
 }
 
-type CoordinateSystem = 'cartesian' | 'polar'
-type Orientation = 'x' | 'y' | 'angular' | 'radial'
 type CartesianSide = Exclude<AxisSide, 'angular' | 'radial'>
 
 function isCartesianSide(position: AxisSide): position is CartesianSide {
@@ -236,121 +220,25 @@ function validatePlotScales(options: PlotOptions, coordinateSystem: CoordinateSy
   }
 }
 
-function validatePlotMark(
-  mark: PlotMark,
+function markValidationContext(
   options: PlotOptions,
   coordinateSystem: CoordinateSystem,
-  dataBacked = isSeriesMark(mark),
-) {
-  if (
-    !mark ||
-    (!isLineMark(mark) &&
-      !isSeriesMark(mark) &&
-      !isBandMark(mark) &&
-      !isBarMark(mark) &&
-      !isStackedAreaMark(mark) &&
-      !isRuleMark(mark) &&
-      !isTextMark(mark))
-  ) {
-    throw new Error(
-      'plot.marks accepts line(), series(), band(), bar(), stackedArea(), rule() or text() marks only.',
-    )
-  }
-  if (isRuleMark(mark)) {
-    if (coordinateSystem !== 'cartesian') throw new Error('rule() supports cartesian plots only.')
-    const scale = options.scales[mark.scale]
-    if (!scale) throw new Error(`rule "${mark.id ?? ''}" references a missing scale.`)
-    if (scale.kind !== 'linear' && scale.kind !== 'time') {
-      throw new Error(`rule "${mark.id ?? ''}" requires a continuous linear or time scale.`)
-    }
-    direction(options, mark.scale, undefined, undefined, coordinateSystem)
-    return
-  }
-  if (isTextMark(mark)) {
-    if (coordinateSystem !== 'cartesian') throw new Error('text() supports cartesian plots only.')
-    for (const coordinate of ['x', 'y'] as const) {
-      const scale = options.scales[mark[coordinate]]
-      if (!scale)
-        throw new Error(`text "${mark.id ?? ''}" references a missing ${coordinate} scale.`)
-      if (direction(options, mark[coordinate]) !== coordinate) {
-        throw new Error(`text "${mark.id ?? ''}" requires a ${coordinate}-direction scale.`)
-      }
-      validateTextValuesForScale(mark, coordinate, scale.kind)
-    }
-    return
-  }
-  if (isStackedAreaMark(mark)) {
-    if (coordinateSystem !== 'cartesian')
-      throw new Error('stackedArea() supports cartesian plots only.')
-    validateStackedAreaScales(mark.options.get().resolved, options.scales)
-    if (direction(options, mark.x) !== 'x' || direction(options, mark.y) !== 'y')
-      throw new Error('Stacked area scales require x and y directions respectively.')
-    return
-  }
-  if (isBarMark(mark)) {
-    if (coordinateSystem !== 'cartesian') throw new Error('bar() supports cartesian plots only.')
-    const config = mark.options.get().resolved
-    validateBarScales(mark.data, config, options.scales)
-    if (direction(options, mark.x) !== 'x' || direction(options, mark.y) !== 'y')
-      throw new Error('Bar scale directions do not match its orientation.')
-    return
-  }
-  if (isBandMark(mark)) {
-    if (!Object.hasOwn(options.scales, mark.x) || !Object.hasOwn(options.scales, mark.y)) {
-      throw new Error(`band "${mark.id ?? ''}" references a missing x or y scale.`)
-    }
-    const xDirection = coordinateSystem === 'polar' ? 'angular' : 'x'
-    const yDirection = coordinateSystem === 'polar' ? 'radial' : 'y'
-    if (direction(options, mark.x, undefined, undefined, coordinateSystem) !== xDirection) {
-      throw new Error(`band "${mark.id ?? ''}" requires a ${xDirection}-direction scale.`)
-    }
-    if (direction(options, mark.y, undefined, undefined, coordinateSystem) !== yDirection) {
-      throw new Error(`band "${mark.id ?? ''}" requires a ${yDirection}-direction scale.`)
-    }
-    if (options.scales[mark.x].kind === 'band' || options.scales[mark.y].kind === 'band') {
-      throw new Error(`band "${mark.id ?? ''}" requires numeric or time scales.`)
-    }
-    return
-  }
-  if (coordinateSystem === 'polar') {
-    throw new Error('line() marks are supported on cartesian plots only.')
-  }
-  if (!Object.hasOwn(options.scales, mark.x) || !Object.hasOwn(options.scales, mark.y)) {
-    throw new Error(`line "${mark.id ?? ''}" references a missing x or y scale.`)
-  }
-  if (direction(options, mark.x, undefined, undefined, coordinateSystem) !== 'x') {
-    throw new Error(`line "${mark.id ?? ''}" requires an x-direction scale.`)
-  }
-  if (direction(options, mark.y, undefined, undefined, coordinateSystem) !== 'y') {
-    throw new Error(`line "${mark.id ?? ''}" requires a y-direction scale.`)
-  }
-  if (isLineMark(mark)) {
-    validateLineValuesForScale(mark, 'x', options.scales[mark.x].kind)
-    validateLineValuesForScale(mark, 'y', options.scales[mark.y].kind)
-  }
-  if (
-    dataBacked &&
-    (options.scales[mark.x].kind === 'band' || options.scales[mark.y].kind === 'band')
-  ) {
-    throw new Error(
-      'series() requires numeric/time scales; categorical tables are not supported yet.',
-    )
-  }
-  if (mark.area) {
-    const expected = options.scales[mark.y].kind === 'band' ? 'string' : 'number'
-    if (typeof mark.area.to !== expected) {
-      throw new TypeError(
-        `line "${mark.id ?? ''}" area.to must be a ${expected} for ${options.scales[mark.y].kind} scale "${mark.y}".`,
-      )
-    }
+): MarkValidationContext {
+  return {
+    coordinateSystem,
+    scales: options.scales,
+    direction: (name) => direction(options, name, undefined, undefined, coordinateSystem),
   }
 }
 
 function validatePlotMarks(options: PlotOptions, coordinateSystem: CoordinateSystem) {
+  const context = markValidationContext(options, coordinateSystem)
   const markIds = new Set<string>()
   const marks = new Set<PlotMark>()
   for (const mark of options.marks) {
-    validatePlotMark(mark, options, coordinateSystem)
+    const definition = findMarkDefinition(mark)
+    if (!definition) throw new Error(`plot.marks accepts ${supportedMarks} marks only.`)
+    definition.validate(mark, context)
     if (marks.has(mark)) throw new Error('Duplicate mark handle in plot.marks.')
     marks.add(mark)
     if (mark.id && markIds.has(mark.id)) throw new Error(`Duplicate mark id "${mark.id}".`)
@@ -393,16 +281,7 @@ function createPlotInternal(
       axes: [],
       marks: [],
     }),
-    isAtomicReference: (value) =>
-      isScaleHandle(value) ||
-      isAxisHandle(value) ||
-      isLineMark(value) ||
-      isSeriesMark(value) ||
-      isBandMark(value) ||
-      isBarMark(value) ||
-      isStackedAreaMark(value) ||
-      isRuleMark(value) ||
-      isTextMark(value),
+    isAtomicReference: (value) => isScaleHandle(value) || isAxisHandle(value) || isPlotMark(value),
     validate(options) {
       validatePlotAppearance(options)
       validatePlotCollections(options)
@@ -432,7 +311,7 @@ function createPlotInternal(
   const measurer = createTextMeasurer()
   const axisWidths = new Map<AxisHandle, { version: number; thickness: number }>()
   const axisValidators = new Map<AxisHandle, () => void>()
-  const markValidators = new Map<SeriesMark | BarMark | StackedAreaMark, { dispose(): void }>()
+  const markValidators = new Map<PlotMark, { dispose(): void }>()
   const bindings = new Map<
     string,
     {
@@ -465,714 +344,70 @@ function createPlotInternal(
   clipPath.append(clipRect)
   definitions.append(clipPath)
   marksLayer.setAttribute('clip-path', `url(#${clipId})`)
-  const areaPaths: (SVGPathElement | undefined)[] = []
-  const linePaths: (SVGPathElement | undefined)[] = []
-  const markerGroups: (SVGGElement | undefined)[] = []
-  const bandGroups = new Map<BandMark, SVGGElement>()
-  const bandGeometryKeys = new Map<BandMark, readonly unknown[]>()
-  const bandStyleKeys = new Map<BandMark, readonly unknown[]>()
-  const barGroups = new Map<BarMark, SVGGElement>()
-  const barGeometryKeys = new Map<BarMark, readonly unknown[]>()
-  const barStyleKeys = new Map<BarMark, readonly unknown[]>()
-  const stackedAreaGroups = new Map<StackedAreaMark, SVGGElement>()
-  const stackedAreaGeometryKeys = new Map<StackedAreaMark, readonly unknown[]>()
-  const stackedAreaStyleKeys = new Map<StackedAreaMark, readonly unknown[]>()
-  const ruleLines = new Map<RuleMark, SVGLineElement>()
-  const ruleGeometryKeys = new Map<RuleMark, readonly unknown[]>()
-  const ruleStyleKeys = new Map<RuleMark, readonly unknown[]>()
-  const textGroups = new Map<TextMark, SVGGElement>()
-  const textGeometryKeys = new Map<TextMark, readonly unknown[]>()
-  const textStyleKeys = new Map<TextMark, readonly unknown[]>()
-  const geometryKeys: (readonly unknown[])[] = []
-  const styleKeys: (readonly unknown[] | undefined)[] = []
-  let renderedMarks: PlotOptions['marks'] = []
+  interface MountedMark {
+    readonly mark: PlotMark
+    readonly definition: MarkDefinition<PlotMark>
+    readonly renderer: MarkRenderer<PlotMark>
+  }
+  let mountedMarks: readonly MountedMark[] = []
   element.append(background, definitions, gridLayer, marksLayer, axesLayer, title)
 
-  function renderMarkGeometry(current: PlotOptions) {
+  function mountMarks(marks: readonly PlotMark[]) {
     if (
-      current.marks.length !== renderedMarks.length ||
-      current.marks.some((mark, index) => mark !== renderedMarks[index])
+      marks.length === mountedMarks.length &&
+      marks.every((mark, index) => mark === mountedMarks[index].mark)
     ) {
-      const oldLines = linePaths.splice(0)
-      const oldAreas = areaPaths.splice(0)
-      const oldMarkers = markerGroups.splice(0)
-      const oldGeometry = geometryKeys.splice(0)
-      const oldStyles = styleKeys.splice(0)
-      const claimed = new Set<number>()
-      const staleBands = new Map(bandGroups)
-      const staleBars = new Map(barGroups)
-      const staleStackedAreas = new Map(stackedAreaGroups)
-      const staleRules = new Map(ruleLines)
-      const staleTexts = new Map(textGroups)
-      const matches = current.marks.map((mark) =>
-        renderedMarks.findIndex(
-          (previous) =>
-            isLineMark(mark) === isLineMark(previous) &&
-            isSeriesMark(mark) === isSeriesMark(previous) &&
-            isBandMark(mark) === isBandMark(previous) &&
-            isBarMark(mark) === isBarMark(previous) &&
-            isStackedAreaMark(mark) === isStackedAreaMark(previous) &&
-            isRuleMark(mark) === isRuleMark(previous) &&
-            isTextMark(mark) === isTextMark(previous) &&
-            (mark.id ? previous.id === mark.id : previous === mark),
-        ),
-      )
-      for (const index of matches) if (index >= 0) claimed.add(index)
-      current.marks.forEach((mark, index) => {
-        if (isStackedAreaMark(mark)) {
-          const source = matches[index]
-          const previous = source >= 0 ? renderedMarks[source] : undefined
-          let group = stackedAreaGroups.get(mark)
-          if (!group && previous && isStackedAreaMark(previous)) {
-            group = stackedAreaGroups.get(previous)
-            staleStackedAreas.delete(previous)
-          }
-          group ??= svgElement('g', { 'data-mark': 'stacked-area' })
-          stackedAreaGroups.set(mark, group)
-          if (mark.id) group.dataset.markId = mark.id
-          staleStackedAreas.delete(mark)
-          marksLayer.append(group)
-          linePaths[index] = undefined
-          areaPaths[index] = undefined
-          markerGroups[index] = undefined
-          geometryKeys[index] = []
-          styleKeys[index] = undefined
-          return
-        }
-        if (isTextMark(mark)) {
-          let group = textGroups.get(mark)
-          if (!group && mark.id) {
-            const previous = renderedMarks.find(
-              (entry) => isTextMark(entry) && entry.id === mark.id,
+      return
+    }
+    // Renderers are reused for the same handle, then for a replacement of the same kind with
+    // the same id, and finally (when the kind opts in) for a replacement at the same position.
+    const previous = mountedMarks
+    const definitions = marks.map(markDefinition)
+    const claimed = new Set<MountedMark>()
+    const matches = marks.map((mark, index) => {
+      const match =
+        previous.find((entry) => entry.mark === mark) ??
+        (mark.id
+          ? previous.find(
+              (entry) => entry.definition === definitions[index] && entry.mark.id === mark.id,
             )
-            if (previous && isTextMark(previous)) {
-              group = textGroups.get(previous)
-              textGroups.delete(previous)
-              textGeometryKeys.delete(previous)
-              textStyleKeys.delete(previous)
-              staleTexts.delete(previous)
-            }
-          }
-          group ??= svgElement('g', { 'data-mark': 'text' })
-          textGroups.set(mark, group)
-          if (mark.id) group.dataset.markId = mark.id
-          else delete group.dataset.markId
-          staleTexts.delete(mark)
-          marksLayer.append(group)
-          linePaths[index] = undefined
-          areaPaths[index] = undefined
-          markerGroups[index] = undefined
-          geometryKeys[index] = []
-          styleKeys[index] = undefined
-          return
-        }
-        if (isRuleMark(mark)) {
-          let line = ruleLines.get(mark)
-          line ??= svgElement('line', {
-            'vector-effect': 'non-scaling-stroke',
-            'data-mark': 'rule',
-          })
-          ruleLines.set(mark, line)
-          if (mark.id) line.dataset.markId = mark.id
-          else delete line.dataset.markId
-          staleRules.delete(mark)
-          marksLayer.append(line)
-          linePaths[index] = undefined
-          areaPaths[index] = undefined
-          markerGroups[index] = undefined
-          geometryKeys[index] = []
-          styleKeys[index] = undefined
-          return
-        }
-        if (isBarMark(mark)) {
-          let group = barGroups.get(mark)
-          if (!group && mark.id) {
-            const previous = renderedMarks.find((entry) => isBarMark(entry) && entry.id === mark.id)
-            if (previous && isBarMark(previous)) {
-              group = barGroups.get(previous)
-              staleBars.delete(previous)
-            }
-          }
-          group ??= svgElement('g', { 'data-mark': 'bar' })
-          barGroups.set(mark, group)
-          if (mark.id) group.dataset.markId = mark.id
-          staleBars.delete(mark)
-          marksLayer.append(group)
-          linePaths[index] = undefined
-          areaPaths[index] = undefined
-          markerGroups[index] = undefined
-          geometryKeys[index] = []
-          styleKeys[index] = undefined
-          return
-        }
-        if (isBandMark(mark)) {
-          let group = bandGroups.get(mark)
-          if (!group) {
-            group = svgElement('g', { 'data-mark': 'band' })
-            bandGroups.set(mark, group)
-          }
-          staleBands.delete(mark)
-          marksLayer.append(group)
-          linePaths[index] = undefined
-          areaPaths[index] = undefined
-          markerGroups[index] = undefined
-          geometryKeys[index] = []
-          styleKeys[index] = undefined
-          return
-        }
-        let source = matches[index]
-        if (source < 0 && index < oldLines.length && !claimed.has(index)) {
-          source = index
-          claimed.add(index)
-        }
-        if (source >= 0) {
-          linePaths[index] = oldLines[source]
-          areaPaths[index] = oldAreas[source]
-          markerGroups[index] = oldMarkers[source]
-          geometryKeys[index] = oldGeometry[source]
-          styleKeys[index] = oldStyles[source]
-          for (const node of [oldAreas[source], oldLines[source], oldMarkers[source]]) {
-            if (node) marksLayer.append(node)
-          }
-        } else {
-          linePaths[index] = undefined
-          areaPaths[index] = undefined
-          markerGroups[index] = undefined
-          geometryKeys[index] = []
-          styleKeys[index] = undefined
-        }
-      })
-      oldLines.forEach((path, index) => {
-        if (claimed.has(index)) return
-        path?.remove()
-        oldAreas[index]?.remove()
-        oldMarkers[index]?.remove()
-      })
-      for (const group of staleBands.values()) group.remove()
-      for (const group of [...staleBars.values(), ...staleStackedAreas.values()]) {
-        clearCompositeCanvas(group)
-        group.remove()
-      }
-      for (const [mark, line] of staleRules) {
-        line.remove()
-        ruleLines.delete(mark)
-        ruleGeometryKeys.delete(mark)
-        ruleStyleKeys.delete(mark)
-      }
-      for (const [mark, group] of staleTexts) {
-        group.remove()
-        textGroups.delete(mark)
-        textGeometryKeys.delete(mark)
-        textStyleKeys.delete(mark)
-      }
-      for (const mark of stackedAreaGroups.keys()) {
-        if (!current.marks.includes(mark)) {
-          stackedAreaGroups.delete(mark)
-          stackedAreaGeometryKeys.delete(mark)
-          stackedAreaStyleKeys.delete(mark)
-        }
-      }
-      for (const mark of barGroups.keys()) {
-        if (!current.marks.includes(mark)) {
-          barGroups.delete(mark)
-          barGeometryKeys.delete(mark)
-          barStyleKeys.delete(mark)
-        }
-      }
-      for (const mark of bandGroups.keys()) {
-        if (!current.marks.includes(mark)) {
-          bandGroups.delete(mark)
-          bandGeometryKeys.delete(mark)
-          bandStyleKeys.delete(mark)
-        }
-      }
-      renderedMarks = [...current.marks]
-    }
-    current.marks.forEach((mark, markIndex) => {
-      if (isTextMark(mark)) {
-        const xScale = localScales[mark.x]
-        const yScale = localScales[mark.y]
-        const key = [
-          mark,
-          xScale,
-          yScale,
-          xScale.scale.domain.version,
-          yScale.scale.domain.version,
-          xScale.scale.options.version,
-          yScale.scale.options.version,
-          ...xScale.range.get(),
-          ...yScale.range.get(),
-        ]
-        const previous = textGeometryKeys.get(mark)
-        if (
-          previous &&
-          key.length === previous.length &&
-          key.every((value, index) => value === previous[index])
-        )
-          return
-        const group = textGroups.get(mark)
-        if (!group) throw new Error('Missing text renderer.')
-        for (let index = 0; index < mark.textValues.length; index += 1) {
-          let label = group.children[index] as SVGTextElement | undefined
-          if (!label) {
-            label = svgElement('text', { 'data-mark': 'text-label' })
-            group.append(label)
-          }
-          label.dataset.index = String(index)
-          const x = mark.xValues[index]
-          const y = mark.yValues[index]
-          const value = mark.textValues[index]
-          if (!isValidTextCoordinate(x) || !isValidTextCoordinate(y) || value == null) {
-            label.setAttribute('display', 'none')
-            label.textContent = ''
-            continue
-          }
-          const px = xScale.project(x)
-          const py = yScale.project(y)
-          label.removeAttribute('display')
-          label.setAttribute('x', String(px))
-          label.setAttribute('y', String(py))
-          label.setAttribute('dx', String(mark.dx))
-          label.setAttribute('dy', String(mark.dy))
-          if (mark.angle) label.setAttribute('transform', `rotate(${mark.angle} ${px} ${py})`)
-          else label.removeAttribute('transform')
-          label.textContent = String(value)
-        }
-        while (group.children.length > mark.textValues.length) group.lastElementChild?.remove()
-        textGeometryKeys.set(mark, key)
-        textStyleKeys.delete(mark)
-        return
-      }
-      if (isRuleMark(mark)) {
-        const scale = localScales[mark.scale]
-        const orientation = direction(current, mark.scale)
-        const region = regions.get().plot
-        const key = [
-          mark,
-          scale,
-          scale.scale.domain.version,
-          scale.scale.options.version,
-          ...scale.range.get(),
-          region.x,
-          region.y,
-          region.width,
-          region.height,
-        ]
-        const previous = ruleGeometryKeys.get(mark)
-        if (
-          previous &&
-          key.length === previous.length &&
-          key.every((value, index) => value === previous[index])
-        )
-          return
-        const line = ruleLines.get(mark)
-        if (!line) throw new Error('Missing rule renderer.')
-        const position = scale.project(mark.value)
-        if (orientation === 'x') {
-          line.setAttribute('x1', String(position))
-          line.setAttribute('x2', String(position))
-          line.setAttribute('y1', String(region.y))
-          line.setAttribute('y2', String(region.y + region.height))
-        } else {
-          line.setAttribute('x1', String(region.x))
-          line.setAttribute('x2', String(region.x + region.width))
-          line.setAttribute('y1', String(position))
-          line.setAttribute('y2', String(position))
-        }
-        ruleGeometryKeys.set(mark, key)
-        ruleStyleKeys.delete(mark)
-        return
-      }
-      const xScale = localScales[mark.x]
-      const yScale = localScales[mark.y]
-      if (isStackedAreaMark(mark)) {
-        const config = mark.options.get().resolved
-        const key = [
-          stackedAreaEndpoints(mark),
-          config.renderer,
-          ...(config.renderer === 'canvas' ? [window.devicePixelRatio] : []),
-          config.visible,
-          config.curve,
-          xScale,
-          yScale,
-          xScale.scale.domain.version,
-          yScale.scale.domain.version,
-          xScale.scale.options.version,
-          yScale.scale.options.version,
-          ...xScale.range.get(),
-          ...yScale.range.get(),
-        ]
-        const previous = stackedAreaGeometryKeys.get(mark)
-        if (
-          previous &&
-          key.length === previous.length &&
-          key.every((value, index) => value === previous[index])
-        )
-          return
-        const group = stackedAreaGroups.get(mark)
-        if (!group) throw new Error('Missing stackedArea renderer.')
-        renderStackedAreas(group, mark, localScales)
-        stackedAreaGeometryKeys.set(mark, key)
-        stackedAreaStyleKeys.delete(mark)
-        return
-      }
-      if (isBarMark(mark)) {
-        const config = mark.options.get().resolved
-        const key = [
-          barEndpoints(mark),
-          config.renderer,
-          ...(config.renderer === 'canvas' ? [window.devicePixelRatio] : []),
-          config.visible,
-          config.orientation,
-          config.scales.x,
-          config.scales.y,
-          config.interval?.start,
-          config.interval?.end,
-          config.width,
-          config.groupPadding,
-          config.layerPadding,
-          xScale,
-          yScale,
-          xScale.scale.domain.version,
-          yScale.scale.domain.version,
-          xScale.scale.options.version,
-          yScale.scale.options.version,
-          ...xScale.range.get(),
-          ...yScale.range.get(),
-        ]
-        const previous = barGeometryKeys.get(mark)
-        if (
-          key.length === previous?.length &&
-          key.every((value, index) => value === previous[index])
-        )
-          return
-        const group = barGroups.get(mark)
-        if (!group) throw new Error('Missing bar renderer.')
-        renderBars(group, mark, localScales)
-        barGeometryKeys.set(mark, key)
-        barStyleKeys.delete(mark)
-        return
-      }
-      if (isBandMark(mark)) {
-        const key = [
-          mark,
-          xScale,
-          yScale,
-          xScale.scale.domain.version,
-          yScale.scale.domain.version,
-          xScale.scale.options.version,
-          yScale.scale.options.version,
-          ...xScale.range.get(),
-          ...yScale.range.get(),
-          ...(coordinateSystem === 'polar' ? [regions.get().plot.x, regions.get().plot.y] : []),
-        ]
-        const previous = bandGeometryKeys.get(mark)
-        if (
-          key.length === previous?.length &&
-          key.every((value, index) => value === previous[index])
-        ) {
-          return
-        }
-        bandGeometryKeys.set(mark, key)
-        bandStyleKeys.delete(mark)
-        const group = bandGroups.get(mark)
-        if (!group) throw new Error('Missing band renderer for a configured mark.')
-        if (mark.id) group.dataset.markId = mark.id
-        else delete group.dataset.markId
-        const region = regions.get().plot
-        if (coordinateSystem === 'polar') {
-          group.setAttribute(
-            'transform',
-            `translate(${region.x + region.width / 2},${region.y + region.height / 2})`,
-          )
-        } else {
-          group.removeAttribute('transform')
-        }
-        let rangeIndex = 0
-        for (let index = 0; index < mark.xValues.length; index += 1) {
-          const xRange = mark.xValues[index]
-          const yRange = mark.yValues[index]
-          if (!xRange || !yRange) continue
-          if (coordinateSystem === 'polar') {
-            let path = group.children[rangeIndex] as SVGPathElement | undefined
-            if (!path) {
-              path = svgElement('path', { 'data-mark': 'band-range', stroke: 'none' })
-              group.append(path)
-            }
-            const angular = xScale.scale.options.get().resolved
-            const direction = angular.direction === 'anticlockwise' ? -1 : 1
-            const intercept = angular.intercept ?? 0
-            const d =
-              arc<null>()
-                .innerRadius(Math.min(yScale.project(yRange[0]), yScale.project(yRange[1])))
-                .outerRadius(Math.max(yScale.project(yRange[0]), yScale.project(yRange[1])))
-                .startAngle(intercept + direction * xScale.project(xRange[0]))
-                .endAngle(intercept + direction * xScale.project(xRange[1]))(null) ?? ''
-            path.setAttribute('d', d)
-          } else {
-            let rect = group.children[rangeIndex] as SVGRectElement | undefined
-            if (!rect) {
-              rect = svgElement('rect', { 'data-mark': 'band-range', stroke: 'none' })
-              group.append(rect)
-            }
-            const x0 = xScale.project(xRange[0])
-            const x1 = xScale.project(xRange[1])
-            const y0 = yScale.project(yRange[0])
-            const y1 = yScale.project(yRange[1])
-            rect.setAttribute('x', String(Math.min(x0, x1)))
-            rect.setAttribute('y', String(Math.min(y0, y1)))
-            rect.setAttribute('width', String(Math.abs(x1 - x0)))
-            rect.setAttribute('height', String(Math.abs(y1 - y0)))
-          }
-          rangeIndex += 1
-        }
-        while (group.children.length > rangeIndex) group.lastElementChild?.remove()
-        return
-      }
-      const store = isSeriesMark(mark) ? mark.data : undefined
-      const staticMark = isLineMark(mark) ? mark : undefined
-      const visible = !isSeriesMark(mark) || mark.visible
-      const key = [
-        mark,
-        store?.version,
-        visible,
-        mark.line,
-        Boolean(mark.markers),
-        mark.area?.to,
-        xScale,
-        yScale,
-        xScale.scale.domain.version,
-        yScale.scale.domain.version,
-        xScale.scale.options.version,
-        yScale.scale.options.version,
-        ...xScale.range.get(),
-        ...yScale.range.get(),
-      ]
-      const previous = geometryKeys[markIndex]
-      if (key.length === previous?.length && key.every((value, index) => value === previous[index]))
-        return
-      geometryKeys[markIndex] = key
-      styleKeys[markIndex] = undefined
-      let path = linePaths[markIndex]
-      if (!path) {
-        path = svgElement('path', {
-          fill: 'none',
-          'vector-effect': 'non-scaling-stroke',
-          'stroke-linecap': 'round',
-          'stroke-linejoin': 'round',
-          'data-mark': 'line',
-        })
-        linePaths[markIndex] = path
-        const nextIndex = linePaths.findIndex(
-          (candidate, index) => index > markIndex && Boolean(candidate),
-        )
-        marksLayer.insertBefore(path, areaPaths[nextIndex] ?? linePaths[nextIndex] ?? null)
-      }
-      let areaPath = areaPaths[markIndex]
-      if (mark.area && !areaPath) {
-        areaPath = svgElement('path', {
-          'data-mark': 'area',
-          'fill-rule': 'evenodd',
-        })
-        areaPaths[markIndex] = areaPath
-        marksLayer.insertBefore(areaPath, path)
-      } else if (!mark.area && areaPath) {
-        areaPath.remove()
-        areaPaths[markIndex] = undefined
-        areaPath = undefined
-      }
-      let markerGroup = markerGroups[markIndex]
-      if (mark.markers && !markerGroup) {
-        markerGroup = svgElement('g', { 'data-mark': 'markers' })
-        markerGroups[markIndex] = markerGroup
-        path.after(markerGroup)
-      } else if (!mark.markers && markerGroup) {
-        markerGroup.remove()
-        markerGroups[markIndex] = undefined
-        markerGroup = undefined
-      }
-      if (mark.id) path.dataset.markId = mark.id
-      else delete path.dataset.markId
-      if (mark.id) {
-        if (areaPath) areaPath.dataset.markId = mark.id
-        if (markerGroup) markerGroup.dataset.markId = mark.id
-      } else {
-        if (areaPath) delete areaPath.dataset.markId
-        if (markerGroup) delete markerGroup.dataset.markId
-      }
-      let data = ''
-      let areaData = ''
-      let drawingSegment = false
-      let segmentCount = 0
-      let lastX = 0
-      const baseline = mark.area ? yScale.project(mark.area.to) : 0
-      let markerIndex = 0
-      const length = visible ? (store?.length ?? staticMark?.xValues.length ?? 0) : 0
-      for (let index = 0; index < length; index += 1) {
-        const xValue = store ? store.xAt(index) : staticMark?.xValues[index]
-        const yValue = store ? store.yAt(index) : staticMark?.yValues[index]
-        if (
-          xValue === null ||
-          xValue === undefined ||
-          yValue === null ||
-          yValue === undefined ||
-          (typeof xValue === 'number' && !Number.isFinite(xValue)) ||
-          (typeof yValue === 'number' && !Number.isFinite(yValue))
-        ) {
-          drawingSegment = false
-          if (segmentCount > 1) areaData += `L${lastX},${baseline}Z`
-          segmentCount = 0
-          continue
-        }
-        const x = xScale.project(xValue)
-        const y = yScale.project(yValue)
-        data += `${drawingSegment ? 'L' : 'M'}${x},${y}`
-        if (mark.area) {
-          if (drawingSegment) {
-            areaData += `L${x},${y}`
-            segmentCount += 1
-          } else {
-            segmentCount = 1
-            areaData += `M${x},${baseline}L${x},${y}`
-          }
-          lastX = x
-        }
-        if (mark.markers && markerGroup) {
-          let marker = markerGroup.children[markerIndex] as SVGCircleElement | undefined
-          if (!marker) {
-            marker = svgElement('circle', { 'data-mark': 'marker' })
-            markerGroup.append(marker)
-          }
-          marker.setAttribute('cx', String(x))
-          marker.setAttribute('cy', String(y))
-          markerIndex += 1
-        }
-        drawingSegment = true
-      }
-      if (segmentCount > 1) areaData += `L${lastX},${baseline}Z`
-      path.setAttribute('d', data)
-      path.setAttribute('display', mark.line ? '' : 'none')
-      areaPath?.setAttribute('d', areaData)
-      if (markerGroup) {
-        while (markerGroup.children.length > markerIndex) markerGroup.lastElementChild?.remove()
-      }
+          : undefined)
+      if (match) claimed.add(match)
+      return match
     })
-    while (linePaths.length > current.marks.length) {
-      linePaths.pop()?.remove()
-      areaPaths.pop()?.remove()
-      markerGroups.pop()?.remove()
-      geometryKeys.pop()
-    }
+    mountedMarks = marks.map((mark, index) => {
+      const definition = definitions[index]
+      let match = matches[index]
+      const positional = previous[index]
+      if (
+        !match &&
+        definition.reuseByPosition &&
+        positional?.definition === definition &&
+        !claimed.has(positional)
+      ) {
+        match = positional
+        claimed.add(positional)
+      }
+      const renderer = match?.renderer ?? definition.createRenderer()
+      renderer.mount(marksLayer, mark)
+      return { mark, definition, renderer }
+    })
+    for (const entry of previous) if (!claimed.has(entry)) entry.renderer.destroy()
   }
 
-  function renderMarkStyles(current: PlotOptions, tokens: ThemeTokens) {
-    current.marks.forEach((mark, markIndex) => {
-      if (isTextMark(mark)) {
-        const group = textGroups.get(mark)
-        if (!group) throw new Error('Missing text renderer.')
-        const key = [
-          mark,
-          group,
-          group.children.length,
-          tokens.accent,
-          tokens.fontFamily,
-          tokens.fontSize,
-        ]
-        const previous = textStyleKeys.get(mark)
-        if (previous && key.every((value, index) => value === previous[index])) return
-        for (const label of group.children) {
-          label.setAttribute('fill', mark.fill ?? `var(--fews-chart-accent, ${tokens.accent})`)
-          label.setAttribute(
-            'font-family',
-            mark.fontFamily ?? `var(--fews-chart-font-family, ${tokens.fontFamily})`,
-          )
-          label.setAttribute('font-size', `${mark.fontSize ?? tokens.fontSize}px`)
-          if (mark.fontWeight === undefined) label.removeAttribute('font-weight')
-          else label.setAttribute('font-weight', String(mark.fontWeight))
-          label.setAttribute('text-anchor', mark.textAnchor)
-          label.setAttribute('dominant-baseline', mark.dominantBaseline)
-        }
-        textStyleKeys.set(mark, key)
-        return
-      }
-      if (isRuleMark(mark)) {
-        const key = [mark, mark.stroke, mark.strokeWidth, tokens.accent]
-        const previous = ruleStyleKeys.get(mark)
-        if (previous && key.every((value, index) => value === previous[index])) return
-        const line = ruleLines.get(mark)
-        if (!line) throw new Error('Missing rule renderer.')
-        line.setAttribute('stroke', mark.stroke ?? `var(--fews-chart-accent, ${tokens.accent})`)
-        line.setAttribute('stroke-width', String(mark.strokeWidth))
-        ruleStyleKeys.set(mark, key)
-        return
-      }
-      if (isStackedAreaMark(mark)) {
-        const key = [
-          mark.options.version,
-          mark.options.get().resolved.renderer === 'canvas' ? tokens : tokens.accent,
-        ]
-        const previous = stackedAreaStyleKeys.get(mark)
-        if (previous && key.every((value, index) => value === previous[index])) return
-        const group = stackedAreaGroups.get(mark)
-        if (!group) throw new Error('Missing stackedArea renderer.')
-        styleStackedAreas(group, mark, tokens.accent)
-        stackedAreaStyleKeys.set(mark, key)
-        return
-      }
-      if (isBarMark(mark)) {
-        const key = [
-          mark.options.version,
-          mark.options.get().resolved.renderer === 'canvas' ? tokens : tokens.accent,
-        ]
-        const previous = barStyleKeys.get(mark)
-        if (previous && key.every((value, index) => value === previous[index])) return
-        const group = barGroups.get(mark)
-        if (!group) throw new Error('Missing bar renderer.')
-        styleBars(group, mark, tokens.accent)
-        barStyleKeys.set(mark, key)
-        return
-      }
-      if (isBandMark(mark)) {
-        const key = [mark, mark.fill, mark.opacity, tokens.accent]
-        const previous = bandStyleKeys.get(mark)
-        if (previous && key.every((value, index) => value === previous[index])) return
-        bandStyleKeys.set(mark, key)
-        const group = bandGroups.get(mark)
-        if (!group) throw new Error('Missing band renderer for a configured mark.')
-        group.setAttribute('fill', mark.fill ?? `var(--fews-chart-accent, ${tokens.accent})`)
-        group.setAttribute('fill-opacity', String(mark.opacity))
-        return
-      }
-      const key = [mark, mark.stroke, mark.strokeWidth, mark.markers, mark.area, tokens.accent]
-      const previous = styleKeys[markIndex]
-      if (previous && key.every((value, index) => value === previous[index])) return
-      styleKeys[markIndex] = key
-      const path = linePaths[markIndex]
-      if (!path) throw new Error('Missing line renderer for a configured mark.')
-      path.setAttribute('stroke', mark.stroke ?? `var(--fews-chart-accent, ${tokens.accent})`)
-      path.setAttribute('stroke-width', String(mark.strokeWidth))
-      const areaPath = areaPaths[markIndex]
-      if (areaPath) {
-        areaPath.setAttribute(
-          'fill',
-          mark.area?.fill || mark.stroke || `var(--fews-chart-accent, ${tokens.accent})`,
-        )
-        areaPath.setAttribute('fill-opacity', String(mark.area?.opacity ?? 0))
-        areaPath.setAttribute('stroke', 'none')
-      }
-      const markerGroup = markerGroups[markIndex]
-      if (markerGroup) {
-        for (const marker of markerGroup.children) {
-          marker.setAttribute('r', String(mark.markers?.size ?? 0))
-          marker.setAttribute(
-            'fill',
-            mark.markers?.fill || mark.stroke || `var(--fews-chart-accent, ${tokens.accent})`,
-          )
-          marker.setAttribute('stroke', mark.markers?.stroke ?? 'none')
-          marker.setAttribute('stroke-width', String(mark.markers?.strokeWidth ?? 0))
-        }
-      }
-    })
+  function renderMarkGeometry(current: PlotOptions) {
+    mountMarks(current.marks)
+    const context: MarkRenderContext = {
+      coordinateSystem,
+      scales: localScales,
+      plot: regions.get().plot,
+      direction: (name) => direction(current, name, undefined, undefined, coordinateSystem),
+    }
+    for (const { mark, renderer } of mountedMarks) renderer.geometry(mark, context)
+  }
+
+  function renderMarkStyles(tokens: ThemeTokens) {
+    for (const { mark, renderer } of mountedMarks) renderer.style(mark, tokens)
   }
 
   function reconcile() {
@@ -1184,44 +419,24 @@ function createPlotInternal(
       }
     }
     for (const mark of current.marks) {
-      if (
-        (!isSeriesMark(mark) && !isBarMark(mark) && !isStackedAreaMark(mark)) ||
-        markValidators.has(mark)
-      )
-        continue
+      const definition = markDefinition(mark)
+      if (markValidators.has(mark) || (!definition.track && !definition.validateUpdates)) continue
       const markScope = scope.createScope()
-      const stopValidation = isBarMark(mark)
-        ? validateBarUpdates(mark, (candidate) => {
-            const current = options.get().resolved
-            validateBarScales(mark.data, candidate, current.scales)
-            const x = candidate.orientation === 'vertical' ? candidate.scales.x : candidate.scales.y
-            const y = candidate.orientation === 'vertical' ? candidate.scales.y : candidate.scales.x
-            if (direction(current, x) !== 'x' || direction(current, y) !== 'y')
-              throw new Error('Bar scale directions do not match its orientation.')
+      const stopValidation = definition.validateUpdates?.(mark, () =>
+        markValidationContext(options.get().resolved, coordinateSystem),
+      )
+      if (definition.track) {
+        const track = definition.track
+        markScope.run(() => {
+          reactive.effect(() => {
+            track(mark)
+            invalidate(render, DirtyLayer.marks)
           })
-        : isStackedAreaMark(mark)
-          ? validateStackedAreaUpdates(mark, (candidate) => {
-              const current = options.get().resolved
-              validateStackedAreaScales(candidate, current.scales)
-              if (
-                direction(current, candidate.scales.x) !== 'x' ||
-                direction(current, candidate.scales.y) !== 'y'
-              )
-                throw new Error('Stacked area scales require x and y directions respectively.')
-            })
-          : validateSeriesUpdates(mark, (candidate) =>
-              validatePlotMark(candidate, options.get().resolved, coordinateSystem, true),
-            )
-      markScope.run(() => {
-        reactive.effect(() => {
-          mark.options.get()
-          const _version = mark.data.version
-          invalidate(render, DirtyLayer.marks)
         })
-      })
+      }
       markValidators.set(mark, {
         dispose() {
-          stopValidation()
+          stopValidation?.()
           markScope.dispose()
         },
       })
@@ -1394,7 +609,7 @@ function createPlotInternal(
       renderMarkGeometry(current)
     }
     if (dirty & (DirtyLayer.layout | DirtyLayer.axes | DirtyLayer.marks | DirtyLayer.style)) {
-      renderMarkStyles(current, tokens)
+      renderMarkStyles(tokens)
     }
   }
 
@@ -1503,34 +718,8 @@ function createPlotInternal(
       markValidators.clear()
       cancelRender(render)
       bindings.clear()
-      areaPaths.length = 0
-      linePaths.length = 0
-      markerGroups.length = 0
-      bandGroups.forEach((group) => group.remove())
-      bandGroups.clear()
-      bandGeometryKeys.clear()
-      bandStyleKeys.clear()
-      barGroups.forEach((group) => {
-        clearCompositeCanvas(group)
-        group.remove()
-      })
-      barGroups.clear()
-      barGeometryKeys.clear()
-      barStyleKeys.clear()
-      stackedAreaGroups.forEach((group) => {
-        clearCompositeCanvas(group)
-        group.remove()
-      })
-      stackedAreaGroups.clear()
-      stackedAreaGeometryKeys.clear()
-      stackedAreaStyleKeys.clear()
-      textGroups.forEach((group) => group.remove())
-      textGroups.clear()
-      textGeometryKeys.clear()
-      textStyleKeys.clear()
-      geometryKeys.length = 0
-      styleKeys.length = 0
-      renderedMarks = []
+      for (const { renderer } of mountedMarks) renderer.destroy()
+      mountedMarks = []
       localScales = Object.freeze({})
       axisWidths.clear()
       measurer.clear()
