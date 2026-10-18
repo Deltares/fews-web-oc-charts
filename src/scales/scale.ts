@@ -7,8 +7,10 @@ import { niceDegreeSteps } from '../Utils/niceDegreeSteps.js'
 import { zonedTicks } from '../time/zoned-time.js'
 
 export type ScaleValue = number | string
-export type ScaleKind = 'linear' | 'time' | 'band' | 'degrees'
-export type PixelRange = readonly [number, number]
+export type ScaleKind = 'linear' | 'time' | 'band' | 'degrees' | 'angular' | 'radial'
+export type ScaleRange = readonly [number, number]
+export type PixelRange = ScaleRange
+export type PolarDirection = 'clockwise' | 'anticlockwise'
 
 export interface ScaleOptions {
   domain?: readonly ScaleValue[] | undefined
@@ -20,6 +22,23 @@ export interface ScaleOptions {
   padding: number
   timeZone: string
   locale: string
+  direction?: PolarDirection | undefined
+  intercept?: number | undefined
+  range?: readonly [number, number] | undefined
+  innerRadius?: number | undefined
+}
+
+export type CartesianScaleOptions = Omit<
+  ScaleOptions,
+  'direction' | 'intercept' | 'range' | 'innerRadius'
+>
+export interface AngularScaleOptions extends CartesianScaleOptions {
+  direction?: PolarDirection | undefined
+  intercept?: number | undefined
+  range?: readonly [number, number] | undefined
+}
+export interface RadialScaleOptions extends CartesianScaleOptions {
+  innerRadius?: number | undefined
 }
 
 export interface ScaleHandle {
@@ -31,7 +50,7 @@ export interface ScaleHandle {
 
 export interface ScaleBinding {
   readonly scale: ScaleHandle
-  readonly range: ReadonlySignal<PixelRange>
+  readonly range: ReadonlySignal<ScaleRange>
   project(value: ScaleValue): number
   invert(pixel: number): number
   ticks(count?: number, timeZone?: string): readonly ScaleValue[]
@@ -71,11 +90,36 @@ function createScale(kind: ScaleKind, initial: OptionPatch<ScaleOptions>): Scale
     ) {
       throw new Error('scale.domain must be an ascending pair of finite numbers.')
     }
+    if (kind === 'radial' && values.some((value) => Number(value) < 0)) {
+      throw new Error('radial.domain must contain nonnegative values.')
+    }
     if (kind === 'time' && values.some((value) => Math.abs(Number(value)) > 8.64e15)) {
       throw new Error('scale.domain must be within the JavaScript Date range.')
     }
     for (const key of ['reverse', 'nice', 'includeZero', 'symmetric'] as const) {
       if (typeof options[key] !== 'boolean') throw new Error(`scale.${key} must be boolean.`)
+    }
+    if (kind === 'angular') {
+      if (options.direction !== 'clockwise' && options.direction !== 'anticlockwise') {
+        throw new Error('angular.direction must be clockwise or anticlockwise.')
+      }
+      if (!Number.isFinite(options.intercept)) throw new Error('angular.intercept must be finite.')
+      if (
+        !Array.isArray(options.range) ||
+        options.range.length !== 2 ||
+        options.range.some((value) => !Number.isFinite(value))
+      ) {
+        throw new Error('angular.range must be a pair of finite radians.')
+      }
+    }
+    if (
+      kind === 'radial' &&
+      (options.innerRadius === undefined ||
+        !Number.isFinite(options.innerRadius) ||
+        options.innerRadius < 0 ||
+        options.innerRadius >= 1)
+    ) {
+      throw new Error('radial.innerRadius must be between 0 (inclusive) and 1 (exclusive).')
     }
     finiteNonnegative(options.padding, 'scale.padding')
     if (options.padding >= 1) throw new Error('scale.padding must be less than 1.')
@@ -86,7 +130,8 @@ function createScale(kind: ScaleKind, initial: OptionPatch<ScaleOptions>): Scale
     resolveDomain(options)
   }
   const defaults = (): ScaleOptions => ({
-    defaultDomain: kind === 'band' ? [] : kind === 'degrees' ? [0, 360] : [0, 1],
+    defaultDomain:
+      kind === 'band' ? [] : kind === 'degrees' || kind === 'angular' ? [0, 360] : [0, 1],
     reverse: false,
     nice: false,
     includeZero: false,
@@ -94,6 +139,10 @@ function createScale(kind: ScaleKind, initial: OptionPatch<ScaleOptions>): Scale
     padding: 0,
     timeZone: 'UTC',
     locale: 'en-GB',
+    ...(kind === 'angular'
+      ? { direction: 'clockwise' as const, intercept: 0, range: [0, 2 * Math.PI] as const }
+      : {}),
+    ...(kind === 'radial' ? { innerRadius: 0 } : {}),
   })
   const keys = [...Object.keys(defaults()), 'domain']
   validateKeys(initial, keys, 'scale')
@@ -114,7 +163,7 @@ function createScale(kind: ScaleKind, initial: OptionPatch<ScaleOptions>): Scale
       low = -high
     }
     const pad = (high - low) * config.padding
-    low -= pad
+    low = kind === 'radial' ? Math.max(0, low - pad) : low - pad
     high += pad
     const numeric =
       kind === 'time' ? scaleUtc().domain([low, high]) : scaleLinear().domain([low, high])
@@ -150,10 +199,18 @@ function createScale(kind: ScaleKind, initial: OptionPatch<ScaleOptions>): Scale
   return Object.freeze(handle)
 }
 
-export const linear = (options: OptionPatch<ScaleOptions> = {}) => createScale('linear', options)
-export const time = (options: OptionPatch<ScaleOptions> = {}) => createScale('time', options)
-export const band = (options: OptionPatch<ScaleOptions> = {}) => createScale('band', options)
-export const degrees = (options: OptionPatch<ScaleOptions> = {}) => createScale('degrees', options)
+export const linear = (options: OptionPatch<CartesianScaleOptions> = {}) =>
+  createScale('linear', options)
+export const time = (options: OptionPatch<CartesianScaleOptions> = {}) =>
+  createScale('time', options)
+export const band = (options: OptionPatch<CartesianScaleOptions> = {}) =>
+  createScale('band', options)
+export const degrees = (options: OptionPatch<CartesianScaleOptions> = {}) =>
+  createScale('degrees', options)
+export const angular = (options: OptionPatch<AngularScaleOptions> = {}) =>
+  createScale('angular', options)
+export const radial = (options: OptionPatch<RadialScaleOptions> = {}) =>
+  createScale('radial', options)
 
 /** Scales are shareable by default; this documents ownership without copying state. */
 export function sharedScale(scale: ScaleHandle): ScaleHandle {
@@ -161,7 +218,7 @@ export function sharedScale(scale: ScaleHandle): ScaleHandle {
   return scale
 }
 
-export function bindScale(scale: ScaleHandle, range: ReadonlySignal<PixelRange>): ScaleBinding {
+export function bindScale(scale: ScaleHandle, range: ReadonlySignal<ScaleRange>): ScaleBinding {
   const derived = reactive.computed(() => {
     const domain = scale.domain.get()
     const config = scale.options.get().resolved
@@ -203,7 +260,7 @@ export function bindScale(scale: ScaleHandle, range: ReadonlySignal<PixelRange>)
         const [start, end] = scale.domain.get().map(Number)
         return zonedTicks(timeZone, start, end, count)
       }
-      if (scale.kind === 'degrees') {
+      if (scale.kind === 'degrees' || scale.kind === 'angular') {
         const [low, high] = scale.domain.get().map(Number)
         const step = niceDegreeSteps((high - low) / count)
         if (step === 0) return [low]

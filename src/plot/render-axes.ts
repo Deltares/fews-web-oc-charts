@@ -182,3 +182,113 @@ export function renderAxes(
     axesLayer.append(group)
   })
 }
+
+export function renderPolarAxes(
+  axesLayer: SVGGElement,
+  gridLayer: SVGGElement,
+  axes: readonly AxisHandle[],
+  bindings: Readonly<Record<string, ScaleBinding>>,
+  regions: PlotLayout,
+  theme: ThemeTokens,
+) {
+  axesLayer.replaceChildren()
+  gridLayer.replaceChildren()
+  const plot = regions.plot
+  const centerX = plot.x + plot.width / 2
+  const centerY = plot.y + plot.height / 2
+  const radius = Math.min(plot.width, plot.height) / 2
+  const angularAxis = axes.find((axis) => axis.options.get().resolved.position === 'angular')
+  const radialAxis = axes.find((axis) => axis.options.get().resolved.position === 'radial')
+  const angularBinding = angularAxis ? bindings[angularAxis.scale] : undefined
+  const radialBinding = radialAxis ? bindings[radialAxis.scale] : undefined
+  const outerRadius = radialBinding?.range.get()[1] ?? radius
+  const axisGroup = svgElement('g', { 'data-coordinate-system': 'polar' })
+  axesLayer.append(axisGroup)
+
+  if (radialAxis && radialBinding) {
+    for (const tick of axisTickLabels(radialBinding, radialAxis)) {
+      const r = radialBinding.project(tick.value)
+      const circle = svgElement('circle', {
+        cx: centerX,
+        cy: centerY,
+        r,
+        fill: 'none',
+        stroke: 'currentColor',
+      })
+      axisGroup.append(circle)
+      if (radialAxis.options.get().resolved.grid) {
+        gridLayer.append(
+          svgElement('circle', {
+            cx: centerX,
+            cy: centerY,
+            r,
+            fill: 'none',
+            stroke: 'currentColor',
+          }),
+        )
+      }
+      const label = svgElement('text', {
+        x: centerX + 4,
+        y: centerY - r - 3,
+        'text-anchor': 'start',
+      })
+      label.textContent = tick.primary
+      axisGroup.append(label)
+    }
+  } else {
+    axisGroup.append(
+      svgElement('circle', {
+        cx: centerX,
+        cy: centerY,
+        r: outerRadius,
+        fill: 'none',
+        stroke: 'currentColor',
+      }),
+    )
+  }
+
+  if (angularAxis && angularBinding) {
+    const config = angularBinding.scale.options.get().resolved
+    const sign = config.direction === 'anticlockwise' ? -1 : 1
+    for (const tick of axisTickLabels(angularBinding, angularAxis)) {
+      const angle = config.intercept! + sign * angularBinding.project(tick.value)
+      const x = centerX + outerRadius * Math.sin(angle)
+      const y = centerY - outerRadius * Math.cos(angle)
+      const line = svgElement('line', {
+        x1: centerX,
+        y1: centerY,
+        x2: x,
+        y2: y,
+        stroke: 'currentColor',
+      })
+      axisGroup.append(line)
+      if (angularAxis.options.get().resolved.grid) gridLayer.append(line.cloneNode(true))
+      const label = svgElement('text', {
+        x: centerX + (outerRadius + 12) * Math.sin(angle),
+        y: centerY - (outerRadius + 12) * Math.cos(angle),
+        'text-anchor':
+          Math.sin(angle) > 0.15 ? 'start' : Math.sin(angle) < -0.15 ? 'end' : 'middle',
+        'dominant-baseline': 'middle',
+      })
+      label.textContent = tick.primary
+      axisGroup.append(label)
+    }
+  }
+
+  for (const axis of axes) {
+    const options = axis.options.get().resolved
+    const caption = [options.label, options.unit && `(${options.unit})`].filter(Boolean).join(' ')
+    if (!caption) continue
+    const radialCaption = options.position === 'radial'
+    const label = svgElement('text', {
+      x: radialCaption ? centerX + outerRadius * 0.7 : centerX,
+      y: radialCaption ? centerY - outerRadius * 0.7 : centerY - outerRadius - theme.fontSize * 2,
+      'text-anchor': radialCaption ? 'start' : 'middle',
+      'dominant-baseline': 'middle',
+      'data-axis-caption': axis.scale,
+    })
+    label.textContent = caption
+    axisGroup.append(label)
+  }
+  axisGroup.setAttribute('font-size', String(theme.fontSize))
+}

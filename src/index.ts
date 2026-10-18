@@ -6,17 +6,30 @@ export * from './Utils/index.js'
 export * from './Scale/index.js'
 export * from './Tooltip/index.js'
 export * from './Data/index.js'
-export { createPlot } from './plot/create-plot.js'
-export type { Plot, PlotConfig, PlotOptions } from './plot/create-plot.js'
+export { createPlot, createPolarPlot } from './plot/create-plot.js'
+export type {
+  Plot,
+  PlotConfig,
+  PlotOptions,
+  PolarPlot,
+  PolarPlotConfig,
+  PolarPoint,
+} from './plot/create-plot.js'
 export { axis } from './plot/axis.js'
 export type { AxisHandle, AxisOptions, AxisSide } from './plot/axis.js'
-export { linear, time, band, degrees, sharedScale } from './scales/scale.js'
+export { linear, time, band, degrees, angular, radial, sharedScale } from './scales/scale.js'
 export type {
   ScaleHandle,
   ScaleBinding,
   ScaleOptions,
+  CartesianScaleOptions,
+  AngularScaleOptions,
+  RadialScaleOptions,
   ScaleValue,
+  ScaleRange,
   PixelRange,
+  ScaleKind,
+  PolarDirection,
 } from './scales/scale.js'
 export { layout } from './layout/layout.js'
 export type { PlotLayout, Size, Margins, Region, AxisMeasure } from './layout/layout.js'

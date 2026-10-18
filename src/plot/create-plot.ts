@@ -8,7 +8,8 @@ import {
   isScaleHandle,
   type ScaleBinding,
   type ScaleHandle,
-  type PixelRange,
+  type ScaleRange,
+  type ScaleValue,
 } from '../scales/scale.js'
 import {
   layout,
@@ -20,7 +21,7 @@ import {
 import { resolveTheme, watchTheme, type ThemeMode, type ThemeTokens } from '../theme/theme.js'
 import { isAxisHandle, validateAxisUpdates, type AxisHandle, type AxisSide } from './axis.js'
 import { observeSize } from './resize.js'
-import { svgElement, renderAxes, axisTickLabels } from './render-axes.js'
+import { svgElement, renderAxes, renderPolarAxes, axisTickLabels } from './render-axes.js'
 
 export interface PlotOptions {
   width?: number | undefined
@@ -40,6 +41,8 @@ export type PlotConfig = Omit<OptionPatch<PlotOptions>, 'scales' | 'axes' | 'the
   themeElement?: Element | undefined
 }
 
+export type PolarPlotConfig = Omit<PlotConfig, 'directions'>
+
 export interface Plot {
   readonly element: SVGSVGElement
   readonly options: ReadonlySignal<OptionStateSnapshot<PlotOptions>>
@@ -51,6 +54,25 @@ export interface Plot {
   update(patch: PlotConfig): void
   setConfig(config: PlotConfig): void
   destroy(): void
+}
+
+export interface PolarPoint {
+  readonly x: number
+  readonly y: number
+}
+
+export interface PolarPlot extends Omit<Plot, 'update' | 'setConfig'> {
+  update(patch: PolarPlotConfig): void
+  setConfig(config: PolarPlotConfig): void
+  project(angularValue: ScaleValue, radialValue: ScaleValue): PolarPoint
+}
+
+type CoordinateSystem = 'cartesian' | 'polar'
+type Orientation = 'x' | 'y' | 'angular' | 'radial'
+type CartesianSide = Exclude<AxisSide, 'angular' | 'radial'>
+
+function isCartesianSide(position: AxisSide): position is CartesianSide {
+  return position !== 'angular' && position !== 'radial'
 }
 
 const optionKeys = [
@@ -76,10 +98,32 @@ function direction(
   name: string,
   candidate?: AxisHandle,
   position?: AxisSide,
-): 'x' | 'y' {
+  coordinateSystem: CoordinateSystem = 'cartesian',
+): Orientation {
   const axes = options.axes.filter((axis) => axis.scale === name)
+  const scale = options.scales[name]
+  if (coordinateSystem === 'polar') {
+    const orientation =
+      scale.kind === 'angular' ? 'angular' : scale.kind === 'radial' ? 'radial' : undefined
+    if (!orientation) throw new Error(`Polar plots require angular or radial scales ("${name}").`)
+    if (
+      axes.some((axis) => {
+        const side = axis === candidate ? position : axis.options.get().resolved.position
+        return side !== orientation
+      })
+    ) {
+      throw new Error(`Polar scale "${name}" requires an axis in the ${orientation} direction.`)
+    }
+    return orientation
+  }
+  if (scale.kind === 'angular' || scale.kind === 'radial') {
+    throw new Error(`Cartesian plots cannot use ${scale.kind} scale "${name}".`)
+  }
   const axisDirections = axes.map((axis) => {
     const side = axis === candidate ? position : axis.options.get().resolved.position
+    if (side === 'angular' || side === 'radial') {
+      throw new Error('Cartesian plots require top, right, bottom or left axes.')
+    }
     return side === 'top' || side === 'bottom' ? 'x' : 'y'
   })
   const result =
@@ -92,7 +136,11 @@ function direction(
   return result
 }
 
-export function createPlot(host: HTMLElement, config: PlotConfig = {}): Plot {
+function createPlotInternal(
+  host: HTMLElement,
+  config: PlotConfig,
+  coordinateSystem: CoordinateSystem,
+): Plot {
   if (!(host instanceof HTMLElement)) throw new Error('createPlot requires an HTMLElement.')
   validatePatch(config)
   const state = createOptionState<PlotOptions>(config, {
@@ -127,10 +175,18 @@ export function createPlot(host: HTMLElement, config: PlotConfig = {}): Plot {
           throw new Error(`plot.${key} must be a named map.`)
         }
       }
+
       const ids = new Set<string>()
       const axes = new Set<AxisHandle>()
       for (const axis of options.axes) {
         if (!axis || !isAxisHandle(axis)) throw new Error('plot.axes requires axis handles.')
+        const position = axis.options.get().resolved.position
+        if (coordinateSystem === 'cartesian' && (position === 'angular' || position === 'radial')) {
+          throw new Error('Cartesian plots require top, right, bottom or left axes.')
+        }
+        if (coordinateSystem === 'polar' && position !== 'angular' && position !== 'radial') {
+          throw new Error('Polar plots require angular or radial axes.')
+        }
         if (axes.has(axis)) throw new Error('Duplicate axis handle in plot.axes.')
         axes.add(axis)
         const id = axis.options.get().resolved.id
@@ -142,7 +198,21 @@ export function createPlot(host: HTMLElement, config: PlotConfig = {}): Plot {
       for (const [name, scale] of Object.entries(options.scales)) {
         if (!name || !scale || !isScaleHandle(scale))
           throw new Error(`plot.scales.${name} requires a scale handle.`)
-        direction(options, name)
+        direction(options, name, undefined, undefined, coordinateSystem)
+      }
+      if (coordinateSystem === 'polar') {
+        const angularScales = Object.values(options.scales).filter(
+          (scale) => scale.kind === 'angular',
+        )
+        const radialScales = Object.values(options.scales).filter(
+          (scale) => scale.kind === 'radial',
+        )
+        if (angularScales.length !== 1 || radialScales.length !== 1) {
+          throw new Error('Polar plots require exactly one angular scale and one radial scale.')
+        }
+        if (Object.keys(options.directions).length > 0) {
+          throw new Error('Polar plots do not support cartesian plot.directions.')
+        }
       }
       for (const [name, value] of Object.entries(options.directions)) {
         if (!Object.hasOwn(options.scales, name))
@@ -174,7 +244,7 @@ export function createPlot(host: HTMLElement, config: PlotConfig = {}): Plot {
   const axisValidators = new Map<AxisHandle, () => void>()
   const bindings = new Map<
     string,
-    { scale: ScaleHandle; direction: 'x' | 'y'; binding: ScaleBinding; scope: ReactiveScope }
+    { scale: ScaleHandle; direction: Orientation; binding: ScaleBinding; scope: ReactiveScope }
   >()
   let localScales: Readonly<Record<string, ScaleBinding>> = Object.freeze({})
   let destroyed = false
@@ -207,13 +277,22 @@ export function createPlot(host: HTMLElement, config: PlotConfig = {}): Plot {
         axisValidators.set(
           axis,
           validateAxisUpdates(axis, (candidate) => {
-            direction(options.get().resolved, axis.scale, axis, candidate.position)
+            direction(
+              options.get().resolved,
+              axis.scale,
+              axis,
+              candidate.position,
+              coordinateSystem,
+            )
           }),
         )
       }
     }
     for (const [name, entry] of bindings) {
-      if (entry.scale !== current.scales[name] || entry.direction !== direction(current, name)) {
+      if (
+        entry.scale !== current.scales[name] ||
+        entry.direction !== direction(current, name, undefined, undefined, coordinateSystem)
+      ) {
         entry.scope.dispose()
         bindings.delete(name)
       }
@@ -221,11 +300,19 @@ export function createPlot(host: HTMLElement, config: PlotConfig = {}): Plot {
     for (const [name, scale] of Object.entries(current.scales)) {
       if (bindings.has(name)) continue
       const bindingScope = scope.createScope()
-      const orientation = direction(current, name)
+      const orientation = direction(current, name, undefined, undefined, coordinateSystem)
       const binding = bindingScope.run(() => {
-        const range = reactive.computed<PixelRange>(
+        const range = reactive.computed<ScaleRange>(
           () => {
             const plot = regions.get().plot
+            if (orientation === 'angular') {
+              return Object.freeze([...(scale.options.get().resolved.range ?? [0, 2 * Math.PI])])
+            }
+            if (orientation === 'radial') {
+              const radius = Math.min(plot.width, plot.height) / 2
+              const innerRadius = scale.options.get().resolved.innerRadius ?? 0
+              return Object.freeze([radius * innerRadius, radius])
+            }
             return Object.freeze(
               orientation === 'x' ? [plot.x, plot.x + plot.width] : [plot.y + plot.height, plot.y],
             )
@@ -251,7 +338,10 @@ export function createPlot(host: HTMLElement, config: PlotConfig = {}): Plot {
         height: current.height ?? measured.get().height,
       })
       size.set(actualSize)
-      const measures = current.axes.map((axis) => {
+      const cartesianAxes = current.axes.filter((axis) =>
+        isCartesianSide(axis.options.get().resolved.position),
+      )
+      const measures = cartesianAxes.map((axis) => {
         const axisOptions = axis.options.get().resolved
         const binding = localScales[axis.scale]
         const labels = axisTickLabels(binding, axis)
@@ -279,11 +369,18 @@ export function createPlot(host: HTMLElement, config: PlotConfig = {}): Plot {
         const stable =
           previous?.version === version ? Math.max(thickness, previous.thickness) : thickness
         axisWidths.set(axis, { version, thickness: stable })
-        return { position: axisOptions.position, thickness: stable }
+        return { position: axisOptions.position as CartesianSide, thickness: stable }
       })
-      regions.set(
-        layout(actualSize, measures, current.margins, current.title ? tokens.fontSize * 2 : 0),
-      )
+      const margins =
+        coordinateSystem === 'polar'
+          ? {
+              top: current.margins.top + tokens.fontSize * 2,
+              right: current.margins.right + tokens.fontSize * 2,
+              bottom: current.margins.bottom + tokens.fontSize * 2,
+              left: current.margins.left + tokens.fontSize * 2,
+            }
+          : current.margins
+      regions.set(layout(actualSize, measures, margins, current.title ? tokens.fontSize * 2 : 0))
       element.setAttribute('width', String(actualSize.width))
       element.setAttribute('height', String(actualSize.height))
       element.setAttribute('viewBox', `0 0 ${actualSize.width} ${actualSize.height}`)
@@ -305,7 +402,11 @@ export function createPlot(host: HTMLElement, config: PlotConfig = {}): Plot {
       gridLayer.setAttribute('stroke', `var(--fews-chart-grid, ${tokens.grid})`)
     }
     if (dirty & (DirtyLayer.layout | DirtyLayer.axes)) {
-      renderAxes(axesLayer, gridLayer, current.axes, localScales, regions.get(), tokens)
+      if (coordinateSystem === 'polar') {
+        renderPolarAxes(axesLayer, gridLayer, current.axes, localScales, regions.get(), tokens)
+      } else {
+        renderAxes(axesLayer, gridLayer, current.axes, localScales, regions.get(), tokens)
+      }
     }
   }
 
@@ -414,4 +515,34 @@ export function createPlot(host: HTMLElement, config: PlotConfig = {}): Plot {
       element.remove()
     },
   }
+}
+
+export function createPlot(host: HTMLElement, config: PlotConfig = {}): Plot {
+  return createPlotInternal(host, config, 'cartesian')
+}
+
+export function createPolarPlot(host: HTMLElement, config: PolarPlotConfig = {}): PolarPlot {
+  const plot = createPlotInternal(host, config, 'polar')
+  return Object.assign(plot, {
+    project(angularValue: ScaleValue, radialValue: ScaleValue): PolarPoint {
+      if (plot.destroyed) throw new Error('Cannot project with a destroyed plot.')
+      const scales = Object.entries(plot.options.get().resolved.scales)
+      const angularName = scales.find(([, scale]) => scale.kind === 'angular')?.[0]
+      const radialName = scales.find(([, scale]) => scale.kind === 'radial')?.[0]
+      if (!angularName || !radialName) {
+        throw new Error('Polar plots require exactly one angular scale and one radial scale.')
+      }
+      const angularScale = plot.options.get().resolved.scales[angularName]
+      const angleDirection =
+        angularScale.options.get().resolved.direction === 'anticlockwise' ? -1 : 1
+      const intercept = angularScale.options.get().resolved.intercept ?? 0
+      const angle = intercept + angleDirection * plot.scales[angularName].project(angularValue)
+      const radius = plot.scales[radialName].project(radialValue)
+      const region = plot.regions.get().plot
+      return Object.freeze({
+        x: region.x + region.width / 2 + radius * Math.sin(angle),
+        y: region.y + region.height / 2 - radius * Math.cos(angle),
+      })
+    },
+  })
 }

@@ -15,8 +15,9 @@ export interface Region extends Size {
   x: number
   y: number
 }
+type CartesianAxisSide = Exclude<AxisSide, 'angular' | 'radial'>
 export interface AxisMeasure {
-  position: AxisSide
+  position: CartesianAxisSide
   thickness: number
 }
 export interface PlotLayout {
