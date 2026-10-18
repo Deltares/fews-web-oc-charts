@@ -46,8 +46,14 @@ import {
 import { renderStackedAreas, styleStackedAreas } from './render-stacked-areas.js'
 import { clearCompositeCanvas, watchCanvasPixelRatio } from './render-composite-canvas.js'
 import { isRuleMark, type RuleMark } from './rule.js'
+import {
+  isTextMark,
+  isValidTextCoordinate,
+  validateTextValuesForScale,
+  type TextMark,
+} from './text.js'
 
-type PlotMark = LineMark | SeriesMark | BandMark | BarMark | StackedAreaMark | RuleMark
+type PlotMark = LineMark | SeriesMark | BandMark | BarMark | StackedAreaMark | RuleMark | TextMark
 
 export interface PlotOptions {
   width?: number
@@ -243,10 +249,11 @@ function validatePlotMark(
       !isBandMark(mark) &&
       !isBarMark(mark) &&
       !isStackedAreaMark(mark) &&
-      !isRuleMark(mark))
+      !isRuleMark(mark) &&
+      !isTextMark(mark))
   ) {
     throw new Error(
-      'plot.marks accepts line(), series(), band(), bar(), stackedArea() or rule() marks only.',
+      'plot.marks accepts line(), series(), band(), bar(), stackedArea(), rule() or text() marks only.',
     )
   }
   if (isRuleMark(mark)) {
@@ -257,6 +264,19 @@ function validatePlotMark(
       throw new Error(`rule "${mark.id ?? ''}" requires a continuous linear or time scale.`)
     }
     direction(options, mark.scale, undefined, undefined, coordinateSystem)
+    return
+  }
+  if (isTextMark(mark)) {
+    if (coordinateSystem !== 'cartesian') throw new Error('text() supports cartesian plots only.')
+    for (const coordinate of ['x', 'y'] as const) {
+      const scale = options.scales[mark[coordinate]]
+      if (!scale)
+        throw new Error(`text "${mark.id ?? ''}" references a missing ${coordinate} scale.`)
+      if (direction(options, mark[coordinate]) !== coordinate) {
+        throw new Error(`text "${mark.id ?? ''}" requires a ${coordinate}-direction scale.`)
+      }
+      validateTextValuesForScale(mark, coordinate, scale.kind)
+    }
     return
   }
   if (isStackedAreaMark(mark)) {
@@ -381,7 +401,8 @@ function createPlotInternal(
       isBandMark(value) ||
       isBarMark(value) ||
       isStackedAreaMark(value) ||
-      isRuleMark(value),
+      isRuleMark(value) ||
+      isTextMark(value),
     validate(options) {
       validatePlotAppearance(options)
       validatePlotCollections(options)
@@ -459,6 +480,9 @@ function createPlotInternal(
   const ruleLines = new Map<RuleMark, SVGLineElement>()
   const ruleGeometryKeys = new Map<RuleMark, readonly unknown[]>()
   const ruleStyleKeys = new Map<RuleMark, readonly unknown[]>()
+  const textGroups = new Map<TextMark, SVGGElement>()
+  const textGeometryKeys = new Map<TextMark, readonly unknown[]>()
+  const textStyleKeys = new Map<TextMark, readonly unknown[]>()
   const geometryKeys: (readonly unknown[])[] = []
   const styleKeys: (readonly unknown[] | undefined)[] = []
   let renderedMarks: PlotOptions['marks'] = []
@@ -479,12 +503,17 @@ function createPlotInternal(
       const staleBars = new Map(barGroups)
       const staleStackedAreas = new Map(stackedAreaGroups)
       const staleRules = new Map(ruleLines)
+      const staleTexts = new Map(textGroups)
       const matches = current.marks.map((mark) =>
         renderedMarks.findIndex(
           (previous) =>
+            isLineMark(mark) === isLineMark(previous) &&
+            isSeriesMark(mark) === isSeriesMark(previous) &&
             isBandMark(mark) === isBandMark(previous) &&
             isBarMark(mark) === isBarMark(previous) &&
             isStackedAreaMark(mark) === isStackedAreaMark(previous) &&
+            isRuleMark(mark) === isRuleMark(previous) &&
+            isTextMark(mark) === isTextMark(previous) &&
             (mark.id ? previous.id === mark.id : previous === mark),
         ),
       )
@@ -502,6 +531,33 @@ function createPlotInternal(
           stackedAreaGroups.set(mark, group)
           if (mark.id) group.dataset.markId = mark.id
           staleStackedAreas.delete(mark)
+          marksLayer.append(group)
+          linePaths[index] = undefined
+          areaPaths[index] = undefined
+          markerGroups[index] = undefined
+          geometryKeys[index] = []
+          styleKeys[index] = undefined
+          return
+        }
+        if (isTextMark(mark)) {
+          let group = textGroups.get(mark)
+          if (!group && mark.id) {
+            const previous = renderedMarks.find(
+              (entry) => isTextMark(entry) && entry.id === mark.id,
+            )
+            if (previous && isTextMark(previous)) {
+              group = textGroups.get(previous)
+              textGroups.delete(previous)
+              textGeometryKeys.delete(previous)
+              textStyleKeys.delete(previous)
+              staleTexts.delete(previous)
+            }
+          }
+          group ??= svgElement('g', { 'data-mark': 'text' })
+          textGroups.set(mark, group)
+          if (mark.id) group.dataset.markId = mark.id
+          else delete group.dataset.markId
+          staleTexts.delete(mark)
           marksLayer.append(group)
           linePaths[index] = undefined
           areaPaths[index] = undefined
@@ -603,6 +659,12 @@ function createPlotInternal(
         ruleGeometryKeys.delete(mark)
         ruleStyleKeys.delete(mark)
       }
+      for (const [mark, group] of staleTexts) {
+        group.remove()
+        textGroups.delete(mark)
+        textGeometryKeys.delete(mark)
+        textStyleKeys.delete(mark)
+      }
       for (const mark of stackedAreaGroups.keys()) {
         if (!current.marks.includes(mark)) {
           stackedAreaGroups.delete(mark)
@@ -627,6 +689,60 @@ function createPlotInternal(
       renderedMarks = [...current.marks]
     }
     current.marks.forEach((mark, markIndex) => {
+      if (isTextMark(mark)) {
+        const xScale = localScales[mark.x]
+        const yScale = localScales[mark.y]
+        const key = [
+          mark,
+          xScale,
+          yScale,
+          xScale.scale.domain.version,
+          yScale.scale.domain.version,
+          xScale.scale.options.version,
+          yScale.scale.options.version,
+          ...xScale.range.get(),
+          ...yScale.range.get(),
+        ]
+        const previous = textGeometryKeys.get(mark)
+        if (
+          previous &&
+          key.length === previous.length &&
+          key.every((value, index) => value === previous[index])
+        )
+          return
+        const group = textGroups.get(mark)
+        if (!group) throw new Error('Missing text renderer.')
+        for (let index = 0; index < mark.textValues.length; index += 1) {
+          let label = group.children[index] as SVGTextElement | undefined
+          if (!label) {
+            label = svgElement('text', { 'data-mark': 'text-label' })
+            group.append(label)
+          }
+          label.dataset.index = String(index)
+          const x = mark.xValues[index]
+          const y = mark.yValues[index]
+          const value = mark.textValues[index]
+          if (!isValidTextCoordinate(x) || !isValidTextCoordinate(y) || value == null) {
+            label.setAttribute('display', 'none')
+            label.textContent = ''
+            continue
+          }
+          const px = xScale.project(x)
+          const py = yScale.project(y)
+          label.removeAttribute('display')
+          label.setAttribute('x', String(px))
+          label.setAttribute('y', String(py))
+          label.setAttribute('dx', String(mark.dx))
+          label.setAttribute('dy', String(mark.dy))
+          if (mark.angle) label.setAttribute('transform', `rotate(${mark.angle} ${px} ${py})`)
+          else label.removeAttribute('transform')
+          label.textContent = String(value)
+        }
+        while (group.children.length > mark.textValues.length) group.lastElementChild?.remove()
+        textGeometryKeys.set(mark, key)
+        textStyleKeys.delete(mark)
+        return
+      }
       if (isRuleMark(mark)) {
         const scale = localScales[mark.scale]
         const orientation = direction(current, mark.scale)
@@ -951,6 +1067,34 @@ function createPlotInternal(
 
   function renderMarkStyles(current: PlotOptions, tokens: ThemeTokens) {
     current.marks.forEach((mark, markIndex) => {
+      if (isTextMark(mark)) {
+        const group = textGroups.get(mark)
+        if (!group) throw new Error('Missing text renderer.')
+        const key = [
+          mark,
+          group,
+          group.children.length,
+          tokens.accent,
+          tokens.fontFamily,
+          tokens.fontSize,
+        ]
+        const previous = textStyleKeys.get(mark)
+        if (previous && key.every((value, index) => value === previous[index])) return
+        for (const label of group.children) {
+          label.setAttribute('fill', mark.fill ?? `var(--fews-chart-accent, ${tokens.accent})`)
+          label.setAttribute(
+            'font-family',
+            mark.fontFamily ?? `var(--fews-chart-font-family, ${tokens.fontFamily})`,
+          )
+          label.setAttribute('font-size', `${mark.fontSize ?? tokens.fontSize}px`)
+          if (mark.fontWeight === undefined) label.removeAttribute('font-weight')
+          else label.setAttribute('font-weight', String(mark.fontWeight))
+          label.setAttribute('text-anchor', mark.textAnchor)
+          label.setAttribute('dominant-baseline', mark.dominantBaseline)
+        }
+        textStyleKeys.set(mark, key)
+        return
+      }
       if (isRuleMark(mark)) {
         const key = [mark, mark.stroke, mark.strokeWidth, tokens.accent]
         const previous = ruleStyleKeys.get(mark)
@@ -1380,6 +1524,10 @@ function createPlotInternal(
       stackedAreaGroups.clear()
       stackedAreaGeometryKeys.clear()
       stackedAreaStyleKeys.clear()
+      textGroups.forEach((group) => group.remove())
+      textGroups.clear()
+      textGeometryKeys.clear()
+      textStyleKeys.clear()
       geometryKeys.length = 0
       styleKeys.length = 0
       renderedMarks = []

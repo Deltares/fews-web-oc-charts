@@ -1368,6 +1368,18 @@ observed.update({ line: { stroke: undefined }, markers: false })
 - Browser tests cover orientation, scale projection updates, default/custom styling,
   autoscale exclusion and rejection of unsupported scale/coordinate bindings.
 
+### Phase 2 text marks (implemented SVG foundation)
+
+- [Text demo](./examples/v5-text/index.html) places labels at aligned x/y coordinates.
+- `text({ x, y, xValues, yValues, textValues, dx?, dy?, angle?, fill?, fontFamily?,
+fontSize?, fontWeight?, textAnchor?, dominantBaseline?, id? })` renders one SVG text
+  element for each non-gap coordinate/label tuple. Linear, time and band cartesian
+  scales are supported. Text coordinates contribute to autoscale extents; labels with
+  missing coordinates or values are skipped. IDs preserve mark and label DOM identity
+  across compatible plot updates.
+- Browser tests cover projection updates, offsets/rotation, styling, gaps, autoscaling,
+  ID-based reuse and unsupported bindings.
+
 ### Phase 2 grouped/stacked bars and shared layout (implemented SVG/canvas foundation)
 
 - [Bars demo](./examples/v5-bars/index.html) compares grouped, implicit stacked,
