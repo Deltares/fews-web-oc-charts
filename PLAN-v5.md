@@ -1115,8 +1115,12 @@ Run `npm run dev` and use the example index, or open these public-API demos:
   configuration replacement, scoped CSS tokens and explicit cleanup.
 - [Civil-time axes](./examples/v5-time-axes/index.html): automatic multi-level time
   labels, locale/time-zone overrides, and spring-forward/fall-back calendar behavior.
+- [Polar coordinates](./examples/v5-polar-coordinates/index.html): clockwise and
+  anticlockwise angles, intercepts, angular sweep, radial inner radius and projected
+  coordinate readouts.
 
-These phase 1 demos intentionally render axes without data marks. The `v5-spike-*`
+These phase 1 demos intentionally render axes without data marks; the polar example
+also reports projected coordinates using the public `project` API. The `v5-spike-*`
 examples remain separate phase 0 prototypes, not examples of the public v5 API.
 
 The package root now exports `createPlot`, `createPolarPlot`, `linear`, `time`, `band`,

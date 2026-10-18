@@ -1,0 +1,33 @@
+.polar-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: 12px;
+}
+
+.polar-grid figure {
+  min-width: 0;
+  margin: 0;
+  padding: 14px;
+  border: 1px solid light-dark(#c6d4e0, #476078);
+  border-radius: 8px;
+}
+
+.polar-grid h2 {
+  margin-top: 0;
+  font-size: 1.05rem;
+}
+
+.polar-grid .plot-host {
+  height: 340px;
+}
+
+.polar-grid figcaption {
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 650px) {
+  .controls {
+    align-items: stretch;
+  }
+}
