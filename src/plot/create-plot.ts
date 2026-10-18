@@ -111,8 +111,9 @@ function direction(
   const axes = options.axes.filter((axis) => axis.scale === name)
   const scale = options.scales[name]
   if (coordinateSystem === 'polar') {
-    const orientation =
-      scale.kind === 'angular' ? 'angular' : scale.kind === 'radial' ? 'radial' : undefined
+    let orientation: Orientation | undefined
+    if (scale.kind === 'angular') orientation = 'angular'
+    else if (scale.kind === 'radial') orientation = 'radial'
     if (!orientation) throw new Error(`Polar plots require angular or radial scales ("${name}").`)
     if (
       axes.some((axis) => {
