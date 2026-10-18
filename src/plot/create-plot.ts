@@ -359,40 +359,20 @@ function createPlotInternal(
     ) {
       return
     }
-    // Renderers are reused for the same handle, then for a replacement of the same kind with
-    // the same id, and finally (when the kind opts in) for a replacement at the same position.
-    const previous = mountedMarks
-    const definitions = marks.map(markDefinition)
-    const claimed = new Set<MountedMark>()
-    const matches = marks.map((mark, index) => {
-      const match =
-        previous.find((entry) => entry.mark === mark) ??
-        (mark.id
-          ? previous.find(
-              (entry) => entry.definition === definitions[index] && entry.mark.id === mark.id,
-            )
-          : undefined)
-      if (match) claimed.add(match)
-      return match
-    })
-    mountedMarks = marks.map((mark, index) => {
-      const definition = definitions[index]
-      let match = matches[index]
-      const positional = previous[index]
-      if (
-        !match &&
-        definition.reuseByPosition &&
-        positional?.definition === definition &&
-        !claimed.has(positional)
-      ) {
-        match = positional
-        claimed.add(positional)
-      }
-      const renderer = match?.renderer ?? definition.createRenderer()
+    const remaining = new Map(
+      mountedMarks.map((entry) => [entry.mark.id ?? entry.mark, entry] as const),
+    )
+    mountedMarks = marks.map((mark) => {
+      const definition = markDefinition(mark)
+      const key = mark.id ?? mark
+      const match = remaining.get(key)
+      const renderer =
+        match?.definition === definition ? match.renderer : definition.createRenderer()
+      if (match?.definition === definition) remaining.delete(key)
       renderer.mount(marksLayer, mark)
       return { mark, definition, renderer }
     })
-    for (const entry of previous) if (!claimed.has(entry)) entry.renderer.destroy()
+    for (const entry of remaining.values()) entry.renderer.destroy()
   }
 
   function renderMarkGeometry(current: PlotOptions) {

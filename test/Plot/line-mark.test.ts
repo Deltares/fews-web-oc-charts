@@ -148,10 +148,13 @@ describe('static line marks', () => {
       ],
     })
     await frame()
-    expect(path.getAttribute('data-mark-id')).toBe('replacement')
-    expect(path.getAttribute('stroke')).toBe('#1677a6')
-    expect(path.getAttribute('stroke-width')).toBe('3')
-    expect(path.getAttribute('d')).toBe(
+    const replacement = current.element.querySelector<SVGPathElement>('[data-mark="line"]')!
+    expect(replacement).not.toBe(path)
+    expect(path.isConnected).toBe(false)
+    expect(replacement.getAttribute('data-mark-id')).toBe('replacement')
+    expect(replacement.getAttribute('stroke')).toBe('#1677a6')
+    expect(replacement.getAttribute('stroke-width')).toBe('3')
+    expect(replacement.getAttribute('d')).toBe(
       `M${current.scales.x.project(0)},${current.scales.y.project(1)}` +
         `L${current.scales.x.project(2)},${current.scales.y.project(0)}`,
     )
@@ -375,7 +378,10 @@ describe('static line marks', () => {
       marks: [line({ x: 'x', y: 'y', xValues: ['a', null, 'b'], yValues: [1, 2, Number.NaN] })],
     })
     await frame()
-    expect(path.getAttribute('d')).toMatch(/^M[^L]+$/)
+    expect(path.isConnected).toBe(false)
+    expect(current.element.querySelector('[data-mark="line"]')?.getAttribute('d')).toMatch(
+      /^M[^L]+$/,
+    )
   })
 
   test('validates line values and rejects polar use', () => {

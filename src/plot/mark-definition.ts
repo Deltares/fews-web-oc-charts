@@ -31,8 +31,10 @@ export interface MarkExtentContext {
 }
 
 /**
- * Owns the SVG nodes of one plotted mark. A renderer may be handed a replacement mark
- * with the same kind and id, so it must not assume the mark object is stable.
+ * Owns the rendering resources of one plotted mark. All kinds reuse a renderer for
+ * the same kind and explicit id, or for the same handle when no id is supplied.
+ * Position never determines identity. Replacements must refresh geometry and style,
+ * including removing obsolete child nodes. Unmatched renderers are destroyed.
  */
 export interface MarkRenderer<M> {
   /** Appends the renderer's nodes to the marks layer; called in plot order when the mark list changes. */
@@ -47,15 +49,10 @@ export interface MarkDefinition<M extends object> {
   /** Factory name used in error messages, e.g. `line`. */
   readonly name: string
   is(value: object): value is M
-  /**
-   * Whether a replacement mark of this kind at the same plot position may take over the
-   * previous renderer when neither handle nor id matches.
-   */
-  readonly reuseByPosition?: boolean
   validate(mark: M, context: MarkValidationContext): void
   extents(mark: M, context: MarkExtentContext): void
   createRenderer(): MarkRenderer<M>
-  /** Reads the reactive state that should trigger a mark redraw. */
+  /** Reads reactive state for this handle; subscriptions are replaced even when its renderer is reused. */
   track?(mark: M): void
   /** Registers validation of option updates against the plot; returns a disposer. */
   validateUpdates?(mark: M, context: () => MarkValidationContext): () => void
