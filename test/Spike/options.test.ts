@@ -28,6 +28,21 @@ function makeDefaults(): Options {
 }
 
 describe('phase 1 runtime option state', () => {
+  test('preserves empty option objects so optional components can be enabled with defaults', () => {
+    const state = createOptionState<{ markers: false | { size?: number } }>(
+      { markers: {} },
+      { defaults: () => ({ markers: false }) },
+    )
+    expect(state.getSnapshot().resolved.markers).toEqual({})
+    state.update({ markers: { size: 4 } })
+    state.update({ markers: { size: undefined } })
+    expect(state.getSnapshot().resolved.markers).toEqual({})
+    state.update({ markers: undefined })
+    expect(state.getSnapshot().resolved.markers).toBe(false)
+    state.update({ markers: {} })
+    expect(state.getSnapshot().resolved.markers).toEqual({})
+  })
+
   test('patches nested values and unsets overrides back to current defaults', () => {
     let inheritedStroke = 'navy'
     const state = createOptionState<Options>(

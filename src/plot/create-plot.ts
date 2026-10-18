@@ -23,6 +23,7 @@ import { isAxisHandle, validateAxisUpdates, type AxisHandle, type AxisSide } fro
 import { observeSize } from './resize.js'
 import { svgElement, renderAxes, renderPolarAxes, axisTickLabels } from './render-axes.js'
 import { isLineMark, validateLineValuesForScale, type LineMark } from './line.js'
+import { isSeriesMark, validateSeriesUpdates, type SeriesMark } from './series.js'
 
 export interface PlotOptions {
   width?: number
@@ -34,7 +35,7 @@ export interface PlotOptions {
   scales: Record<string, ScaleHandle>
   directions: Record<string, 'x' | 'y'>
   axes: readonly AxisHandle[]
-  marks: readonly LineMark[]
+  marks: readonly (LineMark | SeriesMark)[]
 }
 
 export type PlotConfig = Omit<
@@ -43,7 +44,7 @@ export type PlotConfig = Omit<
 > & {
   scales?: Record<string, ScaleHandle | undefined>
   axes?: readonly AxisHandle[]
-  marks?: readonly LineMark[]
+  marks?: readonly (LineMark | SeriesMark)[]
   themeElement?: Element
 }
 
@@ -206,12 +207,13 @@ function validatePlotScales(options: PlotOptions, coordinateSystem: CoordinateSy
 }
 
 function validatePlotMark(
-  mark: LineMark,
+  mark: LineMark | SeriesMark,
   options: PlotOptions,
   coordinateSystem: CoordinateSystem,
+  dataBacked = isSeriesMark(mark),
 ) {
-  if (!mark || !isLineMark(mark)) {
-    throw new Error('plot.marks currently accepts line() marks only.')
+  if (!mark || (!isLineMark(mark) && !isSeriesMark(mark))) {
+    throw new Error('plot.marks accepts line() or series() marks only.')
   }
   if (coordinateSystem === 'polar') {
     throw new Error('line() marks are supported on cartesian plots only.')
@@ -225,8 +227,18 @@ function validatePlotMark(
   if (direction(options, mark.y, undefined, undefined, coordinateSystem) !== 'y') {
     throw new Error(`line "${mark.id ?? ''}" requires a y-direction scale.`)
   }
-  validateLineValuesForScale(mark, 'x', options.scales[mark.x].kind)
-  validateLineValuesForScale(mark, 'y', options.scales[mark.y].kind)
+  if (isLineMark(mark)) {
+    validateLineValuesForScale(mark, 'x', options.scales[mark.x].kind)
+    validateLineValuesForScale(mark, 'y', options.scales[mark.y].kind)
+  }
+  if (
+    dataBacked &&
+    (options.scales[mark.x].kind === 'band' || options.scales[mark.y].kind === 'band')
+  ) {
+    throw new Error(
+      'series() requires numeric/time scales; categorical tables are not supported yet.',
+    )
+  }
   if (mark.area) {
     const expected = options.scales[mark.y].kind === 'band' ? 'string' : 'number'
     if (typeof mark.area.to !== expected) {
@@ -239,8 +251,11 @@ function validatePlotMark(
 
 function validatePlotMarks(options: PlotOptions, coordinateSystem: CoordinateSystem) {
   const markIds = new Set<string>()
+  const marks = new Set<LineMark | SeriesMark>()
   for (const mark of options.marks) {
     validatePlotMark(mark, options, coordinateSystem)
+    if (marks.has(mark)) throw new Error('Duplicate mark handle in plot.marks.')
+    marks.add(mark)
     if (mark.id && markIds.has(mark.id)) throw new Error(`Duplicate mark id "${mark.id}".`)
     if (mark.id) markIds.add(mark.id)
   }
@@ -281,7 +296,8 @@ function createPlotInternal(
       axes: [],
       marks: [],
     }),
-    isAtomicReference: (value) => isScaleHandle(value) || isAxisHandle(value) || isLineMark(value),
+    isAtomicReference: (value) =>
+      isScaleHandle(value) || isAxisHandle(value) || isLineMark(value) || isSeriesMark(value),
     validate(options) {
       validatePlotAppearance(options)
       validatePlotCollections(options)
@@ -311,6 +327,7 @@ function createPlotInternal(
   const measurer = createTextMeasurer()
   const axisWidths = new Map<AxisHandle, { version: number; thickness: number }>()
   const axisValidators = new Map<AxisHandle, () => void>()
+  const markValidators = new Map<SeriesMark, { dispose(): void }>()
   const bindings = new Map<
     string,
     { scale: ScaleHandle; direction: Orientation; binding: ScaleBinding; scope: ReactiveScope }
@@ -340,10 +357,80 @@ function createPlotInternal(
   const areaPaths: (SVGPathElement | undefined)[] = []
   const linePaths: SVGPathElement[] = []
   const markerGroups: (SVGGElement | undefined)[] = []
+  const geometryKeys: (readonly unknown[])[] = []
+  const styleKeys: (readonly unknown[] | undefined)[] = []
+  let renderedMarks: PlotOptions['marks'] = []
   element.append(background, definitions, gridLayer, marksLayer, axesLayer, title)
 
   function renderMarkGeometry(current: PlotOptions) {
+    if (
+      current.marks.length !== renderedMarks.length ||
+      current.marks.some((mark, index) => mark !== renderedMarks[index])
+    ) {
+      const oldLines = linePaths.splice(0)
+      const oldAreas = areaPaths.splice(0)
+      const oldMarkers = markerGroups.splice(0)
+      const oldGeometry = geometryKeys.splice(0)
+      const oldStyles = styleKeys.splice(0)
+      const claimed = new Set<number>()
+      const matches = current.marks.map((mark) =>
+        renderedMarks.findIndex((previous) =>
+          mark.id ? previous.id === mark.id : previous === mark,
+        ),
+      )
+      for (const index of matches) if (index >= 0) claimed.add(index)
+      current.marks.forEach((_mark, index) => {
+        let source = matches[index]
+        if (source < 0 && index < oldLines.length && !claimed.has(index)) {
+          source = index
+          claimed.add(index)
+        }
+        if (source >= 0) {
+          linePaths[index] = oldLines[source]
+          areaPaths[index] = oldAreas[source]
+          markerGroups[index] = oldMarkers[source]
+          geometryKeys[index] = oldGeometry[source]
+          styleKeys[index] = oldStyles[source]
+          for (const node of [oldAreas[source], oldLines[source], oldMarkers[source]]) {
+            if (node) marksLayer.append(node)
+          }
+        }
+      })
+      oldLines.forEach((path, index) => {
+        if (claimed.has(index)) return
+        path.remove()
+        oldAreas[index]?.remove()
+        oldMarkers[index]?.remove()
+      })
+      renderedMarks = [...current.marks]
+    }
     current.marks.forEach((mark, markIndex) => {
+      const store = isSeriesMark(mark) ? mark.data : undefined
+      const staticMark = isLineMark(mark) ? mark : undefined
+      const visible = !isSeriesMark(mark) || mark.visible
+      const xScale = localScales[mark.x]
+      const yScale = localScales[mark.y]
+      const key = [
+        mark,
+        store?.version,
+        visible,
+        mark.line,
+        Boolean(mark.markers),
+        mark.area?.to,
+        xScale,
+        yScale,
+        xScale.scale.domain.version,
+        yScale.scale.domain.version,
+        xScale.scale.options.version,
+        yScale.scale.options.version,
+        ...xScale.range.get(),
+        ...yScale.range.get(),
+      ]
+      const previous = geometryKeys[markIndex]
+      if (key.length === previous?.length && key.every((value, index) => value === previous[index]))
+        return
+      geometryKeys[markIndex] = key
+      styleKeys[markIndex] = undefined
       let path = linePaths[markIndex]
       if (!path) {
         path = svgElement('path', {
@@ -353,10 +440,11 @@ function createPlotInternal(
           'stroke-linejoin': 'round',
           'data-mark': 'line',
         })
-        linePaths.push(path)
-        areaPaths.push(undefined)
-        markerGroups.push(undefined)
-        marksLayer.append(path)
+        linePaths[markIndex] = path
+        const nextIndex = linePaths.findIndex(
+          (candidate, index) => index > markIndex && Boolean(candidate),
+        )
+        marksLayer.insertBefore(path, areaPaths[nextIndex] ?? linePaths[nextIndex] ?? null)
       }
       let areaPath = areaPaths[markIndex]
       if (mark.area && !areaPath) {
@@ -390,8 +478,6 @@ function createPlotInternal(
         if (areaPath) delete areaPath.dataset.markId
         if (markerGroup) delete markerGroup.dataset.markId
       }
-      const xScale = localScales[mark.x]
-      const yScale = localScales[mark.y]
       let data = ''
       let areaData = ''
       let drawingSegment = false
@@ -399,9 +485,10 @@ function createPlotInternal(
       let lastX = 0
       const baseline = mark.area ? yScale.project(mark.area.to) : 0
       let markerIndex = 0
-      for (let index = 0; index < mark.xValues.length; index += 1) {
-        const xValue = mark.xValues[index]
-        const yValue = mark.yValues[index]
+      const length = visible ? (store?.length ?? staticMark?.xValues.length ?? 0) : 0
+      for (let index = 0; index < length; index += 1) {
+        const xValue = store ? store.xAt(index) : staticMark?.xValues[index]
+        const yValue = store ? store.yAt(index) : staticMark?.yValues[index]
         if (
           xValue === null ||
           xValue === undefined ||
@@ -450,13 +537,18 @@ function createPlotInternal(
     })
     while (linePaths.length > current.marks.length) {
       linePaths.pop()?.remove()
-      areaPaths.pop()
-      markerGroups.pop()
+      areaPaths.pop()?.remove()
+      markerGroups.pop()?.remove()
+      geometryKeys.pop()
     }
   }
 
   function renderMarkStyles(current: PlotOptions, tokens: ThemeTokens) {
     current.marks.forEach((mark, markIndex) => {
+      const key = [mark, mark.stroke, mark.strokeWidth, mark.markers, mark.area, tokens.accent]
+      const previous = styleKeys[markIndex]
+      if (previous && key.every((value, index) => value === previous[index])) return
+      styleKeys[markIndex] = key
       const path = linePaths[markIndex]
       path.setAttribute('stroke', mark.stroke ?? `var(--fews-chart-accent, ${tokens.accent})`)
       path.setAttribute('stroke-width', String(mark.strokeWidth))
@@ -486,6 +578,32 @@ function createPlotInternal(
 
   function reconcile() {
     const current = options.get().resolved
+    for (const [mark, entry] of markValidators) {
+      if (!current.marks.includes(mark)) {
+        entry.dispose()
+        markValidators.delete(mark)
+      }
+    }
+    for (const mark of current.marks) {
+      if (!isSeriesMark(mark) || markValidators.has(mark)) continue
+      const markScope = scope.createScope()
+      const stopValidation = validateSeriesUpdates(mark, (candidate) =>
+        validatePlotMark(candidate, options.get().resolved, coordinateSystem, true),
+      )
+      markScope.run(() => {
+        reactive.effect(() => {
+          mark.options.get()
+          const _version = mark.data.version
+          invalidate(render, DirtyLayer.marks)
+        })
+      })
+      markValidators.set(mark, {
+        dispose() {
+          stopValidation()
+          markScope.dispose()
+        },
+      })
+    }
     for (const [axis, dispose] of axisValidators) {
       if (!current.axes.includes(axis)) {
         dispose()
@@ -744,11 +862,16 @@ function createPlotInternal(
       scope.dispose()
       for (const dispose of axisValidators.values()) dispose()
       axisValidators.clear()
+      for (const entry of markValidators.values()) entry.dispose()
+      markValidators.clear()
       cancelRender(render)
       bindings.clear()
       areaPaths.length = 0
       linePaths.length = 0
       markerGroups.length = 0
+      geometryKeys.length = 0
+      styleKeys.length = 0
+      renderedMarks = []
       localScales = Object.freeze({})
       axisWidths.clear()
       measurer.clear()
