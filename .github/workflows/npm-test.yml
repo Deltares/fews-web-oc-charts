@@ -4,7 +4,7 @@ on: [push]
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v6
@@ -32,6 +32,9 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npx playwright install --with-deps chromium firefox webkit
         if: steps.playwright-cache.outputs.cache-hit != 'true'
+
+      - name: Run Phase 1 visual regression
+        run: npm run test:visual
 
       - name: Run tests
         run: npm run test:all-browsers
