@@ -1155,6 +1155,10 @@ detail.destroy()
   instance is exposed or shared. Axes determine x/y orientation; without axes, time
   and band scales default to x, and linear/degrees scales to y. Override this locally
   using `directions: { q: 'x' }`. A name cannot represent both directions in one plot.
+- Time scales generate civil-calendar ticks in their configured time zone. Time axes
+  may override `timeZone` and `locale`; horizontal axes render hour/day or coarser
+  multi-level labels, omit nonexistent spring-forward boundaries, and disambiguate
+  repeated fall-back labels. Supplying `format` opts out of the automatic label rows.
 - The SVG container uses the host's content size, observed by one shared
   `ResizeObserver`; `width`/`height` override individual dimensions, including zero.
   Give the host a height, or provide an explicit height. Rendering is asynchronous
@@ -1184,10 +1188,11 @@ detail.destroy()
   destroyed plot throws.
 
 This is the plot/scale foundation, not completion of every roadmap phase 1 exit gate.
-Time ticks currently use UTC boundaries with `Intl` labels in the configured locale/
-zone (including offset disambiguation). Civil-calendar/multi-level time axes, polar
-coordinates and the migrated basic-line visual fixtures remain to be implemented;
-marks, data-driven autoscaling and interaction APIs follow in their respective phases.
+Time ticks use local civil-calendar boundaries with `Intl` labels in the configured
+locale/zone, including spring-gap omission, fall-fold disambiguation and multi-level
+horizontal axis labels. Polar coordinates and the migrated basic-line visual fixtures
+remain to be implemented; marks, data-driven autoscaling and interaction APIs follow
+in their respective phases.
 
 ### Target composed API
 

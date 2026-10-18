@@ -326,4 +326,26 @@ describe('createPlot named scales', () => {
     expect(current.element.textContent).toContain('a')
     expect(() => current.scales.categories.invert(20)).toThrow(/band/)
   })
+
+  test('renders multi-level civil-time labels with per-axis timezone overrides', async () => {
+    const current = plot(host(700, 320), {
+      scales: {
+        t: time({
+          domain: [Date.UTC(2024, 11, 31, 18), Date.UTC(2025, 0, 2, 18)],
+          timeZone: 'UTC',
+        }),
+      },
+      axes: [axis('t', { position: 'bottom', timeZone: 'America/New_York', locale: 'en-US' })],
+    })
+    await frame()
+    const contexts = [...current.element.querySelectorAll('[data-tick-context]')]
+    expect(contexts.length).toBeGreaterThan(0)
+    expect(contexts.map((label) => label.textContent).join(' ')).toContain('Dec 31, 2024')
+    expect(current.regions.get().axes[0].height).toBeGreaterThanOrEqual(36)
+
+    current.options.get().resolved.axes[0].update({ format: () => 'custom' })
+    await frame()
+    expect(current.element.querySelectorAll('[data-tick-context]')).toHaveLength(0)
+    expect(current.element.textContent).toContain('custom')
+  })
 })

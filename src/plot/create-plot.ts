@@ -20,7 +20,7 @@ import {
 import { resolveTheme, watchTheme, type ThemeMode, type ThemeTokens } from '../theme/theme.js'
 import { isAxisHandle, validateAxisUpdates, type AxisHandle, type AxisSide } from './axis.js'
 import { observeSize } from './resize.js'
-import { svgElement, renderAxes, tickFormatter } from './render-axes.js'
+import { svgElement, renderAxes, axisTickLabels } from './render-axes.js'
 
 export interface PlotOptions {
   width?: number | undefined
@@ -254,20 +254,23 @@ export function createPlot(host: HTMLElement, config: PlotConfig = {}): Plot {
       const measures = current.axes.map((axis) => {
         const axisOptions = axis.options.get().resolved
         const binding = localScales[axis.scale]
-        const format = tickFormatter(binding, axis)
+        const labels = axisTickLabels(binding, axis)
         const maxWidth = Math.max(
           0,
-          ...binding
-            .ticks(axisOptions.tickCount)
-            .map((tick) =>
-              measurer.measure(format(tick), `${tokens.fontSize}px ${tokens.fontFamily}`),
-            ),
+          ...labels.flatMap(({ primary, secondary }) =>
+            [primary, secondary]
+              .filter(Boolean)
+              .map((label) => measurer.measure(label, `${tokens.fontSize}px ${tokens.fontFamily}`)),
+          ),
         )
+        const labelRows = labels.some(({ secondary }) => secondary) ? 2 : 1
         const angle = Math.abs((axisOptions.labelAngle * Math.PI) / 180)
         const horizontal = axisOptions.position === 'top' || axisOptions.position === 'bottom'
         const labelExtent = horizontal
-          ? Math.abs(Math.sin(angle)) * maxWidth + Math.abs(Math.cos(angle)) * tokens.fontSize
-          : Math.abs(Math.cos(angle)) * maxWidth + Math.abs(Math.sin(angle)) * tokens.fontSize
+          ? Math.abs(Math.sin(angle)) * maxWidth +
+            Math.abs(Math.cos(angle)) * tokens.fontSize * labelRows
+          : Math.abs(Math.cos(angle)) * maxWidth +
+            Math.abs(Math.sin(angle)) * tokens.fontSize * labelRows
         const thickness = Math.ceil(
           12 + labelExtent + (axisOptions.label || axisOptions.unit ? tokens.fontSize * 2 : 0),
         )

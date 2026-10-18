@@ -13,6 +13,8 @@ export interface AxisOptions {
   grid: boolean
   tickCount: number
   labelAngle: number
+  locale?: string | undefined
+  timeZone?: string | undefined
   format?: ((value: ScaleValue) => string) | undefined
 }
 
@@ -40,7 +42,18 @@ export function validateAxisUpdates(
 
 export function axis(scale: string, initial: OptionPatch<AxisOptions> = {}): AxisHandle {
   if (typeof scale !== 'string' || scale.length === 0) throw new Error('axis.scale must be a name.')
-  const keys = ['id', 'position', 'label', 'unit', 'grid', 'tickCount', 'labelAngle', 'format']
+  const keys = [
+    'id',
+    'position',
+    'label',
+    'unit',
+    'grid',
+    'tickCount',
+    'labelAngle',
+    'locale',
+    'timeZone',
+    'format',
+  ]
   const consumers = new Set<(options: Readonly<AxisOptions>) => void>()
   validateKeys(initial, keys, 'axis')
   const state = createOptionState<AxisOptions>(initial, {
@@ -70,6 +83,15 @@ export function axis(scale: string, initial: OptionPatch<AxisOptions> = {}): Axi
       }
       if (options.format !== undefined && typeof options.format !== 'function') {
         throw new Error('axis.format must be a function.')
+      }
+      if (options.locale !== undefined && typeof options.locale !== 'string') {
+        throw new Error('axis.locale must be a string.')
+      }
+      if (options.timeZone !== undefined && typeof options.timeZone !== 'string') {
+        throw new Error('axis.timeZone must be a string.')
+      }
+      if (options.locale !== undefined || options.timeZone !== undefined) {
+        new Intl.DateTimeFormat(options.locale, { timeZone: options.timeZone })
       }
       for (const validate of consumers) validate(options)
     },
