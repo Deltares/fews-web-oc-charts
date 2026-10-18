@@ -442,6 +442,7 @@ function createPlotInternal(
       }
       if (segmentCount > 1) areaData += `L${lastX},${baseline}Z`
       path.setAttribute('d', data)
+      path.setAttribute('display', mark.line ? '' : 'none')
       areaPath?.setAttribute('d', areaData)
       if (markerGroup) {
         while (markerGroup.children.length > markerIndex) markerGroup.lastElementChild?.remove()

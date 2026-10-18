@@ -16,9 +16,16 @@
       baseline. The missing interval stays a gap in all three layers.
     </p>
     <p class="note">
-      Phase 2 series marks are static: provide aligned x/y values and replace the mark to change
-      them. Automatic extents, data stores and interactive mark behavior are planned separately.
+      Use the controls to toggle the line, markers and area independently. Phase 2 series marks are
+      static: provide aligned x/y values and replace the mark to change them. Automatic extents,
+      data stores and interactive mark behavior are planned separately.
     </p>
+    <fieldset class="controls" aria-label="Series layers">
+      <legend>Visible layers</legend>
+      <label><input id="show-line" type="checkbox" checked /> Line</label>
+      <label><input id="show-markers" type="checkbox" checked /> Markers</label>
+      <label><input id="show-area" type="checkbox" checked /> Area</label>
+    </fieldset>
     <figure>
       <div id="chart" class="plot-host"></div>
       <figcaption>Observed discharge with sample markers and area filled to zero.</figcaption>
@@ -29,6 +36,7 @@
   y: 'q',
   xValues: times,
   yValues: discharge,
+  line: true,
   markers: { size: 4 },
   area: { to: 0, opacity: 0.2 },
 })</code></pre>
