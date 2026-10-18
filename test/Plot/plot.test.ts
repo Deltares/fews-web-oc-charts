@@ -1,10 +1,13 @@
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import {
   createPlot,
+  createPolarPlot,
   axis,
   linearScale,
   timeScale,
   bandScale,
+  angularScale,
+  radialScale,
   degreesScale,
   sharedScale,
   line,
@@ -75,6 +78,128 @@ describe('createPlot named scales', () => {
     expect(
       current.element.querySelector('[data-layer="marks"]')?.getAttribute('clip-path'),
     ).toMatch(/^url/)
+  })
+
+  test('publishes primary pointer coordinates once per animation frame', async () => {
+    const current = plot(host(), {
+      width: 500,
+      height: 300,
+      directions: { t: 'x' },
+      scales: {
+        t: linearScale({ domain: [0, 100] }),
+        q: linearScale({ domain: [0, 100] }),
+        category: bandScale({ domain: ['a', 'b', 'c'] }),
+      },
+    })
+    await frame()
+    vi.spyOn(current.element, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 500, 300))
+    const initialVersion = current.pointer.version
+    current.element.dispatchEvent(
+      new PointerEvent('pointermove', {
+        clientX: 100,
+        clientY: 100,
+        pointerType: 'pen',
+        isPrimary: true,
+      }),
+    )
+    current.element.dispatchEvent(
+      new PointerEvent('pointermove', {
+        clientX: 250,
+        clientY: 150,
+        pointerType: 'pen',
+        isPrimary: true,
+      }),
+    )
+    current.element.dispatchEvent(
+      new PointerEvent('pointermove', {
+        clientX: 400,
+        clientY: 200,
+        pointerType: 'pen',
+        isPrimary: true,
+      }),
+    )
+    await frame()
+    expect(current.pointer.version).toBe(initialVersion + 1)
+    expect(current.pointer.get()).toMatchObject({ px: 392, py: 192, inside: true })
+    expect(current.pointer.get().x.get('t')).toBeCloseTo(80.991736)
+    expect(current.pointer.get().x.get('q')).toBeCloseTo(32.394366)
+
+    const bandCenter = current.scales.category.project('b') + current.scales.category.bandwidth / 2
+    current.element.dispatchEvent(
+      new PointerEvent('pointermove', {
+        clientX: bandCenter,
+        clientY: 150,
+        pointerType: 'touch',
+        isPrimary: true,
+      }),
+    )
+    await frame()
+    expect(current.pointer.get().x.get('category')).toBe('b')
+
+    current.element.dispatchEvent(
+      new PointerEvent('pointerleave', {
+        clientX: 500,
+        clientY: 200,
+        pointerType: 'pen',
+        isPrimary: true,
+      }),
+    )
+    await frame()
+    expect(current.pointer.get().inside).toBe(false)
+  })
+
+  test('ignores secondary pointers and cancels a queued publication on destroy', async () => {
+    const current = plot(host(), { scales: { q: linearScale({ domain: [0, 1] }) } })
+    await frame()
+    vi.spyOn(current.element, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 500, 300))
+    const initialVersion = current.pointer.version
+    current.element.dispatchEvent(
+      new PointerEvent('pointermove', {
+        clientX: 250,
+        clientY: 150,
+        pointerType: 'touch',
+        isPrimary: false,
+      }),
+    )
+    expect(current.pointer.version).toBe(initialVersion)
+    current.element.dispatchEvent(
+      new PointerEvent('pointermove', {
+        clientX: 250,
+        clientY: 150,
+        pointerType: 'touch',
+        isPrimary: true,
+      }),
+    )
+    current.destroy()
+    await frame()
+    expect(current.pointer.version).toBe(initialVersion)
+  })
+
+  test('inverts polar pointer coordinates into angular and radial scale values', async () => {
+    const current = createPolarPlot(host(), {
+      width: 500,
+      height: 300,
+      scales: {
+        bearing: angularScale({ domain: [0, 360] }),
+        distance: radialScale({ domain: [0, 100] }),
+      },
+    })
+    plots.push(current)
+    await frame()
+    vi.spyOn(current.element, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 500, 300))
+    const region = current.regions.get().plot
+    const radius = current.scales.distance.project(50)
+    current.element.dispatchEvent(
+      new PointerEvent('pointermove', {
+        clientX: region.x + region.width / 2 + radius,
+        clientY: region.y + region.height / 2,
+        pointerType: 'mouse',
+        isPrimary: true,
+      }),
+    )
+    await frame()
+    expect(current.pointer.get().x.get('bearing')).toBeCloseTo(90)
+    expect(current.pointer.get().x.get('distance')).toBeCloseTo(50)
   })
 
   test('shares domains but never ranges or derived scales between differently sized plots', async () => {

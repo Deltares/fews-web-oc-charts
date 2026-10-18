@@ -682,7 +682,9 @@ ensemble(fc, {
 ### 3.8 Interaction & plugins (`plugins/`)
 
 - Single **pointer hub** per plot (one listener set, rAF-coalesced, touch/pen aware) that
-  publishes a `pointer` signal `{ px, py, x: Map<scale, value>, inside }`.
+  publishes a `pointer` signal `{ px, py, x: Map<scaleName, value>, inside }`. Pixel
+  coordinates are relative to the plot region; each configured scale name maps to its
+  inverted pointer value (nearest category for band scales).
 - Plugin interface:
   ```ts
   type Plugin = (ctx: PlotContext) => { update?(dirty: DirtyFlags): void; destroy(): void }
@@ -1858,6 +1860,15 @@ secondary-axis includes ensemble/current-time features, time-axes and vertical
 include interaction visitors, and spectrum is random/interactive. Interaction and
 domain-plugin ports remain outside this static checkpoint. Further static coverage
 and the outstanding exact matches are still needed before closing Phase 2.
+
+### Phase 3 pointer hub foundation
+
+**Status: first interaction step implemented.** `plot.pointer` is a read-only signal
+with plot-local pixel coordinates, named-scale values and an `inside` flag. Pointer
+events are coalesced per animation frame, support primary mouse/pen/touch pointers, and
+are detached with plot destruction. Cartesian continuous and band scales and polar
+angular/radial scales are inverted from the pointer position. Hit testing and interaction
+plugins remain subsequent Phase 3 work.
 
 ## 8. Additional improvements to consider
 

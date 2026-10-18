@@ -12,6 +12,7 @@ export type {
   Plot,
   PlotConfig,
   PlotOptions,
+  PlotPointer,
   PolarPlot,
   PolarPlotConfig,
   PolarPoint,
