@@ -118,6 +118,136 @@ describe('createPolarPlot', () => {
     expect(getComputedStyle(label!).fill).toBe('rgb(237, 242, 244)')
   })
 
+  test.each([false, true])(
+    'preserves polar axis geometry and captions with grid=%s',
+    async (grid) => {
+      const bearing = angular({
+        domain: [0, 360],
+        direction: 'anticlockwise',
+        intercept: Math.PI / 2,
+        range: [0, Math.PI],
+      })
+      const distance = radial({ domain: [0, 10], innerRadius: 0.25 })
+      const bearingAxis = axis('theta', {
+        position: 'angular',
+        grid,
+        tickCount: 4,
+        label: 'Bearing',
+        unit: 'deg',
+        format: (value) => `bearing:${value}`,
+      })
+      const distanceAxis = axis('distance', {
+        position: 'radial',
+        grid,
+        tickCount: 2,
+        label: 'Distance',
+        unit: 'm',
+        format: (value) => `distance:${value}`,
+      })
+      const current = plot(host(), {
+        scales: { theta: bearing, distance },
+        axes: [bearingAxis, distanceAxis],
+      })
+      await frame()
+
+      const group = current.element.querySelector<SVGGElement>('[data-coordinate-system="polar"]')!
+      const gridLayer = current.element.querySelector('[data-layer="grid"]')!
+      const region = current.regions.get().plot
+      const centerX = region.x + region.width / 2
+      const centerY = region.y + region.height / 2
+      const outerRadius = current.scales.distance.range.get()[1]
+      const radialTicks = current.scales.distance.ticks(2)
+      const circles = group.querySelectorAll('circle')
+      expect(circles).toHaveLength(radialTicks.length)
+      radialTicks.forEach((value, index) => {
+        const radius = current.scales.distance.project(value)
+        expect(Number(circles[index].getAttribute('cx'))).toBeCloseTo(centerX)
+        expect(Number(circles[index].getAttribute('cy'))).toBeCloseTo(centerY)
+        expect(Number(circles[index].getAttribute('r'))).toBeCloseTo(radius)
+        const label = circles[index].nextElementSibling!
+        expect(label.textContent).toBe(`distance:${value}`)
+        expect(Number(label.getAttribute('x'))).toBeCloseTo(centerX + 4)
+        expect(Number(label.getAttribute('y'))).toBeCloseTo(centerY - radius - 3)
+      })
+      const angularTicks = current.scales.theta.ticks(4)
+      const lines = group.querySelectorAll('line')
+      expect(lines).toHaveLength(angularTicks.length)
+      angularTicks.forEach((value, index) => {
+        const point = current.project(value, 10)
+        const angle = Math.PI / 2 - current.scales.theta.project(value)
+        expect(Number(lines[index].getAttribute('x1'))).toBeCloseTo(centerX)
+        expect(Number(lines[index].getAttribute('y1'))).toBeCloseTo(centerY)
+        expect(Number(lines[index].getAttribute('x2'))).toBeCloseTo(point.x)
+        expect(Number(lines[index].getAttribute('y2'))).toBeCloseTo(point.y)
+        const label = lines[index].nextElementSibling!
+        expect(label.textContent).toBe(`bearing:${value}`)
+        expect(Number(label.getAttribute('x'))).toBeCloseTo(
+          centerX + (outerRadius + 12) * Math.sin(angle),
+        )
+        expect(Number(label.getAttribute('y'))).toBeCloseTo(
+          centerY - (outerRadius + 12) * Math.cos(angle),
+        )
+        expect(label.getAttribute('text-anchor')).toBe(
+          Math.sin(angle) > 0.15 ? 'start' : Math.sin(angle) < -0.15 ? 'end' : 'middle',
+        )
+      })
+      expect([...gridLayer.children].map((node) => node.outerHTML)).toEqual(
+        grid ? [...circles, ...lines].map((node) => node.outerHTML) : [],
+      )
+      const angularCaption = group.querySelector('[data-axis-caption="theta"]')!
+      const radialCaption = group.querySelector('[data-axis-caption="distance"]')!
+      const fontSize = Number(group.getAttribute('font-size'))
+      expect(angularCaption.textContent).toBe('Bearing (deg)')
+      expect(Number(angularCaption.getAttribute('x'))).toBeCloseTo(centerX)
+      expect(Number(angularCaption.getAttribute('y'))).toBeCloseTo(
+        centerY - outerRadius - fontSize * 2,
+      )
+      expect(radialCaption.textContent).toBe('Distance (m)')
+      expect(Number(radialCaption.getAttribute('x'))).toBeCloseTo(centerX + outerRadius * 0.7)
+      expect(Number(radialCaption.getAttribute('y'))).toBeCloseTo(centerY - outerRadius * 0.7)
+
+      bearingAxis.update({ grid: !grid, label: '', unit: '' })
+      distanceAxis.update({ grid: !grid, label: '', unit: '' })
+      await frame()
+      expect(current.element.querySelectorAll('[data-axis-caption]')).toHaveLength(0)
+      expect(current.element.querySelectorAll('[data-layer="grid"] > *')).toHaveLength(
+        grid ? 0 : radialTicks.length + angularTicks.length,
+      )
+    },
+  )
+
+  test.each(['none', 'angular', 'radial'] as const)(
+    'renders the existing fallback with %s axes',
+    async (position) => {
+      const axes =
+        position === 'none'
+          ? []
+          : [axis(position === 'angular' ? 'theta' : 'distance', { position })]
+      const current = plot(host(), {
+        scales: { theta: angular(), distance: radial() },
+        axes,
+      })
+      await frame()
+
+      const group = current.element.querySelector('[data-coordinate-system="polar"]')!
+      const region = current.regions.get().plot
+      const circles = group.querySelectorAll('circle')
+      expect(circles).toHaveLength(
+        position === 'radial' ? current.scales.distance.ticks(6).length : 1,
+      )
+      if (position !== 'radial') {
+        expect(Number(circles[0].getAttribute('r'))).toBeCloseTo(
+          Math.min(region.width, region.height) / 2,
+        )
+      }
+      expect(group.querySelectorAll('line')).toHaveLength(
+        position === 'angular' ? current.scales.theta.ticks(6).length : 0,
+      )
+      expect(current.element.querySelectorAll('[data-layer="grid"] > *')).toHaveLength(0)
+      expect(group.querySelectorAll('[data-axis-caption]')).toHaveLength(0)
+    },
+  )
+
   test('rejects cartesian scales, mismatched axes, extra polar scales and cartesian directions', () => {
     expect(() => plot(host(), { scales: { theta: linear(), distance: radial() } })).toThrow(
       /angular or radial scales/,

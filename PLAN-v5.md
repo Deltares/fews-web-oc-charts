@@ -1207,7 +1207,13 @@ horizontal axis labels. Phase 1 also includes `createPolarPlot`, `angular` and `
 scales, angular/radial axes, and `plot.project(angle, radius)` for converting data
 coordinates to SVG coordinates. Angular scales default to a clockwise bearing from
 north and may configure direction, intercept and angular range; radial scales may
-configure an inner-radius fraction. The minimal cartesian `line()` mark renders aligned
+configure an inner-radius fraction. Polar axes keep radial rings, angular spokes and
+captions in small, separate SVG rendering functions, with shared plot-local centre/radius
+geometry and the existing scale-binding/tick-formatting APIs. Grid copies stay in the
+grid layer; axis geometry and captions stay in the axes layer. This is an internal
+simplification, not a new renderer or plugin API: phase 2 polar marks, phase 3 hit testing
+and phase 6 wind/current roses remain in their respective phases.
+The minimal cartesian `line()` mark renders aligned
 array-like x/y values against named x/y scales, preserves gaps, and is clipped to the
 plot region. Plot configuration synchronously rejects non-gap values that do not match
 their bound scale kind (strings for band scales, numbers otherwise). It is a static fixture primitive: replace the mark to change its values;
