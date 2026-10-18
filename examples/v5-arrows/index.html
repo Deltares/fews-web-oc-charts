@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>v5: arrows</title>
+    <link rel="stylesheet" href="./arrows.css" />
+  </head>
+  <body>
+    <nav aria-label="Examples">
+      <a href="/">All examples</a>
+      <a href="../v5-range/">Cartesian and polar ranges</a>
+    </nav>
+    <h1>v5: arrows</h1>
+    <p>
+      Compare endpoint-based vectors in Cartesian coordinates and polar coordinates. Each arrow
+      connects its supplied start and end values; polar endpoints follow the plot's angular scale,
+      including its direction and intercept.
+    </p>
+    <div class="example-grid">
+      <figure>
+        <h2>Cartesian vectors over time</h2>
+        <div id="cartesian" class="plot-host"></div>
+        <figcaption>Arrows connect observations to their forecast positions.</figcaption>
+      </figure>
+      <figure>
+        <h2>Polar vectors</h2>
+        <div id="polar" class="plot-host"></div>
+        <figcaption>
+          Each arrow joins an angular/radial start to an angular/radial endpoint.
+        </figcaption>
+      </figure>
+    </div>
+    <h2>Public API</h2>
+    <pre><code>arrows({
+  x: 'time', y: 'value',
+  xValues: starts, yValues: startValues,
+  xEndValues: ends, yEndValues: endValues,
+  color: '#1677a6', headSize: 9,
+})</code></pre>
+    <script type="module" src="./v5-arrows.ts"></script>
+  </body>
+</html>
