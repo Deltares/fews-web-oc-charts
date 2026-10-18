@@ -22,6 +22,7 @@ import { resolveTheme, watchTheme, type ThemeMode, type ThemeTokens } from '../t
 import { isAxisHandle, validateAxisUpdates, type AxisHandle, type AxisSide } from './axis.js'
 import { observeSize } from './resize.js'
 import { svgElement, renderAxes, renderPolarAxes, axisTickLabels } from './render-axes.js'
+import { isLineMark, type LineMark } from './line.js'
 
 export interface PlotOptions {
   width?: number | undefined
@@ -33,11 +34,16 @@ export interface PlotOptions {
   scales: Record<string, ScaleHandle>
   directions: Record<string, 'x' | 'y'>
   axes: readonly AxisHandle[]
+  marks: readonly LineMark[]
 }
 
-export type PlotConfig = Omit<OptionPatch<PlotOptions>, 'scales' | 'axes' | 'themeElement'> & {
+export type PlotConfig = Omit<
+  OptionPatch<PlotOptions>,
+  'scales' | 'axes' | 'marks' | 'themeElement'
+> & {
   scales?: Record<string, ScaleHandle | undefined> | undefined
   axes?: readonly AxisHandle[] | undefined
+  marks?: readonly LineMark[] | undefined
   themeElement?: Element | undefined
 }
 
@@ -85,8 +91,10 @@ const optionKeys = [
   'scales',
   'directions',
   'axes',
+  'marks',
 ]
 const marginKeys = ['top', 'right', 'bottom', 'left'] as const
+let nextClipId = 0
 
 function validatePatch(config: PlotConfig) {
   validateKeys(config, optionKeys, 'plot')
@@ -151,8 +159,9 @@ function createPlotInternal(
       scales: {},
       directions: {},
       axes: [],
+      marks: [],
     }),
-    isAtomicReference: (value) => isScaleHandle(value) || isAxisHandle(value),
+    isAtomicReference: (value) => isScaleHandle(value) || isAxisHandle(value) || isLineMark(value),
     validate(options) {
       for (const dimension of ['width', 'height'] as const) {
         if (options[dimension] !== undefined)
@@ -169,6 +178,7 @@ function createPlotInternal(
       for (const side of marginKeys)
         finiteNonnegative(options.margins[side], `plot.margins.${side}`)
       if (!Array.isArray(options.axes)) throw new Error('plot.axes must be an array.')
+      if (!Array.isArray(options.marks)) throw new Error('plot.marks must be an array.')
       for (const key of ['scales', 'directions'] as const) {
         const value = options[key]
         if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -199,6 +209,26 @@ function createPlotInternal(
         if (!name || !scale || !isScaleHandle(scale))
           throw new Error(`plot.scales.${name} requires a scale handle.`)
         direction(options, name, undefined, undefined, coordinateSystem)
+      }
+      const markIds = new Set<string>()
+      for (const mark of options.marks) {
+        if (!mark || !isLineMark(mark)) {
+          throw new Error('plot.marks currently accepts line() marks only.')
+        }
+        if (coordinateSystem === 'polar') {
+          throw new Error('line() marks are supported on cartesian plots only.')
+        }
+        if (!Object.hasOwn(options.scales, mark.x) || !Object.hasOwn(options.scales, mark.y)) {
+          throw new Error(`line "${mark.id ?? ''}" references a missing x or y scale.`)
+        }
+        if (direction(options, mark.x, undefined, undefined, coordinateSystem) !== 'x') {
+          throw new Error(`line "${mark.id ?? ''}" requires an x-direction scale.`)
+        }
+        if (direction(options, mark.y, undefined, undefined, coordinateSystem) !== 'y') {
+          throw new Error(`line "${mark.id ?? ''}" requires a y-direction scale.`)
+        }
+        if (mark.id && markIds.has(mark.id)) throw new Error(`Duplicate line id "${mark.id}".`)
+        if (mark.id) markIds.add(mark.id)
       }
       if (coordinateSystem === 'polar') {
         const angularScales = Object.values(options.scales).filter(
@@ -261,7 +291,61 @@ function createPlotInternal(
   const marksLayer = svgElement('g', { 'data-layer': 'marks' })
   const axesLayer = svgElement('g', { 'data-layer': 'axes' })
   const title = svgElement('text', { 'text-anchor': 'middle' })
-  element.append(background, gridLayer, marksLayer, axesLayer, title)
+  const clipId = `fews-plot-clip-${nextClipId++}`
+  const definitions = svgElement('defs')
+  const clipPath = svgElement('clipPath', { id: clipId })
+  const clipRect = svgElement('rect')
+  clipPath.append(clipRect)
+  definitions.append(clipPath)
+  marksLayer.setAttribute('clip-path', `url(#${clipId})`)
+  const linePaths: SVGPathElement[] = []
+  element.append(background, definitions, gridLayer, marksLayer, axesLayer, title)
+
+  function renderMarks(current: PlotOptions, tokens: ThemeTokens) {
+    current.marks.forEach((mark, markIndex) => {
+      let path = linePaths[markIndex]
+      if (!path) {
+        path = svgElement('path', {
+          fill: 'none',
+          'vector-effect': 'non-scaling-stroke',
+          'stroke-linecap': 'round',
+          'stroke-linejoin': 'round',
+          'data-mark': 'line',
+        })
+        linePaths.push(path)
+        marksLayer.append(path)
+      }
+      if (mark.id) path.setAttribute('data-mark-id', mark.id)
+      else path.removeAttribute('data-mark-id')
+      path.setAttribute('stroke', mark.stroke ?? `var(--fews-chart-accent, ${tokens.accent})`)
+      path.setAttribute('stroke-width', String(mark.strokeWidth))
+      const xScale = localScales[mark.x]
+      const yScale = localScales[mark.y]
+      let data = ''
+      let drawingSegment = false
+      for (let index = 0; index < mark.xValues.length; index += 1) {
+        const xValue = mark.xValues[index]
+        const yValue = mark.yValues[index]
+        if (
+          xValue === null ||
+          xValue === undefined ||
+          yValue === null ||
+          yValue === undefined ||
+          (typeof xValue === 'number' && !Number.isFinite(xValue)) ||
+          (typeof yValue === 'number' && !Number.isFinite(yValue))
+        ) {
+          drawingSegment = false
+          continue
+        }
+        const x = xScale.project(xValue)
+        const y = yScale.project(yValue)
+        data += `${drawingSegment ? 'L' : 'M'}${x},${y}`
+        drawingSegment = true
+      }
+      path.setAttribute('d', data)
+    })
+    while (linePaths.length > current.marks.length) linePaths.pop()?.remove()
+  }
 
   function reconcile() {
     const current = options.get().resolved
@@ -390,6 +474,11 @@ function createPlotInternal(
       title.setAttribute('x', String(titleRegion.x + titleRegion.width / 2))
       title.setAttribute('y', String(titleRegion.y + tokens.fontSize))
       title.textContent = current.title
+      const plotRegion = regions.get().plot
+      clipRect.setAttribute('x', String(plotRegion.x))
+      clipRect.setAttribute('y', String(plotRegion.y))
+      clipRect.setAttribute('width', String(plotRegion.width))
+      clipRect.setAttribute('height', String(plotRegion.height))
       if (current.title) element.setAttribute('aria-label', current.title)
       else element.removeAttribute('aria-label')
     }
@@ -407,6 +496,9 @@ function createPlotInternal(
       } else {
         renderAxes(axesLayer, gridLayer, current.axes, localScales, regions.get(), tokens)
       }
+    }
+    if (dirty & (DirtyLayer.layout | DirtyLayer.axes | DirtyLayer.marks | DirtyLayer.style)) {
+      renderMarks(current, tokens)
     }
   }
 
@@ -426,6 +518,7 @@ function createPlotInternal(
         current.title,
         ...marginKeys.map((side) => current.margins[side]),
         ...current.axes.flatMap((axis) => [axis, axis.options.version]),
+        ...current.marks,
       ]
       for (const entry of bindings.values()) {
         entry.scale.domain.get()
@@ -509,6 +602,7 @@ function createPlotInternal(
       axisValidators.clear()
       cancelRender(render)
       bindings.clear()
+      linePaths.length = 0
       localScales = Object.freeze({})
       axisWidths.clear()
       measurer.clear()
