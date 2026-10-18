@@ -34,6 +34,7 @@
     "test": "vitest",
     "test:all-browsers": "vitest run --mode all-browsers",
     "spike:benchmark": "node scripts/phase0-benchmark.mjs",
+    "spike:interaction": "node scripts/phase0-interaction.mjs",
     "sonar": "sonar-scanner -Dsonar.host.url=$SONAR_URL -Dsonar.login=$SONAR_TOKEN -Dsonar.projectKey=$SONAR_KEY -Dsonar.projectName='Delft-FEWS Web OC Charts'"
   },
   "prettier": {

@@ -49,6 +49,8 @@ try {
   console.log(
     JSON.stringify(
       {
+        benchmark:
+          'Renderer microbenchmark; excludes real input, scheduling, paint and final commit',
         os: process.platform,
         osRelease: release(),
         cpu: cpus()[0]?.model ?? 'unknown',
@@ -68,7 +70,7 @@ try {
 
   if (result.speedup < 5) {
     throw new Error(
-      `Phase 0 pan target missed: expected at least 5x, measured ${result.speedup.toFixed(2)}x.`,
+      `Renderer microbenchmark target missed: expected at least 5x, measured ${result.speedup.toFixed(2)}x.`,
     )
   }
   if (result.spikePanP95Ms >= 8) {

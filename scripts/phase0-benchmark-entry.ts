@@ -3,6 +3,7 @@ import { createColumnarSeries } from '../src/spike/data/columnar-series.js'
 import type { ColumnarSeries } from '../src/spike/data/columnar-series.js'
 import { createSvgLineRenderer } from '../src/spike/render/svg-line.js'
 import type { SvgLineRenderer } from '../src/spike/render/svg-line.js'
+import { changedPixelRatio } from './benchmark-pixels.js'
 
 declare global {
   interface Window {
@@ -31,14 +32,6 @@ declare global {
 
 function p95(values: number[]) {
   return [...values].sort((left, right) => left - right)[Math.ceil(values.length * 0.95) - 1]
-}
-
-function median(values: number[]) {
-  const ordered = [...values].sort((left, right) => left - right)
-  return (
-    (ordered[Math.floor((ordered.length - 1) / 2)] + ordered[Math.ceil((ordered.length - 1) / 2)]) /
-    2
-  )
 }
 
 window.runPhase0MemoryProbe = () => {
@@ -160,17 +153,6 @@ window.runPhase0Benchmark = async () => {
 
   const baselinePixels = baselineContext.getImageData(0, 0, width, height).data
   const spikePixels = spikeContext.getImageData(0, 0, width, height).data
-  let changedPixels = 0
-  for (let pixel = 0; pixel < width * height; pixel += 1) {
-    const channel = pixel * 4
-    if (
-      Math.abs(baselinePixels[channel] - spikePixels[channel]) > 2 ||
-      Math.abs(baselinePixels[channel + 1] - spikePixels[channel + 1]) > 2 ||
-      Math.abs(baselinePixels[channel + 2] - spikePixels[channel + 2]) > 2
-    ) {
-      changedPixels += 1
-    }
-  }
 
   renderer.destroy()
   const v4PanP95Ms = p95(baselineTimes)
@@ -183,6 +165,6 @@ window.runPhase0Benchmark = async () => {
     v4PanP95Ms,
     spikePanP95Ms,
     speedup: v4PanP95Ms / spikePanP95Ms,
-    changedPixelRatio: changedPixels / (width * height),
+    changedPixelRatio: changedPixelRatio(baselinePixels, spikePixels),
   }
 }

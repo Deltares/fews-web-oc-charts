@@ -11,4 +11,9 @@ jobs:
       - uses: actions/checkout@v5
       - run: npm ci --ignore-scripts
       - run: npx vitest run test/Spike
-      - run: npm run spike:benchmark
+      - name: Renderer microbenchmark
+        id: renderer-benchmark
+        run: npm run spike:benchmark
+      - name: Real-input interaction correctness (shared runner, no performance certification)
+        if: ${{ !cancelled() && steps.renderer-benchmark.outcome != 'skipped' }}
+        run: npm run spike:interaction
