@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>v5: polar coordinates</title>
+  </head>
+  <body>
+    <nav aria-label="Examples">
+      <a href="/">All examples</a>
+      <a href="../v5-shared-scales/">Shared domains, local ranges</a>
+      <a href="../v5-time-axes/">Civil-time axes</a>
+    </nav>
+    <h1>v5: polar coordinates</h1>
+    <p>
+      Explore the public polar API with three plots sharing the same bearing and radius settings:
+      clockwise from north, an anticlockwise sector with an intercept, and a radial scale with an
+      inner radius. The projected coordinate readouts show how data values map into each plot.
+    </p>
+    <p class="note">
+      Phase 1 provides scales, axes, layout and coordinate projection. Data marks are not available
+      yet.
+    </p>
+    <div class="controls">
+      <label for="direction">
+        Angular direction
+        <select id="direction">
+          <option value="clockwise">Clockwise</option>
+          <option value="anticlockwise">Anticlockwise</option>
+        </select>
+      </label>
+      <label for="intercept">
+        Intercept (degrees)
+        <input id="intercept" type="number" value="0" min="-180" max="180" step="15" />
+      </label>
+      <label for="sweep">
+        Angular sweep (degrees)
+        <input id="sweep" type="number" value="360" min="45" max="360" step="45" />
+      </label>
+      <label for="inner-radius">
+        Inner radius
+        <input id="inner-radius" type="number" value="0.25" min="0" max="0.8" step="0.05" />
+      </label>
+      <label for="bearing">
+        Project bearing (degrees)
+        <input id="bearing" type="number" value="45" min="0" max="360" step="15" />
+      </label>
+      <label for="distance">
+        Project radius (0–100)
+        <input id="distance" type="number" value="70" min="0" max="100" step="5" />
+      </label>
+    </div>
+    <div class="polar-grid">
+      <figure>
+        <h2>Clockwise compass</h2>
+        <div id="clockwise" class="plot-host"></div>
+        <figcaption id="clockwise-coordinate"></figcaption>
+      </figure>
+      <figure>
+        <h2>Anticlockwise sector</h2>
+        <div id="sector" class="plot-host"></div>
+        <figcaption id="sector-coordinate"></figcaption>
+      </figure>
+      <figure>
+        <h2>Radial inner radius</h2>
+        <div id="inner" class="plot-host"></div>
+        <figcaption id="inner-coordinate"></figcaption>
+      </figure>
+    </div>
+    <p id="status" class="status" role="status"></p>
+    <h2>Public API</h2>
+    <pre><code>const bearing = angular({
+  domain: [0, 360],
+  direction: 'clockwise',
+  intercept: 0,
+  range: [0, 2 * Math.PI],
+})
+const distance = radial({ domain: [0, 100], innerRadius: 0.25 })
+const plot = createPolarPlot(element, {
+  scales: { bearing, distance },
+  axes: [
+    axis('bearing', { position: 'angular', grid: true }),
+    axis('distance', { position: 'radial', grid: true }),
+  ],
+})
+const point = plot.project(45, 70)</code></pre>
+    <script type="module" src="./v5-polar-coordinates.ts"></script>
+  </body>
+</html>
