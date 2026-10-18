@@ -7,6 +7,7 @@ import { barExtent } from './bar-geometry.js'
 import { isStackedAreaMark, type StackedAreaMark } from './stacked-area.js'
 import { stackedAreaExtent } from './render-stacked-areas.js'
 import { isRuleMark, type RuleMark } from './rule.js'
+import { isTextMark, isValidTextCoordinate, type TextMark } from './text.js'
 
 function valid(value: LineValue): value is ScaleValue {
   return typeof value === 'string' || (typeof value === 'number' && Number.isFinite(value))
@@ -19,7 +20,9 @@ function within(value: ScaleValue, domain: readonly ScaleValue[]) {
 }
 
 export function markExtents(
-  marks: readonly (LineMark | SeriesMark | BandMark | BarMark | StackedAreaMark | RuleMark)[],
+  marks: readonly (
+    LineMark | SeriesMark | BandMark | BarMark | StackedAreaMark | RuleMark | TextMark
+  )[],
   scales: Readonly<Record<string, ScaleHandle>>,
   name: string,
   mode: 'data' | 'visible',
@@ -36,6 +39,28 @@ export function markExtents(
   }
   for (const mark of marks) {
     if (isRuleMark(mark)) continue
+    if (isTextMark(mark)) {
+      const coordinate = mark.x === name ? 'x' : mark.y === name ? 'y' : undefined
+      if (!coordinate) continue
+      const opposite = coordinate === 'x' ? mark.y : mark.x
+      const window = mode === 'visible' ? autoscaleWindow(scales[opposite]) : undefined
+      for (let index = 0; index < mark.textValues.length; index += 1) {
+        const x = mark.xValues[index]
+        const y = mark.yValues[index]
+        if (
+          mark.textValues[index] == null ||
+          !isValidTextCoordinate(x) ||
+          !isValidTextCoordinate(y)
+        ) {
+          continue
+        }
+        const extent = coordinate === 'x' ? x : y
+        const other = coordinate === 'x' ? y : x
+        if (window && !within(other, window)) continue
+        add(extent)
+      }
+      continue
+    }
     if (isStackedAreaMark(mark)) {
       const coordinate = mark.x === name ? 'x' : mark.y === name ? 'y' : undefined
       if (!coordinate) continue
