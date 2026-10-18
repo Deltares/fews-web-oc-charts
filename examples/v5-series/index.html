@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>v5: line, markers and area</title>
+  </head>
+  <body>
+    <nav aria-label="Examples">
+      <a href="/">All examples</a>
+      <a href="../v5-basic-line/">Basic line</a>
+    </nav>
+    <h1>v5: line, markers and area</h1>
+    <p>
+      One static series mark combines a line, point markers and a filled area to a configurable
+      baseline. The missing interval stays a gap in all three layers.
+    </p>
+    <p class="note">
+      Phase 2 series marks are static: provide aligned x/y values and replace the mark to change
+      them. Automatic extents, data stores and interactive mark behavior are planned separately.
+    </p>
+    <figure>
+      <div id="chart" class="plot-host"></div>
+      <figcaption>Observed discharge with sample markers and area filled to zero.</figcaption>
+    </figure>
+    <h2>Public API</h2>
+    <pre><code>line({
+  x: 't',
+  y: 'q',
+  xValues: times,
+  yValues: discharge,
+  markers: { size: 4 },
+  area: { to: 0, opacity: 0.2 },
+})</code></pre>
+    <script type="module" src="./v5-series.ts"></script>
+  </body>
+</html>
