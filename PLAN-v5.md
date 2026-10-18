@@ -1426,6 +1426,9 @@ observed.update({ line: { stroke: undefined }, markers: false })
   order, reversed time scales, append/retention and reset. "Reverse stacking order"
   changes accumulation within each stack (including the single-stack plot), not
   just paint order; it also reverses the named stacks' front-to-back order.
+- [Stacked-area LOD demo](./examples/v5-stacked-area-lod/index.html) uses a dense
+  24,000-sample stack to compare sparse and pixel-bucketed views with live path/
+  retained-row readouts.
 - `stackedArea(table, { x, scales: { x, y }, layers, curve? })` requires numeric/time
   x columns with strictly increasing unique keys, a linear/time x scale and a linear
   value scale. It is cartesian-only. Unsupported curves, offsets, scale bindings,

@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>v5: stacked-area LOD</title>
+    <link rel="stylesheet" href="./lod.css" />
+  </head>
+  <body>
+    <nav aria-label="Examples">
+      <a href="/">All examples</a>
+      <a href="../v5-stacked-area/">Stacked areas</a>
+      <a href="../v5-series/">Series</a>
+    </nav>
+    <h1>v5: stacked-area LOD</h1>
+    <p>
+      A 24,000-sample diverging stack demonstrates shared-boundary level of detail. As the visible
+      window gets denser than four samples per plot pixel, the renderer retains bucket endpoints,
+      boundary extrema, sign transitions, gaps and viewport neighbours using one row selection for
+      every layer in the stack.
+    </p>
+    <fieldset class="controls" aria-label="LOD controls">
+      <legend>Change the visible sample window</legend>
+      <label for="window-size">Samples in view</label>
+      <input id="window-size" type="range" min="500" max="24000" step="500" value="24000" />
+      <output id="window-value" for="window-size"></output>
+      <label><input id="step" type="checkbox" /> Midpoint-step curve</label>
+    </fieldset>
+    <figure>
+      <div id="chart" class="plot-host"></div>
+      <figcaption>
+        The narrow gap, positive and negative excursions, and sharp peaks remain represented as the
+        shared stack is reduced to screen resolution.
+      </figcaption>
+    </figure>
+    <dl id="stats" class="lod-stats" aria-live="polite">
+      <div>
+        <dt>Source samples in view</dt>
+        <dd id="source-count">—</dd>
+      </div>
+      <div>
+        <dt>SVG path commands per layer</dt>
+        <dd id="path-count">—</dd>
+      </div>
+      <div>
+        <dt>Shared rows represented</dt>
+        <dd id="row-count">—</dd>
+      </div>
+    </dl>
+    <p class="note">
+      Both boundaries of this implicit stack use exactly the same retained sample rows. Drag the
+      slider to compare a sparse view with a dense full-series view; resize the page to see the
+      pixel-bucket budget adapt to plot width. Linear and midpoint-step curves share the selected
+      rows. The displayed row count is estimated from the SVG path commands.
+    </p>
+    <h2>Public API</h2>
+    <pre><code>const areas = stackedArea(data, {
+  x: 'sample',
+  scales: { x: 'sample', y: 'flow' },
+  layers: [
+    { id: 'base', y: 'base', fill: '#4477aa' },
+    { id: 'adjustment', y: 'adjustment', fill: '#228833' },
+  ],
+})
+// Dense stacks automatically share screen-space retained rows.
+areas.update({ curve: 'step' })</code></pre>
+    <script type="module" src="./v5-stacked-area-lod.ts"></script>
+  </body>
+</html>
