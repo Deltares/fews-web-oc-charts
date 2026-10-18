@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>v5: polar progress marks</title>
+    <link rel="stylesheet" href="../shared/v5.css" />
+    <style>
+      .plot-host {
+        width: min(100%, 680px);
+        height: 460px;
+      }
+    </style>
+  </head>
+  <body>
+    <nav aria-label="Examples">
+      <a href="/">All examples</a>
+      <a href="../v5-polar-range/">Polar range marks</a>
+    </nav>
+    <h1>v5: polar progress marks</h1>
+    <p>
+      Progress marks draw rounded angular intervals centered on radial values. The interval and
+      radial center contribute to autoscaling; thickness is measured in pixels.
+    </p>
+    <figure>
+      <div id="chart" class="plot-host"></div>
+      <figcaption>
+        Three independent completion tracks, with muted full-circle backgrounds.
+      </figcaption>
+    </figure>
+    <h2>Public API</h2>
+    <pre><code>const completed = progress({
+  x: 'completion',
+  y: 'track',
+  xValues: [[0, 72], [0, 45], [0, 89]],
+  yValues: [25, 50, 75],
+  thickness: 18,
+})</code></pre>
+    <script type="module" src="./v5-progress.ts"></script>
+  </body>
+</html>

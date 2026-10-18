@@ -5,6 +5,7 @@ import { histogramDefinition } from './histogram-mark.js'
 import { heatmapDefinition } from './heatmap-mark.js'
 import { lineDefinition, seriesDefinition } from './line-mark.js'
 import type { MarkDefinition } from './mark-definition.js'
+import { progressDefinition } from './progress-mark.js'
 import { ruleDefinition } from './rule-mark.js'
 import { stackedAreaDefinition } from './stacked-area-mark.js'
 import { textDefinition } from './text-mark.js'
@@ -22,6 +23,7 @@ const markDefinitions = [
   textDefinition,
   arrowsDefinition,
   directionDefinition,
+  progressDefinition,
 ] as const
 
 type MarkOf<D> = D extends MarkDefinition<infer M> ? M : never
