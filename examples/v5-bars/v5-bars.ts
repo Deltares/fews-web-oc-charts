@@ -4,8 +4,8 @@ import {
   bar,
   createPlot,
   createTable,
-  linear,
-  time,
+  linearScale,
+  timeScale,
   type BarLayer,
   type BarMark,
   type Plot,
@@ -75,7 +75,7 @@ for (const [id, layout, named, horizontal] of [
   ['horizontal', 'stacked', true, true],
 ] as const) {
   const observedOnly = id === 'stacked'
-  const t = time({ timeZone: 'UTC' })
+  const t = timeScale({ timeZone: 'UTC' })
   timeScales.push(t)
   const mark = bar(data, {
     renderer: renderer.value === 'canvas' ? 'canvas' : 'svg',
@@ -91,7 +91,7 @@ for (const [id, layout, named, horizontal] of [
   plots.push(
     createPlot(required(`#${id}`), {
       title: `${id[0].toUpperCase()}${id.slice(1)} bars`,
-      scales: { t, q: linear({ nice: true }) },
+      scales: { t, q: linearScale({ nice: true }) },
       axes: [
         axis('t', { position: horizontal ? 'left' : 'bottom', label: 'Time (UTC)', tickCount: 5 }),
         axis('q', { position: horizontal ? 'bottom' : 'left', label: 'Flow', grid: true }),

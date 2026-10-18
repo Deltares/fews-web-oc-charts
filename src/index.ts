@@ -92,7 +92,15 @@ export type {
   LineValue,
   LineValues,
 } from './plot/line.js'
-export { linear, time, band, degrees, angular, radial, sharedScale } from './scales/scale.js'
+export {
+  linearScale,
+  timeScale,
+  bandScale,
+  degreesScale,
+  angularScale,
+  radialScale,
+  sharedScale,
+} from './scales/scale.js'
 export type {
   ScaleHandle,
   ScaleBinding,

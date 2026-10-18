@@ -1,5 +1,5 @@
 import '../shared/v5.css'
-import { axis, createPlot, createTable, histogram, linear } from '@lib'
+import { axis, createPlot, createTable, histogram, linearScale } from '@lib'
 
 function required<T extends HTMLElement>(selector: string) {
   const element = document.querySelector<T>(selector)
@@ -23,8 +23,8 @@ let mark = histogram(data, {
   renderer: renderer.value === 'canvas' ? 'canvas' : 'svg',
   fill: '#4477aa',
 })
-const sample = linear()
-const frequency = linear({ nice: true })
+const sample = linearScale()
+const frequency = linearScale({ nice: true })
 let sampleAxis = axis('sample', { position: 'bottom', label: 'Sample' })
 let frequencyAxis = axis('frequency', { position: 'left', label: 'Count', grid: true })
 const plot = createPlot(required('#histogram'), {

@@ -1,6 +1,15 @@
 import '../shared/v5.css'
 import './arrows.css'
-import { angular, arrows, axis, createPlot, createPolarPlot, linear, radial, time } from '@lib'
+import {
+  angularScale,
+  arrows,
+  axis,
+  createPlot,
+  createPolarPlot,
+  linearScale,
+  radialScale,
+  timeScale,
+} from '@lib'
 
 function required<T extends HTMLElement>(selector: string) {
   const element = document.querySelector<T>(selector)
@@ -13,8 +22,8 @@ const hour = 3_600_000
 const cartesian = createPlot(required('#cartesian'), {
   title: 'Observed to forecast vectors',
   scales: {
-    time: time({ domain: [start, start + 12 * hour], timeZone: 'UTC' }),
-    value: linear({ domain: [0, 20], includeZero: true }),
+    time: timeScale({ domain: [start, start + 12 * hour], timeZone: 'UTC' }),
+    value: linearScale({ domain: [0, 20], includeZero: true }),
   },
   axes: [
     axis('time', { position: 'bottom', label: 'Time (UTC)', tickCount: 5 }),
@@ -39,8 +48,8 @@ const cartesian = createPlot(required('#cartesian'), {
 const polar = createPolarPlot(required('#polar'), {
   title: 'Polar displacement vectors',
   scales: {
-    bearing: angular({ domain: [0, 360], direction: 'clockwise', intercept: 0 }),
-    distance: radial({ domain: [0, 100], innerRadius: 0.12 }),
+    bearing: angularScale({ domain: [0, 360], direction: 'clockwise', intercept: 0 }),
+    distance: radialScale({ domain: [0, 100], innerRadius: 0.12 }),
   },
   axes: [
     axis('bearing', { position: 'angular', grid: true }),

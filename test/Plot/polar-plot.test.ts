@@ -1,5 +1,12 @@
 import { afterEach, describe, expect, test, vi } from 'vitest'
-import { angular, axis, createPolarPlot, linear, radial, type PolarPlot } from '../../src/index.js'
+import {
+  angularScale,
+  axis,
+  createPolarPlot,
+  linearScale,
+  radialScale,
+  type PolarPlot,
+} from '../../src/index.js'
 
 const plots: PolarPlot[] = []
 const hosts: HTMLElement[] = []
@@ -33,8 +40,8 @@ describe('createPolarPlot', () => {
   test('projects angular and radial values and renders polar axes', async () => {
     const current = plot(host(), {
       scales: {
-        theta: angular({ domain: [0, 360] }),
-        distance: radial({ domain: [0, 10] }),
+        theta: angularScale({ domain: [0, 360] }),
+        distance: radialScale({ domain: [0, 10] }),
       },
       axes: [
         axis('theta', { position: 'angular', grid: true }),
@@ -66,12 +73,12 @@ describe('createPolarPlot', () => {
   test('applies anticlockwise direction, intercept, inner radius, updates and resize', async () => {
     const current = plot(host(), {
       scales: {
-        theta: angular({
+        theta: angularScale({
           domain: [0, 360],
           direction: 'anticlockwise',
           intercept: Math.PI / 2,
         }),
-        distance: radial({ domain: [0, 10], innerRadius: 0.5 }),
+        distance: radialScale({ domain: [0, 10], innerRadius: 0.5 }),
       },
     })
     await frame()
@@ -104,8 +111,8 @@ describe('createPolarPlot', () => {
     const current = plot(host(), {
       theme: 'dark',
       scales: {
-        theta: angular({ domain: [0, 360] }),
-        distance: radial({ domain: [0, 10] }),
+        theta: angularScale({ domain: [0, 360] }),
+        distance: radialScale({ domain: [0, 10] }),
       },
       axes: [axis('theta', { position: 'angular' }), axis('distance', { position: 'radial' })],
     })
@@ -121,13 +128,13 @@ describe('createPolarPlot', () => {
   test.each([false, true])(
     'preserves polar axis geometry and captions with grid=%s',
     async (grid) => {
-      const bearing = angular({
+      const bearing = angularScale({
         domain: [0, 360],
         direction: 'anticlockwise',
         intercept: Math.PI / 2,
         range: [0, Math.PI],
       })
-      const distance = radial({ domain: [0, 10], innerRadius: 0.25 })
+      const distance = radialScale({ domain: [0, 10], innerRadius: 0.25 })
       const bearingAxis = axis('theta', {
         position: 'angular',
         grid,
@@ -224,7 +231,7 @@ describe('createPolarPlot', () => {
           ? []
           : [axis(position === 'angular' ? 'theta' : 'distance', { position })]
       const current = plot(host(), {
-        scales: { theta: angular(), distance: radial() },
+        scales: { theta: angularScale(), distance: radialScale() },
         axes,
       })
       await frame()
@@ -249,41 +256,43 @@ describe('createPolarPlot', () => {
   )
 
   test('rejects cartesian scales, mismatched axes, extra polar scales and cartesian directions', () => {
-    expect(() => plot(host(), { scales: { theta: linear(), distance: radial() } })).toThrow(
-      /angular or radial scales/,
-    )
+    expect(() =>
+      plot(host(), { scales: { theta: linearScale(), distance: radialScale() } }),
+    ).toThrow(/angular or radial scales/)
     expect(() =>
       plot(host(), {
-        scales: { theta: angular(), distance: radial() },
+        scales: { theta: angularScale(), distance: radialScale() },
         axes: [axis('theta', { position: 'radial' })],
       }),
     ).toThrow(/axis in the angular direction/)
     expect(() =>
       plot(host(), {
         scales: {
-          theta: angular(),
-          theta2: angular(),
-          distance: radial(),
+          theta: angularScale(),
+          theta2: angularScale(),
+          distance: radialScale(),
         },
       }),
     ).toThrow(/exactly one angular scale/)
     // @ts-expect-error Polar plots have no cartesian directions.
     expect(() =>
       plot(host(), {
-        scales: { theta: angular(), distance: radial() },
+        scales: { theta: angularScale(), distance: radialScale() },
         directions: { theta: 'x' },
       }),
     ).toThrow(/cartesian plot.directions/)
   })
 
   test('validates polar scale options', () => {
-    expect(angular().domain.get()).toEqual([0, 360])
-    expect(radial().options.get().resolved.innerRadius).toBe(0)
-    expect(() => angular({ direction: 'sideways' as 'clockwise' })).toThrow(/angular.direction/)
-    expect(() => angular({ intercept: Number.NaN })).toThrow(/angular.intercept/)
-    expect(() => angular({ range: [0, Number.POSITIVE_INFINITY] })).toThrow(/angular.range/)
-    expect(() => radial({ innerRadius: 1 })).toThrow(/radial.innerRadius/)
-    expect(() => radial({ domain: [-1, 1] })).toThrow(/radial.domain/)
-    expect(() => radial({ includeZero: true })).toThrow(/require a linear scale/)
+    expect(angularScale().domain.get()).toEqual([0, 360])
+    expect(radialScale().options.get().resolved.innerRadius).toBe(0)
+    expect(() => angularScale({ direction: 'sideways' as 'clockwise' })).toThrow(
+      /angular.direction/,
+    )
+    expect(() => angularScale({ intercept: Number.NaN })).toThrow(/angular.intercept/)
+    expect(() => angularScale({ range: [0, Number.POSITIVE_INFINITY] })).toThrow(/angular.range/)
+    expect(() => radialScale({ innerRadius: 1 })).toThrow(/radial.innerRadius/)
+    expect(() => radialScale({ domain: [-1, 1] })).toThrow(/radial.domain/)
+    expect(() => radialScale({ includeZero: true })).toThrow(/require a linear scale/)
   })
 })

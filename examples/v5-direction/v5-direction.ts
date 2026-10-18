@@ -1,6 +1,15 @@
 import '../shared/v5.css'
 import './direction.css'
-import { angular, axis, createPlot, createPolarPlot, direction, linear, radial, time } from '@lib'
+import {
+  angularScale,
+  axis,
+  createPlot,
+  createPolarPlot,
+  direction,
+  linearScale,
+  radialScale,
+  timeScale,
+} from '@lib'
 
 function required<T extends HTMLElement>(selector: string) {
   const element = document.querySelector<T>(selector)
@@ -17,8 +26,8 @@ const speeds = [8, 10, 9, 13, 15, 11, 8, 6, 7, 12, 14, 10]
 const cartesian = createPlot(required('#cartesian'), {
   title: 'Wind direction and speed',
   scales: {
-    time: time({ domain: [times[0]!, times.at(-1)!], timeZone: 'UTC' }),
-    speed: linear({ domain: [0, 20], includeZero: true }),
+    time: timeScale({ domain: [times[0]!, times.at(-1)!], timeZone: 'UTC' }),
+    speed: linearScale({ domain: [0, 20], includeZero: true }),
   },
   axes: [
     axis('time', { position: 'bottom', label: 'Time (UTC)', tickCount: 5 }),
@@ -43,8 +52,8 @@ const cartesian = createPlot(required('#cartesian'), {
 const polar = createPolarPlot(required('#polar'), {
   title: 'Wind from each bearing',
   scales: {
-    bearing: angular({ domain: [0, 360], direction: 'clockwise', intercept: 0 }),
-    speed: radial({ domain: [0, 20], innerRadius: 0.12 }),
+    bearing: angularScale({ domain: [0, 360], direction: 'clockwise', intercept: 0 }),
+    speed: radialScale({ domain: [0, 20], innerRadius: 0.12 }),
   },
   axes: [
     axis('bearing', { position: 'angular', grid: true }),

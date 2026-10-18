@@ -1,16 +1,16 @@
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import {
   axis,
-  band,
+  bandScale,
   bar,
   createPlot,
   createPolarPlot,
   createTable,
-  linear,
+  linearScale,
   stackedArea,
-  time,
-  angular,
-  radial,
+  timeScale,
+  angularScale,
+  radialScale,
   type Plot,
   type StackedAreaOptions,
   type OptionPatch,
@@ -59,7 +59,7 @@ describe('stacked areas', () => {
     const mark = stackedArea(data, options)
     const current = plot({
       ...fixed,
-      scales: { t: linear({ domain: [0, 2] }), q: linear({ domain: [-5, 10] }) },
+      scales: { t: linearScale({ domain: [0, 2] }), q: linearScale({ domain: [-5, 10] }) },
       directions: { t: 'x' },
       marks: [mark],
     })
@@ -86,7 +86,7 @@ describe('stacked areas', () => {
     const mark = stackedArea(data, { ...options, layers: named })
     const current = plot({
       ...fixed,
-      scales: { t: time(), q: linear() },
+      scales: { t: timeScale(), q: linearScale() },
       marks: [mark],
     })
     await frame()
@@ -138,10 +138,10 @@ describe('stacked areas', () => {
       b: [2, 2, 3, 2, -4, 1, 2, 1, 2],
     })
     const mark = stackedArea(data, options)
-    const t = linear({ domain: [0.5, 4.5] })
+    const t = linearScale({ domain: [0.5, 4.5] })
     const current = plot({
       ...fixed,
-      scales: { t, q: linear({ domain: [-6, 10] }) },
+      scales: { t, q: linearScale({ domain: [-6, 10] }) },
       directions: { t: 'x' },
       marks: [mark],
     })
@@ -180,7 +180,7 @@ describe('stacked areas', () => {
     const mark = stackedArea(data, options)
     const current = plot({
       ...fixed,
-      scales: { t: linear({ domain: [0, 9999] }), q: linear({ domain: [-20, 100] }) },
+      scales: { t: linearScale({ domain: [0, 9999] }), q: linearScale({ domain: [-20, 100] }) },
       directions: { t: 'x' },
       marks: [mark],
     })
@@ -205,7 +205,7 @@ describe('stacked areas', () => {
   test('style-only updates reuse endpoints and geometry; resize and data updates redraw retained paths', async () => {
     const data = createTable({ t: [0, 1], a: [3, 4], b: [2, 3] }, { maxPoints: 3 })
     const mark = stackedArea(data, { ...options, id: 'flow' })
-    const current = plot({ ...fixed, scales: { t: time(), q: linear() }, marks: [mark] })
+    const current = plot({ ...fixed, scales: { t: timeScale(), q: linearScale() }, marks: [mark] })
     await frame()
     const path = current.element.querySelector('[data-layer-id="a"]')!
     const endpoints = stackedAreaEndpoints(mark)
@@ -259,8 +259,8 @@ describe('stacked areas', () => {
       { id: 'c', y: 'c', stack: 'B' },
     ]
     const mark = stackedArea(data, { ...options, layers: named })
-    const t = time({ domain: [0, 0.5] })
-    const q = linear({ autoscale: 'visible', defaultDomain: [-1, 1] })
+    const t = timeScale({ domain: [0, 0.5] })
+    const q = linearScale({ autoscale: 'visible', defaultDomain: [-1, 1] })
     plot({ ...fixed, scales: { t, q }, marks: [mark] })
     await frame()
     expect(q.domain.get()).toEqual([0, 7])
@@ -279,8 +279,8 @@ describe('stacked areas', () => {
   test('visible extents include interpolated viewport edges without bridging gaps', async () => {
     const data = createTable({ t: [0, 10], a: [2, 8], b: [2, 4] })
     const mark = stackedArea(data, options)
-    const t = time({ domain: [2, 4] })
-    const q = linear({ autoscale: 'visible', defaultDomain: [-1, 1] })
+    const t = timeScale({ domain: [2, 4] })
+    const q = linearScale({ autoscale: 'visible', defaultDomain: [-1, 1] })
     plot({ ...fixed, scales: { t, q }, marks: [mark] })
     await frame()
     expect(q.domain.get()[0]).toBe(0)
@@ -344,17 +344,21 @@ describe('stacked areas', () => {
   test('rejects incompatible plot scales and live updates; removal and destruction release validators', async () => {
     const data = createTable({ t: [0, 1], a: [1, 2], b: [3, 4] })
     const mark = stackedArea(data, options)
-    expect(() => plot({ scales: { t: band(), q: linear() }, marks: [mark] })).toThrow(/continuous/)
-    expect(() => plot({ scales: { t: time(), q: time() }, marks: [mark] })).toThrow(/linear value/)
+    expect(() => plot({ scales: { t: bandScale(), q: linearScale() }, marks: [mark] })).toThrow(
+      /continuous/,
+    )
+    expect(() => plot({ scales: { t: timeScale(), q: timeScale() }, marks: [mark] })).toThrow(
+      /linear value/,
+    )
     expect(() =>
       createPolarPlot(host(), {
-        scales: { t: angular(), q: radial() },
+        scales: { t: angularScale(), q: radialScale() },
         marks: [mark],
       }),
     ).toThrow(/cartesian/)
     const current = plot({
       ...fixed,
-      scales: { t: time(), q: linear(), other: time() },
+      scales: { t: timeScale(), q: linearScale(), other: timeScale() },
       marks: [mark],
     })
     await frame()

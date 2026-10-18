@@ -1,5 +1,5 @@
 import '../shared/v5.css'
-import { axis, batch, createPlot, linear, time, type Plot } from '@lib'
+import { axis, batch, createPlot, linearScale, timeScale, type Plot } from '@lib'
 
 const overviewHost = document.querySelector<HTMLElement>('#overview')
 const detailHost = document.querySelector<HTMLElement>('#detail')
@@ -30,8 +30,8 @@ if (
 
 const start = Date.UTC(2026, 0, 1)
 const hour = 3_600_000
-const t = time({ domain: [start, start + 6 * hour], timeZone: 'UTC' })
-const q = linear({ domain: [0, 100], includeZero: true })
+const t = timeScale({ domain: [start, start + 6 * hour], timeZone: 'UTC' })
+const q = linearScale({ domain: [0, 100], includeZero: true })
 const events = new AbortController()
 const timeLabel = new Intl.DateTimeFormat('en-GB', {
   timeZone: 'UTC',

@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import {
   axis,
-  band,
+  bandScale,
   createPlot,
   createTable,
   histogram,
-  linear,
-  time,
+  linearScale,
+  timeScale,
   type HistogramOptions,
   type OptionPatch,
   type Plot,
@@ -30,8 +30,8 @@ function plot(mark: ReturnType<typeof histogram>, visible = false) {
     width: 400,
     height: 240,
     scales: {
-      x: linear(visible ? { domain: [1.1, 2.9] } : {}),
-      y: linear({ autoscale: visible ? 'visible' : 'data' }),
+      x: linearScale(visible ? { domain: [1.1, 2.9] } : {}),
+      y: linearScale({ autoscale: visible ? 'visible' : 'data' }),
     },
     axes: [axis('x', { position: 'bottom' }), axis('y', { position: 'left' })],
     marks: [mark],
@@ -181,10 +181,10 @@ describe('histogram bin semantics', () => {
 describe('histogram bar integration', () => {
   test('reuses exact interval geometry, zero baselines, reversed scales and horizontal orientation', () => {
     const mark = histogram(samples([0, 1, 2, 3]), options)
-    const x = linear({ domain: [0, 3] })
+    const x = linearScale({ domain: [0, 3] })
     const scales = {
       x: bindScale(x, reactive.signal([0, 300] as const)),
-      y: bindScale(linear({ domain: [0, 3] }), reactive.signal([90, 0] as const)),
+      y: bindScale(linearScale({ domain: [0, 3] }), reactive.signal([90, 0] as const)),
     }
     const shape = () =>
       barRectangles(histogramBar(mark), scales).map(({ x, y, width, height }) => [
@@ -267,14 +267,14 @@ describe('histogram bar integration', () => {
     const host = document.createElement('div')
     expect(() =>
       createPlot(host, {
-        scales: { x: band({ domain: ['a'] }), y: linear() },
+        scales: { x: bandScale({ domain: ['a'] }), y: linearScale() },
         marks: [mark],
       }),
     ).toThrow(/linear or time/)
     const timePlot = createPlot(host, {
       width: 400,
       height: 240,
-      scales: { x: time(), y: linear() },
+      scales: { x: timeScale(), y: linearScale() },
       marks: [mark],
     })
     timePlot.destroy()

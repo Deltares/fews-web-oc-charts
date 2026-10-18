@@ -2,10 +2,10 @@ import { afterEach, describe, expect, test, vi } from 'vitest'
 import {
   createPlot,
   axis,
-  linear,
-  time,
-  band,
-  degrees,
+  linearScale,
+  timeScale,
+  bandScale,
+  degreesScale,
   sharedScale,
   batch,
   type Plot,
@@ -39,7 +39,7 @@ afterEach(() => {
 
 describe('createPlot named scales', () => {
   test('shares domains but never ranges or derived scales between differently sized plots', async () => {
-    const shared = sharedScale(linear({ domain: [0, 100] }))
+    const shared = sharedScale(linearScale({ domain: [0, 100] }))
     const first = plot(host(), { scales: { q: shared }, directions: { q: 'x' } })
     const second = plot(host(800), { scales: { q: shared }, directions: { q: 'x' } })
     await frame()
@@ -60,7 +60,7 @@ describe('createPlot named scales', () => {
   })
 
   test('uses local x/y directions, reversed ranges, and immutable snapshots', async () => {
-    const y = linear({ domain: [-10, 10], reverse: true })
+    const y = linearScale({ domain: [-10, 10], reverse: true })
     const current = plot(host(), { scales: { q: y }, axes: [axis('q')] })
     await frame()
     expect(current.scales.q.project(-10)).toBe(current.regions.get().plot.y)
@@ -79,7 +79,7 @@ describe('createPlot named scales', () => {
   })
 
   test('updates, unsets and replaces configuration without mutating external handles', async () => {
-    const shared = linear({ domain: [2, 8] })
+    const shared = linearScale({ domain: [2, 8] })
     const left = axis('q', { id: 'left', label: 'Flow', format: () => 'custom' })
     const current = plot(host(), {
       width: 600,
@@ -119,7 +119,7 @@ describe('createPlot named scales', () => {
   })
 
   test('rejects unknown keys, duplicate axes and dangling references atomically', async () => {
-    const q = linear()
+    const q = linearScale()
     const current = plot(host(), {
       title: 'original',
       scales: { q },
@@ -135,7 +135,7 @@ describe('createPlot named scales', () => {
       current.update({ axes: [axis('q', { id: 'same' }), axis('q', { id: 'same' })] }),
     ).toThrow(/Duplicate axis id/)
     expect(() =>
-      current.update({ scales: { missing: linear() }, axes: [axis('not-bound')] }),
+      current.update({ scales: { missing: linearScale() }, axes: [axis('not-bound')] }),
     ).toThrow(/missing scale/)
     // @ts-expect-error Unknown options are also checked for untyped JavaScript callers.
     expect(() => current.update({ unknown: 1 })).toThrow(/plot.unknown/)
@@ -149,7 +149,7 @@ describe('createPlot named scales', () => {
     const element = host()
     const child = document.createElement('span')
     element.append(child)
-    const current = plot(element, { scales: { q: linear() } })
+    const current = plot(element, { scales: { q: linearScale() } })
     await frame()
     element.style.width = '700px'
     await vi.waitFor(() => expect(current.size.get().width).toBe(700))
@@ -163,7 +163,7 @@ describe('createPlot named scales', () => {
   })
 
   test('releases reactive consumers and cancels queued rendering before first frame', async () => {
-    const q = linear()
+    const q = linearScale()
     q.domain.get()
     const baseline = reactive.getDiagnostics()
     for (let index = 0; index < 20; index += 1) {
@@ -181,7 +181,7 @@ describe('createPlot named scales', () => {
   })
 
   test('coalesces shared updates into one plot render and ignores no-ops', async () => {
-    const q = linear()
+    const q = linearScale()
     const current = plot(host(), { scales: { q }, axes: [axis('q')] })
     await frame()
     const replace = vi.spyOn(
@@ -204,8 +204,8 @@ describe('createPlot named scales', () => {
 
   test('validates axis direction changes against every live consumer before committing', async () => {
     const shared = axis('q', { position: 'left' })
-    const first = plot(host(), { scales: { q: linear() }, axes: [shared, axis('q')] })
-    const second = plot(host(), { scales: { q: linear() }, axes: [shared] })
+    const first = plot(host(), { scales: { q: linearScale() }, axes: [shared, axis('q')] })
+    const second = plot(host(), { scales: { q: linearScale() }, axes: [shared] })
     await frame()
     expect(() => shared.update({ position: 'bottom', label: 'invalid' })).toThrow(/both x and y/)
     expect(shared.options.get().resolved).toMatchObject({ position: 'left', label: '' })
@@ -218,8 +218,8 @@ describe('createPlot named scales', () => {
   })
 
   test('reconciles replacement bindings and reordered axes, detaching removed handles', async () => {
-    const original = linear()
-    const replacement = linear({ domain: [0, 10] })
+    const original = linearScale()
+    const replacement = linearScale({ domain: [0, 10] })
     const first = axis('q', { id: 'first', label: 'first' })
     const second = axis('q', { id: 'second', label: 'second' })
     const current = plot(host(), { scales: { q: original }, axes: [first, second] })
@@ -271,7 +271,7 @@ describe('createPlot named scales', () => {
 
   test('repaints only style for colour changes and remeasures when the font changes', async () => {
     const current = plot(host(), {
-      scales: { q: linear() },
+      scales: { q: linearScale() },
       axes: [axis('q', { grid: true })],
     })
     await frame()
@@ -303,14 +303,14 @@ describe('createPlot named scales', () => {
   test('renders unlimited secondary axes, categorical and time scales without global locale changes', async () => {
     const current = plot(host(1000, 500), {
       scales: {
-        t: time({
+        t: timeScale({
           domain: [Date.UTC(2026, 9, 24), Date.UTC(2026, 9, 26)],
           timeZone: 'Europe/Amsterdam',
         }),
-        q: linear({ domain: [0, 10] }),
-        h: linear({ domain: [-1, 1] }),
-        dir: degrees(),
-        categories: band({ domain: ['a', 'b', 'c'] }),
+        q: linearScale({ domain: [0, 10] }),
+        h: linearScale({ domain: [-1, 1] }),
+        dir: degreesScale(),
+        categories: bandScale({ domain: ['a', 'b', 'c'] }),
       },
       axes: [
         axis('t', { position: 'bottom' }),
@@ -342,7 +342,7 @@ describe('createPlot named scales', () => {
         format: (value) => `tick:${value}`,
       })
       const current = plot(host(), {
-        scales: { categories: band({ domain: ['a', 'b', 'c'], reverse: true }) },
+        scales: { categories: bandScale({ domain: ['a', 'b', 'c'], reverse: true }) },
         axes: [handle],
       })
       await frame()
@@ -434,7 +434,7 @@ describe('createPlot named scales', () => {
     async (position) => {
       const current = plot(host(700, 320), {
         scales: {
-          t: time({
+          t: timeScale({
             domain: [Date.UTC(2024, 11, 31, 18), Date.UTC(2025, 0, 2, 18)],
             timeZone: 'UTC',
           }),

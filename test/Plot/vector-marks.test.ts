@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, test } from 'vitest'
 import {
-  angular,
+  angularScale,
   arrows,
   createPlot,
   createPolarPlot,
   direction,
-  linear,
-  radial,
+  linearScale,
+  radialScale,
   type Plot,
 } from '../../src/index.js'
 
@@ -35,7 +35,7 @@ afterEach(() => {
 describe('arrow and direction marks', () => {
   test('renders Cartesian vectors and bearing glyphs, retaining gaps and autoscale extents', async () => {
     const current = createPlot(host(), {
-      scales: { x: linear(), y: linear() },
+      scales: { x: linearScale(), y: linearScale() },
       directions: { x: 'x' },
       marks: [
         arrows({
@@ -89,12 +89,12 @@ describe('arrow and direction marks', () => {
   test('projects polar arrow endpoints with the plot angular convention and renders polar bearings', async () => {
     const current = createPolarPlot(host(), {
       scales: {
-        bearing: angular({
+        bearing: angularScale({
           domain: [0, 360],
           direction: 'anticlockwise',
           intercept: Math.PI / 4,
         }),
-        distance: radial({ domain: [0, 10] }),
+        distance: radialScale({ domain: [0, 10] }),
       },
       marks: [
         arrows({
@@ -135,7 +135,7 @@ describe('arrow and direction marks', () => {
 
   test('thins direction glyphs without including skipped values in autoscale', async () => {
     const current = createPlot(host(), {
-      scales: { x: linear(), y: linear() },
+      scales: { x: linearScale(), y: linearScale() },
       directions: { x: 'x' },
       marks: [
         direction({
@@ -182,7 +182,7 @@ describe('arrow and direction marks', () => {
 
     expect(() =>
       createPlot(host(), {
-        scales: { x: linear(), y: linear() },
+        scales: { x: linearScale(), y: linearScale() },
         directions: { x: 'x', y: 'x' },
         marks: [
           arrows({
@@ -199,7 +199,7 @@ describe('arrow and direction marks', () => {
 
     expect(() =>
       createPolarPlot(host(), {
-        scales: { angle: angular(), radius: radial() },
+        scales: { angle: angularScale(), radius: radialScale() },
         marks: [
           arrows({
             x: 'angle',

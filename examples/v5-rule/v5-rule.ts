@@ -1,5 +1,5 @@
 import '../shared/v5.css'
-import { axis, createPlot, line, linear, rule, time } from '@lib'
+import { axis, createPlot, line, linearScale, rule, timeScale } from '@lib'
 
 const host = document.querySelector<HTMLElement>('#chart')
 if (!host) throw new Error('The rule example is missing its chart host.')
@@ -16,8 +16,8 @@ const eventTime = start + 14 * hour
 const plot = createPlot(host, {
   title: 'Discharge threshold and event time',
   scales: {
-    t: time({ domain: [start, start + 24 * hour], timeZone: 'UTC' }),
-    q: linear({ domain: [0, 100] }),
+    t: timeScale({ domain: [start, start + 24 * hour], timeZone: 'UTC' }),
+    q: linearScale({ domain: [0, 100] }),
   },
   axes: [
     axis('t', { position: 'bottom', label: 'Time (UTC)', tickCount: 6 }),

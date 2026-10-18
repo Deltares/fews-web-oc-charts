@@ -1,10 +1,10 @@
 import { describe, expect, test } from 'vitest'
-import { linear, time, band, degrees, axis, layout } from '../../src/index.js'
+import { linearScale, timeScale, bandScale, degreesScale, axis, layout } from '../../src/index.js'
 
 describe('named scale domain state', () => {
   test('owns input arrays and resolves nice, includeZero, symmetric and defaults', () => {
     const input = [2, 8]
-    const scale = linear({ domain: input, includeZero: true, nice: true })
+    const scale = linearScale({ domain: input, includeZero: true, nice: true })
     input[1] = 100
     expect(scale.domain.get()).toEqual([0, 8])
     scale.update({ symmetric: true })
@@ -13,30 +13,30 @@ describe('named scale domain state', () => {
     expect(scale.domain.get()).toEqual([0, 10])
     scale.update({ includeZero: undefined })
     expect(scale.domain.get()).toEqual([4, 10])
-    expect(degrees().domain.get()).toEqual([0, 360])
+    expect(degreesScale().domain.get()).toEqual([0, 360])
   })
 
   test('rejects invalid updates without publishing partial state', () => {
-    const scale = linear({ domain: [1, 5] })
+    const scale = linearScale({ domain: [1, 5] })
     expect(() => scale.update({ domain: [5, 1], reverse: true })).toThrow(/ascending pair/)
     expect(scale.domain.get()).toEqual([1, 5])
     expect(scale.options.get().resolved.reverse).toBe(false)
     expect(() => scale.domain.set([NaN, 2])).toThrow(/finite numbers/)
-    expect(() => time({ domain: [0, 9e15] })).toThrow(/Date range/)
-    expect(() => time({ timeZone: 'invalid' })).toThrow()
-    expect(() => band({ domain: ['a', 'a'] })).toThrow(/unique strings/)
-    expect(() => linear({ padding: 1 })).toThrow(/less than 1/)
+    expect(() => timeScale({ domain: [0, 9e15] })).toThrow(/Date range/)
+    expect(() => timeScale({ timeZone: 'invalid' })).toThrow()
+    expect(() => bandScale({ domain: ['a', 'a'] })).toThrow(/unique strings/)
+    expect(() => linearScale({ padding: 1 })).toThrow(/less than 1/)
     // @ts-expect-error null is not an unset alias.
     expect(() => scale.update({ domain: null })).toThrow(/scale.domain/)
-    expect(() => linear({ domain: [-Number.MAX_VALUE, Number.MAX_VALUE], padding: 0.5 })).toThrow(
-      /overflowed/,
-    )
+    expect(() =>
+      linearScale({ domain: [-Number.MAX_VALUE, Number.MAX_VALUE], padding: 0.5 }),
+    ).toThrow(/overflowed/)
     // @ts-expect-error Unknown options must fail at runtime as well as compile time.
     expect(() => scale.update({ type: 'band' })).toThrow(/scale.type/)
   })
 
   test('retains explicit no-op state without scheduling an effective change', () => {
-    const scale = linear()
+    const scale = linearScale()
     const version = scale.options.version
     scale.update({ reverse: false })
     expect(scale.options.get().explicit.reverse).toBe(false)

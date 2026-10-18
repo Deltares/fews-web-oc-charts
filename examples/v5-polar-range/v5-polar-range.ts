@@ -1,6 +1,6 @@
 import '../shared/v5.css'
 import './polar-range.css'
-import { angular, axis, createPolarPlot, radial, range } from '@lib'
+import { angularScale, axis, createPolarPlot, radialScale, range } from '@lib'
 
 const host = document.querySelector<HTMLElement>('#chart')
 if (!host) throw new Error('The polar range example is missing its chart host.')
@@ -8,8 +8,8 @@ if (!host) throw new Error('The polar range example is missing its chart host.')
 const plot = createPolarPlot(host, {
   title: 'Directional forecast ranges',
   scales: {
-    bearing: angular({ domain: [0, 360], direction: 'clockwise' }),
-    distance: radial({ domain: [0, 100], innerRadius: 0.18 }),
+    bearing: angularScale({ domain: [0, 360], direction: 'clockwise' }),
+    distance: radialScale({ domain: [0, 100], innerRadius: 0.18 }),
   },
   axes: [
     axis('bearing', { position: 'angular', grid: true }),

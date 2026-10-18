@@ -6,7 +6,7 @@ import {
   createTable,
   histogram,
   line,
-  linear,
+  linearScale,
   range,
   rule,
   series,
@@ -26,7 +26,7 @@ function plot(marks: readonly PlotMark[]) {
   const current = createPlot(host, {
     width: 400,
     height: 240,
-    scales: { x: linear({ domain: [0, 10] }), y: linear({ domain: [0, 10] }) },
+    scales: { x: linearScale({ domain: [0, 10] }), y: linearScale({ domain: [0, 10] }) },
     directions: { x: 'x' },
     marks,
   })

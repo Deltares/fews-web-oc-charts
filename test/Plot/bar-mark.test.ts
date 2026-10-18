@@ -1,16 +1,16 @@
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import {
   axis,
-  band,
+  bandScale,
   bar,
   createPlot,
   createPolarPlot,
   createTable,
-  linear,
+  linearScale,
   line,
-  time,
-  angular,
-  radial,
+  timeScale,
+  angularScale,
+  radialScale,
   type Plot,
   type BarOptions,
   type OptionPatch,
@@ -63,10 +63,10 @@ describe('grouped and stacked bars', () => {
   test('exact band slots, group/inner padding, reversed categories and horizontal geometry', () => {
     const data = createTable({ t: ['one'], a: [3], b: [-2] })
     const mark = bar(data, { ...options, groupPadding: 0.2, layerPadding: 0.4 })
-    const category = band({ domain: ['one'] })
+    const category = bandScale({ domain: ['one'] })
     const scales = {
       t: binding(category, [0, 100]),
-      q: binding(linear({ domain: [-2, 3] }), [100, 0]),
+      q: binding(linearScale({ domain: [-2, 3] }), [100, 0]),
     }
     const shape = () =>
       barRectangles(mark, scales).map(({ x, y, width, height }) => [x, y, width, height])
@@ -86,7 +86,7 @@ describe('grouped and stacked bars', () => {
     ])
     category.update({ reverse: false })
     scales.t = binding(category, [100, 0])
-    scales.q = binding(linear({ domain: [-2, 3] }), [0, 100])
+    scales.q = binding(linearScale({ domain: [-2, 3] }), [0, 100])
     expect(shape()).toEqual([
       [40, 60, 60, 30],
       [0, 10, 40, 30],
@@ -98,8 +98,8 @@ describe('grouped and stacked bars', () => {
   test('explicit irregular intervals and pixel widths cull without changing slots, extents or sample IDs', () => {
     const data = createTable({ t: [0, 2, 9], end: [1, 8, 12], a: [3, 4, 5], b: [1, 2, 3] })
     const mark = bar(data, { ...options, layout: 'stacked', interval: { start: 't', end: 'end' } })
-    const t = time({ domain: [3, 7] })
-    const scales = { t: binding(t, [0, 400]), q: binding(linear({ domain: [0, 8] }), [80, 0]) }
+    const t = timeScale({ domain: [3, 7] })
+    const scales = { t: binding(t, [0, 400]), q: binding(linearScale({ domain: [0, 8] }), [80, 0]) }
     const rectangles = barRectangles(mark, scales)
     expect(
       rectangles.map(({ row, sampleId, x, y, width, height }) => [
@@ -139,8 +139,8 @@ describe('grouped and stacked bars', () => {
     ]
     const mark = bar(data, { ...options, layers: named, layout: 'stacked' })
     const scales = {
-      t: binding(band({ domain: ['one'] }), [0, 100]),
-      q: binding(linear({ domain: [0, 10] }), [100, 0]),
+      t: binding(bandScale({ domain: ['one'] }), [0, 100]),
+      q: binding(linearScale({ domain: [0, 10] }), [100, 0]),
     }
     expect(
       barRectangles(mark, scales).map(({ layerId, x, width, height }) => [
@@ -180,8 +180,8 @@ describe('grouped and stacked bars', () => {
       layout: 'stacked',
       interval: { start: 't', end: 'end' },
     })
-    const t = time({ domain: [3, 7] })
-    const q = linear({ autoscale: 'visible' })
+    const t = timeScale({ domain: [3, 7] })
+    const q = linearScale({ autoscale: 'visible' })
     const current = plot({ width: 400, height: 200, scales: { t, q }, marks: [mark] })
     await frame()
     expect(q.domain.get()).toEqual([0, 10])
@@ -227,19 +227,23 @@ describe('grouped and stacked bars', () => {
   test('rejects unsupported bindings and invalid patches synchronously, without mutating live options', async () => {
     const data = createTable({ t: [0], a: [1], b: [2] })
     const mark = bar(data, { ...options, width: 20 })
-    expect(() => plot({ scales: { t: time(), q: time() }, marks: [mark] })).toThrow('linear value')
-    expect(() => plot({ scales: { t: band(), q: linear() }, marks: [mark] })).toThrow('scale kind')
+    expect(() => plot({ scales: { t: timeScale(), q: timeScale() }, marks: [mark] })).toThrow(
+      'linear value',
+    )
+    expect(() => plot({ scales: { t: bandScale(), q: linearScale() }, marks: [mark] })).toThrow(
+      'scale kind',
+    )
     const noWidth = bar(data, options)
-    expect(() => plot({ scales: { t: time(), q: linear() }, marks: [noWidth] })).toThrow(
+    expect(() => plot({ scales: { t: timeScale(), q: linearScale() }, marks: [noWidth] })).toThrow(
       'explicit interval',
     )
     expect(() =>
-      createPolarPlot(host(), { scales: { t: angular(), q: radial() }, marks: [mark] }),
+      createPolarPlot(host(), { scales: { t: angularScale(), q: radialScale() }, marks: [mark] }),
     ).toThrow('cartesian')
     const current = plot({
       width: 400,
       height: 200,
-      scales: { t: time(), q: linear() },
+      scales: { t: timeScale(), q: linearScale() },
       marks: [mark],
     })
     await frame()
@@ -267,8 +271,8 @@ describe('grouped and stacked bars', () => {
       orientation: 'horizontal',
       scales: { x: 'category', y: 'value' },
     })
-    const category = band()
-    const value = linear({ reverse: true })
+    const category = bandScale()
+    const value = linearScale({ reverse: true })
     const current = plot({
       width: 400,
       height: 200,
@@ -297,7 +301,7 @@ describe('grouped and stacked bars', () => {
     const current = plot({
       width: 400,
       height: 200,
-      scales: { t: time({ domain: [0, 4] }), q: linear({ domain: [0, 10] }) },
+      scales: { t: timeScale({ domain: [0, 4] }), q: linearScale({ domain: [0, 10] }) },
       marks: [first, staticLine, second],
     })
     await frame()

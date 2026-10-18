@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import {
   bar,
-  band,
+  bandScale,
   createPlot,
   createTable,
   histogram,
-  linear,
+  linearScale,
   stackedArea,
   type Plot,
 } from '../../src/index.js'
@@ -106,8 +106,8 @@ describe('composite canvas parity', () => {
       }
       const svgMark = histogram(data, options)
       const canvasMark = histogram(data, { ...options, renderer: 'canvas' })
-      const x = linear({ domain: [0, 3] })
-      const y = linear({ domain: [0, 3] })
+      const x = linearScale({ domain: [0, 3] })
+      const y = linearScale({ domain: [0, 3] })
       const directions =
         orientation === 'vertical'
           ? { x: 'x' as const, y: 'y' as const }
@@ -156,8 +156,8 @@ describe('composite canvas parity', () => {
       }
       const svgMark = bar(data, options)
       const canvasMark = bar(data, { ...options, renderer: 'canvas' })
-      const t = linear({ domain: [0, 4] })
-      const q = linear({ domain: [-6, 8] })
+      const t = linearScale({ domain: [0, 4] })
+      const q = linearScale({ domain: [-6, 8] })
       const config = { scales: { t, q }, directions: { t: 'x' as const } }
       const svg = plot({ ...config, marks: [svgMark] })
       const canvas = plot({ ...config, marks: [canvasMark] })
@@ -200,7 +200,7 @@ describe('composite canvas parity', () => {
     const svgMark = bar(data, options)
     const canvasMark = bar(data, { ...options, renderer: 'canvas' })
     const config = {
-      scales: { category: band(), q: linear() },
+      scales: { category: bandScale(), q: linearScale() },
       directions: { category: 'y' as const, q: 'x' as const },
     }
     const svg = plot({ ...config, marks: [svgMark] })
@@ -238,9 +238,9 @@ describe('composite canvas parity', () => {
       }
       const svgMark = stackedArea(data, options)
       const canvasMark = stackedArea(data, { ...options, renderer: 'canvas' })
-      const x = linear({ domain: [100.5, 4500.5] })
+      const x = linearScale({ domain: [100.5, 4500.5] })
       const config = {
-        scales: { t: x, q: linear({ domain: [-5, 12] }) },
+        scales: { t: x, q: linearScale({ domain: [-5, 12] }) },
         directions: { t: 'x' as const },
       }
       const svg = plot({ ...config, marks: [svgMark] })
@@ -277,7 +277,7 @@ describe('composite canvas parity', () => {
       width: 20,
     })
     const current = plot({
-      scales: { t: linear({ domain: [0, 1] }), q: linear({ domain: [0, 4] }) },
+      scales: { t: linearScale({ domain: [0, 1] }), q: linearScale({ domain: [0, 4] }) },
       directions: { t: 'x' },
       marks: [mark],
     })
@@ -328,7 +328,7 @@ describe('composite canvas parity', () => {
     themeElement.style.setProperty('--area-color', '#ff0000')
     const current = plot({
       themeElement,
-      scales: { t: linear({ domain: [0, 1] }), q: linear({ domain: [0, 4] }) },
+      scales: { t: linearScale({ domain: [0, 1] }), q: linearScale({ domain: [0, 4] }) },
       directions: { t: 'x' },
       marks: [mark],
     })
@@ -373,7 +373,7 @@ describe('composite canvas parity', () => {
     const back = stackedArea(data, { ...options, id: 'back', renderer: 'canvas' })
     const front = bar(data, { ...options, id: 'front', layout: 'stacked', width: 10 })
     const current = plot({
-      scales: { t: linear(), q: linear() },
+      scales: { t: linearScale(), q: linearScale() },
       directions: { t: 'x' },
       marks: [back, front],
     })

@@ -1,5 +1,5 @@
 import '../shared/v5.css'
-import { axis, createPlot, line, linear, text, time } from '@lib'
+import { axis, createPlot, line, linearScale, text, timeScale } from '@lib'
 
 const host = document.querySelector<HTMLElement>('#chart')
 if (!host) throw new Error('The text example is missing its chart host.')
@@ -13,8 +13,8 @@ const labels = ['Low', 'Rising', 'Peak', 'Falling', 'Recovered']
 const plot = createPlot(host, {
   title: 'Observation labels',
   scales: {
-    t: time({ domain: [start, start + 24 * hour], timeZone: 'UTC' }),
-    q: linear({ domain: [0, 100] }),
+    t: timeScale({ domain: [start, start + 24 * hour], timeZone: 'UTC' }),
+    q: linearScale({ domain: [0, 100] }),
   },
   axes: [
     axis('t', { position: 'bottom', label: 'Time (UTC)', tickCount: 5 }),

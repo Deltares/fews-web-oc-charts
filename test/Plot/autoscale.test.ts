@@ -1,15 +1,15 @@
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import {
-  band,
+  bandScale,
   batch,
   createPlot,
   createSeries,
-  degrees,
+  degreesScale,
   line,
-  linear,
+  linearScale,
   range,
   series,
-  time,
+  timeScale,
   type AutoscaleContext,
   type Plot,
   type PlotConfig,
@@ -38,8 +38,8 @@ afterEach(() => {
 
 describe('autoscale policies', () => {
   test('static lines contribute only when their line, markers or area are enabled', () => {
-    const x = linear()
-    const y = linear()
+    const x = linearScale()
+    const y = linearScale()
     const options = { x: 'x', y: 'y', xValues: [2, 4], yValues: [10, 20], line: false }
     const current = plot({
       scales: { x, y },
@@ -63,8 +63,8 @@ describe('autoscale policies', () => {
   })
 
   test('unions eligible series and static lines, ignores gaps and includes area baselines', () => {
-    const x = time()
-    const y = linear()
+    const x = timeScale()
+    const y = linearScale()
     const data = createSeries({ x: [0, 1, 2, 3], y: [NaN, 20, 30, NaN] })
     const mark = series(data, { x: 'x', y: 'y', area: { to: -10 } })
     plot({
@@ -83,8 +83,8 @@ describe('autoscale policies', () => {
   })
 
   test('explicit domains override policies until unset; fixed uses the configured fallback', () => {
-    const x = time()
-    const y = linear({ domain: [0, 100], defaultDomain: [-5, 5] })
+    const x = timeScale()
+    const y = linearScale({ domain: [0, 100], defaultDomain: [-5, 5] })
     const mark = series(createSeries({ x: [0, 1], y: [20, 40] }), { x: 'x', y: 'y' })
     const current = plot({ scales: { x, y }, marks: [mark] })
     expect(y.domain.get()).toEqual([0, 100])
@@ -98,12 +98,12 @@ describe('autoscale policies', () => {
     expect(y.domain.get()).toEqual([20, 40])
     current.update({ marks: [] })
     expect(y.domain.get()).toEqual([-5, 5])
-    expect(degrees().options.get().resolved.autoscale).toBe('fixed')
+    expect(degreesScale().options.get().resolved.autoscale).toBe('fixed')
   })
 
   test('applies includeZero, symmetry, padding and nice once after the union', () => {
-    const x = time()
-    const y = linear({ includeZero: true, symmetric: true, padding: 0.1, nice: true })
+    const x = timeScale()
+    const y = linearScale({ includeZero: true, symmetric: true, padding: 0.1, nice: true })
     plot({
       scales: { x, y },
       marks: [series(createSeries({ x: [0, 1], y: [2, 7] }), { x: 'x', y: 'y' })],
@@ -114,8 +114,8 @@ describe('autoscale policies', () => {
   })
 
   test('supports visible windows on either axis, inclusive duplicates and empty fallbacks', () => {
-    const x = time({ domain: [1, 2] })
-    const y = linear({ autoscale: 'visible', defaultDomain: [-1, 1] })
+    const x = timeScale({ domain: [1, 2] })
+    const y = linearScale({ autoscale: 'visible', defaultDomain: [-1, 1] })
     const data = createSeries({ x: [0, 1, 1, 2, 3], y: [100, 10, 30, 20, 200] })
     plot({ scales: { x, y }, marks: [series(data, { x: 'x', y: 'y' })] })
     expect(y.domain.get()).toEqual([10, 30])
@@ -137,9 +137,9 @@ describe('autoscale policies', () => {
   })
 
   test('custom policies receive immutable data/visible unions and may use the fallback', () => {
-    const x = time({ domain: [1, 2] })
+    const x = timeScale({ domain: [1, 2] })
     const contexts: AutoscaleContext[] = []
-    const y = linear({
+    const y = linearScale({
       autoscale(context) {
         contexts.push(context)
         return context.visible
@@ -162,8 +162,8 @@ describe('autoscale policies', () => {
   })
 
   test('band domains preserve first-seen order and visible-window membership', () => {
-    const x = band()
-    const y = linear({ autoscale: 'visible' })
+    const x = bandScale()
+    const y = linearScale({ autoscale: 'visible' })
     plot({
       scales: { x, y },
       marks: [
@@ -178,8 +178,8 @@ describe('autoscale policies', () => {
   })
 
   test('range mark extents include both interval endpoints and visible overlaps', () => {
-    const x = linear({ domain: [0, 1] })
-    const y = linear({ autoscale: 'visible' })
+    const x = linearScale({ domain: [0, 1] })
+    const y = linearScale({ autoscale: 'visible' })
     plot({
       scales: { x, y },
       directions: { x: 'x' },
@@ -206,8 +206,8 @@ describe('autoscale policies', () => {
 
   test('empty/all-gap data uses defaults; singleton data stays projectable and time-safe', () => {
     const data = createSeries({ x: [8.64e15], y: [5] })
-    const x = time()
-    const y = linear({ defaultDomain: [-2, 2] })
+    const x = timeScale()
+    const y = linearScale({ defaultDomain: [-2, 2] })
     const current = plot({ scales: { x, y }, marks: [series(data, { x: 'x', y: 'y' })] })
     expect(y.domain.get()).toEqual([4, 6])
     expect(x.domain.get()).toEqual([8.64e15 - 1, 8.64e15])
@@ -218,28 +218,28 @@ describe('autoscale policies', () => {
     data.clear()
     expect(y.domain.get()).toEqual([-2, 2])
     // @ts-expect-error Invalid policies must also fail for JavaScript callers.
-    expect(() => linear({ autoscale: 'invalid' })).toThrow(/autoscale/)
-    expect(() => linear({ domain: [0, 1], defaultDomain: [NaN, 1] })).toThrow(/finite/)
+    expect(() => linearScale({ autoscale: 'invalid' })).toThrow(/autoscale/)
+    expect(() => linearScale({ domain: [0, 1], defaultDomain: [NaN, 1] })).toThrow(/finite/)
   })
 })
 
 describe('autoscale binding lifecycle', () => {
   test('shared visible domains use each plot window and release replaced scale bindings', () => {
-    const y = linear({ autoscale: 'visible' })
+    const y = linearScale({ autoscale: 'visible' })
     const data = createSeries({ x: [0, 1, 2, 3], y: [10, 20, 100, 200] })
     const mark = series(data, { x: 'x', y: 'y' })
-    const firstX = time({ domain: [0, 1] })
-    const secondX = time({ domain: [2, 3] })
+    const firstX = timeScale({ domain: [0, 1] })
+    const secondX = timeScale({ domain: [2, 3] })
     const a = plot({ scales: { x: firstX, y }, marks: [mark] })
     const b = plot({ scales: { x: secondX, y }, marks: [mark] })
     expect(y.domain.get()).toEqual([10, 200])
     b.destroy()
     expect(y.domain.get()).toEqual([10, 20])
-    const replacement = linear({ autoscale: 'visible' })
+    const replacement = linearScale({ autoscale: 'visible' })
     a.update({ scales: { y: replacement } })
     expect(y.domain.get()).toEqual([0, 1])
     expect(replacement.domain.get()).toEqual([10, 20])
-    a.update({ scales: { alternate: time({ domain: [2, 3] }) } })
+    a.update({ scales: { alternate: timeScale({ domain: [2, 3] }) } })
     mark.update({ x: 'alternate' })
     expect(replacement.domain.get()).toEqual([100, 200])
     a.setConfig({})
@@ -251,8 +251,8 @@ describe('autoscale binding lifecycle', () => {
 
   test('max-age retention shrinks extents, including duplicate cutoff samples', () => {
     const data = createSeries({ x: [0, 1, 1, 2], y: [-100, 10, 50, 20] }, { maxAge: 2 })
-    const x = time()
-    const y = linear()
+    const x = timeScale()
+    const y = linearScale()
     plot({ scales: { x, y }, marks: [series(data, { x: 'x', y: 'y' })] })
     expect(y.domain.get()).toEqual([-100, 50])
     data.append({ x: [3], y: [30] })
@@ -264,8 +264,8 @@ describe('autoscale binding lifecycle', () => {
   })
 
   test('shared domains union plots with independent ranges and shrink on removal/destroy', async () => {
-    const x = time()
-    const y = linear()
+    const x = timeScale()
+    const y = linearScale()
     const first = series(createSeries({ x: [0, 1], y: [10, 20] }), { x: 'x', y: 'y' })
     const second = series(createSeries({ x: [2, 3], y: [-30, 40] }), { x: 't', y: 'q' })
     const a = plot({ scales: { x, y }, marks: [first] })
@@ -288,9 +288,9 @@ describe('autoscale binding lifecycle', () => {
 
   test('mutations, retention, rebindings and replacement update extents and rendering', async () => {
     const data = createSeries({ x: [0, 1], y: [10, 20] }, { maxPoints: 3 })
-    const x = time()
-    const y = linear()
-    const other = linear()
+    const x = timeScale()
+    const y = linearScale()
+    const other = linearScale()
     const mark = series(data, { x: 'x', y: 'y' })
     const baseline = reactive.getDiagnostics()
     const current = plot({ scales: { x, y, other }, marks: [mark] })
