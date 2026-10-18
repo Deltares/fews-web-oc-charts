@@ -28,8 +28,16 @@ import { isBandMark, type BandMark } from './band.js'
 import { isLineMark, validateLineValuesForScale, type LineMark } from './line.js'
 import { isSeriesMark, validateSeriesUpdates, type SeriesMark } from './series.js'
 import { markExtents } from './mark-extents.js'
+import {
+  isBarMark,
+  validateBarScales,
+  validateBarUpdates,
+  barEndpoints,
+  type BarMark,
+} from './bar.js'
+import { renderBars, styleBars } from './render-bars.js'
 
-type PlotMark = LineMark | SeriesMark | BandMark
+type PlotMark = LineMark | SeriesMark | BandMark | BarMark
 
 export interface PlotOptions {
   width?: number
@@ -218,8 +226,19 @@ function validatePlotMark(
   coordinateSystem: CoordinateSystem,
   dataBacked = isSeriesMark(mark),
 ) {
-  if (!mark || (!isLineMark(mark) && !isSeriesMark(mark) && !isBandMark(mark))) {
-    throw new Error('plot.marks accepts line(), series() or band() marks only.')
+  if (
+    !mark ||
+    (!isLineMark(mark) && !isSeriesMark(mark) && !isBandMark(mark) && !isBarMark(mark))
+  ) {
+    throw new Error('plot.marks accepts line(), series(), band() or bar() marks only.')
+  }
+  if (isBarMark(mark)) {
+    if (coordinateSystem !== 'cartesian') throw new Error('bar() supports cartesian plots only.')
+    const config = mark.options.get().resolved
+    validateBarScales(mark.data, config, options.scales)
+    if (direction(options, mark.x) !== 'x' || direction(options, mark.y) !== 'y')
+      throw new Error('Bar scale directions do not match its orientation.')
+    return
   }
   if (isBandMark(mark)) {
     if (!Object.hasOwn(options.scales, mark.x) || !Object.hasOwn(options.scales, mark.y)) {
@@ -324,7 +343,8 @@ function createPlotInternal(
       isAxisHandle(value) ||
       isLineMark(value) ||
       isSeriesMark(value) ||
-      isBandMark(value),
+      isBandMark(value) ||
+      isBarMark(value),
     validate(options) {
       validatePlotAppearance(options)
       validatePlotCollections(options)
@@ -354,7 +374,7 @@ function createPlotInternal(
   const measurer = createTextMeasurer()
   const axisWidths = new Map<AxisHandle, { version: number; thickness: number }>()
   const axisValidators = new Map<AxisHandle, () => void>()
-  const markValidators = new Map<SeriesMark, { dispose(): void }>()
+  const markValidators = new Map<SeriesMark | BarMark, { dispose(): void }>()
   const bindings = new Map<
     string,
     {
@@ -393,6 +413,9 @@ function createPlotInternal(
   const bandGroups = new Map<BandMark, SVGGElement>()
   const bandGeometryKeys = new Map<BandMark, readonly unknown[]>()
   const bandStyleKeys = new Map<BandMark, readonly unknown[]>()
+  const barGroups = new Map<BarMark, SVGGElement>()
+  const barGeometryKeys = new Map<BarMark, readonly unknown[]>()
+  const barStyleKeys = new Map<BarMark, readonly unknown[]>()
   const geometryKeys: (readonly unknown[])[] = []
   const styleKeys: (readonly unknown[] | undefined)[] = []
   let renderedMarks: PlotOptions['marks'] = []
@@ -410,15 +433,38 @@ function createPlotInternal(
       const oldStyles = styleKeys.splice(0)
       const claimed = new Set<number>()
       const staleBands = new Map(bandGroups)
+      const staleBars = new Map(barGroups)
       const matches = current.marks.map((mark) =>
         renderedMarks.findIndex(
           (previous) =>
             isBandMark(mark) === isBandMark(previous) &&
+            isBarMark(mark) === isBarMark(previous) &&
             (mark.id ? previous.id === mark.id : previous === mark),
         ),
       )
       for (const index of matches) if (index >= 0) claimed.add(index)
       current.marks.forEach((mark, index) => {
+        if (isBarMark(mark)) {
+          let group = barGroups.get(mark)
+          if (!group && mark.id) {
+            const previous = renderedMarks.find((entry) => isBarMark(entry) && entry.id === mark.id)
+            if (previous && isBarMark(previous)) {
+              group = barGroups.get(previous)
+              staleBars.delete(previous)
+            }
+          }
+          group ??= svgElement('g', { 'data-mark': 'bar' })
+          barGroups.set(mark, group)
+          if (mark.id) group.dataset.markId = mark.id
+          staleBars.delete(mark)
+          marksLayer.append(group)
+          linePaths[index] = undefined
+          areaPaths[index] = undefined
+          markerGroups[index] = undefined
+          geometryKeys[index] = []
+          styleKeys[index] = undefined
+          return
+        }
         if (isBandMark(mark)) {
           let group = bandGroups.get(mark)
           if (!group) {
@@ -463,6 +509,14 @@ function createPlotInternal(
         oldMarkers[index]?.remove()
       })
       for (const group of staleBands.values()) group.remove()
+      for (const group of staleBars.values()) group.remove()
+      for (const mark of barGroups.keys()) {
+        if (!current.marks.includes(mark)) {
+          barGroups.delete(mark)
+          barGeometryKeys.delete(mark)
+          barStyleKeys.delete(mark)
+        }
+      }
       for (const mark of bandGroups.keys()) {
         if (!current.marks.includes(mark)) {
           bandGroups.delete(mark)
@@ -475,6 +529,41 @@ function createPlotInternal(
     current.marks.forEach((mark, markIndex) => {
       const xScale = localScales[mark.x]
       const yScale = localScales[mark.y]
+      if (isBarMark(mark)) {
+        const config = mark.options.get().resolved
+        const key = [
+          barEndpoints(mark),
+          config.visible,
+          config.orientation,
+          config.scales.x,
+          config.scales.y,
+          config.interval?.start,
+          config.interval?.end,
+          config.width,
+          config.groupPadding,
+          config.layerPadding,
+          xScale,
+          yScale,
+          xScale.scale.domain.version,
+          yScale.scale.domain.version,
+          xScale.scale.options.version,
+          yScale.scale.options.version,
+          ...xScale.range.get(),
+          ...yScale.range.get(),
+        ]
+        const previous = barGeometryKeys.get(mark)
+        if (
+          key.length === previous?.length &&
+          key.every((value, index) => value === previous[index])
+        )
+          return
+        const group = barGroups.get(mark)
+        if (!group) throw new Error('Missing bar renderer.')
+        renderBars(group, mark, localScales)
+        barGeometryKeys.set(mark, key)
+        barStyleKeys.delete(mark)
+        return
+      }
       if (isBandMark(mark)) {
         const key = [
           mark,
@@ -490,8 +579,7 @@ function createPlotInternal(
         ]
         const previous = bandGeometryKeys.get(mark)
         if (
-          previous &&
-          key.length === previous.length &&
+          key.length === previous?.length &&
           key.every((value, index) => value === previous[index])
         ) {
           return
@@ -690,6 +778,16 @@ function createPlotInternal(
 
   function renderMarkStyles(current: PlotOptions, tokens: ThemeTokens) {
     current.marks.forEach((mark, markIndex) => {
+      if (isBarMark(mark)) {
+        const key = [mark.options.version, tokens.accent]
+        const previous = barStyleKeys.get(mark)
+        if (previous && key.every((value, index) => value === previous[index])) return
+        const group = barGroups.get(mark)
+        if (!group) throw new Error('Missing bar renderer.')
+        styleBars(group, mark, tokens.accent)
+        barStyleKeys.set(mark, key)
+        return
+      }
       if (isBandMark(mark)) {
         const key = [mark, mark.fill, mark.opacity, tokens.accent]
         const previous = bandStyleKeys.get(mark)
@@ -742,11 +840,20 @@ function createPlotInternal(
       }
     }
     for (const mark of current.marks) {
-      if (!isSeriesMark(mark) || markValidators.has(mark)) continue
+      if ((!isSeriesMark(mark) && !isBarMark(mark)) || markValidators.has(mark)) continue
       const markScope = scope.createScope()
-      const stopValidation = validateSeriesUpdates(mark, (candidate) =>
-        validatePlotMark(candidate, options.get().resolved, coordinateSystem, true),
-      )
+      const stopValidation = isBarMark(mark)
+        ? validateBarUpdates(mark, (candidate) => {
+            const current = options.get().resolved
+            validateBarScales(mark.data, candidate, current.scales)
+            const x = candidate.orientation === 'vertical' ? candidate.scales.x : candidate.scales.y
+            const y = candidate.orientation === 'vertical' ? candidate.scales.y : candidate.scales.x
+            if (direction(current, x) !== 'x' || direction(current, y) !== 'y')
+              throw new Error('Bar scale directions do not match its orientation.')
+          })
+        : validateSeriesUpdates(mark, (candidate) =>
+            validatePlotMark(candidate, options.get().resolved, coordinateSystem, true),
+          )
       markScope.run(() => {
         reactive.effect(() => {
           mark.options.get()
@@ -1043,6 +1150,10 @@ function createPlotInternal(
       bandGroups.clear()
       bandGeometryKeys.clear()
       bandStyleKeys.clear()
+      barGroups.forEach((group) => group.remove())
+      barGroups.clear()
+      barGeometryKeys.clear()
+      barStyleKeys.clear()
       geometryKeys.length = 0
       styleKeys.length = 0
       renderedMarks = []

@@ -2,6 +2,8 @@ import { autoscaleWindow, type ScaleHandle, type ScaleValue } from '../scales/sc
 import { isBandMark, type BandMark } from './band.js'
 import { isLineMark, type LineMark, type LineValue } from './line.js'
 import { isSeriesMark, type SeriesMark } from './series.js'
+import { isBarMark, type BarMark } from './bar.js'
+import { barExtent } from './bar-geometry.js'
 
 function valid(value: LineValue): value is ScaleValue {
   return typeof value === 'string' || (typeof value === 'number' && Number.isFinite(value))
@@ -14,7 +16,7 @@ function within(value: ScaleValue, domain: readonly ScaleValue[]) {
 }
 
 export function markExtents(
-  marks: readonly (LineMark | SeriesMark | BandMark)[],
+  marks: readonly (LineMark | SeriesMark | BandMark | BarMark)[],
   scales: Readonly<Record<string, ScaleHandle>>,
   name: string,
   mode: 'data' | 'visible',
@@ -30,6 +32,17 @@ export function markExtents(
     }
   }
   for (const mark of marks) {
+    if (isBarMark(mark)) {
+      const options = mark.options.get().resolved
+      const coordinate =
+        options.scales.x === name ? 'category' : options.scales.y === name ? 'value' : undefined
+      if (!coordinate) continue
+      const opposite = coordinate === 'category' ? options.scales.y : options.scales.x
+      const window = mode === 'visible' ? autoscaleWindow(scales[opposite]) : undefined
+      const extent = barExtent(mark, coordinate, window)
+      extent?.forEach(add)
+      continue
+    }
     if (isBandMark(mark)) {
       const coordinate = mark.x === name ? 'x' : mark.y === name ? 'y' : undefined
       if (!coordinate) continue
