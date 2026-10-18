@@ -1358,7 +1358,7 @@ observed.update({ line: { stroke: undefined }, markers: false })
   cached extents and visible-window acceleration remain future work; this foundation
   scans eligible samples without copying or re-ingesting canonical columns.
 
-### Phase 2 grouped/stacked bars and shared layout (implemented SVG foundation)
+### Phase 2 grouped/stacked bars and shared layout (implemented SVG/canvas foundation)
 
 - [Bars demo](./examples/v5-bars/index.html) compares grouped, implicit stacked,
   side-by-side named stacks and horizontal bars using one aligned table. Controls
@@ -1413,12 +1413,12 @@ observed.update({ line: { stroke: undefined }, markers: false })
 - Exact tests cover diverging endpoints, independent stack totals/gaps, union extents,
   hidden slots, reorder/reassignment/removal, resets, malformed input, atomic mutations,
   categorical/time geometry, horizontal/reversed scales, padding, culling, resizing,
-  visible autoscale, retained SVG identity and cleanup. Shared-boundary LOD, canvas,
-  interaction/tooltip/legend adapters, block indexes and
+  visible autoscale, retained SVG identity and cleanup. Interaction/tooltip/legend
+  adapters, block indexes and
   incremental table/stack updates remain separate roadmap work; this is not completion
   of every phase 2 exit gate.
 
-### Phase 2 stacked-area rendering (implemented SVG foundation)
+### Phase 2 stacked-area rendering (implemented SVG/canvas foundation)
 
 - [Stacked areas demo](./examples/v5-stacked-area/index.html) compares an implicit
   observed stack with independent named observed/forecast stacks over one aligned
@@ -1451,12 +1451,50 @@ observed.update({ line: { stroke: undefined }, markers: false })
   the window. Dense stacks use per-pixel LOD with one retained-index set per stack,
   shared by every layer boundary; bucket endpoints and boundary extrema, sign
   transitions, gaps and viewport neighbours are retained. Linear and step curves
-  use the same selected rows. Canvas and interaction/tooltip/legend adapters remain
+  use the same selected rows. Interaction/tooltip/legend adapters remain
   roadmap work, not claimed as completed phase 2 exit gates.
 - Browser tests cover exact diverging geometry, per-stack gaps, named paint order,
   shared endpoint identity with bars, visibility/reset/reassignment/removal, curves,
   viewport neighbours, reverse/resize, style-only reuse, live table mutations and
   retention, autoscale, atomic rejection and plot lifecycle cleanup.
+
+### Phase 2 composite canvas parity and visual fixtures (implemented)
+
+- `bar` (single, grouped, implicit/named stacked and horizontal) and `stackedArea`
+  accept `renderer: 'svg' | 'canvas'`. SVG remains the default;
+  `mark.update({ renderer: undefined })` restores it. Invalid renderers, including
+  `'auto'`, are rejected atomically. The bars and stacked-area demos expose a live
+  renderer selector; `?renderer=canvas` opens either demo in canvas mode.
+- Both renderers consume the same bar rectangles and stack endpoints. Areas use
+  the same per-stack retained rows, gap/sign/extrema preservation, paint order and
+  linear/step path geometry. Switching renderers does not copy/re-ingest canonical
+  columns or alter sample IDs, endpoints, visibility or autoscaling.
+- Each canvas mark owns a transparent, device-pixel-ratio-scaled canvas inside an
+  SVG `foreignObject`. Keeping it in the mark's keyed SVG group preserves mixed
+  SVG/canvas paint order and the shared plot clip, with SVG axes/grid/title unchanged.
+  Geometry updates cache `Path2D` objects; style-only updates repaint existing paths.
+  CSS colours/variables and `currentColor` resolve once per layer per repaint.
+  Fill opacity and stroke width/colour retain the SVG semantics (opacity affects
+  fill, not stroke). Watched theme changes and device-scale changes repaint canvas;
+  use the existing `themeElement` observer for live application CSS changes.
+  Removing/replacing/destroying marks releases their canvas buffers and references.
+- `npm run test:visual` now also checks grouped, implicit stacked, side-by-side
+  named-stack and horizontal bars; implicit and overlaid named-stack areas; and
+  a step-curve named-stack view after hiding a layer/restacking. Every state runs
+  in SVG and canvas in Chromium, Firefox and WebKit against checked-in references
+  under `test/visual/baselines/<browser>/`. Canvas pixels are embedded as PNG images
+  inside the reference SVG, so the gate tests actual canvas output, not invisible
+  SVG substitutes. The existing 0.1% changed-pixel limit still applies.
+- Browser tests compare canvas backing pixels exactly against the shared SVG
+  rectangle/path geometry, including diverging/zero/missing data, independent
+  named stacks, categorical/horizontal bars, interval culling, dense area LOD,
+  reverse/resize, visibility/restacking, retention, style-only reuse, renderer
+  resets, CSS/high-DPI repaint, mixed renderer order and lifecycle cleanup.
+- This completes the composite-renderer/fixture increment, not all phase 2 exit
+  gates: plot-wide renderer defaults, canvas for other marks, public SVG/PNG export,
+  composite hit testing/tooltips, legend-driven fixtures and element/Vue entry-point
+  parity remain their respective roadmap work. Raw SVG DOM serialization alone
+  does not capture live canvas bitmaps; the fixture harness explicitly embeds them.
 
 ### Target composed API
 

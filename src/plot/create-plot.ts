@@ -44,6 +44,7 @@ import {
   type StackedAreaMark,
 } from './stacked-area.js'
 import { renderStackedAreas, styleStackedAreas } from './render-stacked-areas.js'
+import { clearCompositeCanvas, watchCanvasPixelRatio } from './render-composite-canvas.js'
 
 type PlotMark = LineMark | SeriesMark | BandMark | BarMark | StackedAreaMark
 
@@ -557,8 +558,10 @@ function createPlotInternal(
         oldMarkers[index]?.remove()
       })
       for (const group of staleBands.values()) group.remove()
-      for (const group of staleBars.values()) group.remove()
-      for (const group of staleStackedAreas.values()) group.remove()
+      for (const group of [...staleBars.values(), ...staleStackedAreas.values()]) {
+        clearCompositeCanvas(group)
+        group.remove()
+      }
       for (const mark of stackedAreaGroups.keys()) {
         if (!current.marks.includes(mark)) {
           stackedAreaGroups.delete(mark)
@@ -589,6 +592,8 @@ function createPlotInternal(
         const config = mark.options.get().resolved
         const key = [
           stackedAreaEndpoints(mark),
+          config.renderer,
+          ...(config.renderer === 'canvas' ? [window.devicePixelRatio] : []),
           config.visible,
           config.curve,
           xScale,
@@ -618,6 +623,8 @@ function createPlotInternal(
         const config = mark.options.get().resolved
         const key = [
           barEndpoints(mark),
+          config.renderer,
+          ...(config.renderer === 'canvas' ? [window.devicePixelRatio] : []),
           config.visible,
           config.orientation,
           config.scales.x,
@@ -864,7 +871,10 @@ function createPlotInternal(
   function renderMarkStyles(current: PlotOptions, tokens: ThemeTokens) {
     current.marks.forEach((mark, markIndex) => {
       if (isStackedAreaMark(mark)) {
-        const key = [mark.options.version, tokens.accent]
+        const key = [
+          mark.options.version,
+          mark.options.get().resolved.renderer === 'canvas' ? tokens : tokens.accent,
+        ]
         const previous = stackedAreaStyleKeys.get(mark)
         if (previous && key.every((value, index) => value === previous[index])) return
         const group = stackedAreaGroups.get(mark)
@@ -874,7 +884,10 @@ function createPlotInternal(
         return
       }
       if (isBarMark(mark)) {
-        const key = [mark.options.version, tokens.accent]
+        const key = [
+          mark.options.version,
+          mark.options.get().resolved.renderer === 'canvas' ? tokens : tokens.accent,
+        ]
         const previous = barStyleKeys.get(mark)
         if (previous && key.every((value, index) => value === previous[index])) return
         const group = barGroups.get(mark)
@@ -1150,6 +1163,7 @@ function createPlotInternal(
   }
 
   reconcile()
+  const stopPixelRatio = watchCanvasPixelRatio(() => invalidate(render, DirtyLayer.marks))
   const stopSize = observeSize(host, (value) => {
     axisWidths.clear()
     measured.set(value)
@@ -1243,6 +1257,7 @@ function createPlotInternal(
       if (destroyed) return
       destroyed = true
       stopSize()
+      stopPixelRatio()
       stopTheme()
       for (const entry of bindings.values()) entry.stopExtents()
       scope.dispose()
@@ -1259,10 +1274,20 @@ function createPlotInternal(
       bandGroups.clear()
       bandGeometryKeys.clear()
       bandStyleKeys.clear()
-      barGroups.forEach((group) => group.remove())
+      barGroups.forEach((group) => {
+        clearCompositeCanvas(group)
+        group.remove()
+      })
       barGroups.clear()
       barGeometryKeys.clear()
       barStyleKeys.clear()
+      stackedAreaGroups.forEach((group) => {
+        clearCompositeCanvas(group)
+        group.remove()
+      })
+      stackedAreaGroups.clear()
+      stackedAreaGeometryKeys.clear()
+      stackedAreaStyleKeys.clear()
       geometryKeys.length = 0
       styleKeys.length = 0
       renderedMarks = []

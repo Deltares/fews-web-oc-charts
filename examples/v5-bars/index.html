@@ -14,12 +14,19 @@
     </nav>
     <h1>v5: grouped and stacked bars</h1>
     <p>
-      Four SVG plots share one aligned table of irregular time intervals. Positive and negative
-      values accumulate independently. A missing visible layer gaps only its own stack; hiding it
-      repairs that stack. Grouped layers and named stacks keep their slots when hidden.
+      Four SVG/canvas plots share one aligned table of irregular time intervals. Positive and
+      negative values accumulate independently. A missing visible layer gaps only its own stack;
+      hiding it repairs that stack. Grouped layers and named stacks keep their slots when hidden.
     </p>
     <fieldset class="controls" aria-label="Bar options">
       <legend>Update retained handles</legend>
+      <label
+        >Renderer
+        <select id="renderer">
+          <option value="svg">SVG</option>
+          <option value="canvas">Canvas</option>
+        </select></label
+      >
       <label><input id="lateral" type="checkbox" checked /> Observed lateral inflow</label>
       <label><input id="forecast" type="checkbox" checked /> Forecast stack</label>
       <label><input id="reverse" type="checkbox" /> Reverse time scale</label>
@@ -49,7 +56,7 @@
       The table owns its columns. Appends update all four plots and retain the newest eight
       intervals. Layer visibility and ordering change derived endpoints without changing source
       values. These controls exercise the public mark API, not a built-in legend or hit testing. See
-      the stacked areas example for shared area boundaries. Canvas remains separate work.
+      the stacked areas example for shared area boundaries. Switch renderers without replacing data.
     </p>
     <h2>Public API</h2>
     <pre><code>const flows = createTable({ t, end, upstream, lateral })
@@ -67,6 +74,7 @@ const bars = bar(flows, {
 // Use layout: 'grouped' (without stack IDs) for independent layer slots.
 // Horizontal bars keep scales.x as the category binding and scales.y as value.
 bars.update({ groupPadding: 0.2 })
+bars.update({ renderer: 'canvas' }) // undefined restores SVG
 flows.append({ t: [nextStart], end: [nextEnd], upstream: [6], lateral: [-2] })</code></pre>
     <script type="module" src="./v5-bars.ts"></script>
   </body>

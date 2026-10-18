@@ -20,6 +20,7 @@ import {
 export interface StackedAreaLayer extends CompositeLayer {}
 
 export interface StackedAreaOptions {
+  renderer: 'svg' | 'canvas'
   id?: string
   x: string
   scales: { x: string; y: string }
@@ -89,6 +90,7 @@ export function stackedArea(
 ): StackedAreaMark {
   if (!data || !isTableStore(data)) throw new TypeError('stackedArea requires a createTable store.')
   const keys = [
+    'renderer',
     'id',
     'x',
     'scales',
@@ -106,6 +108,7 @@ export function stackedArea(
   if (initial.layers === undefined) throw new Error('stackedArea requires layers.')
   const state = createOptionState<StackedAreaOptions>(initial, {
     defaults: () => ({
+      renderer: 'svg',
       x: '',
       scales: { x: '', y: '' },
       layers: [],
@@ -116,6 +119,8 @@ export function stackedArea(
       strokeWidth: 0,
     }),
     validate(options) {
+      if (options.renderer !== 'svg' && options.renderer !== 'canvas')
+        throw new Error('stackedArea.renderer must be svg or canvas.')
       if (options.id !== undefined && (typeof options.id !== 'string' || !options.id))
         throw new Error('stackedArea.id must be a non-empty string.')
       if (typeof options.x !== 'string' || !options.x)

@@ -15,6 +15,24 @@ const fixtures = [
     period: 'fall',
     statusIncludes: '2026-10-25',
   },
+  ...['svg', 'canvas'].flatMap((renderer) => [
+    ...['grouped', 'stacked', 'named', 'horizontal'].map((kind) => ({
+      name: `${kind}-bars-${renderer}`,
+      route: `/examples/v5-bars/?renderer=${renderer}`,
+      selector: `#${kind}`,
+    })),
+    ...['implicit', 'named'].map((kind) => ({
+      name: `${kind}-areas-${renderer}`,
+      route: `/examples/v5-stacked-area/?renderer=${renderer}`,
+      selector: `#${kind}`,
+    })),
+    {
+      name: `named-areas-step-restacked-${renderer}`,
+      route: `/examples/v5-stacked-area/?renderer=${renderer}`,
+      selector: '#named',
+      restack: true,
+    },
+  ]),
 ]
 const computedStyleProperties = [
   'display',
@@ -129,7 +147,7 @@ const server = await createServer({
       '@shared': path.join(root, 'examples/shared'),
     },
   },
-  server: { host: '127.0.0.1', port: 0 },
+  server: { host: '127.0.0.1', port: 0, watch: null, hmr: false },
   appType: 'mpa',
 })
 
@@ -160,6 +178,11 @@ try {
             '*,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important}',
         })
         await waitForStablePlot(page, fixture.selector)
+        if (fixture.restack) {
+          await page.locator('#lateral').uncheck()
+          await page.locator('#step').check()
+          await waitForStablePlot(page, fixture.selector)
+        }
 
         const baselinePath = path.join(
           root,
@@ -185,6 +208,18 @@ try {
               for (const property of styleProperties) {
                 snapshot.style.setProperty(property, computed.getPropertyValue(property))
               }
+              const canvases = svg.querySelectorAll('foreignObject canvas')
+              snapshot.querySelectorAll('foreignObject').forEach((foreign, index) => {
+                const canvas = canvases[index]
+                if (!(canvas instanceof HTMLCanvasElement))
+                  throw new Error('Missing canvas for visual snapshot.')
+                const image = document.createElementNS('http://www.w3.org/2000/svg', 'image')
+                for (const attribute of ['x', 'y', 'width', 'height']) {
+                  image.setAttribute(attribute, foreign.getAttribute(attribute) ?? '0')
+                }
+                image.setAttribute('href', canvas.toDataURL('image/png'))
+                foreign.replaceWith(image)
+              })
               return new XMLSerializer().serializeToString(snapshot)
             }, computedStyleProperties),
         )

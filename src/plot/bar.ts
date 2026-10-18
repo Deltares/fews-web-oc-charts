@@ -19,6 +19,7 @@ import {
 
 export interface BarLayer extends CompositeLayer {}
 export interface BarOptions {
+  renderer: 'svg' | 'canvas'
   id?: string
   x: string
   y?: string
@@ -127,6 +128,7 @@ export function validateBarScales(
 export function bar(data: TableStore, initial: OptionPatch<BarOptions>): BarMark {
   if (!data || !isTableStore(data)) throw new TypeError('bar requires a createTable store.')
   const keys = [
+    'renderer',
     'id',
     'x',
     'y',
@@ -147,6 +149,8 @@ export function bar(data: TableStore, initial: OptionPatch<BarOptions>): BarMark
   ]
   const consumers = new Set<(options: Readonly<BarOptions>) => void>()
   function validate(options: Readonly<BarOptions>) {
+    if (options.renderer !== 'svg' && options.renderer !== 'canvas')
+      throw new Error('bar.renderer must be svg or canvas.')
     if (options.id !== undefined && (typeof options.id !== 'string' || !options.id))
       throw new Error('bar.id must be a non-empty string.')
     if (typeof options.x !== 'string' || !options.x)
@@ -197,6 +201,7 @@ export function bar(data: TableStore, initial: OptionPatch<BarOptions>): BarMark
   validateKeys(initial, keys, 'bar')
   const state = createOptionState<BarOptions>(initial, {
     defaults: () => ({
+      renderer: 'svg',
       x: '',
       scales: { x: '', y: '' },
       orientation: 'vertical',
