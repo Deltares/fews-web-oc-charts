@@ -53,6 +53,8 @@ export type {
   PixelRange,
   ScaleKind,
   PolarDirection,
+  AutoscalePolicy,
+  AutoscaleContext,
 } from './scales/scale.js'
 export { layout } from './layout/layout.js'
 export type { PlotLayout, Size, Margins, Region, AxisMeasure } from './layout/layout.js'

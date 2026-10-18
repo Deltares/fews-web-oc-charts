@@ -12,9 +12,20 @@ export type ScaleRange = readonly [number, number]
 export type PixelRange = ScaleRange
 export type PolarDirection = 'clockwise' | 'anticlockwise'
 
+export interface AutoscaleContext {
+  readonly kind: ScaleKind
+  readonly data: readonly ScaleValue[] | undefined
+  readonly visible: readonly ScaleValue[] | undefined
+  readonly defaultDomain: readonly ScaleValue[]
+}
+
+export type AutoscalePolicy =
+  'data' | 'visible' | 'fixed' | ((context: AutoscaleContext) => readonly ScaleValue[] | undefined)
+
 export interface ScaleOptions {
   domain?: readonly ScaleValue[]
   defaultDomain: readonly ScaleValue[]
+  autoscale: AutoscalePolicy
   reverse: boolean
   nice: boolean
   includeZero: boolean
@@ -58,6 +69,23 @@ export interface ScaleBinding {
 }
 
 const handles = new WeakSet<object>()
+type ExtentSource = (mode: 'data' | 'visible') => readonly ScaleValue[] | undefined
+const extentSources = new WeakMap<ScaleHandle, (source: ExtentSource) => () => void>()
+const dataDomains = new WeakMap<ScaleHandle, () => readonly ScaleValue[]>()
+
+export function registerScaleExtents(scale: ScaleHandle, source: ExtentSource): () => void {
+  const register = extentSources.get(scale)
+  if (!register) throw new Error('Expected a scale handle.')
+  return register(source)
+}
+
+export function autoscaleWindow(scale: ScaleHandle): readonly ScaleValue[] {
+  const config = scale.options.get().resolved
+  // Two visible policies use data windows rather than recursively constraining each other.
+  return config.domain === undefined && config.autoscale === 'visible'
+    ? dataDomains.get(scale)!()
+    : scale.domain.get()
+}
 
 export function isScaleHandle(value: object): value is ScaleHandle {
   return handles.has(value)
@@ -68,33 +96,41 @@ function equalDomain(left: readonly ScaleValue[], right: readonly ScaleValue[]) 
 }
 
 function createScale(kind: ScaleKind, initial: OptionPatch<ScaleOptions>): ScaleHandle {
-  function validate(options: Readonly<ScaleOptions>) {
-    for (const key of ['domain', 'defaultDomain'] as const) {
-      if (options[key] !== undefined && !Array.isArray(options[key])) {
-        throw new Error(`scale.${key} must be an array.`)
-      }
-    }
-    const values = options.domain ?? options.defaultDomain
-    if (!Array.isArray(values)) throw new Error('scale.domain must be an array.')
+  function validateDomain(values: readonly ScaleValue[], path: string) {
+    if (!Array.isArray(values)) throw new Error(`${path} must be an array.`)
     if (kind === 'band') {
       if (
         values.some((value) => typeof value !== 'string') ||
         new Set(values).size !== values.length
       ) {
-        throw new Error('scale.domain must contain unique strings for a band scale.')
+        throw new Error(`${path} must contain unique strings for a band scale.`)
       }
     } else if (
       values.length !== 2 ||
       values.some((value) => typeof value !== 'number' || !Number.isFinite(value)) ||
       Number(values[0]) > Number(values[1])
     ) {
-      throw new Error('scale.domain must be an ascending pair of finite numbers.')
+      throw new Error(`${path} must be an ascending pair of finite numbers.`)
     }
     if (kind === 'radial' && values.some((value) => Number(value) < 0)) {
-      throw new Error('radial.domain must contain nonnegative values.')
+      throw new Error(`${path.replace('scale.', 'radial.')} must contain nonnegative values.`)
     }
     if (kind === 'time' && values.some((value) => Math.abs(Number(value)) > 8.64e15)) {
-      throw new Error('scale.domain must be within the JavaScript Date range.')
+      throw new Error(`${path} must be within the JavaScript Date range.`)
+    }
+  }
+
+  function validate(options: Readonly<ScaleOptions>) {
+    for (const key of ['domain', 'defaultDomain'] as const) {
+      if (key === 'defaultDomain' || options[key] !== undefined) {
+        validateDomain(options[key]!, `scale.${key}`)
+      }
+    }
+    if (
+      typeof options.autoscale !== 'function' &&
+      !['data', 'visible', 'fixed'].includes(options.autoscale)
+    ) {
+      throw new Error('scale.autoscale must be data, visible, fixed or a function.')
     }
     for (const key of ['reverse', 'nice', 'includeZero', 'symmetric'] as const) {
       if (typeof options[key] !== 'boolean') throw new Error(`scale.${key} must be boolean.`)
@@ -132,6 +168,7 @@ function createScale(kind: ScaleKind, initial: OptionPatch<ScaleOptions>): Scale
   const defaults = (): ScaleOptions => ({
     defaultDomain:
       kind === 'band' ? [] : kind === 'degrees' || kind === 'angular' ? [0, 360] : [0, 1],
+    autoscale: kind === 'degrees' || kind === 'angular' ? 'fixed' : 'data',
     reverse: false,
     nice: false,
     includeZero: false,
@@ -149,11 +186,21 @@ function createScale(kind: ScaleKind, initial: OptionPatch<ScaleOptions>): Scale
   const state = createOptionState<ScaleOptions>(initial, { defaults, validate })
   const optionState = optionSignal(state)
   const options = optionState.snapshot
-  function resolveDomain(config: Readonly<ScaleOptions>): readonly ScaleValue[] {
-    const source = config.domain ?? config.defaultDomain
+  function resolveDomain(
+    config: Readonly<ScaleOptions>,
+    source = config.domain ?? config.defaultDomain,
+    fromData = false,
+  ): readonly ScaleValue[] {
+    validateDomain(source, 'scale.domain')
     if (kind === 'band') return Object.freeze([...source])
     let low = Number(source[0])
     let high = Number(source[1])
+    if (fromData && low === high) {
+      const delta = kind === 'time' ? 1 : Math.max(Math.abs(low) * 0.01, 1)
+      const limit = kind === 'time' ? 8.64e15 : Number.MAX_VALUE
+      low = Math.max(-limit, low - delta)
+      high = Math.min(limit, high + delta)
+    }
     if (config.includeZero) {
       low = Math.min(low, 0)
       high = Math.max(high, 0)
@@ -162,7 +209,7 @@ function createScale(kind: ScaleKind, initial: OptionPatch<ScaleOptions>): Scale
       high = Math.max(Math.abs(low), Math.abs(high))
       low = -high
     }
-    const pad = (high - low) * config.padding
+    const pad = config.padding === 0 ? 0 : (high - low) * config.padding
     low = kind === 'radial' ? Math.max(0, low - pad) : low - pad
     high += pad
     const numeric =
@@ -178,7 +225,46 @@ function createScale(kind: ScaleKind, initial: OptionPatch<ScaleOptions>): Scale
     }
     return Object.freeze(result)
   }
-  const domain = reactive.computed(() => resolveDomain(options.get().resolved), equalDomain)
+  const sources = new Set<ExtentSource>()
+  const sourceVersion = reactive.signal(0)
+  function union(mode: 'data' | 'visible'): readonly ScaleValue[] | undefined {
+    sourceVersion.get()
+    const categories = new Set<string>()
+    let low = Infinity
+    let high = -Infinity
+    for (const source of sources) {
+      const extent = source(mode)
+      if (!extent) continue
+      if (kind === 'band') {
+        for (const value of extent) categories.add(String(value))
+      } else {
+        low = Math.min(low, Number(extent[0]))
+        high = Math.max(high, Number(extent[1]))
+      }
+    }
+    if (kind === 'band') return categories.size ? Object.freeze([...categories]) : undefined
+    return low <= high ? Object.freeze([low, high]) : undefined
+  }
+  function automaticDomain(config: Readonly<ScaleOptions>, policy = config.autoscale) {
+    if (config.domain !== undefined || policy === 'fixed') return resolveDomain(config)
+    const extent =
+      typeof policy === 'function'
+        ? policy(
+            Object.freeze({
+              kind,
+              get data() {
+                return union('data')
+              },
+              get visible() {
+                return union('visible')
+              },
+              defaultDomain: config.defaultDomain,
+            }),
+          )
+        : union(policy)
+    return resolveDomain(config, extent ?? config.defaultDomain, extent !== undefined)
+  }
+  const domain = reactive.computed(() => automaticDomain(options.get().resolved), equalDomain)
   const handle: ScaleHandle = {
     kind,
     options,
@@ -196,6 +282,18 @@ function createScale(kind: ScaleKind, initial: OptionPatch<ScaleOptions>): Scale
     },
   }
   handles.add(handle)
+  extentSources.set(handle, (source) => {
+    sources.add(source)
+    sourceVersion.update((value) => value + 1)
+    return () => {
+      if (sources.delete(source)) {
+        sourceVersion.update((value) => value + 1)
+        // Release subscriptions to stores/options owned by the removed plot.
+        reactive.untracked(() => domain.get())
+      }
+    }
+  })
+  dataDomains.set(handle, () => automaticDomain(options.get().resolved, 'data'))
   return Object.freeze(handle)
 }
 

@@ -34,12 +34,12 @@ const observed = series(data, {
   area: showArea.checked ? { to: 0, fill: '#1677a6', opacity: 0.18 } : false,
 })
 
-const t = time({ domain: [start, start + 18 * hour], timeZone: 'UTC' })
+const t = time({ timeZone: 'UTC' })
 const plot = createPlot(host, {
   title: 'Observed discharge',
   scales: {
     t,
-    q: linear({ domain: [0, 80], includeZero: true }),
+    q: linear({ autoscale: 'visible', includeZero: true, nice: true }),
   },
   axes: [
     axis('t', { position: 'bottom', label: 'Time (UTC)', tickCount: 5 }),
@@ -69,7 +69,6 @@ appendButton.addEventListener(
     const next = data.xAt(data.length - 1) + hour
     const index = (next - start) / hour
     data.append({ x: [next], y: [24 + 13 * Math.sin(index / 2.3) + index * 0.6] })
-    t.domain.set([data.xAt(0), next])
   },
   events,
 )
@@ -77,7 +76,6 @@ replaceButton.addEventListener(
   'click',
   () => {
     data.replace({ x: times, y: discharge })
-    t.domain.set([start, start + 18 * hour])
   },
   events,
 )
