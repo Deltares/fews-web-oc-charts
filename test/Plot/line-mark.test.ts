@@ -42,6 +42,18 @@ afterEach(() => {
 })
 
 describe('static line marks', () => {
+  test('normalizes and validates the line visibility flag', () => {
+    const options = { x: 'x', y: 'y', xValues: [0, 1], yValues: [1, 2] }
+    expect(line(options).line).toBe(true)
+    expect(line({ ...options, line: undefined }).line).toBe(true)
+    expect(line({ ...options, line: true }).line).toBe(true)
+    expect(line({ ...options, line: false }).line).toBe(false)
+    for (const value of [null, 0, 'false', {}]) {
+      // @ts-expect-error Invalid flags must also fail for JavaScript callers.
+      expect(() => line({ ...options, line: value })).toThrow(/line.line must be a boolean/)
+    }
+  })
+
   test('updates theme and colour attributes without projecting points or rewriting paths', async () => {
     const element = host()
     const current = plot(element, {
@@ -183,6 +195,7 @@ describe('static line marks', () => {
     const second = paths[1]
     if (!first || !second) throw new Error('Expected both line marks to render.')
     expect(first.getAttribute('data-mark-id')).toBe('discharge')
+    expect(first.getAttribute('display')).toBe('')
     expect(first.getAttribute('stroke')).toBe('#1677a6')
     expect(first.getAttribute('d')).toBe(
       `M${current.scales.t.project(0)},${current.scales.q.project(0)}` +

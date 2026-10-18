@@ -1228,7 +1228,9 @@ simplification, not a new renderer or plugin API: phase 2 polar marks, phase 3 h
 and phase 6 wind/current roses remain in their respective phases.
 The minimal cartesian `line()` mark renders aligned
 array-like x/y values against named x/y scales, preserves gaps, and is clipped to the
-plot region. Plot configuration synchronously rejects non-gap values that do not match
+plot region. Its boolean `line` option defaults to `true`; `line: false` hides the
+stroke while retaining configured markers and area. Marks with no enabled line,
+markers or area do not contribute autoscale extents. Plot configuration synchronously rejects non-gap values that do not match
 their bound scale kind (strings for band scales, numbers otherwise). It is a static fixture primitive: replace the mark to change its values;
 polar marks and interaction APIs follow in
 their respective phases. The deterministic per-engine visual regression gate remains
