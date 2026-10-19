@@ -4,7 +4,7 @@ import { isAxisHandle, type AxisHandle, type AxisOptions, type AxisSide } from '
 import { coordinateAdapter } from './coordinate-system.js'
 import type { CoordinateSystem, MarkValidationContext, Orientation } from './mark-definition.js'
 import { findMarkDefinition, supportedMarks, type PlotMark } from './marks.js'
-import { isZoomHandle } from './zoom.js'
+import { validatePlugins } from './plugins.js'
 import type { PlotConfig, PlotOptions } from './create-plot.js'
 
 const optionKeys = [
@@ -72,15 +72,7 @@ function validatePlotCollections(
   if (!Array.isArray(options.axes)) throw new Error('plot.axes must be an array.')
   if (!Array.isArray(options.marks)) throw new Error('plot.marks must be an array.')
   if (!Array.isArray(options.plugins)) throw new Error('plot.plugins must be an array.')
-  if (options.plugins.some((plugin) => !isZoomHandle(plugin))) {
-    throw new Error('plot.plugins must contain zoom handles.')
-  }
-  if (options.plugins.length > 1) {
-    throw new Error('A plot can install at most one zoom plugin.')
-  }
-  if (coordinateSystem !== 'cartesian' && options.plugins.length > 0) {
-    throw new Error('The zoom plugin currently supports Cartesian plots only.')
-  }
+  validatePlugins(options.plugins, { coordinateSystem, plugins: options.plugins })
   for (const key of ['scales', 'directions'] as const) {
     const value = options[key]
     if (!value || typeof value !== 'object' || Array.isArray(value)) {

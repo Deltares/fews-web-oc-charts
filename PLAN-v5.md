@@ -1943,6 +1943,12 @@ The [v5 zoom example](./examples/v5-zoom/index.html) demonstrates the public API
 live option updates. The current zoom plugin supports Cartesian plots; drag-zoom, pan and
 brush are later Phase 3 work.
 
+Plugins are installed by a plugin host that reconciles `plot.plugins` by handle
+identity. Each built-in plugin registers a `PluginDefinition` (`is`, `validate`,
+`install`) in `src/plot/plugins.ts` and receives a read-only `PlotContext` with
+its own reactive scope. Gesture handlers it registers through the plot's single
+pointer hub are released automatically on removal or plot destruction.
+
 ## 8. Additional improvements to consider
 
 - **Missing-value & quality flags**: render gaps, flag-based styling (FEWS flags/doubtful
