@@ -3,8 +3,11 @@ import { axis, createSkewTPlot, line, linearScale, logScale } from '@lib'
 
 const host = document.querySelector<HTMLElement>('#chart')
 const skew = document.querySelector<HTMLInputElement>('#skew')
+const skewNumber = document.querySelector<HTMLInputElement>('#skew-number')
 const readout = document.querySelector<HTMLOutputElement>('#readout')
-if (!host || !skew || !readout) throw new Error('The skew-T example is missing its controls.')
+if (!host || !skew || !skewNumber || !readout) {
+  throw new Error('The skew-T example is missing its controls.')
+}
 
 const pressure = [1000, 925, 850, 700, 600, 500, 400, 300, 250, 200, 150, 100]
 const temperature = [24, 19, 14, 4, -4, -14, -25, -40, -49, -56, -62, -66]
@@ -52,7 +55,18 @@ const plot = createSkewTPlot(host, {
 })
 
 const events = new AbortController()
-skew.addEventListener('input', () => plot.update({ skewT: { skew: Number(skew.value) } }), events)
+for (const input of [skew, skewNumber]) {
+  input.addEventListener(
+    'input',
+    () => {
+      if (!input.reportValidity()) return
+      const value = input.valueAsNumber
+      plot.update({ skewT: { skew: value } })
+      skew.value = skewNumber.value = String(value)
+    },
+    events,
+  )
+}
 plot.element.addEventListener(
   'pointermove',
   (event) => {
