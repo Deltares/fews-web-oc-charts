@@ -308,6 +308,69 @@ describe('createPlot named scales', () => {
     expect(x.domain.get()).toEqual([0, 100])
   })
 
+  test('attaches gesture listeners only while a zoom plugin is installed', () => {
+    const added = vi.spyOn(SVGSVGElement.prototype, 'addEventListener')
+    const removed = vi.spyOn(SVGSVGElement.prototype, 'removeEventListener')
+    const gestureTypes = (spy: typeof added | typeof removed) =>
+      spy.mock.calls.map(([type]) => type).filter((type) => type === 'wheel' || type === 'dblclick')
+    const current = plot(host(), {
+      directions: { x: 'x' },
+      scales: { x: linearScale({ domain: [0, 100] }) },
+    })
+    expect(gestureTypes(added)).toEqual([])
+
+    current.update({ plugins: [zoom({ wheel: 'x' })] })
+    expect(gestureTypes(added)).toEqual(['wheel', 'dblclick'])
+    expect(added.mock.calls.find(([type]) => type === 'wheel')?.[2]).toEqual({ passive: false })
+
+    current.update({ plugins: [] })
+    expect(gestureTypes(removed)).toEqual(['wheel', 'dblclick'])
+  })
+
+  test('releases zoom listeners when the plot is destroyed', async () => {
+    const current = plot(host(), {
+      directions: { x: 'x' },
+      scales: { x: linearScale({ domain: [0, 100] }) },
+      plugins: [zoom({ wheel: 'x' })],
+    })
+    await frame()
+    const removed = vi.spyOn(current.element, 'removeEventListener')
+    current.destroy()
+    const types = removed.mock.calls.map(([type]) => type)
+    expect(types).toEqual(expect.arrayContaining(['wheel', 'dblclick']))
+  })
+
+  test('ignores zoom gestures outside the plot region', async () => {
+    const x = linearScale({ domain: [0, 100] })
+    const current = plot(host(), {
+      width: 500,
+      height: 300,
+      directions: { x: 'x' },
+      scales: { x },
+      plugins: [zoom({ wheel: 'x', reset: 'full' })],
+    })
+    await frame()
+    vi.spyOn(current.element, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 500, 300))
+    const region = current.regions.get().plot
+    const wheel = new WheelEvent('wheel', {
+      clientX: region.x - 2,
+      clientY: 150,
+      deltaY: -100,
+      cancelable: true,
+    })
+    current.element.dispatchEvent(wheel)
+    expect(wheel.defaultPrevented).toBe(false)
+    expect(x.domain.get()).toEqual([0, 100])
+    const doubleClick = new MouseEvent('dblclick', {
+      clientX: region.x - 2,
+      clientY: 150,
+      button: 0,
+      cancelable: true,
+    })
+    current.element.dispatchEvent(doubleClick)
+    expect(doubleClick.defaultPrevented).toBe(false)
+  })
+
   test('supports y-only zoom over an autoscaled visible-data domain', async () => {
     const x = linearScale({ domain: [0, 2] })
     const y = linearScale({ autoscale: 'visible', defaultDomain: [0, 100] })

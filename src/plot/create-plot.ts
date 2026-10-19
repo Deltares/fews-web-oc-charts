@@ -22,7 +22,6 @@ import { svgElement, renderAxes, renderPolarAxes, axisTickLabels } from './rende
 import { arc } from 'd3'
 import { projectPolarPoint } from './polar-geometry.js'
 import { watchCanvasPixelRatio } from './render-composite-canvas.js'
-import { coordinateAdapter } from './coordinate-system.js'
 import type {
   CoordinateSystem,
   MarkDefinition,
@@ -41,6 +40,9 @@ import {
 } from './skew-t-geometry.js'
 import { renderSkewTAxes } from './render-skew-t-axes.js'
 import { createScaleBindings } from './scale-bindings.js'
+import { createPointerHub, type PlotPointer } from './pointer-hub.js'
+
+export type { PlotPointer } from './pointer-hub.js'
 import {
   direction,
   marginKeys,
@@ -103,13 +105,6 @@ export interface Plot {
   update(patch: PlotConfig): void
   setConfig(config: PlotConfig): void
   destroy(): void
-}
-
-export interface PlotPointer {
-  readonly px: number
-  readonly py: number
-  readonly x: ReadonlyMap<string, ScaleValue>
-  readonly inside: boolean
 }
 
 export interface PolarPoint {
@@ -192,9 +187,6 @@ function createPlotInternal(
   )
   const size = reactive.signal<Readonly<Size>>(Object.freeze({ width: 0, height: 0 }))
   const regions = reactive.signal(layout({ width: 0, height: 0 }))
-  const pointer = reactive.signal<PlotPointer>(
-    Object.freeze({ px: 0, py: 0, x: new Map(), inside: false }),
-  )
   const initialThemeMode = options.get().resolved.theme
   const theme = reactive.signal(
     resolveTheme(host, initialThemeMode, matchMedia('(prefers-color-scheme: dark)').matches),
@@ -246,8 +238,7 @@ function createPlotInternal(
   let allMarksDirty = false
   type MountedZoom = {
     handle: ZoomHandle
-    onWheel(event: WheelEvent): void
-    onDoubleClick(event: MouseEvent): void
+    stop(): void
     initialDomains: ReadonlyMap<
       string,
       { scale: ScaleHandle; domain: readonly ScaleValue[] | undefined }
@@ -257,6 +248,14 @@ function createPlotInternal(
   }
   let mountedZoom: MountedZoom | undefined
   element.append(background, polarBackground, definitions, gridLayer, marksLayer, axesLayer, title)
+  const pointerHub = createPointerHub({
+    element,
+    coordinateSystem,
+    size,
+    regions,
+    scales: () => scaleBindings.scales,
+    options: () => options.get().resolved,
+  })
 
   function mountMarks(marks: readonly PlotMark[]) {
     if (
@@ -317,8 +316,7 @@ function createPlotInternal(
 
   function removeZoom() {
     if (!mountedZoom) return
-    element.removeEventListener('wheel', mountedZoom.onWheel)
-    element.removeEventListener('dblclick', mountedZoom.onDoubleClick)
+    mountedZoom.stop()
     mountedZoom = undefined
   }
 
@@ -338,27 +336,13 @@ function createPlotInternal(
       initialDomains,
       toggledDomains: new Map(),
       toggled: false,
-      onWheel: () => {},
-      onDoubleClick: () => {},
+      stop: () => {},
     }
-    installed.onWheel = (event) => {
+    const onWheel = (event: WheelEvent) => {
       const config = handle.options.get().resolved
       if (config.wheel === 'none' || !matchesModifierKey(event, config.modifier)) return
-      const rect = element.getBoundingClientRect()
-      const actualSize = size.get()
-      if (rect.width <= 0 || rect.height <= 0 || actualSize.width <= 0 || actualSize.height <= 0)
-        return
-      const svgX = ((event.clientX - rect.left) / rect.width) * actualSize.width
-      const svgY = ((event.clientY - rect.top) / rect.height) * actualSize.height
-      const region = regions.get().plot
-      if (
-        svgX < region.x ||
-        svgY < region.y ||
-        svgX > region.x + region.width ||
-        svgY > region.y + region.height
-      ) {
-        return
-      }
+      const position = pointerHub.locate(event)
+      if (!position?.inside) return
       const activeAxes = new Set<'x' | 'y'>()
       if (config.mode.includes('x') && config.wheel.includes('x')) activeAxes.add('x')
       if (config.mode.includes('y') && config.wheel.includes('y')) activeAxes.add('y')
@@ -380,7 +364,7 @@ function createPlotInternal(
         ) {
           continue
         }
-        const pixel = orientation === 'x' ? svgX : svgY
+        const pixel = orientation === 'x' ? position.svgX : position.svgY
         const anchor = binding.invert(pixel)
         const domain = binding.scale.domain.get()
         const low = Number(domain[0])
@@ -406,22 +390,10 @@ function createPlotInternal(
         installed.toggled = false
       }
     }
-    installed.onDoubleClick = (event) => {
+    const onDoubleClick = (event: MouseEvent) => {
       if (event.button !== 0) return
       const config = handle.options.get().resolved
-      const region = regions.get().plot
-      const rect = element.getBoundingClientRect()
-      if (rect.width <= 0 || rect.height <= 0) return
-      const svgX = ((event.clientX - rect.left) / rect.width) * size.get().width
-      const svgY = ((event.clientY - rect.top) / rect.height) * size.get().height
-      if (
-        svgX < region.x ||
-        svgY < region.y ||
-        svgX > region.x + region.width ||
-        svgY > region.y + region.height
-      ) {
-        return
-      }
+      if (!pointerHub.locate(event)?.inside) return
       const currentOptions = options.get().resolved
       for (const [name, binding] of Object.entries(scaleBindings.scales)) {
         const orientation = direction(currentOptions, name, undefined, undefined, coordinateSystem)
@@ -449,9 +421,13 @@ function createPlotInternal(
       installed.toggled = config.reset === 'toggle' && !installed.toggled
       event.preventDefault()
     }
+    const stopWheel = pointerHub.on('wheel', onWheel)
+    const stopDoubleClick = pointerHub.on('dblclick', onDoubleClick)
+    installed.stop = () => {
+      stopWheel()
+      stopDoubleClick()
+    }
     mountedZoom = installed
-    element.addEventListener('wheel', installed.onWheel, { passive: false })
-    element.addEventListener('dblclick', installed.onDoubleClick)
   }
 
   function reconcile() {
@@ -821,62 +797,13 @@ function createPlotInternal(
     reconcile()
   }
 
-  let pointerFrame: number | undefined
-  let pendingPointer: { clientX: number; clientY: number; inside: boolean } | undefined
-  function publishPointer() {
-    pointerFrame = undefined
-    const pending = pendingPointer
-    pendingPointer = undefined
-    if (!pending || destroyed) return
-    const rect = element.getBoundingClientRect()
-    const actualSize = size.get()
-    const plotRegion = regions.get().plot
-    if (rect.width <= 0 || rect.height <= 0 || actualSize.width <= 0 || actualSize.height <= 0) {
-      pointer.set(Object.freeze({ px: 0, py: 0, x: new Map(), inside: false }))
-      return
-    }
-    const svgX = ((pending.clientX - rect.left) / rect.width) * actualSize.width
-    const svgY = ((pending.clientY - rect.top) / rect.height) * actualSize.height
-    const px = svgX - plotRegion.x
-    const py = svgY - plotRegion.y
-    const inside =
-      pending.inside && px >= 0 && py >= 0 && px <= plotRegion.width && py <= plotRegion.height
-    const current = options.get().resolved
-    const values = coordinateAdapter(coordinateSystem).invertPointer({
-      svgX,
-      svgY,
-      plotX: px,
-      plotY: py,
-      region: plotRegion,
-      scales: scaleBindings.scales,
-      skew: current.skewT?.skew,
-      direction: (name) => direction(current, name, undefined, undefined, coordinateSystem),
-    })
-    pointer.set(Object.freeze({ px, py, x: values, inside }))
-  }
-  function queuePointer(event: PointerEvent, inside: boolean) {
-    if (!event.isPrimary) return
-    pendingPointer = { clientX: event.clientX, clientY: event.clientY, inside }
-    if (pointerFrame === undefined) pointerFrame = requestAnimationFrame(publishPointer)
-  }
-  const onPointerEnter = (event: PointerEvent) => queuePointer(event, true)
-  const onPointerMove = (event: PointerEvent) => queuePointer(event, true)
-  const onPointerDown = (event: PointerEvent) => queuePointer(event, true)
-  const onPointerLeave = (event: PointerEvent) => queuePointer(event, false)
-  const onPointerCancel = (event: PointerEvent) => queuePointer(event, false)
-  element.addEventListener('pointerenter', onPointerEnter)
-  element.addEventListener('pointermove', onPointerMove)
-  element.addEventListener('pointerdown', onPointerDown)
-  element.addEventListener('pointerleave', onPointerLeave)
-  element.addEventListener('pointercancel', onPointerCancel)
-
   return {
     element,
     options,
     size,
     regions,
     theme,
-    pointer,
+    pointer: pointerHub.pointer,
     get scales() {
       return scaleBindings.scales
     },
@@ -892,13 +819,8 @@ function createPlotInternal(
     destroy() {
       if (destroyed) return
       destroyed = true
-      element.removeEventListener('pointerenter', onPointerEnter)
-      element.removeEventListener('pointermove', onPointerMove)
-      element.removeEventListener('pointerdown', onPointerDown)
-      element.removeEventListener('pointerleave', onPointerLeave)
-      element.removeEventListener('pointercancel', onPointerCancel)
-      if (pointerFrame !== undefined) cancelAnimationFrame(pointerFrame)
-      pendingPointer = undefined
+      removeZoom()
+      pointerHub.dispose()
       stopSize()
       stopPixelRatio()
       stopTheme()
