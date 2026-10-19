@@ -33,6 +33,7 @@ import { markExtents } from './mark-extents.js'
 import { arc } from 'd3'
 import { projectPolarPoint } from './polar-geometry.js'
 import { watchCanvasPixelRatio } from './render-composite-canvas.js'
+import { coordinateAdapter } from './coordinate-system.js'
 import type {
   CoordinateSystem,
   MarkDefinition,
@@ -48,7 +49,7 @@ import {
   supportedMarks,
   type PlotMark,
 } from './marks.js'
-import { isZoomHandle, type ZoomHandle, type ZoomMode, type ZoomResetMode } from './zoom.js'
+import { isZoomHandle, type ZoomHandle } from './zoom.js'
 import { matchesModifierKey } from '../Utils/modifierKey.js'
 import {
   projectSkewTPoint,
@@ -171,55 +172,7 @@ function direction(
   position?: AxisSide,
   coordinateSystem: CoordinateSystem = 'cartesian',
 ): Orientation {
-  const axes = options.axes.filter((axis) => axis.scale === name)
-  const scale = options.scales[name]
-  if (coordinateSystem === 'skewT') {
-    const orientation = scale.kind === 'linear' ? 'x' : scale.kind === 'log' ? 'y' : undefined
-    if (!orientation)
-      throw new Error('Skew-T plots require linear temperature and log pressure scales.')
-    if (
-      axes.some((axis) => {
-        const side = axis === candidate ? position : axis.options.get().resolved.position
-        return orientation === 'x' ? side !== 'bottom' : side !== 'left' && side !== 'right'
-      })
-    ) {
-      throw new Error('Skew-T axes require bottom temperature and left or right pressure axes.')
-    }
-    return orientation
-  }
-  if (coordinateSystem === 'polar') {
-    let orientation: Orientation | undefined
-    if (scale.kind === 'angular') orientation = 'angular'
-    else if (scale.kind === 'radial') orientation = 'radial'
-    if (!orientation) throw new Error(`Polar plots require angular or radial scales ("${name}").`)
-    if (
-      axes.some((axis) => {
-        const side = axis === candidate ? position : axis.options.get().resolved.position
-        return side !== orientation
-      })
-    ) {
-      throw new Error(`Polar scale "${name}" requires an axis in the ${orientation} direction.`)
-    }
-    return orientation
-  }
-  if (scale.kind === 'angular' || scale.kind === 'radial') {
-    throw new Error(`Cartesian plots cannot use ${scale.kind} scale "${name}".`)
-  }
-  const axisDirections = axes.map((axis) => {
-    const side = axis === candidate ? position : axis.options.get().resolved.position
-    if (side === 'angular' || side === 'radial') {
-      throw new Error('Cartesian plots require top, right, bottom or left axes.')
-    }
-    return side === 'top' || side === 'bottom' ? 'x' : 'y'
-  })
-  const result =
-    options.directions[name] ??
-    axisDirections[0] ??
-    (options.scales[name].kind === 'time' || options.scales[name].kind === 'band' ? 'x' : 'y')
-  if (axisDirections.some((axisDirection) => axisDirection !== result)) {
-    throw new Error(`plot.scales.${name} cannot bind to both x and y directions in one plot.`)
-  }
-  return result
+  return coordinateAdapter(coordinateSystem).direction(options, name, candidate, position)
 }
 
 function validatePlotAppearance(options: PlotOptions) {
@@ -371,31 +324,7 @@ function validatePlotMarks(options: PlotOptions, coordinateSystem: CoordinateSys
 }
 
 function validatePlotDirections(options: PlotOptions, coordinateSystem: CoordinateSystem) {
-  if (coordinateSystem === 'skewT') {
-    const scales = Object.values(options.scales)
-    if (
-      scales.length !== 2 ||
-      scales.filter((scale) => scale.kind === 'linear').length !== 1 ||
-      scales.filter((scale) => scale.kind === 'log').length !== 1
-    ) {
-      throw new Error(
-        'Skew-T plots require exactly one linear temperature scale and one log pressure scale.',
-      )
-    }
-    if (Object.keys(options.directions).length > 0) {
-      throw new Error('Skew-T plots infer scale directions.')
-    }
-  }
-  if (coordinateSystem === 'polar') {
-    const angularScales = Object.values(options.scales).filter((scale) => scale.kind === 'angular')
-    const radialScales = Object.values(options.scales).filter((scale) => scale.kind === 'radial')
-    if (angularScales.length !== 1 || radialScales.length !== 1) {
-      throw new Error('Polar plots require exactly one angular scale and one radial scale.')
-    }
-    if (Object.keys(options.directions).length > 0) {
-      throw new Error('Polar plots do not support cartesian plot.directions.')
-    }
-  }
+  coordinateAdapter(coordinateSystem).validateScales(options)
   for (const [name, value] of Object.entries(options.directions)) {
     if (!Object.hasOwn(options.scales, name))
       throw new Error(`plot.directions.${name} references a missing scale.`)
@@ -1154,64 +1083,16 @@ function createPlotInternal(
     const inside =
       pending.inside && px >= 0 && py >= 0 && px <= plotRegion.width && py <= plotRegion.height
     const current = options.get().resolved
-    const values = new Map<string, ScaleValue>()
-    if (coordinateSystem === 'skewT') {
-      const [temperature, pressure] = skewTBindings(localScales)
-      const sounding = invertSkewTPoint(
-        temperature[1],
-        pressure[1],
-        svgX,
-        svgY,
-        current.skewT!.skew,
-      )
-      values.set(temperature[0], sounding.temperature)
-      values.set(pressure[0], sounding.pressure)
-    } else if (coordinateSystem === 'cartesian') {
-      for (const [name, binding] of Object.entries(localScales)) {
-        const pixel =
-          direction(current, name, undefined, undefined, coordinateSystem) === 'x' ? svgX : svgY
-        if (binding.scale.kind === 'band') {
-          const domain = binding.scale.domain.get()
-          if (domain.length === 0) continue
-          const centerAt = (index: number) => binding.project(domain[index]) + binding.bandwidth / 2
-          let low = 0
-          let high = domain.length - 1
-          const ascending = centerAt(high) >= centerAt(low)
-          while (low < high) {
-            const middle = Math.floor((low + high) / 2)
-            const midpoint = (centerAt(middle) + centerAt(middle + 1)) / 2
-            if (ascending ? pixel > midpoint : pixel < midpoint) low = middle + 1
-            else high = middle
-          }
-          values.set(name, domain[low])
-        } else {
-          values.set(name, binding.invert(pixel))
-        }
-      }
-    } else {
-      const angularEntry = Object.entries(localScales).find(
-        ([, binding]) => binding.scale.kind === 'angular',
-      )
-      const radialEntry = Object.entries(localScales).find(
-        ([, binding]) => binding.scale.kind === 'radial',
-      )
-      if (angularEntry && radialEntry) {
-        const [angularName, angular] = angularEntry
-        const [radialName, radial] = radialEntry
-        const dx = px - plotRegion.width / 2
-        const dy = py - plotRegion.height / 2
-        const radius = Math.hypot(dx, dy)
-        const angularOptions = angular.scale.options.get().resolved
-        const sign = angularOptions.direction === 'anticlockwise' ? -1 : 1
-        const intercept = angularOptions.intercept ?? 0
-        const angularRange = angular.range.get()
-        const middle = (angularRange[0] + angularRange[1]) / 2
-        const angle = radius === 0 ? middle : sign * (Math.atan2(dx, -dy) - intercept)
-        const unwrappedAngle = angle + Math.round((middle - angle) / (2 * Math.PI)) * 2 * Math.PI
-        values.set(angularName, angular.invert(unwrappedAngle))
-        values.set(radialName, radial.invert(radius))
-      }
-    }
+    const values = coordinateAdapter(coordinateSystem).invertPointer({
+      svgX,
+      svgY,
+      plotX: px,
+      plotY: py,
+      region: plotRegion,
+      scales: localScales,
+      skew: current.skewT?.skew,
+      direction: (name) => direction(current, name, undefined, undefined, coordinateSystem),
+    })
     pointer.set(Object.freeze({ px, py, x: values, inside }))
   }
   function queuePointer(event: PointerEvent, inside: boolean) {
