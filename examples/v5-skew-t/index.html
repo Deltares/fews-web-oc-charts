@@ -28,10 +28,20 @@
       <strong class="temperature-key">Solid: temperature</strong> /
       <strong class="dew-point-key">Dashed: dew point</strong>
     </p>
-    <label>
-      Skew (C per natural-log pressure)
+    <div>
+      <label id="skew-label" for="skew">Skew (C per natural-log pressure)</label>
       <input id="skew" type="range" min="0" max="45" step="1" value="30" />
-    </label>
+      <input
+        id="skew-number"
+        type="number"
+        min="0"
+        max="45"
+        step="1"
+        value="30"
+        required
+        aria-labelledby="skew-label"
+      />
+    </div>
     <figure>
       <div id="chart" class="plot-host"></div>
       <figcaption>
