@@ -1,14 +1,11 @@
 import { createOptionState, type OptionPatch, type OptionStateSnapshot } from '../core/options.js'
 import { DirtyLayer, type DirtyLayers } from '../core/frame-scheduler.js'
 import { reactive, invalidate, cancelRender, optionSignal } from '../core/runtime.js'
-import type { ReadonlySignal, ReactiveScope } from '../core/reactive.js'
+import type { ReadonlySignal } from '../core/reactive.js'
 import {
-  bindScale,
   isScaleHandle,
-  registerScaleExtents,
   type ScaleBinding,
   type ScaleHandle,
-  type ScaleRange,
   type ScaleValue,
 } from '../scales/scale.js'
 import {
@@ -22,7 +19,6 @@ import { resolveTheme, watchTheme, type ThemeMode, type ThemeTokens } from '../t
 import { isAxisHandle, validateAxisUpdates, type AxisHandle, type AxisSide } from './axis.js'
 import { observeSize } from './resize.js'
 import { svgElement, renderAxes, renderPolarAxes, axisTickLabels } from './render-axes.js'
-import { markExtents } from './mark-extents.js'
 import { arc } from 'd3'
 import { projectPolarPoint } from './polar-geometry.js'
 import { watchCanvasPixelRatio } from './render-composite-canvas.js'
@@ -32,7 +28,6 @@ import type {
   MarkDefinition,
   MarkRenderContext,
   MarkRenderer,
-  Orientation,
 } from './mark-definition.js'
 import { isPlotMark, markDefinition, type PlotMark } from './marks.js'
 import { isZoomHandle, type ZoomHandle } from './zoom.js'
@@ -45,7 +40,7 @@ import {
   type SoundingPoint,
 } from './skew-t-geometry.js'
 import { renderSkewTAxes } from './render-skew-t-axes.js'
-import { skewTMarkExtents } from './skew-t-extents.js'
+import { createScaleBindings } from './scale-bindings.js'
 import {
   direction,
   marginKeys,
@@ -211,19 +206,12 @@ function createPlotInternal(
   const insetWidths = new Map<AxisHandle, number>()
   const axisValidators = new Map<AxisHandle, () => void>()
   const markValidators = new Map<PlotMark, { dispose(): void }>()
-  const bindings = new Map<
-    string,
-    {
-      scale: ScaleHandle
-      direction: Orientation
-      binding: ScaleBinding
-      markBinding: ScaleBinding
-      scope: ReactiveScope
-      stopExtents(): void
-    }
-  >()
-  let localScales: Readonly<Record<string, ScaleBinding>> = Object.freeze({})
-  let markScales: Readonly<Record<string, ScaleBinding>> = Object.freeze({})
+  const scaleBindings = createScaleBindings({
+    scope,
+    coordinateSystem,
+    regions,
+    options: () => options.get().resolved,
+  })
   let destroyed = false
   let lastThemeMode: ThemeMode | undefined
   let lastThemeVersion = -1
@@ -309,7 +297,7 @@ function createPlotInternal(
       skew: current.skewT?.skew,
       localCoordinates: current.axisLayout === 'inset',
       coordinateSystem,
-      scales: markScales,
+      scales: scaleBindings.markScales,
       plot:
         current.axisLayout === 'inset' && coordinateSystem === 'cartesian'
           ? { ...regions.get().plot, x: 0, y: 0 }
@@ -377,7 +365,7 @@ function createPlotInternal(
       if (activeAxes.size === 0) return
       const factor = Math.exp(Math.max(-1, Math.min(1, event.deltaY * 0.002)))
       let changed = false
-      for (const [name, binding] of Object.entries(localScales)) {
+      for (const [name, binding] of Object.entries(scaleBindings.scales)) {
         const orientation = direction(
           options.get().resolved,
           name,
@@ -435,7 +423,7 @@ function createPlotInternal(
         return
       }
       const currentOptions = options.get().resolved
-      for (const [name, binding] of Object.entries(localScales)) {
+      for (const [name, binding] of Object.entries(scaleBindings.scales)) {
         const orientation = direction(currentOptions, name, undefined, undefined, coordinateSystem)
         if (
           (orientation !== 'x' && orientation !== 'y') ||
@@ -530,82 +518,7 @@ function createPlotInternal(
         )
       }
     }
-    for (const [name, entry] of bindings) {
-      if (
-        entry.scale !== current.scales[name] ||
-        entry.direction !== direction(current, name, undefined, undefined, coordinateSystem)
-      ) {
-        entry.stopExtents()
-        entry.scope.dispose()
-        bindings.delete(name)
-      }
-    }
-    for (const [name, scale] of Object.entries(current.scales)) {
-      if (bindings.has(name)) continue
-      const bindingScope = scope.createScope()
-      const orientation = direction(current, name, undefined, undefined, coordinateSystem)
-      const binding = bindingScope.run(() => {
-        const range = reactive.computed<ScaleRange>(
-          () => {
-            const plot = regions.get().plot
-            if (orientation === 'angular') {
-              return Object.freeze([...(scale.options.get().resolved.range ?? [0, 2 * Math.PI])])
-            }
-            if (orientation === 'radial') {
-              const radius = Math.min(plot.width, plot.height) / 2
-              const innerRadius = scale.options.get().resolved.innerRadius ?? 0
-              return Object.freeze([radius * innerRadius, radius])
-            }
-            return Object.freeze(
-              orientation === 'x' ? [plot.x, plot.x + plot.width] : [plot.y + plot.height, plot.y],
-            )
-          },
-          (a, b) => a[0] === b[0] && a[1] === b[1],
-        )
-        return bindScale(scale, range)
-      })
-      const markBinding = bindingScope.run(() =>
-        bindScale(
-          scale,
-          reactive.computed<ScaleRange>(() => {
-            if (options.get().resolved.axisLayout !== 'inset' || coordinateSystem === 'polar') {
-              return binding.range.get()
-            }
-            const plot = regions.get().plot
-            return Object.freeze(orientation === 'x' ? [0, plot.width] : [plot.height, 0])
-          }),
-        ),
-      )
-      const stopExtents = registerScaleExtents(scale, (mode) => {
-        const config = options.get().resolved
-        if (config.scales[name] !== scale) return undefined
-        if (coordinateSystem === 'skewT') {
-          return skewTMarkExtents(config.marks, config.scales, name, mode, config.skewT!.skew)
-        }
-        return markExtents(config.marks, config.scales, name, mode)
-      })
-      bindings.set(name, {
-        scale,
-        direction: orientation,
-        binding,
-        markBinding,
-        scope: bindingScope,
-        stopExtents,
-      })
-    }
-    localScales = Object.freeze(
-      Object.fromEntries([...bindings].map(([name, entry]) => [name, entry.binding])),
-    )
-    markScales = Object.freeze(
-      Object.fromEntries(
-        [...bindings].map(([name, entry]) => [
-          name,
-          current.axisLayout === 'inset' && coordinateSystem === 'cartesian'
-            ? entry.markBinding
-            : entry.binding,
-        ]),
-      ),
-    )
+    scaleBindings.reconcile(current)
     reconcileZoom(current.plugins)
   }
 
@@ -622,7 +535,7 @@ function createPlotInternal(
     )
     const measures = cartesianAxes.map((axis) => {
       const axisOptions = axis.options.get().resolved
-      const binding = localScales[axis.scale]
+      const binding = scaleBindings.scales[axis.scale]
       const labels = axisTickLabels(binding, axis)
       const maxWidth = Math.max(
         0,
@@ -690,10 +603,12 @@ function createPlotInternal(
     background.setAttribute('display', polarFill ? 'none' : '')
     polarBackground.setAttribute('display', polarFill ? '' : 'none')
     if (polarFill) {
-      const angular = Object.values(localScales).find(
+      const angular = Object.values(scaleBindings.scales).find(
         (binding) => binding.scale.kind === 'angular',
       )!
-      const radial = Object.values(localScales).find((binding) => binding.scale.kind === 'radial')!
+      const radial = Object.values(scaleBindings.scales).find(
+        (binding) => binding.scale.kind === 'radial',
+      )!
       const angularOptions = angular.scale.options.get().resolved
       const classic = current.axes.some((axis) => axis.options.get().resolved.style === 'classic')
       const sign = angularOptions.direction === 'anticlockwise' ? -1 : 1
@@ -763,15 +678,22 @@ function createPlotInternal(
           axesLayer,
           gridLayer,
           current.axes,
-          localScales,
+          scaleBindings.scales,
           regions.get(),
           tokens,
           current.skewT!.skew,
         )
       } else if (coordinateSystem === 'polar') {
-        renderPolarAxes(axesLayer, gridLayer, current.axes, localScales, regions.get(), tokens)
+        renderPolarAxes(
+          axesLayer,
+          gridLayer,
+          current.axes,
+          scaleBindings.scales,
+          regions.get(),
+          tokens,
+        )
       } else {
-        renderAxes(axesLayer, gridLayer, current.axes, localScales, regions.get(), tokens)
+        renderAxes(axesLayer, gridLayer, current.axes, scaleBindings.scales, regions.get(), tokens)
         if (current.axisLayout === 'inset' && current.autoMargins) {
           let changed = false
           const groups = [...axesLayer.children]
@@ -791,7 +713,14 @@ function createPlotInternal(
           })
           if (changed) {
             renderLayout(current, tokens)
-            renderAxes(axesLayer, gridLayer, current.axes, localScales, regions.get(), tokens)
+            renderAxes(
+              axesLayer,
+              gridLayer,
+              current.axes,
+              scaleBindings.scales,
+              regions.get(),
+              tokens,
+            )
           }
         }
       }
@@ -818,16 +747,7 @@ function createPlotInternal(
       const current = options.get().resolved
       const measuredSize = measured.get()
       reconcile()
-      const scaleDependencies: unknown[] = []
-      for (const entry of bindings.values()) {
-        entry.scale.domain.get()
-        entry.scale.options.get()
-        scaleDependencies.push(
-          entry.binding,
-          entry.scale.domain.version,
-          entry.scale.options.version,
-        )
-      }
+      const scaleDependencies = scaleBindings.trackDependencies()
       const nextDependencies: PlotDependencySnapshot = {
         layout: {
           size: [current.width ?? measuredSize.width, current.height ?? measuredSize.height],
@@ -928,7 +848,7 @@ function createPlotInternal(
       plotX: px,
       plotY: py,
       region: plotRegion,
-      scales: localScales,
+      scales: scaleBindings.scales,
       skew: current.skewT?.skew,
       direction: (name) => direction(current, name, undefined, undefined, coordinateSystem),
     })
@@ -958,7 +878,7 @@ function createPlotInternal(
     theme,
     pointer,
     get scales() {
-      return localScales
+      return scaleBindings.scales
     },
     get destroyed() {
       return destroyed
@@ -982,20 +902,17 @@ function createPlotInternal(
       stopSize()
       stopPixelRatio()
       stopTheme()
-      for (const entry of bindings.values()) entry.stopExtents()
+      scaleBindings.dispose()
       scope.dispose()
       for (const dispose of axisValidators.values()) dispose()
       axisValidators.clear()
       for (const entry of markValidators.values()) entry.dispose()
       markValidators.clear()
       cancelRender(render)
-      bindings.clear()
       for (const { renderer } of mountedMarks) renderer.destroy()
       mountedMarks = []
       dirtyMarks.clear()
       allMarksDirty = false
-      localScales = Object.freeze({})
-      markScales = Object.freeze({})
       axisWidths.clear()
       insetWidths.clear()
       measurer.clear()
