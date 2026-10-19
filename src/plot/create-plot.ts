@@ -165,6 +165,29 @@ function validatePatch(config: PlotConfig) {
   if (config.margins) validateKeys(config.margins, marginKeys, 'plot.margins')
 }
 
+type DependencyGroups = Readonly<Record<string, readonly unknown[]>>
+
+interface PlotDependencySnapshot {
+  readonly layout: DependencyGroups
+  readonly marks: DependencyGroups
+}
+
+function dependenciesChanged(previous: DependencyGroups | undefined, current: DependencyGroups) {
+  if (!previous) return true
+  const previousKeys = Object.keys(previous)
+  const currentKeys = Object.keys(current)
+  if (previousKeys.length !== currentKeys.length) return true
+  return currentKeys.some((key) => {
+    const before = previous[key]
+    const after = current[key]
+    return (
+      !before ||
+      before.length !== after.length ||
+      after.some((value, index) => value !== before[index])
+    )
+  })
+}
+
 function direction(
   options: PlotOptions,
   name: string,
@@ -419,7 +442,7 @@ function createPlotInternal(
   let destroyed = false
   let lastThemeMode: ThemeMode | undefined
   let lastThemeVersion = -1
-  let layoutDependencies: readonly unknown[] = []
+  let dependencySnapshot: PlotDependencySnapshot | undefined
   let stopTheme = watchTheme(options.get().resolved.themeElement, () =>
     themeVersion.update((value) => value + 1),
   )
@@ -992,32 +1015,45 @@ function createPlotInternal(
       const current = options.get().resolved
       const measuredSize = measured.get()
       reconcile()
-      const dependencies: unknown[] = [
-        current.width ?? measuredSize.width,
-        current.height ?? measuredSize.height,
-        current.title,
-        current.axisLayout,
-        current.background,
-        current.autoMargins,
-        current.clipMarks,
-        current.skewT?.skew,
-        ...marginKeys.map((side) => current.margins[side]),
-        ...current.axes.flatMap((axis) => [axis, axis.options.version]),
-        ...current.marks,
-      ]
+      const scaleDependencies: unknown[] = []
       for (const entry of bindings.values()) {
         entry.scale.domain.get()
         entry.scale.options.get()
-        dependencies.push(entry.binding, entry.scale.domain.version, entry.scale.options.version)
+        scaleDependencies.push(
+          entry.binding,
+          entry.scale.domain.version,
+          entry.scale.options.version,
+        )
       }
-      if (
-        dependencies.length === layoutDependencies.length &&
-        dependencies.every((value, index) => value === layoutDependencies[index])
-      )
-        return
-      layoutDependencies = dependencies
-      insetWidths.clear()
-      invalidate(render, DirtyLayer.layout | DirtyLayer.axes)
+      const nextDependencies: PlotDependencySnapshot = {
+        layout: {
+          size: [current.width ?? measuredSize.width, current.height ?? measuredSize.height],
+          options: [
+            current.title,
+            current.axisLayout,
+            current.background,
+            current.autoMargins,
+            current.clipMarks,
+            current.skewT?.skew,
+            ...marginKeys.map((side) => current.margins[side]),
+          ],
+          axes: current.axes.flatMap((axis) => [axis, axis.options.version]),
+          scales: scaleDependencies,
+        },
+        marks: {
+          membership: current.marks,
+          projection: [current.axisLayout, current.skewT?.skew, ...scaleDependencies],
+        },
+      }
+      const layoutChanged = dependenciesChanged(dependencySnapshot?.layout, nextDependencies.layout)
+      const marksChanged = dependenciesChanged(dependencySnapshot?.marks, nextDependencies.marks)
+      dependencySnapshot = nextDependencies
+      if (layoutChanged) {
+        insetWidths.clear()
+        invalidate(render, DirtyLayer.layout | DirtyLayer.axes)
+      } else if (marksChanged) {
+        invalidate(render, DirtyLayer.marks)
+      }
     })
     reactive.effect(() => {
       const version = themeVersion.get()
