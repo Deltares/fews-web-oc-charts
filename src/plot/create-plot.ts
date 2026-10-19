@@ -469,6 +469,8 @@ function createPlotInternal(
     readonly renderer: MarkRenderer<PlotMark>
   }
   let mountedMarks: readonly MountedMark[] = []
+  const dirtyMarks = new Set<PlotMark>()
+  let allMarksDirty = false
   type MountedZoom = {
     handle: ZoomHandle
     onWheel(event: WheelEvent): void
@@ -488,7 +490,7 @@ function createPlotInternal(
       marks.length === mountedMarks.length &&
       marks.every((mark, index) => mark === mountedMarks[index].mark)
     ) {
-      return
+      return false
     }
     const remaining = new Map(
       mountedMarks.map((entry) => [entry.mark.id ?? entry.mark, entry] as const),
@@ -504,10 +506,20 @@ function createPlotInternal(
       return { mark, definition, renderer }
     })
     for (const entry of remaining.values()) entry.renderer.destroy()
+    return true
   }
 
-  function renderMarkGeometry(current: PlotOptions) {
-    mountMarks(current.marks)
+  function invalidateMark(mark: PlotMark) {
+    dirtyMarks.add(mark)
+    invalidate(render, DirtyLayer.marks)
+  }
+
+  function invalidateAllMarks() {
+    allMarksDirty = true
+    invalidate(render, DirtyLayer.marks)
+  }
+
+  function renderMarkGeometry(current: PlotOptions, selectedMarks?: ReadonlySet<PlotMark>) {
     const context: MarkRenderContext = {
       skew: current.skewT?.skew,
       localCoordinates: current.axisLayout === 'inset',
@@ -519,11 +531,15 @@ function createPlotInternal(
           : regions.get().plot,
       direction: (name) => direction(current, name, undefined, undefined, coordinateSystem),
     }
-    for (const { mark, renderer } of mountedMarks) renderer.geometry(mark, context)
+    for (const { mark, renderer } of mountedMarks) {
+      if (!selectedMarks || selectedMarks.has(mark)) renderer.geometry(mark, context)
+    }
   }
 
-  function renderMarkStyles(tokens: ThemeTokens) {
-    for (const { mark, renderer } of mountedMarks) renderer.style(mark, tokens)
+  function renderMarkStyles(tokens: ThemeTokens, selectedMarks?: ReadonlySet<PlotMark>) {
+    for (const { mark, renderer } of mountedMarks) {
+      if (!selectedMarks || selectedMarks.has(mark)) renderer.style(mark, tokens)
+    }
   }
 
   function removeZoom() {
@@ -688,7 +704,7 @@ function createPlotInternal(
         markScope.run(() => {
           reactive.effect(() => {
             track(mark)
-            invalidate(render, DirtyLayer.marks)
+            invalidateMark(mark)
           })
         })
       }
@@ -945,6 +961,12 @@ function createPlotInternal(
     if (destroyed) return
     const current = options.get().resolved
     const tokens = theme.get()
+    const fullMarkRender = Boolean(dirty & (DirtyLayer.layout | DirtyLayer.axes)) || allMarksDirty
+    const markUpdates = new Set(dirtyMarks)
+    dirtyMarks.clear()
+    allMarksDirty = false
+    const marksChanged = mountMarks(current.marks)
+    const renderAllMarks = fullMarkRender || marksChanged
     if (dirty & DirtyLayer.layout) {
       renderLayout(current, tokens)
     }
@@ -997,15 +1019,18 @@ function createPlotInternal(
       }
     }
     if (dirty & (DirtyLayer.layout | DirtyLayer.axes | DirtyLayer.marks)) {
-      renderMarkGeometry(current)
+      if (renderAllMarks) renderMarkGeometry(current)
+      else if (markUpdates.size > 0) renderMarkGeometry(current, markUpdates)
     }
     if (dirty & (DirtyLayer.layout | DirtyLayer.axes | DirtyLayer.marks | DirtyLayer.style)) {
-      renderMarkStyles(tokens)
+      if (dirty & (DirtyLayer.layout | DirtyLayer.axes | DirtyLayer.style) || renderAllMarks) {
+        renderMarkStyles(tokens)
+      } else if (markUpdates.size > 0) renderMarkStyles(tokens, markUpdates)
     }
   }
 
   reconcile()
-  const stopPixelRatio = watchCanvasPixelRatio(() => invalidate(render, DirtyLayer.marks))
+  const stopPixelRatio = watchCanvasPixelRatio(invalidateAllMarks)
   const stopSize = observeSize(host, (value) => {
     axisWidths.clear()
     measured.set(value)
@@ -1052,7 +1077,7 @@ function createPlotInternal(
         insetWidths.clear()
         invalidate(render, DirtyLayer.layout | DirtyLayer.axes)
       } else if (marksChanged) {
-        invalidate(render, DirtyLayer.marks)
+        invalidateAllMarks()
       }
     })
     reactive.effect(() => {
@@ -1189,6 +1214,8 @@ function createPlotInternal(
       bindings.clear()
       for (const { renderer } of mountedMarks) renderer.destroy()
       mountedMarks = []
+      dirtyMarks.clear()
+      allMarksDirty = false
       localScales = Object.freeze({})
       markScales = Object.freeze({})
       axisWidths.clear()
