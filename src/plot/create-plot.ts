@@ -29,8 +29,7 @@ import type {
   MarkRenderer,
 } from './mark-definition.js'
 import { isPlotMark, markDefinition, type PlotMark } from './marks.js'
-import { isZoomHandle, type ZoomHandle } from './zoom.js'
-import { matchesModifierKey } from '../Utils/modifierKey.js'
+import { createPluginHost, isPlotPlugin, type PlotPlugin } from './plugins.js'
 import {
   projectSkewTPoint,
   invertSkewTPoint,
@@ -69,7 +68,7 @@ export interface PlotOptions {
   directions: Record<string, 'x' | 'y'>
   axes: readonly AxisHandle[]
   marks: readonly PlotMark[]
-  plugins: readonly ZoomHandle[]
+  plugins: readonly PlotPlugin[]
 }
 
 export type PlotConfig = Omit<
@@ -79,7 +78,7 @@ export type PlotConfig = Omit<
   scales?: Record<string, ScaleHandle | undefined>
   axes?: readonly AxisHandle[]
   marks?: readonly PlotMark[]
-  plugins?: readonly ZoomHandle[]
+  plugins?: readonly PlotPlugin[]
   themeElement?: Element
 }
 
@@ -173,7 +172,7 @@ function createPlotInternal(
       plugins: [],
     }),
     isAtomicReference: (value) =>
-      isScaleHandle(value) || isAxisHandle(value) || isPlotMark(value) || isZoomHandle(value),
+      isScaleHandle(value) || isAxisHandle(value) || isPlotMark(value) || isPlotPlugin(value),
     validate: (options) => validatePlotOptions(options, coordinateSystem),
   })
   const optionState = optionSignal(state)
@@ -236,17 +235,6 @@ function createPlotInternal(
   let mountedMarks: readonly MountedMark[] = []
   const dirtyMarks = new Set<PlotMark>()
   let allMarksDirty = false
-  type MountedZoom = {
-    handle: ZoomHandle
-    stop(): void
-    initialDomains: ReadonlyMap<
-      string,
-      { scale: ScaleHandle; domain: readonly ScaleValue[] | undefined }
-    >
-    toggledDomains: Map<string, readonly ScaleValue[]>
-    toggled: boolean
-  }
-  let mountedZoom: MountedZoom | undefined
   element.append(background, polarBackground, definitions, gridLayer, marksLayer, axesLayer, title)
   const pointerHub = createPointerHub({
     element,
@@ -255,6 +243,21 @@ function createPlotInternal(
     regions,
     scales: () => scaleBindings.scales,
     options: () => options.get().resolved,
+  })
+  const pluginHost = createPluginHost(scope, {
+    element,
+    coordinateSystem,
+    options,
+    size,
+    regions,
+    pointer: pointerHub.pointer,
+    get scales() {
+      return scaleBindings.scales
+    },
+    direction: (name) =>
+      direction(options.get().resolved, name, undefined, undefined, coordinateSystem),
+    locate: (event) => pointerHub.locate(event),
+    on: (type, handler) => pointerHub.on(type, handler),
   })
 
   function mountMarks(marks: readonly PlotMark[]) {
@@ -312,122 +315,6 @@ function createPlotInternal(
     for (const { mark, renderer } of mountedMarks) {
       if (!selectedMarks || selectedMarks.has(mark)) renderer.style(mark, tokens)
     }
-  }
-
-  function removeZoom() {
-    if (!mountedZoom) return
-    mountedZoom.stop()
-    mountedZoom = undefined
-  }
-
-  function reconcileZoom(plugins: readonly ZoomHandle[]) {
-    const handle = plugins[0]
-    if (mountedZoom?.handle === handle) return
-    removeZoom()
-    if (!handle) return
-    const initialDomains = new Map(
-      Object.entries(options.get().resolved.scales).map(([name, scale]) => [
-        name,
-        { scale, domain: scale.options.get().explicit.domain },
-      ]),
-    )
-    const installed: MountedZoom = {
-      handle,
-      initialDomains,
-      toggledDomains: new Map(),
-      toggled: false,
-      stop: () => {},
-    }
-    const onWheel = (event: WheelEvent) => {
-      const config = handle.options.get().resolved
-      if (config.wheel === 'none' || !matchesModifierKey(event, config.modifier)) return
-      const position = pointerHub.locate(event)
-      if (!position?.inside) return
-      const activeAxes = new Set<'x' | 'y'>()
-      if (config.mode.includes('x') && config.wheel.includes('x')) activeAxes.add('x')
-      if (config.mode.includes('y') && config.wheel.includes('y')) activeAxes.add('y')
-      if (activeAxes.size === 0) return
-      const factor = Math.exp(Math.max(-1, Math.min(1, event.deltaY * 0.002)))
-      let changed = false
-      for (const [name, binding] of Object.entries(scaleBindings.scales)) {
-        const orientation = direction(
-          options.get().resolved,
-          name,
-          undefined,
-          undefined,
-          coordinateSystem,
-        )
-        if (
-          (orientation !== 'x' && orientation !== 'y') ||
-          !activeAxes.has(orientation) ||
-          binding.scale.kind === 'band'
-        ) {
-          continue
-        }
-        const pixel = orientation === 'x' ? position.svgX : position.svgY
-        const anchor = binding.invert(pixel)
-        const domain = binding.scale.domain.get()
-        const low = Number(domain[0])
-        const high = Number(domain[1])
-        const zoomValue =
-          binding.scale.kind === 'log'
-            ? (value: number) =>
-                Math.exp(Math.log(anchor) + (Math.log(value) - Math.log(anchor)) * factor)
-            : (value: number) => anchor + (value - anchor) * factor
-        const nextDomain = [zoomValue(low), zoomValue(high)] as const
-        if (
-          nextDomain.some((value) => !Number.isFinite(value)) ||
-          (binding.scale.kind === 'log' && nextDomain.some((value) => value <= 0)) ||
-          (binding.scale.kind === 'time' && nextDomain.some((value) => Math.abs(value) > 8.64e15))
-        ) {
-          continue
-        }
-        binding.scale.update({ domain: nextDomain })
-        changed = true
-      }
-      if (changed) {
-        event.preventDefault()
-        installed.toggled = false
-      }
-    }
-    const onDoubleClick = (event: MouseEvent) => {
-      if (event.button !== 0) return
-      const config = handle.options.get().resolved
-      if (!pointerHub.locate(event)?.inside) return
-      const currentOptions = options.get().resolved
-      for (const [name, binding] of Object.entries(scaleBindings.scales)) {
-        const orientation = direction(currentOptions, name, undefined, undefined, coordinateSystem)
-        if (
-          (orientation !== 'x' && orientation !== 'y') ||
-          !config.mode.includes(orientation) ||
-          binding.scale.kind === 'band'
-        )
-          continue
-        if (config.reset === 'toggle' && installed.toggled) {
-          const previous = installed.toggledDomains.get(name)
-          if (previous) binding.scale.update({ domain: previous })
-          installed.toggledDomains.delete(name)
-          continue
-        }
-        if (config.reset === 'toggle')
-          installed.toggledDomains.set(name, binding.scale.domain.get())
-        const initial = installed.initialDomains.get(name)
-        if (config.reset === 'initial' && initial?.scale === binding.scale) {
-          binding.scale.update({ domain: initial.domain })
-        } else {
-          binding.scale.update({ domain: undefined })
-        }
-      }
-      installed.toggled = config.reset === 'toggle' && !installed.toggled
-      event.preventDefault()
-    }
-    const stopWheel = pointerHub.on('wheel', onWheel)
-    const stopDoubleClick = pointerHub.on('dblclick', onDoubleClick)
-    installed.stop = () => {
-      stopWheel()
-      stopDoubleClick()
-    }
-    mountedZoom = installed
   }
 
   function reconcile() {
@@ -495,7 +382,7 @@ function createPlotInternal(
       }
     }
     scaleBindings.reconcile(current)
-    reconcileZoom(current.plugins)
+    pluginHost.reconcile(current.plugins)
   }
 
   function renderLayout(current: PlotOptions, tokens: ThemeTokens) {
@@ -819,7 +706,7 @@ function createPlotInternal(
     destroy() {
       if (destroyed) return
       destroyed = true
-      removeZoom()
+      pluginHost.dispose()
       pointerHub.dispose()
       stopSize()
       stopPixelRatio()

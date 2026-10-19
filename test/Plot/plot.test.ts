@@ -371,6 +371,52 @@ describe('createPlot named scales', () => {
     expect(doubleClick.defaultPrevented).toBe(false)
   })
 
+  test('validates plugin membership atomically', () => {
+    const interaction = zoom()
+    const current = plot(host(), { scales: { x: linearScale({ domain: [0, 1] }) } })
+    expect(() => current.update({ plugins: [{} as never] })).toThrow(
+      'plot.plugins accepts zoom() plugins only.',
+    )
+    expect(() => current.update({ plugins: [interaction, interaction] })).toThrow(
+      'Duplicate plugin handle in plot.plugins.',
+    )
+    expect(() => current.update({ plugins: [interaction, zoom()] })).toThrow(
+      'A plot can install at most one zoom plugin.',
+    )
+    expect(current.options.get().resolved.plugins).toEqual([])
+    const polar = createPolarPlot(host(), {
+      scales: { a: angularScale({ domain: [0, 360] }), r: radialScale({ domain: [0, 1] }) },
+    })
+    plots.push(polar)
+    expect(() => polar.update({ plugins: [interaction] })).toThrow(
+      'The zoom plugin currently supports Cartesian plots only.',
+    )
+  })
+
+  test('reinstalls a replaced zoom handle with its own initial domains', async () => {
+    const x = linearScale({ domain: [0, 100] })
+    const first = zoom({ wheel: 'x', reset: 'initial' })
+    const current = plot(host(), {
+      width: 500,
+      height: 300,
+      directions: { x: 'x' },
+      scales: { x },
+      plugins: [first],
+    })
+    await frame()
+    vi.spyOn(current.element, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 500, 300))
+    x.update({ domain: [10, 90] })
+    current.update({ plugins: [zoom({ wheel: 'x', reset: 'initial' })] })
+    current.element.dispatchEvent(
+      new WheelEvent('wheel', { clientX: 250, clientY: 150, deltaY: -100, cancelable: true }),
+    )
+    expect(x.domain.get()[0]).toBeGreaterThan(10)
+    current.element.dispatchEvent(
+      new MouseEvent('dblclick', { clientX: 250, clientY: 150, button: 0, cancelable: true }),
+    )
+    expect(x.domain.get()).toEqual([10, 90])
+  })
+
   test('supports y-only zoom over an autoscaled visible-data domain', async () => {
     const x = linearScale({ domain: [0, 2] })
     const y = linearScale({ autoscale: 'visible', defaultDomain: [0, 100] })
