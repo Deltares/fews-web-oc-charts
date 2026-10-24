@@ -9,8 +9,8 @@ import {
   stackedArea,
   type Plot,
 } from '../../src/index.js'
-import { barEndpoints } from '../../src/plot/bar.js'
-import { stackedAreaEndpoints } from '../../src/plot/stacked-area.js'
+import { barEndpoints } from '../../src/plot/marks/bar/bar.js'
+import { stackedAreaEndpoints } from '../../src/plot/marks/stacked-area/stacked-area.js'
 
 const plots: Plot[] = []
 const hosts: HTMLElement[] = []

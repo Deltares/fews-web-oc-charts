@@ -9,10 +9,10 @@ import {
   tooltip,
 } from '../../src/index.js'
 import { reactive } from '../../src/core/runtime.js'
-import { computeTooltipModel } from '../../src/plot/tooltip-model.js'
-import type { PlotContext } from '../../src/plot/plugin-definition.js'
+import { computeTooltipModel } from '../../src/plot/plugins/tooltip/tooltip-model.js'
+import type { PlotContext } from '../../src/plot/plugins/plugin-definition.js'
 import { bindScale } from '../../src/scales/scale.js'
-import { barRectangles } from '../../src/plot/bar-geometry.js'
+import { barRectangles } from '../../src/plot/marks/bar/bar-geometry.js'
 
 function setup() {
   const first = line({

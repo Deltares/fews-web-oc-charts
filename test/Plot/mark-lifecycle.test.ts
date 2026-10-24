@@ -14,7 +14,7 @@ import {
   text,
   type Plot,
 } from '../../src/index.js'
-import type { PlotMark } from '../../src/plot/marks.js'
+import type { PlotMark } from '../../src/plot/marks/marks.js'
 
 const plots: Plot[] = []
 const hosts: HTMLElement[] = []

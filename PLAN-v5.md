@@ -2061,19 +2061,19 @@ same root-group sections: a small gap with a divider spanning the column separat
 
 Plugins are installed by a plugin host that reconciles `plot.plugins` by handle
 identity. Each built-in plugin registers a `PluginDefinition` (`is`, `validate`,
-`install`) in `src/plot/plugins.ts` and receives a read-only `PlotContext` with
+`install`) in `src/plot/plugins/plugins.ts` and receives a read-only `PlotContext` with
 its own reactive scope. Gesture handlers it registers through the plot's single
 pointer hub are released automatically on removal or plot destruction.
 
 Tooltip hit collection, selection, formatting and accessible text are computed in
-`src/plot/tooltip-model.ts`; `tooltip-plugin.ts` owns DOM rendering, placement and
+`src/plot/plugins/tooltip/tooltip-model.ts`; `tooltip-plugin.ts` owns DOM rendering, placement and
 lifecycle. Brush bounds and scale-selection conversions live in
-`src/plot/brush-selection.ts`, while `brush-plugin.ts` keeps gesture transitions,
+`src/plot/plugins/brush/brush-selection.ts`, while `brush-plugin.ts` keeps gesture transitions,
 publication and SVG rendering explicit. The model and bounds helpers are tested
 independently of DOM rendering.
 
 Mark membership reconciliation, per-mark tracking and update validation, renderer
-mounting, geometry and style passes are owned by `src/plot/mark-layer.ts`. The plot
+mounting, geometry and style passes are owned by `src/plot/marks/mark-layer.ts`. The plot
 coordinator supplies current options, scales and regions, then delegates dirty mark
 rendering and teardown to that layer.
 

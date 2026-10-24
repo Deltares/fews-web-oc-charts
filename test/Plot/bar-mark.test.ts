@@ -17,8 +17,8 @@ import {
 } from '../../src/index.js'
 import { bindScale, type ScaleHandle, type ScaleRange } from '../../src/scales/scale.js'
 import { reactive } from '../../src/core/runtime.js'
-import { barExtent, barRectangles } from '../../src/plot/bar-geometry.js'
-import { barEndpoints } from '../../src/plot/bar.js'
+import { barExtent, barRectangles } from '../../src/plot/marks/bar/bar-geometry.js'
+import { barEndpoints } from '../../src/plot/marks/bar/bar.js'
 
 const plots: Plot[] = []
 const hosts: HTMLElement[] = []

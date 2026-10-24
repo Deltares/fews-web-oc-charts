@@ -15,9 +15,9 @@ import {
   type StackedAreaOptions,
   type OptionPatch,
 } from '../../src/index.js'
-import { stackedAreaEndpoints } from '../../src/plot/stacked-area.js'
-import { stackedAreaExtent } from '../../src/plot/render-stacked-areas.js'
-import { barEndpoints } from '../../src/plot/bar.js'
+import { stackedAreaEndpoints } from '../../src/plot/marks/stacked-area/stacked-area.js'
+import { stackedAreaExtent } from '../../src/plot/marks/stacked-area/render-stacked-areas.js'
+import { barEndpoints } from '../../src/plot/marks/bar/bar.js'
 
 const plots: Plot[] = []
 const hosts: HTMLElement[] = []

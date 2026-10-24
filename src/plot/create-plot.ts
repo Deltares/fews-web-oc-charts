@@ -16,29 +16,29 @@ import {
   type PlotLayout,
 } from '../layout/layout.js'
 import { resolveTheme, watchTheme, type ThemeMode, type ThemeTokens } from '../theme/theme.js'
-import { isAxisHandle, validateAxisUpdates, type AxisHandle, type AxisSide } from './axis.js'
+import { isAxisHandle, validateAxisUpdates, type AxisHandle, type AxisSide } from './axes/axis.js'
 import { observeSize } from './resize.js'
-import { svgElement, renderAxes, renderPolarAxes, axisTickLabels } from './render-axes.js'
+import { svgElement, renderAxes, renderPolarAxes, axisTickLabels } from './axes/render-axes.js'
 import { arc } from 'd3'
-import { projectPolarPoint } from './polar-geometry.js'
-import { watchCanvasPixelRatio } from './render-composite-canvas.js'
-import type { CoordinateSystem } from './mark-definition.js'
-import { isPlotMark, type PlotMark } from './marks.js'
-import { createPluginHost, isPlotPlugin, type PlotPlugin } from './plugins.js'
+import { projectPolarPoint } from './coordinates/polar-geometry.js'
+import { watchCanvasPixelRatio } from './rendering/render-composite-canvas.js'
+import type { CoordinateSystem } from './marks/mark-definition.js'
+import { isPlotMark, type PlotMark } from './marks/marks.js'
+import { createPluginHost, isPlotPlugin, type PlotPlugin } from './plugins/plugins.js'
 import {
   projectSkewTPoint,
   invertSkewTPoint,
   type SkewTOptions,
   type SkewTPoint,
   type SoundingPoint,
-} from './skew-t-geometry.js'
-import { renderSkewTAxes } from './render-skew-t-axes.js'
-import { createScaleBindings } from './scale-bindings.js'
-import { createMarkLayer } from './mark-layer.js'
-import { createPointerHub, type PlotPointer } from './pointer-hub.js'
-import { createLegendModel, type LegendModel } from './legend.js'
+} from './coordinates/skew-t-geometry.js'
+import { renderSkewTAxes } from './axes/render-skew-t-axes.js'
+import { createScaleBindings } from './scales/scale-bindings.js'
+import { createMarkLayer } from './marks/mark-layer.js'
+import { createPointerHub, type PlotPointer } from './interaction/pointer-hub.js'
+import { createLegendModel, type LegendModel } from './plugins/legend/legend.js'
 
-export type { PlotPointer } from './pointer-hub.js'
+export type { PlotPointer } from './interaction/pointer-hub.js'
 import {
   direction,
   marginKeys,

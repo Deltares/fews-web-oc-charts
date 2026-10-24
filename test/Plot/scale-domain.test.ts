@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import type { ScaleKind } from '../../src/scales/scale.js'
-import { isValidScaleDomain } from '../../src/plot/scale-domain.js'
+import { isValidScaleDomain } from '../../src/plot/scales/scale-domain.js'
 
 describe('interaction scale-domain validation', () => {
   test.each<ScaleKind>(['linear', 'log', 'time', 'degrees', 'angular', 'radial'])(
