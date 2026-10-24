@@ -628,19 +628,40 @@ describe('tooltip plugin', () => {
     await frame()
     expect(plot.element.querySelector('[data-crosshair-label="x"]')?.textContent).toBe('6')
     expect(plot.element.querySelector('[data-crosshair-label="y"]')?.textContent).toBe('21.123')
+    const callouts = [...plot.element.querySelectorAll('[data-crosshair-label]')]
+    expect(callouts).toHaveLength(2)
     live.update({ visible: false })
     await frame()
     expect(entries()).toEqual([])
     expect(plot.element.querySelector('[data-layer="crosshair"]')?.getAttribute('display')).toBe(
       'none',
     )
+    for (const callout of callouts) expect(callout.getAttribute('display')).toBe('none')
     live.update({ visible: true })
     await frame()
     expect(entries()).toEqual(['live'])
     data.clear()
     await frame()
     expect(entries()).toEqual([])
-    expect(plot.element.querySelector('[data-crosshair-label]')).toBeNull()
+    expect(plot.element.querySelector('[data-layer="crosshair"]')?.getAttribute('display')).toBe(
+      'none',
+    )
+    expect(document.querySelector<HTMLElement>('[data-layer="tooltip"]')?.style.visibility).toBe(
+      'hidden',
+    )
+    for (const callout of callouts) expect(callout.getAttribute('display')).toBe('none')
+
+    data.replace({ x: [7], y: [22.456] })
+    await frame()
+    expect(entries()).toEqual(['live'])
+    expect(plot.element.querySelector('[data-layer="crosshair"]')?.getAttribute('display')).toBe('')
+    const restoredCallouts = [...plot.element.querySelectorAll('[data-crosshair-label]')]
+    expect(restoredCallouts).toHaveLength(callouts.length)
+    restoredCallouts.forEach((callout, index) => {
+      expect(callout).toBe(callouts[index])
+      expect(callout.getAttribute('display')).toBe('')
+    })
+    expect(restoredCallouts.map((callout) => callout.textContent)).toEqual(['7', '22.456'])
   })
 
   test('validates callout scales and linked handle updates atomically', async () => {

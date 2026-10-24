@@ -2038,6 +2038,8 @@ runtime. Composite bar and stacked-area hit testing are implemented; remaining P
 examples and exit criteria, including interaction coverage for the remaining mark kinds,
 remain. Crosshair snapping now supports composite bar and stacked-area layers; snapping vertical
 stacks along x draws one y guide and cumulative-upper callout per visible layer.
+Crosshair callout nodes are reused across pointer leaves, hidden marks and empty data;
+inactive callouts are hidden rather than removed, then updated when inspection resumes.
 
 Docked legends use a separate SVG outside the entire chart SVG, including its axes and
 title. A grid reserves space within the configured host size, and the chart observes its
