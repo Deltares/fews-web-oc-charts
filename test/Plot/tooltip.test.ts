@@ -272,6 +272,7 @@ describe('tooltip plugin', () => {
       height: 100,
       margins: { top: 0, right: 0, bottom: 0, left: 0 },
       scales: { t: linearScale({ domain: [0, 1] }), q: linearScale({ domain: [0, 10] }) },
+      directions: { t: 'x', q: 'y' },
       marks: [mark],
       plugins: [interaction],
     })
@@ -366,6 +367,7 @@ describe('tooltip plugin', () => {
       height: 100,
       margins: { top: 0, right: 0, bottom: 0, left: 0 },
       scales: { t: linearScale({ domain: [0, 1] }), q: linearScale({ domain: [0, 10] }) },
+      directions: { t: 'x', q: 'y' },
       marks: [mark],
       plugins: [interaction, guide],
     })
@@ -425,6 +427,7 @@ describe('tooltip plugin', () => {
           t: kind === 'bar' ? bandScale({ domain: ['one'] }) : linearScale({ domain: [0, 1] }),
           q: linearScale({ domain: [0, 10] }),
         },
+        directions: { t: 'x', q: 'y' },
         marks: [mark],
         plugins: [interaction, guide],
       })
