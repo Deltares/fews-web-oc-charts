@@ -439,6 +439,55 @@ describe('createPlot named scales', () => {
     expect(x.domain.get()).toEqual(stopped)
   })
 
+  test.each(['pan', 'zoom'] as const)(
+    'ignores %s updates outside the Date range without changing the domain',
+    async (gesture) => {
+      const domain = [8.64e15 - 10000, 8.64e15]
+      const x = timeScale({ domain })
+      const current = plot(host(), {
+        width: 500,
+        height: 300,
+        directions: { x: 'x' },
+        scales: { x },
+        plugins: [gesture === 'pan' ? pan({ mode: 'x' }) : zoom({ mode: 'x', wheel: 'x' })],
+      })
+      await frame()
+      vi.spyOn(current.element, 'getBoundingClientRect').mockReturnValue(
+        new DOMRect(0, 0, 500, 300),
+      )
+      const options = x.options.get()
+      if (gesture === 'pan') {
+        for (const [type, clientX] of [
+          ['pointerdown', 250],
+          ['pointermove', 200],
+          ['pointerup', 200],
+        ] as const) {
+          current.element.dispatchEvent(
+            new PointerEvent(type, {
+              clientX,
+              clientY: 150,
+              pointerId: 1,
+              button: 0,
+              isPrimary: true,
+              cancelable: true,
+            }),
+          )
+        }
+      } else {
+        const event = new WheelEvent('wheel', {
+          clientX: 250,
+          clientY: 150,
+          deltaY: 100,
+          cancelable: true,
+        })
+        current.element.dispatchEvent(event)
+        expect(event.defaultPrevented).toBe(false)
+      }
+      expect(x.options.get()).toBe(options)
+      expect(x.domain.get()).toEqual(domain)
+    },
+  )
+
   test('brushes selected scales and emits an immutable selection event', async () => {
     const x = linearScale({ domain: [0, 100] })
     const y = linearScale({ domain: [0, 100] })

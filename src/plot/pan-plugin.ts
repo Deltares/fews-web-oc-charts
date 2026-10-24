@@ -1,11 +1,11 @@
-import type { ScaleBinding, ScaleValue } from '../scales/scale.js'
+import type { ScaleBinding } from '../scales/scale.js'
 import { reactive } from '../core/runtime.js'
 import { matchesModifierKey } from '../Utils/modifierKey.js'
 import { isBrushHandle } from './brush.js'
 import type { PlotContext, PluginDefinition } from './plugin-definition.js'
 import { isPanHandle, type PanHandle, type PanMode } from './pan.js'
+import { isValidScaleDomain } from './scale-domain.js'
 
-const maxTime = 8.64e15
 type Axis = 'x' | 'y'
 
 function installPan(handle: PanHandle, context: PlotContext) {
@@ -133,17 +133,8 @@ function panScale(
   const domain = binding.scale.domain.get()
   const shiftDomain = (value: number) =>
     binding.scale.kind === 'log' ? value * (before / after) : value + before - after
-  const nextDomain = domain.map((value) => shiftDomain(Number(value))) as ScaleValue[]
-  if (
-    nextDomain.some(
-      (value) =>
-        !Number.isFinite(value) ||
-        (binding.scale.kind === 'log' && Number(value) <= 0) ||
-        (binding.scale.kind === 'time' && Math.abs(Number(value)) > maxTime),
-    )
-  ) {
-    return
-  }
+  const nextDomain = domain.map((value) => shiftDomain(Number(value)))
+  if (!isValidScaleDomain(binding.scale.kind, nextDomain)) return
   binding.scale.update({ domain: nextDomain })
 }
 
