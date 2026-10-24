@@ -114,10 +114,10 @@ export function inspectCrosshair(
       return layers.map(({ hit: layer, py }) => ({
         axis,
         scale: scaleName,
-        value: layer.upper as ScaleValue,
-        digits: 2 as number | undefined,
+        value: layer.upper,
+        digits: 2,
         position: py,
-        layerId: layer.layerId as string | undefined,
+        layerId: layer.layerId,
       }))
     }
     if (!options.mode.includes(axis)) return []
@@ -125,25 +125,27 @@ export function inspectCrosshair(
     if (!binding) return []
     const domain = binding.scale.domain.get()
     if (binding.scale.kind === 'band' && !domain.length) return []
-    const value =
-      hit && options.snap?.mark[axis] === scaleName
-        ? hit[axis]
-        : binding.scale.kind === 'band'
-          ? domain.reduce((closest, value) =>
-              Math.abs(binding.project(value) - resolved[axis]) <
-              Math.abs(binding.project(closest) - resolved[axis])
-                ? value
-                : closest,
-            )
-          : binding.invert(resolved[axis])
-    const digits =
-      hit && options.snap?.mark[axis] === scaleName
-        ? (isLineMark(options.snap.mark) || isSeriesMark(options.snap.mark)) && axis === 'y'
-          ? options.snap.mark.digits
-          : axis === 'y'
-            ? 2
-            : undefined
-        : 2
+    let value
+    if (hit && options.snap?.mark[axis] === scaleName) {
+      value = hit[axis]
+    } else if (binding.scale.kind === 'band') {
+      value = domain.reduce((closest, value) =>
+        Math.abs(binding.project(value) - resolved[axis]) <
+        Math.abs(binding.project(closest) - resolved[axis])
+          ? value
+          : closest,
+      )
+    } else {
+      value = binding.invert(resolved[axis])
+    }
+    let digits: number | undefined = 2
+    if (hit && options.snap?.mark[axis] === scaleName) {
+      if ((isLineMark(options.snap.mark) || isSeriesMark(options.snap.mark)) && axis === 'y') {
+        digits = options.snap.mark.digits
+      } else if (axis !== 'y') {
+        digits = undefined
+      }
+    }
     return [
       {
         axis,
