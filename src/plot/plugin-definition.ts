@@ -6,6 +6,8 @@ import type { PlotOptions } from './create-plot.js'
 import type { CoordinateSystem, Orientation } from './mark-definition.js'
 import type { GestureHandler, GestureType, PlotPointer, PlotPosition } from './pointer-hub.js'
 import type { LegendModel } from './legend.js'
+import type { CrosshairHandle } from './crosshair.js'
+import type { CrosshairInspection } from './inspection.js'
 
 /** The read-only view of a plot that an installed plugin receives. */
 export interface PlotContext {
@@ -20,6 +22,7 @@ export interface PlotContext {
   readonly scales: Readonly<Record<string, ScaleBinding>>
   /** Owned by the installed plugin and disposed when it is removed. */
   readonly scope: ReactiveScope
+  inspectCrosshair(handle: CrosshairHandle): CrosshairInspection
   direction(name: string): Orientation
   locate(event: { readonly clientX: number; readonly clientY: number }): PlotPosition | undefined
   /** Registers a gesture handler that is released automatically with the plugin. */

@@ -1,4 +1,7 @@
-import type { ReactiveScope } from '../core/reactive.js'
+import type { ReactiveScope, ComputedSignal } from '../core/reactive.js'
+import { reactive } from '../core/runtime.js'
+import type { CrosshairHandle } from './crosshair.js'
+import { inspectCrosshair, type CrosshairInspection } from './inspection.js'
 import type { PlotContext, PluginDefinition, PluginValidationContext } from './plugin-definition.js'
 import { panDefinition } from './pan-plugin.js'
 import { brushDefinition } from './brush-plugin.js'
@@ -46,8 +49,8 @@ export function validatePlugins(plugins: readonly unknown[], context: PluginVali
   )
 }
 
-/** Everything in PlotContext except the per-plugin scope; `scales` must be a live getter. */
-export type SharedPlotContext = Omit<PlotContext, 'scope'>
+/** Plot state supplied to the plugin host; `scales` must be a live getter. */
+export type SharedPlotContext = Omit<PlotContext, 'scope' | 'inspectCrosshair'>
 
 export interface PluginHost {
   reconcile(plugins: readonly PlotPlugin[]): void
@@ -65,6 +68,7 @@ export function createPluginHost(
   shared: SharedPlotContext,
 ): PluginHost {
   const mounted = new Map<PlotPlugin, MountedPlugin>()
+  const inspections = new Map<CrosshairHandle, ComputedSignal<CrosshairInspection>>()
 
   function uninstall(entry: MountedPlugin) {
     try {
@@ -91,6 +95,16 @@ export function createPluginHost(
         return shared.scales
       },
       scope,
+      inspectCrosshair(handle) {
+        let inspection = inspections.get(handle)
+        if (!inspection) {
+          inspection = parentScope.run(() =>
+            reactive.computed(() => inspectCrosshair(handle, shared)),
+          )
+          inspections.set(handle, inspection)
+        }
+        return inspection.get()
+      },
       direction: (name) => shared.direction(name),
       locate: (event) => shared.locate(event),
       on(type, handler) {
@@ -119,6 +133,12 @@ export function createPluginHost(
           uninstall(entry)
         }
       }
+      for (const [handle, inspection] of inspections) {
+        if (!plugins.includes(handle)) {
+          inspection.dispose()
+          inspections.delete(handle)
+        }
+      }
       for (const plugin of plugins) {
         if (!mounted.has(plugin)) mounted.set(plugin, install(plugin))
       }
@@ -127,6 +147,8 @@ export function createPluginHost(
       const entries = [...mounted.values()].reverse()
       mounted.clear()
       for (const entry of entries) uninstall(entry)
+      for (const inspection of inspections.values()) inspection.dispose()
+      inspections.clear()
     },
   }
 }

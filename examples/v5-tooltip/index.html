@@ -12,15 +12,38 @@
     </nav>
     <h1>v5: tooltip</h1>
     <p>
-      Move the pointer over the plot to inspect samples from both series, with matching symbols and
-      label colors.
+      Inspect samples with matching symbols and label colors. Crosshair axis callouts show shared
+      coordinates without repeating them in every tooltip entry.
     </p>
     <fieldset class="controls">
       <legend>Tooltip options</legend>
+      <label for="mode">
+        Crosshair guides
+        <select id="mode">
+          <option value="none">None (standalone tooltip)</option>
+          <option value="x" selected>Vertical (x)</option>
+          <option value="y">Horizontal (y)</option>
+          <option value="xy">Both (xy)</option>
+        </select>
+      </label>
+      <label for="snap">
+        Snap to observed sample by
+        <select id="snap">
+          <option value="none">Free pointer</option>
+          <option value="x" selected>Nearest x</option>
+          <option value="y">Nearest y</option>
+          <option value="xy">Nearest screen position</option>
+        </select>
+      </label>
+      <label for="callouts">
+        <input id="callouts" type="checkbox" checked />
+        Axis coordinate callouts
+      </label>
       <label for="axis">
-        Match samples by
+        Match samples by (without snapping)
         <select id="axis">
           <option value="x" selected>Nearest x</option>
+          <option value="y">Nearest y</option>
           <option value="xy">Nearest screen position</option>
         </select>
       </label>
@@ -37,14 +60,27 @@
     <figure>
       <div id="chart" class="plot-host"></div>
       <figcaption>
-        In nearest-x mode each mark contributes its closest visible sample. Nearest screen position
-        selects one actual sample across the configured marks.
+        X/y snapping anchors the guides to an observed sample, then finds each series' nearest
+        sample along that axis. Screen-distance snapping inspects only the selected observed sample.
+        A coordinate stays in the tooltip if its scale or exact value differs from the callout; no
+        interpolation is performed. Callouts use the time scale's UTC formatting.
       </figcaption>
     </figure>
+    <p id="status" class="status" role="status"></p>
     <h2>Public API</h2>
-    <pre><code>const interaction = tooltip({ marks: [observed, forecast], axis: 'x' })
-const plot = createPlot(host, { scales: { t, q }, marks, plugins: [interaction] })
-interaction.update({ axis: 'xy', position: 'top' })</code></pre>
+    <pre><code>const guide = crosshair({
+  mode: 'x',
+  snap: { mark: observed, axis: 'x' },
+  labels: { x: 't', y: 'q' },
+})
+const interaction = tooltip({ marks: [observed, forecast], crosshair: guide })
+const plot = createPlot(host, { scales: { t, q }, marks, plugins: [guide, interaction] })
+guide.update({ mode: 'xy' })
+guide.update({ snap: { mark: observed, axis: 'y' } })
+interaction.update({ position: 'top' })
+// A linked crosshair's snap axis takes precedence over tooltip.axis.
+// Without a link, the tooltip retains all sample coordinates.
+interaction.update({ crosshair: undefined, axis: 'xy' })</code></pre>
     <script type="module" src="./v5-tooltip.ts"></script>
   </body>
 </html>
