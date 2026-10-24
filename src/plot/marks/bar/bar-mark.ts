@@ -82,24 +82,24 @@ export const barDefinition: MarkDefinition<BarMark> = {
           : mark.update({ visible: visible && layers[0]?.visible !== false }),
       tokens.accent,
     ),
-  validate(mark, { scales, coordinateSystem, direction }) {
+  validate(mark, context) {
+    const { scales, coordinateSystem } = context
     if (coordinateSystem !== 'cartesian') throw new Error('bar() supports cartesian plots only.')
     validateBarScales(mark.data, mark.options.get().resolved, scales)
-    if (direction(mark.x) !== 'x' || direction(mark.y) !== 'y') {
+    if (context.direction(mark.x) !== 'x' || context.direction(mark.y) !== 'y') {
       throw new Error('Bar scale directions do not match its orientation.')
     }
   },
   extents(mark, context) {
     const options = mark.options.get().resolved
-    const coordinate =
-      options.scales.x === context.scale
-        ? 'category'
-        : options.scales.y === context.scale
-          ? 'value'
-          : undefined
+    let coordinate: 'category' | 'value' | undefined
+    if (options.scales.x === context.scale) coordinate = 'category'
+    else if (options.scales.y === context.scale) coordinate = 'value'
     if (!coordinate) return
     const opposite = coordinate === 'category' ? options.scales.y : options.scales.x
-    barExtent(mark, coordinate, extentWindow(context, opposite))?.forEach(context.add)
+    barExtent(mark, coordinate, extentWindow(context, opposite))?.forEach((value) =>
+      context.add(value),
+    )
   },
   createRenderer: createBarRenderer,
   track(mark) {
@@ -108,12 +108,13 @@ export const barDefinition: MarkDefinition<BarMark> = {
   },
   validateUpdates: (mark, context) =>
     validateBarUpdates(mark, (candidate) => {
-      const { scales, direction } = context()
+      const validationContext = context()
+      const { scales } = validationContext
       validateBarScales(mark.data, candidate, scales)
       const vertical = candidate.orientation === 'vertical'
       const x = vertical ? candidate.scales.x : candidate.scales.y
       const y = vertical ? candidate.scales.y : candidate.scales.x
-      if (direction(x) !== 'x' || direction(y) !== 'y') {
+      if (validationContext.direction(x) !== 'x' || validationContext.direction(y) !== 'y') {
         throw new Error('Bar scale directions do not match its orientation.')
       }
     }),
