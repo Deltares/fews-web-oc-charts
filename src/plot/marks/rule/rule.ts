@@ -1,6 +1,11 @@
 import { validateKeys } from '../../../core/validation.js'
+import {
+  registerStaticLegend,
+  staticLegendKeys,
+  type StaticLegendOptions,
+} from '../static-legend.js'
 
-export interface RuleOptions {
+export interface RuleOptions extends StaticLegendOptions {
   id?: string
   scale: string
   value: number
@@ -24,7 +29,11 @@ export function isRuleMark(value: object): value is RuleMark {
 
 export function rule(options: RuleOptions): RuleMark {
   if (!options || typeof options !== 'object') throw new Error('rule options must be an object.')
-  validateKeys(options, ['id', 'scale', 'value', 'stroke', 'strokeWidth'], 'rule')
+  validateKeys(
+    options,
+    ['id', 'scale', 'value', 'stroke', 'strokeWidth', ...staticLegendKeys],
+    'rule',
+  )
   if (options.id !== undefined && (typeof options.id !== 'string' || options.id.length === 0)) {
     throw new Error('rule.id must be a non-empty string.')
   }
@@ -47,5 +56,6 @@ export function rule(options: RuleOptions): RuleMark {
     strokeWidth,
   })
   ruleMarks.add(mark)
+  registerStaticLegend(mark, options, 'rule')
   return mark
 }

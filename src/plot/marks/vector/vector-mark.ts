@@ -11,6 +11,7 @@ import {
   type MarkRenderer,
   type MarkValidationContext,
 } from '../mark-definition.js'
+import { applyStaticVisibility, isStaticMarkVisible, staticLegend } from '../static-legend.js'
 import { isArrowsMark, type ArrowsMark, type VectorValue } from './arrows.js'
 import { isDirectionMark, type DirectionMark } from './direction.js'
 import { projectPolarPoint } from '../../coordinates/polar-geometry.js'
@@ -72,6 +73,7 @@ function createVectorRenderer<M extends VectorMark>(
       layer.append(group)
     },
     geometry(mark, context) {
+      if (!applyStaticVisibility(mark, group)) return
       const xScale = context.scales[mark.x]
       const yScale = context.scales[mark.y]
       const key = [
@@ -156,6 +158,7 @@ function createVectorRenderer<M extends VectorMark>(
 }
 
 function vectorExtents(mark: VectorMark, context: MarkExtentContext) {
+  if (!isStaticMarkVisible(mark)) return
   const coordinate = mark.x === context.scale ? 'x' : mark.y === context.scale ? 'y' : undefined
   if (!coordinate) return
   const window = extentWindow(context, coordinate === 'x' ? mark.y : mark.x)
@@ -228,6 +231,13 @@ export const arrowsDefinition: MarkDefinition<ArrowsMark> = {
   validate(mark, context) {
     validateVectorMark(mark, context)
   },
+  legend: (mark, tokens) =>
+    staticLegend(mark, {
+      type: 'arrow',
+      color: mark.color ?? accent(tokens),
+      strokeWidth: mark.strokeWidth,
+    }),
+  track: (mark) => isStaticMarkVisible(mark),
   extents: vectorExtents,
   createRenderer: () => createVectorRenderer<ArrowsMark>('arrows'),
 }
@@ -238,6 +248,9 @@ export const directionDefinition: MarkDefinition<DirectionMark> = {
   validate(mark, context) {
     validateVectorMark(mark, context)
   },
+  legend: (mark, tokens) =>
+    staticLegend(mark, { type: 'direction', color: mark.color ?? accent(tokens) }),
+  track: (mark) => isStaticMarkVisible(mark),
   extents: vectorExtents,
   createRenderer: () => createVectorRenderer<DirectionMark>('direction'),
 }

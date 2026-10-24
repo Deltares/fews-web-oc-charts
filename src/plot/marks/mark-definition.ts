@@ -117,7 +117,7 @@ export interface MarkDefinition<M extends object> {
   /** Returns shapes that mark one of this mark's hits as selected. */
   highlight?(mark: M, hit: MarkHit, context: MarkHighlightContext): readonly HighlightShape[]
   /** Supplies symbols and visibility operations without reading data or rendered nodes. */
-  legend?(mark: M, tokens: ThemeTokens): MarkLegend
+  legend?(mark: M, tokens: ThemeTokens): MarkLegend | undefined
   /** Reads reactive state for this handle; subscriptions are replaced even when its renderer is reused. */
   track?(mark: M): void
   /** Registers validation of option updates against the plot; returns a disposer. */

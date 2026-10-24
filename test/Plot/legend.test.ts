@@ -10,6 +10,16 @@ import {
   stackedArea,
   legendSymbolPrimitives,
   legend,
+  line,
+  rule,
+  band,
+  text,
+  arrows,
+  direction,
+  histogram,
+  heatmap,
+  createGrid,
+  colorScale,
   type Plot,
 } from '../../src/index.js'
 import { seriesDefinition } from '../../src/plot/marks/line/line-mark.js'
@@ -497,7 +507,7 @@ describe('headless legend model', () => {
   })
 
   test.each(['svg', 'canvas'] as const)(
-    'resolves inherited composite styles and multicolour stack/group symbols with %s marks',
+    'resolves inherited composite styles into per-layer symbols under group headings with %s marks',
     async (renderer) => {
       const data = createTable({ t: [0, 1], a: [1, 2], b: [3, 4], c: [2, 1] })
       const layers = [
@@ -507,6 +517,7 @@ describe('headless legend model', () => {
       ]
       const mark = stackedArea(data, {
         id: 'areas',
+        label: 'Areas',
         x: 't',
         scales: { x: 't', y: 'q' },
         renderer,
@@ -518,6 +529,7 @@ describe('headless legend model', () => {
       })
       const columns = bar(data, {
         id: 'bars',
+        label: 'Bars',
         x: 't',
         scales: { x: 't', y: 'q' },
         renderer,
@@ -542,12 +554,14 @@ describe('headless legend model', () => {
           { type, fill: 'blue', opacity: 0.7, stroke: 'black', strokeWidth: 2 },
           { type, fill: 'green', opacity: 0.4, stroke: 'purple', strokeWidth: 3 },
         ]
-        expect(entry.symbol).toEqual({ type: 'stack', parts })
-        expect(entry.children[0].symbol).toEqual({ type: 'stack', parts: parts.slice(0, 2) })
-        expect(entry.children[1].symbol).toEqual({ type: 'stack', parts: parts.slice(2) })
+        expect(entry.symbol).toEqual(parts[0])
+        expect(entry.children[0].symbol).toEqual({ type: 'group' })
+        expect(entry.children[1].symbol).toEqual({ type: 'group' })
         expect(entry.children[0].children[1].symbol).toEqual(parts[1])
         expect(
-          legendSymbolPrimitives(entry.symbol).map(({ attributes }) => attributes.fill),
+          [...entry.children[0].children, ...entry.children[1].children].map(
+            ({ symbol }) => legendSymbolPrimitives(symbol)[0].attributes.fill,
+          ),
         ).toEqual(['red', 'blue', 'green'])
       }
       if (renderer === 'svg') {
@@ -729,5 +743,140 @@ describe('headless legend model', () => {
     current.legend.showAll()
     expect(columns.options.get().resolved.visible).toBe(true)
     expect(columns.options.get().resolved.layers?.every((layer) => layer.visible)).toBe(true)
+  })
+
+  test('collapses single-layer composites and flattens unlabelled multi-layer composites', () => {
+    const data = createTable({ t: [0, 1], a: [1, 2], b: [3, 4] })
+    const single = bar(data, {
+      id: 'single',
+      x: 't',
+      scales: { x: 't', y: 'q' },
+      layers: [{ id: 'a', y: 'a', label: 'Only', fill: 'red' }],
+      layout: 'grouped',
+      width: 20,
+    })
+    const unlabelled = stackedArea(data, {
+      id: 'flat',
+      x: 't',
+      scales: { x: 't', y: 'q' },
+      layers: [
+        { id: 'a', y: 'a', label: 'A', fill: 'red' },
+        { id: 'b', y: 'b', label: 'B', fill: 'blue' },
+      ],
+    })
+    const current = plot({
+      scales: { t: linearScale({ domain: [0, 1] }), q: linearScale({ domain: [0, 10] }) },
+      directions: { t: 'x' },
+      marks: [single, unlabelled],
+    })
+    const entries = current.legend.entries.get()
+    expect(entries.map(({ label }) => label)).toEqual(['Only', 'A', 'B'])
+    expect(entries[0]).toMatchObject({ id: 'single', children: [], symbol: { type: 'bar' } })
+    expect(entries[1]).toMatchObject({ markId: 'flat', symbol: { type: 'area', fill: 'red' } })
+
+    current.legend.toggle('single')
+    expect(single.options.get().resolved.layers?.[0].visible).toBe(false)
+    expect(current.legend.entries.get()[0].visibility).toBe('hidden')
+    current.legend.toggle('single')
+    expect(current.legend.entries.get()[0].visibility).toBe('visible')
+
+    current.legend.isolate(entries[2].id)
+    expect(unlabelled.options.get().resolved.layers?.map((layer) => layer.visible)).toEqual([
+      false,
+      true,
+    ])
+    expect(single.options.get().resolved.layers?.[0].visible).toBe(false)
+
+    unlabelled.update({ visible: false })
+    current.legend.setVisible(entries[1].id, true)
+    expect(unlabelled.options.get().resolved.visible).toBe(true)
+    expect(unlabelled.options.get().resolved.layers?.map((layer) => layer.visible)).toEqual([
+      true,
+      false,
+    ])
+  })
+})
+
+describe('v4 legend symbol parity', () => {
+  test('labelled static marks join the legend with v4 symbols and toggle their rendering', async () => {
+    const xy = { x: 'x', y: 'y', xValues: [0, 1], yValues: [1, 2] }
+    const vectors = { ...xy, xEndValues: [0.5, 1], yEndValues: [2, 3] }
+    const marks = [
+      line({ ...xy, id: 'line', label: 'Line', stroke: 'red' }),
+      line({ ...xy, id: 'unlabelled' }),
+      rule({ id: 'rule', label: 'Rule', scale: 'y', value: 2, stroke: 'black' }),
+      band({
+        id: 'band',
+        label: 'Band',
+        x: 'x',
+        y: 'y',
+        xValues: [[0, 1]],
+        yValues: [[1, 2]],
+        fill: 'grey',
+        opacity: 0.4,
+      }),
+      text({ ...xy, id: 'text', label: 'Text', textValues: ['a', 'b'], fill: 'green' }),
+      arrows({ ...vectors, id: 'arrows', label: 'Arrows', color: 'blue' }),
+      direction({ ...xy, id: 'direction', label: 'Direction', directionValues: [0, 90] }),
+    ]
+    const current = plot({
+      scales: { x: linearScale({ domain: [0, 2] }), y: linearScale({ domain: [0, 4] }) },
+      directions: { x: 'x' },
+      marks,
+    })
+    await frame()
+    const entries = current.legend.entries.get()
+    expect(entries.map(({ id, symbol }) => [id, symbol.type])).toEqual([
+      ['line', 'composite'],
+      ['rule', 'rule'],
+      ['band', 'area'],
+      ['text', 'text'],
+      ['arrows', 'arrow'],
+      ['direction', 'direction'],
+    ])
+    expect(entries[1].symbol).toMatchObject({ stroke: 'black', strokeWidth: 1.5 })
+    expect(entries[2].symbol).toMatchObject({ fill: 'grey', opacity: 0.4 })
+    expect(entries[4].symbol).toMatchObject({ color: 'blue' })
+
+    const node = current.element.querySelector('[data-mark="band"]')!
+    current.legend.toggle('band')
+    expect(current.legend.entries.get()[2].visibility).toBe('hidden')
+    await frame()
+    expect(node.getAttribute('display')).toBe('none')
+    current.legend.showAll()
+    await frame()
+    expect(node.hasAttribute('display')).toBe(false)
+  })
+
+  test('histogram and labelled heatmap use the v4 step-bar symbol', async () => {
+    const color = colorScale({ domain: [0, 2], colors: ['black', 'white'] })
+    const grid = heatmap(createGrid({ xEdges: [0, 1, 2], yEdges: [0, 1], values: [0, 2] }), {
+      id: 'grid',
+      label: 'Grid',
+      scales: { x: 'x', y: 'y' },
+      color,
+    })
+    const bins = histogram(createTable({ sample: [0.5, 1.5] }), {
+      id: 'bins',
+      x: 'sample',
+      scales: { x: 'x', y: 'y' },
+      bins: [0, 1, 2],
+      fill: 'orange',
+    })
+    const current = plot({
+      scales: { x: linearScale({ domain: [0, 2] }), y: linearScale({ domain: [0, 2] }) },
+      directions: { x: 'x' },
+      marks: [grid, bins],
+    })
+    await frame()
+    const [gridEntry, binsEntry] = current.legend.entries.get()
+    expect(gridEntry).toMatchObject({
+      label: 'Grid',
+      symbol: { type: 'steps', fill: color.map(1) },
+    })
+    expect(binsEntry.symbol).toMatchObject({ type: 'steps', fill: 'orange' })
+    expect(legendSymbolPrimitives(binsEntry.symbol)).toHaveLength(3)
+    current.legend.toggle('grid')
+    expect(grid.options.get().resolved.visible).toBe(false)
   })
 })

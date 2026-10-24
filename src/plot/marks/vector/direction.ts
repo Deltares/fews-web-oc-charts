@@ -1,7 +1,12 @@
 import { validateKeys } from '../../../core/validation.js'
+import {
+  registerStaticLegend,
+  staticLegendKeys,
+  type StaticLegendOptions,
+} from '../static-legend.js'
 import { validateVectorValues, type VectorValues } from './arrows.js'
 
-export interface DirectionOptions {
+export interface DirectionOptions extends StaticLegendOptions {
   id?: string
   x: string
   y: string
@@ -49,6 +54,7 @@ export function direction(options: DirectionOptions): DirectionMark {
       'every',
       'color',
       'strokeWidth',
+      ...staticLegendKeys,
     ],
     'direction',
   )
@@ -95,5 +101,6 @@ export function direction(options: DirectionOptions): DirectionMark {
     strokeWidth,
   })
   directionMarks.add(mark)
+  registerStaticLegend(mark, options, 'direction')
   return mark
 }

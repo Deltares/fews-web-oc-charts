@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest'
 import { createLegendSwatch, legendSymbolPrimitives, type SymbolSpec } from '../../src/index.js'
 
 describe('legend symbol geometry', () => {
-  test('overlays area, dashed stroke and outlined marker with resolved attributes', () => {
+  test('overlays a v4 area band, dashed stroke and outlined marker on a 20×20 swatch', () => {
     const primitives = legendSymbolPrimitives({
       type: 'composite',
       parts: [
@@ -23,10 +23,10 @@ describe('legend symbol geometry', () => {
       {
         type: 'rect',
         attributes: {
-          x: 2.5,
-          y: 10,
-          width: 31,
-          height: 7.5,
+          x: 0,
+          y: 5,
+          width: 20,
+          height: 10,
           fill: 'navy',
           'fill-opacity': 0.25,
           stroke: 'none',
@@ -36,9 +36,9 @@ describe('legend symbol geometry', () => {
       {
         type: 'line',
         attributes: {
-          x1: 2.5,
+          x1: 0,
           y1: 10,
-          x2: 33.5,
+          x2: 20,
           y2: 10,
           stroke: 'navy',
           'stroke-width': 3,
@@ -51,7 +51,7 @@ describe('legend symbol geometry', () => {
       {
         type: 'circle',
         attributes: {
-          cx: 18,
+          cx: 10,
           cy: 10,
           r: 4,
           fill: 'white',
@@ -112,7 +112,7 @@ describe('legend symbol geometry', () => {
     ])
   })
 
-  test('fits marker-only and bar geometry, including small swatches', () => {
+  test('fits marker-only and centred square bar geometry, including small swatches', () => {
     expect(
       legendSymbolPrimitives(
         {
@@ -141,10 +141,10 @@ describe('legend symbol geometry', () => {
     ).toEqual({
       type: 'rect',
       attributes: {
-        x: 2,
-        y: 2,
-        width: 36,
-        height: 20,
+        x: 14,
+        y: 6,
+        width: 12,
+        height: 12,
         fill: 'orange',
         stroke: 'black',
         'stroke-width': 2,
@@ -154,6 +154,43 @@ describe('legend symbol geometry', () => {
     expect(legendSymbolPrimitives({ type: 'stack', parts: [] })).toEqual([])
     expect(legendSymbolPrimitives({ type: 'composite', parts: [] })).toEqual([])
     expect(legendSymbolPrimitives({ type: 'group' })).toEqual([])
+  })
+
+  test('draws the v4 step bars, rule, arrow, direction and text symbols', () => {
+    const shapes = (symbol: SymbolSpec) =>
+      legendSymbolPrimitives(symbol).map(({ type, attributes }) => ({ type, ...attributes }))
+    expect(shapes({ type: 'steps', fill: 'teal' })).toMatchObject([
+      { type: 'rect', x: 0, y: 2, width: 5, height: 18, fill: 'teal' },
+      { type: 'rect', x: 5, y: 4, width: 5, height: 16, fill: 'teal' },
+      { type: 'rect', x: 10, y: 5, width: 5, height: 15, fill: 'teal' },
+    ])
+    expect(shapes({ type: 'rule', stroke: 'red', strokeWidth: 2 })).toEqual([
+      {
+        type: 'line',
+        x1: 10,
+        y1: 2,
+        x2: 10,
+        y2: 18,
+        stroke: 'red',
+        'stroke-width': 2,
+        'stroke-dasharray': undefined,
+        opacity: undefined,
+      },
+    ])
+    expect(shapes({ type: 'arrow', color: 'blue' })).toMatchObject([
+      { type: 'line', x1: 0, y1: 10, x2: 10, y2: 10, stroke: 'blue', 'stroke-width': 1.5 },
+      { type: 'path', d: 'M10,10L5,4L20,10L5,16Z', fill: 'blue', stroke: 'none' },
+    ])
+    expect(shapes({ type: 'direction', color: 'blue' })).toMatchObject([
+      { type: 'path', d: 'M10,10L5.2,14L10,2L14.8,14Z', fill: 'blue' },
+    ])
+    const [label] = legendSymbolPrimitives({ type: 'text', fill: 'green' })
+    expect(label).toMatchObject({
+      type: 'text',
+      text: '+1.0',
+      attributes: { x: 10, y: 10, 'text-anchor': 'middle', 'font-size': 10, fill: 'green' },
+    })
+    expect(createLegendSwatch({ type: 'text' }).querySelector('text')?.textContent).toBe('+1.0')
   })
 
   test.each([0, -1, NaN, Infinity])('rejects invalid dimensions: %s', (value) => {

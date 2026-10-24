@@ -1,11 +1,16 @@
 import { validateKeys } from '../../../core/validation.js'
+import {
+  registerStaticLegend,
+  staticLegendKeys,
+  type StaticLegendOptions,
+} from '../static-legend.js'
 import { copyNumericRanges } from '../mark-values.js'
 
 export type BandRange = readonly [number, number]
 export type BandRangeValue = BandRange | null | undefined
 export type BandRangeValues = ArrayLike<BandRangeValue>
 
-export interface BandOptions {
+export interface BandOptions extends StaticLegendOptions {
   shapeRendering?: 'auto' | 'crispEdges' | 'geometricPrecision'
   curve?: 'linear' | 'basis' | 'step' | 'step-before' | 'step-after'
   id?: string
@@ -57,7 +62,18 @@ export function band(options: BandOptions): BandMark {
   if (!options || typeof options !== 'object') throw new Error('band options must be an object.')
   validateKeys(
     options,
-    ['id', 'x', 'y', 'xValues', 'yValues', 'fill', 'opacity', 'curve', 'shapeRendering'],
+    [
+      'id',
+      'x',
+      'y',
+      'xValues',
+      'yValues',
+      'fill',
+      'opacity',
+      'curve',
+      'shapeRendering',
+      ...staticLegendKeys,
+    ],
     'band',
   )
   if (
@@ -95,5 +111,6 @@ export function band(options: BandOptions): BandMark {
     opacity,
   })
   bandMarks.add(mark)
+  registerStaticLegend(mark, options, 'band')
   return mark
 }
