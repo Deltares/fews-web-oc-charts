@@ -149,6 +149,7 @@ function installCrossSectionSelect(handle: CrossSectionSelectHandle, context: Pl
     'vector-effect': 'non-scaling-stroke',
     'pointer-events': 'none',
   })
+  const stemLayer = svgElement('g', { 'data-cross-section-stems': '', 'pointer-events': 'none' })
   const pointLayer = svgElement('g', { 'data-cross-section-points': '', 'pointer-events': 'none' })
   const handleGroup = svgElement('g', {
     'data-cross-section-handle': '',
@@ -186,7 +187,7 @@ function installCrossSectionSelect(handle: CrossSectionSelectHandle, context: Pl
     'pointer-events': 'none',
   })
   labelLayer.style.filter = 'drop-shadow(0 1px 2.5px rgb(0 0 0 / 25%))'
-  guide.append(line, pointLayer, labelLayer, handleGroup)
+  guide.append(line, stemLayer, labelLayer, pointLayer, handleGroup)
   context.element.append(guide)
 
   let activePointer: number | undefined
@@ -196,6 +197,7 @@ function installCrossSectionSelect(handle: CrossSectionSelectHandle, context: Pl
 
   function hide() {
     guide.setAttribute('display', 'none')
+    stemLayer.replaceChildren()
     pointLayer.replaceChildren()
     labelLayer.replaceChildren()
   }
@@ -246,6 +248,7 @@ function installCrossSectionSelect(handle: CrossSectionSelectHandle, context: Pl
     const calloutY = Math.max(0, Math.min(size.height - 22, bottom))
     callout.setAttribute('transform', `translate(${calloutX} ${calloutY})`)
 
+    stemLayer.replaceChildren()
     pointLayer.replaceChildren()
     labelLayer.replaceChildren()
     if (!entries.length) return
@@ -292,33 +295,69 @@ function installCrossSectionSelect(handle: CrossSectionSelectHandle, context: Pl
         labelLayer.append(group)
         const width = text.getComputedTextLength() + labelHeight
         background.setAttribute('width', String(width))
-        return { point, color, group, width, top: point.y - labelHeight / 2 }
+        const placeLeft =
+          point.x + offset + width > plot.x + plot.width && point.x - offset - width >= plot.x
+        const left = placeLeft ? point.x - offset - width : point.x + offset
+        return {
+          point,
+          color,
+          group,
+          width,
+          left,
+          placeLeft,
+          markerSize,
+          top: Math.max(plot.y, point.y - labelHeight / 2),
+        }
       })
       .sort((a, b) => a.point.y - b.point.y)
 
-    // Stack labels near their points without overlap, then keep them inside the plot.
-    const minTop = plot.y
-    const maxTop = plot.y + plot.height - labelHeight
-    for (let index = 0; index < labels.length; index += 1) {
-      const previous = labels[index - 1]
-      const lowest = previous ? previous.top + labelHeight + labelGap : minTop
-      labels[index].top = Math.max(labels[index].top, lowest)
+    // Place each label at the free position closest to its own point. Candidates are the
+    // ideal position and the slots directly above/below every box it could collide with, so
+    // a label moves up or down depending on which side is nearer.
+    interface Box {
+      readonly left: number
+      readonly width: number
+      readonly top: number
+      readonly height: number
     }
-    for (let index = labels.length - 1; index >= 0; index -= 1) {
-      const next = labels[index + 1]
-      const highest = next ? next.top - labelHeight - labelGap : maxTop
-      labels[index].top = Math.max(minTop, Math.min(labels[index].top, highest))
+    const minTop = plot.y
+    const maxTop = Math.max(minTop, plot.y + plot.height - labelHeight)
+    const clampTop = (top: number) => Math.max(minTop, Math.min(maxTop, top))
+    const boxes: Box[] = labels.map(({ point, markerSize }) => ({
+      left: point.x - markerSize,
+      width: markerSize * 2,
+      top: point.y - markerSize,
+      height: markerSize * 2,
+    }))
+    const overlapsX = (label: (typeof labels)[number], box: Box) =>
+      label.left < box.left + box.width + labelGap && box.left < label.left + label.width + labelGap
+    const collides = (label: (typeof labels)[number], top: number, box: Box) =>
+      overlapsX(label, box) &&
+      top < box.top + box.height + labelGap &&
+      box.top < top + labelHeight + labelGap
+    const ideal = (label: (typeof labels)[number]) => clampTop(label.point.y - labelHeight / 2)
+    for (const label of labels) {
+      const target = ideal(label)
+      const nearby = boxes.filter((box) => overlapsX(label, box))
+      const candidates = [
+        target,
+        ...nearby.flatMap((box) => [
+          box.top - labelHeight - labelGap,
+          box.top + box.height + labelGap,
+        ]),
+      ]
+        .filter((top) => top >= minTop && top <= maxTop)
+        .sort((a, b) => Math.abs(a - target) - Math.abs(b - target))
+      label.top =
+        candidates.find((top) => nearby.every((box) => !collides(label, top, box))) ?? target
+      boxes.push({ left: label.left, width: label.width, top: label.top, height: labelHeight })
     }
 
     for (const label of labels) {
-      const { point } = label
-      const placeLeft =
-        point.x + offset + label.width > plot.x + plot.width &&
-        point.x - offset - label.width >= plot.x
-      const left = placeLeft ? point.x - offset - label.width : point.x + offset
+      const { left, placeLeft } = label
       const centerY = label.top + labelHeight / 2
       label.group.setAttribute('transform', `translate(${left} ${label.top})`)
-      pointLayer.prepend(
+      stemLayer.append(
         svgElement('line', {
           x1: label.point.x,
           y1: label.point.y,
