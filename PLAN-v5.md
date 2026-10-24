@@ -1991,8 +1991,12 @@ demonstrates its public API, live mode updates and optional data-point snapping.
 are explicit line/series marks; x and y select samples by projected screen coordinate, while
 xy selects the nearest actual sample by screen distance. Both guides use that same sample,
 and snapped guides hide when the target has no visible sample. The reusable nearest-point
-hit-test is shared groundwork for the tooltip plugin. Tooltip, legend and the remaining
-Phase 3 examples/exit criteria remain.
+hit-test is shared with the tooltip plugin. Tooltip supports nearest-x samples across selected
+line/series marks or one nearest actual sample in xy mode, safe text-only HTML content,
+viewport-aware placement, runtime option updates and plugin lifecycle cleanup. The
+[v5 tooltip example](./examples/v5-tooltip/index.html) demonstrates its public API. Tooltip is
+implemented; the headless legend, composite-layer hit tests and remaining Phase 3
+examples/exit criteria remain.
 
 Plugins are installed by a plugin host that reconciles `plot.plugins` by handle
 identity. Each built-in plugin registers a `PluginDefinition` (`is`, `validate`,

@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>v5: tooltip</title>
+  </head>
+  <body>
+    <nav aria-label="Examples">
+      <a href="/">All examples</a>
+      <a href="../v5-crosshair/">Crosshair</a>
+    </nav>
+    <h1>v5: tooltip</h1>
+    <p>Move the pointer over the plot to inspect samples from both series.</p>
+    <fieldset class="controls">
+      <legend>Tooltip options</legend>
+      <label for="axis">
+        Match samples by
+        <select id="axis">
+          <option value="x" selected>Nearest x</option>
+          <option value="xy">Nearest screen position</option>
+        </select>
+      </label>
+      <label for="position">
+        Preferred position
+        <select id="position">
+          <option value="right" selected>Right</option>
+          <option value="left">Left</option>
+          <option value="top">Top</option>
+          <option value="bottom">Bottom</option>
+        </select>
+      </label>
+    </fieldset>
+    <figure>
+      <div id="chart" class="plot-host"></div>
+      <figcaption>
+        In nearest-x mode each mark contributes its closest visible sample. Nearest screen position
+        selects one actual sample across the configured marks.
+      </figcaption>
+    </figure>
+    <h2>Public API</h2>
+    <pre><code>const interaction = tooltip({ marks: [observed, forecast], axis: 'x' })
+const plot = createPlot(host, { scales: { t, q }, marks, plugins: [interaction] })
+interaction.update({ axis: 'xy', position: 'top' })</code></pre>
+    <script type="module" src="./v5-tooltip.ts"></script>
+  </body>
+</html>

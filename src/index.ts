@@ -47,6 +47,14 @@ export type {
   CrosshairSnapAxis,
   CrosshairSnapOptions,
 } from './plot/crosshair.js'
+export { tooltip } from './plot/tooltip.js'
+export type {
+  TooltipAxis,
+  TooltipHandle,
+  TooltipMark,
+  TooltipOptions,
+  TooltipPlacementPosition,
+} from './plot/tooltip.js'
 export { line } from './plot/line.js'
 export { rule } from './plot/rule.js'
 export type { RuleMark, RuleOptions } from './plot/rule.js'
