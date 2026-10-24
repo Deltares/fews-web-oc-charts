@@ -1952,7 +1952,11 @@ native touch gestures over the plot. The original touch-action style is restored
 the plugin is removed or the plot is destroyed. Both also end an active gesture and
 release its listeners. The
 [v5 pan example](./examples/v5-pan/index.html) demonstrates the public API.
-Brush selection, crosshair, tooltip and legend remain Phase 3 work.
+The `brush()` plugin selects configured Cartesian x/y ranges by Shift-drag by default
+and emits a bubbling `brush` event from the plot SVG. Its immutable `detail` contains
+the selected mode and scale ranges; band scales report the intersected categories.
+`mode` and `modifier` are editable at runtime. Brush selection is implemented;
+crosshair, tooltip, legend and the remaining Phase 3 examples/exit criteria remain.
 
 Plugins are installed by a plugin host that reconciles `plot.plugins` by handle
 identity. Each built-in plugin registers a `PluginDefinition` (`is`, `validate`,

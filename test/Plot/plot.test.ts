@@ -15,8 +15,11 @@ import {
   createSeries,
   zoom,
   pan,
+  brush,
+  brushEvent,
   batch,
   type Plot,
+  type BrushSelection,
 } from '../../src/index.js'
 import { reactive } from '../../src/core/runtime.js'
 
@@ -312,6 +315,100 @@ describe('createPlot named scales', () => {
     expect(x.domain.get()).toEqual(stopped)
   })
 
+  test('brushes selected scales and emits an immutable selection event', async () => {
+    const x = linearScale({ domain: [0, 100] })
+    const y = linearScale({ domain: [0, 100] })
+    const interaction = brush({ mode: 'x' })
+    const current = plot(host(), {
+      width: 500,
+      height: 300,
+      directions: { x: 'x', y: 'y' },
+      scales: { x, y },
+      plugins: [interaction, pan({ mode: 'x', modifier: 'shift' })],
+    })
+    await frame()
+    vi.spyOn(current.element, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 500, 300))
+    let result: BrushSelection | undefined
+    current.element.addEventListener(brushEvent, (event) => {
+      result = (event as CustomEvent<BrushSelection>).detail
+    })
+    const pointer = (type: string, clientX: number, clientY: number, shiftKey = true) =>
+      new PointerEvent(type, {
+        clientX,
+        clientY,
+        pointerId: 1,
+        button: 0,
+        shiftKey,
+        isPrimary: true,
+        pointerType: 'mouse',
+        cancelable: true,
+      })
+    const unmodified = pointer('pointerdown', 100, 100, false)
+    current.element.dispatchEvent(unmodified)
+    expect(unmodified.defaultPrevented).toBe(false)
+    current.element.dispatchEvent(pointer('pointerup', 100, 100, false))
+
+    current.element.dispatchEvent(pointer('pointerdown', 100, 100))
+    const moving = pointer('pointermove', 300, 200)
+    current.element.dispatchEvent(moving)
+    expect(moving.defaultPrevented).toBe(true)
+    expect(
+      current.element.querySelector('[data-layer="brush"] rect')?.getAttribute('display'),
+    ).toBe('')
+    current.element.dispatchEvent(pointer('pointerup', 300, 200))
+
+    const start = current.scales.x.invert(100)
+    const end = current.scales.x.invert(300)
+    expect(result).toEqual({
+      mode: 'x',
+      scales: { x: [Math.min(start, end), Math.max(start, end)] },
+    })
+    expect(Object.isFrozen(result)).toBe(true)
+    expect(Object.isFrozen(result?.scales)).toBe(true)
+    expect(
+      current.element.querySelector('[data-layer="brush"] rect')?.getAttribute('display'),
+    ).toBe('none')
+    expect(y.domain.get()).toEqual([0, 100])
+    expect(x.domain.get()).toEqual([0, 100])
+
+    current.update({ plugins: [] })
+    expect(current.element.querySelector('[data-layer="brush"]')).toBeNull()
+  })
+
+  test('brush selection includes band categories intersecting the selected interval', async () => {
+    const categories = bandScale({ domain: ['a', 'b', 'c'] })
+    const interaction = brush({ mode: 'x', modifier: 'none' })
+    const current = plot(host(), {
+      width: 500,
+      height: 300,
+      directions: { category: 'x' },
+      scales: { category: categories },
+      plugins: [interaction],
+    })
+    await frame()
+    vi.spyOn(current.element, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 500, 300))
+    let result: BrushSelection | undefined
+    current.element.addEventListener(brushEvent, (event) => {
+      result = (event as CustomEvent<BrushSelection>).detail
+    })
+    const center = (value: string) =>
+      current.scales.category.project(value) + current.scales.category.bandwidth / 2
+    const pointer = (type: string, clientX: number) =>
+      new PointerEvent(type, {
+        clientX,
+        clientY: 150,
+        pointerId: 1,
+        button: 0,
+        isPrimary: true,
+        pointerType: 'mouse',
+        cancelable: true,
+      })
+    current.element.dispatchEvent(pointer('pointerdown', center('a')))
+    current.element.dispatchEvent(pointer('pointermove', center('b')))
+    current.element.dispatchEvent(pointer('pointerup', center('b')))
+    expect(result).toEqual({ mode: 'x', scales: { category: ['a', 'b'] } })
+  })
+
   test('requires configured modifiers and releases pan listeners when removed', async () => {
     const x = linearScale({ domain: [0, 100] })
     const interaction = pan({ mode: 'x', modifier: 'ctrl' })
@@ -469,7 +566,7 @@ describe('createPlot named scales', () => {
     const interaction = zoom()
     const current = plot(host(), { scales: { x: linearScale({ domain: [0, 1] }) } })
     expect(() => current.update({ plugins: [{} as never] })).toThrow(
-      'plot.plugins accepts zoom() or pan() plugins only.',
+      'plot.plugins accepts zoom(), pan() or brush() plugins only.',
     )
     expect(() => current.update({ plugins: [interaction, interaction] })).toThrow(
       'Duplicate plugin handle in plot.plugins.',

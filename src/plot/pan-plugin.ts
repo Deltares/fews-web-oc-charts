@@ -1,6 +1,7 @@
 import type { ScaleBinding, ScaleValue } from '../scales/scale.js'
 import { reactive } from '../core/runtime.js'
 import { matchesModifierKey } from '../Utils/modifierKey.js'
+import { isBrushHandle } from './brush.js'
 import type { PlotContext, PluginDefinition } from './plugin-definition.js'
 import { isPanHandle, type PanHandle, type PanMode } from './pan.js'
 
@@ -55,8 +56,17 @@ function installPan(handle: PanHandle, context: PlotContext) {
   }
 
   context.on('pointerdown', (event) => {
+    const brushOwnsGesture = context.options
+      .get()
+      .resolved.plugins.some(
+        (plugin) =>
+          isBrushHandle(plugin) &&
+          matchesModifierKey(event, plugin.options.get().resolved.modifier),
+      )
     if (
       active ||
+      event.defaultPrevented ||
+      brushOwnsGesture ||
       !event.isPrimary ||
       event.button !== 0 ||
       !matchesModifierKey(event, handle.options.get().resolved.modifier)

@@ -31,6 +31,8 @@ export type {
 } from './plot/zoom.js'
 export { pan } from './plot/pan.js'
 export type { PanHandle, PanMode, PanOptions } from './plot/pan.js'
+export { brush, brushEvent } from './plot/brush.js'
+export type { BrushHandle, BrushMode, BrushOptions, BrushSelection } from './plot/brush.js'
 export { line } from './plot/line.js'
 export { rule } from './plot/rule.js'
 export type { RuleMark, RuleOptions } from './plot/rule.js'
