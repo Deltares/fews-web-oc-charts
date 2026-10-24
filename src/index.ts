@@ -40,7 +40,13 @@ export type {
   BrushSelectionMode,
 } from './plot/brush.js'
 export { crosshair } from './plot/crosshair.js'
-export type { CrosshairHandle, CrosshairMode, CrosshairOptions } from './plot/crosshair.js'
+export type {
+  CrosshairHandle,
+  CrosshairMode,
+  CrosshairOptions,
+  CrosshairSnapAxis,
+  CrosshairSnapOptions,
+} from './plot/crosshair.js'
 export { line } from './plot/line.js'
 export { rule } from './plot/rule.js'
 export type { RuleMark, RuleOptions } from './plot/rule.js'

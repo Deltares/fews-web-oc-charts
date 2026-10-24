@@ -27,6 +27,7 @@ export interface PlotContext {
 export interface PluginValidationContext {
   readonly coordinateSystem: CoordinateSystem
   readonly plugins: readonly object[]
+  readonly marks: readonly object[]
   readonly scales: Readonly<Record<string, ScaleHandle>>
   direction(name: string): Orientation
 }

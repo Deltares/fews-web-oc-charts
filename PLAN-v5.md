@@ -1987,8 +1987,12 @@ and pan without narrowing its own domain. Both plots reuse data arrays, not scal
 Brush selection and persistent navigation are implemented;
 crosshair rendering is implemented with configurable x/y guides that follow the shared pointer
 signal and hide outside the plot region. The [v5 crosshair example](./examples/v5-crosshair/index.html)
-demonstrates its public API and live mode updates. Tooltip, legend and the remaining Phase 3
-examples/exit criteria remain.
+demonstrates its public API, live mode updates and optional data-point snapping. Snap targets
+are explicit line/series marks; x and y select samples by projected screen coordinate, while
+xy selects the nearest actual sample by screen distance. Both guides use that same sample,
+and snapped guides hide when the target has no visible sample. The reusable nearest-point
+hit-test is shared groundwork for the tooltip plugin. Tooltip, legend and the remaining
+Phase 3 examples/exit criteria remain.
 
 Plugins are installed by a plugin host that reconciles `plot.plugins` by handle
 identity. Each built-in plugin registers a `PluginDefinition` (`is`, `validate`,

@@ -263,6 +263,76 @@ describe('createPlot named scales', () => {
     expect(current.element.querySelector('[data-layer="crosshair"]')).toBeNull()
   })
 
+  test('snaps both guides to one nearest sample by x, y or screen distance', async () => {
+    const observations = line({
+      x: 'x',
+      y: 'y',
+      xValues: [2, 8, 5],
+      yValues: [2, 8, 4],
+    })
+    const interaction = crosshair({
+      mode: 'xy',
+      snap: { mark: observations, axis: 'x' },
+    })
+    const current = plot(host(), {
+      width: 500,
+      height: 300,
+      directions: { x: 'x', y: 'y' },
+      scales: {
+        x: linearScale({ domain: [0, 10] }),
+        y: linearScale({ domain: [0, 10] }),
+      },
+      marks: [observations],
+      plugins: [interaction],
+    })
+    await frame()
+    vi.spyOn(current.element, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 500, 300))
+
+    const sample = (index: number) => ({
+      x: current.scales.x.project([2, 8, 5][index]),
+      y: current.scales.y.project([2, 8, 4][index]),
+    })
+    const first = sample(0)
+    const second = sample(1)
+    const third = sample(2)
+    current.element.dispatchEvent(
+      new PointerEvent('pointermove', {
+        clientX: 340,
+        clientY: 210,
+        pointerType: 'mouse',
+        isPrimary: true,
+      }),
+    )
+    await frame()
+
+    const vertical = current.element.querySelector<SVGLineElement>('[data-crosshair-axis="x"]')!
+    const horizontal = current.element.querySelector<SVGLineElement>('[data-crosshair-axis="y"]')!
+    const region = current.regions.get().plot
+    const expectBothAt = (point: { x: number; y: number }) => {
+      expect(Number(vertical.getAttribute('x1'))).toBeCloseTo(point.x - region.x)
+      expect(Number(horizontal.getAttribute('y1'))).toBeCloseTo(point.y - region.y)
+    }
+
+    expectBothAt(second)
+    interaction.update({ snap: { axis: 'y' } })
+    await frame()
+    expectBothAt(first)
+
+    interaction.update({ snap: { axis: 'xy' } })
+    await frame()
+    expectBothAt(third)
+  })
+
+  test('requires the snapped mark to belong to the plot', () => {
+    const observations = line({ x: 'x', y: 'y', xValues: [0], yValues: [0] })
+    expect(() =>
+      plot(host(), {
+        scales: { x: linearScale(), y: linearScale() },
+        plugins: [crosshair({ snap: { mark: observations, axis: 'x' } })],
+      }),
+    ).toThrow('crosshair.snap.mark must be included in plot.marks.')
+  })
+
   test('zooms selected Cartesian domains at the pointer and resets to initial domains', async () => {
     const x = linearScale({ domain: [0, 100] })
     const y = linearScale({ domain: [0, 100] })
