@@ -11,6 +11,16 @@ import type { ScaleHandle } from '../scales/scale.js'
 import type { Orientation } from './mark-definition.js'
 import { displayInspectionValue } from './inspection.js'
 import { svgElement } from './svg.js'
+import { barLayers, isBarMark } from './bar.js'
+import { isStackedAreaMark } from './stacked-area.js'
+
+interface CrosshairCallout {
+  readonly group: SVGGElement
+  readonly background: SVGRectElement
+  readonly text: SVGTextElement
+  measuredText: string | undefined
+  measuredTheme: object | undefined
+}
 
 function validateSnapTarget(
   snap: CrosshairSnapOptions | undefined,
@@ -69,8 +79,53 @@ function installCrosshair(handle: CrosshairHandle, context: PlotContext) {
   layer.append(vertical, horizontal)
   const layerGuides = svgElement('g', { 'data-crosshair-layers': '' })
   const callouts = svgElement('g', { 'data-crosshair-labels': '' })
+  const guideNodes = new Map<string, SVGLineElement>()
+  const calloutNodes = new Map<string, CrosshairCallout>()
   layer.append(layerGuides, callouts)
   context.element.append(layer)
+
+  function layerGuideIds(snap: CrosshairOptions['snap']) {
+    if (!snap || snap.axis !== 'x') return []
+    if (isBarMark(snap.mark)) {
+      const options = snap.mark.options.get().resolved
+      if (options.orientation !== 'vertical') return []
+      return barLayers(options)
+        .filter((candidate) => candidate.visible !== false)
+        .map((candidate) => candidate.id)
+    }
+    if (isStackedAreaMark(snap.mark)) {
+      return snap.mark.options
+        .get()
+        .resolved.layers.filter((candidate) => candidate.visible !== false)
+        .map((candidate) => candidate.id)
+    }
+    return []
+  }
+
+  function calloutKey(axis: 'x' | 'y', layerId: string | undefined) {
+    return JSON.stringify([axis, layerId ?? null])
+  }
+
+  function createCallout(axis: 'x' | 'y', layerId: string | undefined): CrosshairCallout {
+    const group = svgElement('g', { 'data-crosshair-label': axis })
+    if (layerId !== undefined) group.setAttribute('data-crosshair-layer', layerId)
+    const background = svgElement('rect', {
+      height: 22,
+      rx: 3,
+      fill: 'var(--fews-chart-tooltip-background, #fff)',
+      stroke: 'currentColor',
+      'stroke-opacity': 0.4,
+    })
+    const text = svgElement('text', {
+      x: 6,
+      y: 15,
+      fill: 'var(--fews-chart-tooltip-color, #222)',
+      'font-size': 12,
+    })
+    group.append(background, text)
+    callouts.append(group)
+    return { group, background, text, measuredText: undefined, measuredTheme: undefined }
+  }
 
   const validateOptions = (options: Readonly<CrosshairOptions>) => {
     const current = context.options.get().resolved
@@ -105,61 +160,87 @@ function installCrosshair(handle: CrosshairHandle, context: PlotContext) {
         'display',
         visible && mode.includes('y') && !inspection.layers.length ? '' : 'none',
       )
-      layerGuides.replaceChildren()
+      const guideIds = layerGuideIds(inspection.options.snap)
+      const guideSet = new Set(guideIds)
+      for (const [id, node] of guideNodes) {
+        if (guideSet.has(id)) continue
+        node.remove()
+        guideNodes.delete(id)
+      }
+      for (const node of guideNodes.values()) node.setAttribute('display', 'none')
       if (visible) {
         for (const guide of inspection.layers) {
           const py = String(guide.py - region.y)
-          layerGuides.append(
-            svgElement('line', {
+          let node = guideNodes.get(guide.hit.layerId)
+          if (!node) {
+            node = svgElement('line', {
               'data-crosshair-axis': 'y',
               'data-crosshair-layer': guide.hit.layerId,
-              x1: 0,
-              x2: region.width,
-              y1: py,
-              y2: py,
               stroke: 'currentColor',
               'stroke-opacity': 0.65,
               'stroke-dasharray': '3 3',
               'vector-effect': 'non-scaling-stroke',
-            }),
-          )
+            })
+            guideNodes.set(guide.hit.layerId, node)
+            layerGuides.append(node)
+          }
+          node.setAttribute('x1', '0')
+          node.setAttribute('x2', String(region.width))
+          node.setAttribute('y1', py)
+          node.setAttribute('y2', py)
+          node.setAttribute('display', '')
         }
       }
-      callouts.replaceChildren()
-      for (const coordinate of inspection.coordinates) {
-        const group = svgElement('g', { 'data-crosshair-label': coordinate.axis })
-        if (coordinate.layerId !== undefined) {
-          group.setAttribute('data-crosshair-layer', coordinate.layerId)
+      const layerCallouts = !!inspection.options.labels?.y && guideIds.length > 0
+      const allowedCallouts = new Set<string>()
+      if (inspection.options.labels?.x) allowedCallouts.add(calloutKey('x', undefined))
+      if (inspection.options.labels?.y) {
+        if (layerCallouts) {
+          for (const id of guideIds) allowedCallouts.add(calloutKey('y', id))
+        } else {
+          allowedCallouts.add(calloutKey('y', undefined))
         }
-        const background = svgElement('rect', {
-          height: 22,
-          rx: 3,
-          fill: 'var(--fews-chart-tooltip-background, #fff)',
-          stroke: 'currentColor',
-          'stroke-opacity': 0.4,
-        })
-        const text = svgElement('text', {
-          x: 6,
-          y: 15,
-          fill: 'var(--fews-chart-tooltip-color, #222)',
-          'font-size': 12,
-        })
-        text.textContent = displayInspectionValue(
+      }
+      for (const [key, nodes] of calloutNodes) {
+        if (allowedCallouts.has(key)) continue
+        nodes.group.remove()
+        calloutNodes.delete(key)
+      }
+      for (const nodes of calloutNodes.values()) nodes.group.setAttribute('display', 'none')
+      const activeCallouts = new Set<string>()
+      const theme = context.theme.get()
+      for (const coordinate of inspection.coordinates) {
+        if (coordinate.layerId !== undefined && !guideSet.has(coordinate.layerId)) continue
+        const key = calloutKey(coordinate.axis, coordinate.layerId)
+        let nodes = calloutNodes.get(key)
+        if (!nodes) {
+          nodes = createCallout(coordinate.axis, coordinate.layerId)
+          calloutNodes.set(key, nodes)
+        }
+        activeCallouts.add(key)
+        nodes.group.setAttribute('display', '')
+        const text = displayInspectionValue(
           coordinate.value,
           context,
           coordinate.scale,
           coordinate.digits,
         )
-        group.append(background, text)
-        callouts.append(group)
-        const width = text.getComputedTextLength() + 12
-        background.setAttribute('width', String(width))
+        if (nodes.text.textContent !== text) nodes.text.textContent = text
+        if (nodes.measuredText !== text || nodes.measuredTheme !== theme) {
+          nodes.background.setAttribute('width', String(nodes.text.getComputedTextLength() + 12))
+          nodes.measuredText = text
+          nodes.measuredTheme = theme
+        }
+        const width = Number(nodes.background.getAttribute('width'))
         const size = context.size.get()
         const left = coordinate.axis === 'x' ? x - width / 2 : -width
         const top = coordinate.axis === 'x' ? region.height : coordinate.position - region.y - 11
         const clampedX = Math.max(-region.x, Math.min(size.width - region.x - width, left))
         const clampedY = Math.max(-region.y, Math.min(size.height - region.y - 22, top))
-        group.setAttribute('transform', `translate(${clampedX} ${clampedY})`)
+        nodes.group.setAttribute('transform', `translate(${clampedX} ${clampedY})`)
+      }
+      for (const [key, nodes] of calloutNodes) {
+        if (!activeCallouts.has(key)) nodes.group.setAttribute('display', 'none')
       }
     }),
   )
