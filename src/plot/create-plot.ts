@@ -36,6 +36,7 @@ import { renderSkewTAxes } from './render-skew-t-axes.js'
 import { createScaleBindings } from './scale-bindings.js'
 import { createMarkLayer } from './mark-layer.js'
 import { createPointerHub, type PlotPointer } from './pointer-hub.js'
+import { createLegendModel, type LegendModel } from './legend.js'
 
 export type { PlotPointer } from './pointer-hub.js'
 import {
@@ -94,6 +95,7 @@ export interface Plot {
   readonly regions: ReadonlySignal<PlotLayout>
   readonly theme: ReadonlySignal<ThemeTokens>
   readonly pointer: ReadonlySignal<PlotPointer>
+  readonly legend: LegendModel
   readonly scales: Readonly<Record<string, ScaleBinding>>
   readonly destroyed: boolean
   update(patch: PlotConfig): void
@@ -239,6 +241,7 @@ function createPlotInternal(
     options: () => options.get().resolved,
     requestRender: () => invalidate(render, DirtyLayer.marks),
   })
+  const legend = createLegendModel(scope, () => options.get().resolved.marks, element)
   const pluginHost = createPluginHost(scope, {
     element,
     coordinateSystem,
@@ -246,6 +249,7 @@ function createPlotInternal(
     size,
     regions,
     pointer: pointerHub.pointer,
+    legend,
     get scales() {
       return scaleBindings.scales
     },
@@ -587,6 +591,7 @@ function createPlotInternal(
     regions,
     theme,
     pointer: pointerHub.pointer,
+    legend,
     get scales() {
       return scaleBindings.scales
     },
@@ -603,6 +608,7 @@ function createPlotInternal(
       if (destroyed) return
       destroyed = true
       pluginHost.dispose()
+      legend.dispose()
       pointerHub.dispose()
       stopSize()
       stopPixelRatio()

@@ -1995,8 +1995,12 @@ hit-test is shared with the tooltip plugin. Tooltip supports nearest-x samples a
 line/series marks or one nearest actual sample in xy mode, safe text-only HTML content,
 viewport-aware placement, runtime option updates and plugin lifecycle cleanup. The
 [v5 tooltip example](./examples/v5-tooltip/index.html) demonstrates its public API. Tooltip is
-implemented; the headless legend, composite-layer hit tests and remaining Phase 3
-examples/exit criteria remain.
+implemented. The core now exposes a headless `plot.legend` model for series, bars and
+stacked areas, including immutable metadata snapshots, line/marker/area/bar symbol
+specifications, named-stack grouping, visibility commands, and bubbling `legendtoggle`
+events. Unlabelled entries use their mark ID, or a stable generated label when no ID
+exists. The built-in legend renderer, broader mark-kind support, composite-layer hit
+testing and remaining Phase 3 examples/exit criteria remain.
 
 Plugins are installed by a plugin host that reconciles `plot.plugins` by handle
 identity. Each built-in plugin registers a `PluginDefinition` (`is`, `validate`,

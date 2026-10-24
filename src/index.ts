@@ -55,6 +55,17 @@ export type {
   TooltipOptions,
   TooltipPlacementPosition,
 } from './plot/tooltip.js'
+export type {
+  LegendActionSource,
+  LegendCommandSource,
+  LegendEntry,
+  LegendModel,
+  LegendToggleEventDetail,
+  LegendVisibility,
+  LegendVisibilityChange,
+  SymbolPrimitiveSpec,
+  SymbolSpec,
+} from './plot/legend.js'
 export { line } from './plot/line.js'
 export { rule } from './plot/rule.js'
 export type { RuleMark, RuleOptions } from './plot/rule.js'
