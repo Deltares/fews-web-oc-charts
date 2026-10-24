@@ -1,16 +1,15 @@
 import type { CrosshairHandle, CrosshairSnapOptions } from '../plugins/crosshair/crosshair.js'
 import type { PlotContext } from '../plugins/plugin-definition.js'
-import { nearestPoint, type PointHit } from './point-hit-testing.js'
 import type { ScaleValue } from '../../scales/scale.js'
 import { isLineMark } from '../marks/line/line.js'
 import { isSeriesMark } from '../marks/line/series.js'
 import { isBarMark } from '../marks/bar/bar.js'
 import { isStackedAreaMark } from '../marks/stacked-area/stacked-area.js'
-import { compositeHits, type CompositeHit } from './composite-hit-testing.js'
-import type { PlotLayout } from '../../layout/layout.js'
-import { histogramBar, isHistogramMark } from '../marks/histogram/histogram.js'
-import { isHeatmapMark } from '../marks/heatmap/heatmap.js'
-import { heatmapHit, type HeatmapHit } from './heatmap-hit-testing.js'
+import type { CompositeHit } from './composite-hit-testing.js'
+import type { Region } from '../../layout/layout.js'
+import { isHistogramMark } from '../marks/histogram/histogram.js'
+import { markDefinition } from '../marks/marks.js'
+import type { MarkHit } from '../marks/mark-definition.js'
 
 let areaPathContext: CanvasRenderingContext2D | undefined
 
@@ -24,33 +23,26 @@ function snapHits(
   snap: CrosshairSnapOptions,
   context: Omit<PlotContext, 'scope' | 'inspectCrosshair'>,
   point: { readonly x: number; readonly y: number },
-  regions: PlotLayout,
-): readonly (PointHit | CompositeHit | HeatmapHit)[] {
-  if (isLineMark(snap.mark) || isSeriesMark(snap.mark)) {
-    const hit = nearestPoint(snap.mark, context.scales, point, snap.axis, regions.plot)
-    return hit ? [hit] : []
-  }
-
-  if (isStackedAreaMark(snap.mark)) {
-    areaPathContext ??= document.createElement('canvas').getContext('2d') ?? undefined
-    if (!areaPathContext) {
-      throw new Error('Crosshair snapping to stacked areas requires a 2D canvas context.')
-    }
-  } else if (isHeatmapMark(snap.mark)) {
-    const hit = heatmapHit(snap.mark, context.scales, point, snap.axis, regions.plot)
-    return hit ? [hit] : []
-  } else if (isHistogramMark(snap.mark)) {
-    return compositeHits(histogramBar(snap.mark), context.scales, point, snap.axis, regions.plot)
-  } else if (!isBarMark(snap.mark)) {
-    return []
-  }
-  return compositeHits(snap.mark, context.scales, point, snap.axis, regions.plot, areaPathContext)
+  regions: { readonly plot: Readonly<Region> },
+): readonly MarkHit[] {
+  return (
+    markDefinition(snap.mark).hits?.(snap.mark, {
+      scales: context.scales,
+      point,
+      axis: snap.axis,
+      plot: regions.plot,
+      pathContext() {
+        areaPathContext ??= document.createElement('canvas').getContext('2d') ?? undefined
+        if (!areaPathContext) {
+          throw new Error('Crosshair snapping to stacked areas requires a 2D canvas context.')
+        }
+        return areaPathContext
+      },
+    }) ?? []
+  )
 }
 
-function nearestHit<T extends PointHit | CompositeHit | HeatmapHit>(
-  hits: readonly T[],
-  point: { readonly y: number },
-) {
+function nearestHit<T extends MarkHit>(hits: readonly T[], point: { readonly y: number }) {
   return hits.reduce<T | undefined>(
     (nearest, hit) =>
       !nearest || Math.abs(hit.py - point.y) < Math.abs(nearest.py - point.y) ? hit : nearest,
@@ -61,7 +53,7 @@ function nearestHit<T extends PointHit | CompositeHit | HeatmapHit>(
 /** Vertical composites snapped along x get one horizontal guide per visible layer. */
 function layerGuides(
   snap: CrosshairSnapOptions | undefined,
-  hits: readonly (PointHit | CompositeHit | HeatmapHit)[],
+  hits: readonly MarkHit[],
   context: Omit<PlotContext, 'scope' | 'inspectCrosshair'>,
 ): readonly CrosshairLayerGuide[] {
   if (snap?.axis !== 'x') return []

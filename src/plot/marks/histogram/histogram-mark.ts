@@ -6,10 +6,13 @@ import {
   type HistogramMark,
 } from './histogram.js'
 import type { MarkDefinition, MarkLegend } from '../mark-definition.js'
+import { compositeHits } from '../../interaction/composite-hit-testing.js'
 
 export const histogramDefinition: MarkDefinition<HistogramMark> = {
   name: 'histogram',
   is: isHistogramMark,
+  hits: (mark, { scales, point, axis, plot }) =>
+    compositeHits(histogramBar(mark), scales, point, axis, plot),
   legend(mark, tokens): MarkLegend {
     const options = () => mark.options.get().resolved
     return {
