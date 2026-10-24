@@ -1985,7 +1985,10 @@ selection modes, brush-to-zoom, and a full-domain overview with a persistent nav
 that controls a separate main-chart time scale. The overview follows main-chart zoom
 and pan without narrowing its own domain. Both plots reuse data arrays, not scale handles.
 Brush selection and persistent navigation are implemented;
-crosshair, tooltip, legend and the remaining Phase 3 examples/exit criteria remain.
+crosshair rendering is implemented with configurable x/y guides that follow the shared pointer
+signal and hide outside the plot region. The [v5 crosshair example](./examples/v5-crosshair/index.html)
+demonstrates its public API and live mode updates. Tooltip, legend and the remaining Phase 3
+examples/exit criteria remain.
 
 Plugins are installed by a plugin host that reconciles `plot.plugins` by handle
 identity. Each built-in plugin registers a `PluginDefinition` (`is`, `validate`,

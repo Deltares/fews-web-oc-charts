@@ -17,6 +17,7 @@ import {
   pan,
   brush,
   brushEvent,
+  crosshair,
   batch,
   type Plot,
   type BrushSelection,
@@ -207,6 +208,59 @@ describe('createPlot named scales', () => {
     await frame()
     expect(current.pointer.get().x.get('bearing')).toBeCloseTo(90)
     expect(current.pointer.get().x.get('distance')).toBeCloseTo(50)
+  })
+
+  test('tracks the pointer with configurable crosshair guides and removes the overlay', async () => {
+    const interaction = crosshair({ mode: 'x' })
+    const current = plot(host(), {
+      width: 500,
+      height: 300,
+      scales: { x: linearScale({ domain: [0, 100] }), y: linearScale({ domain: [0, 100] }) },
+      plugins: [interaction],
+    })
+    await frame()
+    vi.spyOn(current.element, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 500, 300))
+    const vertical = current.element.querySelector('[data-crosshair-axis="x"]')!
+    const horizontal = current.element.querySelector('[data-crosshair-axis="y"]')!
+
+    expect(current.element.querySelector('[data-layer="crosshair"]')?.getAttribute('display')).toBe(
+      'none',
+    )
+    current.element.dispatchEvent(
+      new PointerEvent('pointermove', {
+        clientX: 250,
+        clientY: 150,
+        pointerType: 'mouse',
+        isPrimary: true,
+      }),
+    )
+    await frame()
+    expect(current.element.querySelector('[data-layer="crosshair"]')?.getAttribute('display')).toBe(
+      '',
+    )
+    expect(vertical.getAttribute('display')).toBe('')
+    expect(vertical.getAttribute('x1')).toBe('242')
+    expect(horizontal.getAttribute('display')).toBe('none')
+
+    interaction.update({ mode: 'y' })
+    await frame()
+    expect(vertical.getAttribute('display')).toBe('none')
+    expect(horizontal.getAttribute('display')).toBe('')
+
+    current.element.dispatchEvent(
+      new PointerEvent('pointerleave', {
+        clientX: 500,
+        clientY: 200,
+        pointerType: 'mouse',
+        isPrimary: true,
+      }),
+    )
+    await frame()
+    expect(current.element.querySelector('[data-layer="crosshair"]')?.getAttribute('display')).toBe(
+      'none',
+    )
+    current.update({ plugins: [] })
+    expect(current.element.querySelector('[data-layer="crosshair"]')).toBeNull()
   })
 
   test('zooms selected Cartesian domains at the pointer and resets to initial domains', async () => {
@@ -614,7 +668,7 @@ describe('createPlot named scales', () => {
     const interaction = zoom()
     const current = plot(host(), { scales: { x: linearScale({ domain: [0, 1] }) } })
     expect(() => current.update({ plugins: [{} as never] })).toThrow(
-      'plot.plugins accepts zoom(), pan() or brush() plugins only.',
+      'plot.plugins accepts zoom(), pan(), brush() or crosshair() plugins only.',
     )
     expect(() => current.update({ plugins: [interaction, interaction] })).toThrow(
       'Duplicate plugin handle in plot.plugins.',
