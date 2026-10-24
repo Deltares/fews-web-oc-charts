@@ -241,7 +241,12 @@ function createPlotInternal(
     options: () => options.get().resolved,
     requestRender: () => invalidate(render, DirtyLayer.marks),
   })
-  const legend = createLegendModel(scope, () => options.get().resolved.marks, element)
+  const legend = createLegendModel(
+    scope,
+    () => options.get().resolved.marks,
+    element,
+    () => theme.get(),
+  )
   const pluginHost = createPluginHost(scope, {
     element,
     coordinateSystem,

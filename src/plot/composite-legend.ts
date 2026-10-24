@@ -1,0 +1,45 @@
+import type { CompositeLayer, CompositeStyle } from './composite.js'
+import type { MarkLegend } from './mark-definition.js'
+import { resolveCompositeStyle } from './mark-styles.js'
+
+interface LegendOptions extends CompositeStyle {
+  readonly label: string
+  readonly visible: boolean
+}
+
+export function compositeLegend<L extends CompositeLayer>(
+  type: 'bar' | 'area',
+  options: () => LegendOptions,
+  layers: () => readonly L[],
+  update: (visible: boolean, layers: readonly L[]) => void,
+  accent: string,
+): MarkLegend {
+  const symbol = (layer: L) => ({
+    type,
+    ...resolveCompositeStyle(layer, options(), accent),
+  })
+  return {
+    label: options().label,
+    symbol: { type: 'stack', parts: layers().map(symbol) },
+    visible: () => options().visible,
+    setVisible: (visible) =>
+      update(
+        visible,
+        layers().map((layer) => ({ ...layer, visible })),
+      ),
+    layers: layers().map((layer) => ({
+      id: layer.id,
+      label: layer.label,
+      stack: layer.stack,
+      symbol: symbol(layer),
+      visible: () => layers().find(({ id }) => id === layer.id)?.visible !== false,
+      setVisible: (visible) =>
+        update(
+          true,
+          layers().map((candidate) =>
+            candidate.id === layer.id ? { ...candidate, visible } : candidate,
+          ),
+        ),
+    })),
+  }
+}

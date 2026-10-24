@@ -5,7 +5,6 @@ import { isLineMark, validateLineValuesForScale, type LineMark } from './line.js
 import { isSeriesMark, validateSeriesUpdates, type SeriesMark } from './series.js'
 import { svgElement } from './render-axes.js'
 import {
-  accent,
   createKeyCache,
   extentWindow,
   isScaleValue,
@@ -18,6 +17,8 @@ import {
   type MarkRenderer,
   type MarkValidationContext,
 } from './mark-definition.js'
+import { resolveLineStyles } from './mark-styles.js'
+import type { SymbolPrimitiveSpec } from './legend.js'
 
 type LineLikeMark = LineMark | SeriesMark
 let nextSymbolId = 0
@@ -264,31 +265,43 @@ function createLineRenderer(): MarkRenderer<LineLikeMark> {
       }
     },
     style(mark: LineLikeMark, tokens: ThemeTokens) {
-      const key = [mark, mark.stroke, mark.strokeWidth, mark.markers, mark.area, tokens.accent]
+      const key = [
+        mark,
+        mark.stroke,
+        mark.strokeWidth,
+        mark.strokeDasharray,
+        mark.strokeLinecap,
+        mark.strokeLinejoin,
+        mark.vectorEffect,
+        mark.markers,
+        mark.area,
+        tokens.accent,
+      ]
       if (!styleKey.changed(key)) return
-      path.setAttribute('stroke', mark.stroke ?? accent(tokens))
-      path.setAttribute('stroke-width', String(mark.strokeWidth))
+      const styles = resolveLineStyles(mark, tokens)
+      path.setAttribute('stroke', styles.line.stroke)
+      path.setAttribute('stroke-width', String(styles.line.strokeWidth))
       for (const [name, value] of [
         ['vector-effect', mark.vectorEffect ?? 'non-scaling-stroke'],
-        ['stroke-linecap', mark.strokeLinecap ?? 'round'],
-        ['stroke-linejoin', mark.strokeLinejoin ?? 'round'],
+        ['stroke-linecap', styles.line.strokeLinecap],
+        ['stroke-linejoin', styles.line.strokeLinejoin],
       ]) {
         if (path.getAttribute(name) !== value) path.setAttribute(name, value)
       }
       if (mark.strokeDasharray === undefined) path.removeAttribute('stroke-dasharray')
       else path.setAttribute('stroke-dasharray', mark.strokeDasharray)
       if (areaPath) {
-        areaPath.setAttribute('fill', mark.area?.fill || mark.stroke || accent(tokens))
-        areaPath.setAttribute('fill-opacity', String(mark.area?.opacity ?? 0))
+        areaPath.setAttribute('fill', styles.area.fill)
+        areaPath.setAttribute('fill-opacity', String(styles.area.opacity))
         areaPath.setAttribute('stroke', 'none')
       }
       if (markerGroup) {
         const markers = symbolPath ? [symbolPath] : markerGroup.children
         for (const marker of markers) {
-          marker.setAttribute('r', String(mark.markers?.size ?? 0))
-          marker.setAttribute('fill', mark.markers?.fill || mark.stroke || accent(tokens))
-          marker.setAttribute('stroke', mark.markers?.stroke ?? 'none')
-          marker.setAttribute('stroke-width', String(mark.markers?.strokeWidth ?? 0))
+          marker.setAttribute('r', String(styles.marker.size))
+          marker.setAttribute('fill', styles.marker.fill)
+          marker.setAttribute('stroke', styles.marker.stroke)
+          marker.setAttribute('stroke-width', String(styles.marker.strokeWidth))
         }
       }
     },
@@ -311,6 +324,20 @@ export const lineDefinition: MarkDefinition<LineMark> = {
 export const seriesDefinition: MarkDefinition<SeriesMark> = {
   name: 'series',
   is: isSeriesMark,
+  legend(mark, tokens) {
+    const options = mark.options.get().resolved
+    const styles = resolveLineStyles(mark, tokens)
+    const parts: SymbolPrimitiveSpec[] = []
+    if (mark.area) parts.push({ type: 'area', ...styles.area })
+    if (mark.line) parts.push({ type: 'line', ...styles.line })
+    if (mark.markers) parts.push({ type: 'marker', ...styles.marker })
+    return {
+      label: options.label,
+      symbol: { type: 'composite', parts },
+      visible: () => mark.visible,
+      setVisible: (visible) => mark.update({ visible }),
+    }
+  },
   validate: (mark, context) => validateLineLike(mark, context, true),
   extents: lineExtents,
   createRenderer: createLineRenderer,

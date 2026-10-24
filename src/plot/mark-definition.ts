@@ -6,6 +6,24 @@ import {
   type ScaleValue,
 } from '../scales/scale.js'
 import type { ThemeTokens } from '../theme/theme.js'
+import type { SymbolSpec } from './legend.js'
+
+export interface MarkLegendLayer {
+  readonly id: string
+  readonly label?: string
+  readonly stack?: string
+  readonly symbol: SymbolSpec
+  visible(): boolean
+  setVisible(visible: boolean): void
+}
+
+export interface MarkLegend {
+  readonly label?: string
+  readonly symbol: SymbolSpec
+  readonly layers?: readonly MarkLegendLayer[]
+  visible(): boolean
+  setVisible(visible: boolean): void
+}
 
 export type CoordinateSystem = 'cartesian' | 'polar' | 'skewT'
 export type Orientation = 'x' | 'y' | 'angular' | 'radial'
@@ -54,6 +72,8 @@ export interface MarkDefinition<M extends object> {
   validate(mark: M, context: MarkValidationContext): void
   extents(mark: M, context: MarkExtentContext): void
   createRenderer(): MarkRenderer<M>
+  /** Supplies symbols and visibility operations without reading data or rendered nodes. */
+  legend?(mark: M, tokens: ThemeTokens): MarkLegend
   /** Reads reactive state for this handle; subscriptions are replaced even when its renderer is reused. */
   track?(mark: M): void
   /** Registers validation of option updates against the plot; returns a disposer. */

@@ -26,9 +26,14 @@
 
 .legend-swatch {
   display: inline-block;
-  width: 24px;
-  height: 12px;
-  border: 1px solid currentColor;
+  flex-shrink: 0;
+  width: 36px;
+  height: 20px;
+  background: none;
+}
+
+.legend-row[data-visibility='hidden'] .legend-swatch {
+  opacity: 0.35;
 }
 
 .legend-visibility {

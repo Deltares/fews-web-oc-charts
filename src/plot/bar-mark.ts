@@ -1,6 +1,7 @@
 import type { ThemeTokens } from '../theme/theme.js'
 import {
   barEndpoints,
+  barLayers,
   isBarMark,
   validateBarScales,
   validateBarUpdates,
@@ -19,6 +20,7 @@ import {
   type MarkRenderContext,
   type MarkRenderer,
 } from './mark-definition.js'
+import { compositeLegend } from './composite-legend.js'
 
 export function createBarRenderer(kind = 'bar'): MarkRenderer<BarMark> {
   const group = svgElement('g', { 'data-mark': kind })
@@ -67,6 +69,17 @@ export function createBarRenderer(kind = 'bar'): MarkRenderer<BarMark> {
 export const barDefinition: MarkDefinition<BarMark> = {
   name: 'bar',
   is: isBarMark,
+  legend: (mark, tokens) =>
+    compositeLegend(
+      'bar',
+      () => mark.options.get().resolved,
+      () => barLayers(mark.options.get().resolved),
+      (visible, layers) =>
+        mark.options.get().resolved.layers
+          ? mark.update({ visible, layers })
+          : mark.update({ visible: visible && layers[0]?.visible !== false }),
+      tokens.accent,
+    ),
   validate(mark, { scales, coordinateSystem, direction }) {
     if (coordinateSystem !== 'cartesian') throw new Error('bar() supports cartesian plots only.')
     validateBarScales(mark.data, mark.options.get().resolved, scales)

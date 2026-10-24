@@ -4,6 +4,7 @@ import type { ScaleBinding, ScaleValue } from '../scales/scale.js'
 import { stackedAreaEndpoints, type StackedAreaMark } from './stacked-area.js'
 import { svgElement } from './render-axes.js'
 import type { StackEndpoints } from '../layout/stack.js'
+import { resolveCompositeStyle } from './mark-styles.js'
 import {
   clearCompositeCanvas,
   renderCompositeCanvas,
@@ -204,10 +205,11 @@ export function styleStackedAreas(group: SVGGElement, mark: StackedAreaMark, acc
   for (const node of group.children) {
     const layer = layers.get(node.getAttribute('data-layer-id')!)
     if (!layer) throw new Error('Missing stackedArea layer for rendered path.')
-    node.setAttribute('fill', layer.fill ?? options.fill ?? `var(--fews-chart-accent, ${accent})`)
-    node.setAttribute('fill-opacity', String(layer.opacity ?? options.opacity))
-    node.setAttribute('stroke', layer.stroke ?? options.stroke ?? 'none')
-    node.setAttribute('stroke-width', String(layer.strokeWidth ?? options.strokeWidth))
+    const style = resolveCompositeStyle(layer, options, accent)
+    node.setAttribute('fill', style.fill)
+    node.setAttribute('fill-opacity', String(style.opacity))
+    node.setAttribute('stroke', style.stroke)
+    node.setAttribute('stroke-width', String(style.strokeWidth))
   }
 }
 

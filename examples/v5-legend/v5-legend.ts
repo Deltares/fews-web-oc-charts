@@ -4,12 +4,12 @@ import {
   createPlot,
   createSeries,
   createTable,
+  createLegendSwatch,
   linearScale,
   series,
   stackedArea,
   timeScale,
   type LegendEntry,
-  type SymbolSpec,
 } from '@lib'
 import { reactive } from '../../src/core/runtime.js'
 
@@ -36,8 +36,8 @@ const observed = series(
     x: 't',
     y: 'q',
     label: 'Observed total',
-    line: { stroke: '#222222', width: 2 },
-    markers: { fill: '#222222', size: 2 },
+    line: { stroke: '#222222', width: 2, strokeDasharray: '6 3' },
+    markers: { fill: 'white', stroke: '#222222', strokeWidth: 1, size: 3 },
   },
 )
 const areas = stackedArea(
@@ -87,17 +87,6 @@ const plot = createPlot(required('#chart'), {
   marks: [areas, observed],
 })
 
-function symbolColor(symbol: SymbolSpec): string {
-  if (symbol.type === 'composite') {
-    const part = symbol.parts[0]
-    return part ? symbolColor(part) : 'transparent'
-  }
-  if (symbol.type === 'group') return 'transparent'
-  return symbol.type === 'line'
-    ? (symbol.stroke ?? 'currentColor')
-    : (symbol.fill ?? 'currentColor')
-}
-
 function renderEntries(entries: readonly LegendEntry[]): HTMLUListElement {
   const list = document.createElement('ul')
   list.className = 'legend-list'
@@ -105,6 +94,7 @@ function renderEntries(entries: readonly LegendEntry[]): HTMLUListElement {
     const item = document.createElement('li')
     const row = document.createElement('div')
     row.className = 'legend-row'
+    row.dataset.visibility = entry.visibility
     const label = document.createElement('label')
     const checkbox = document.createElement('input')
     checkbox.type = 'checkbox'
@@ -114,10 +104,8 @@ function renderEntries(entries: readonly LegendEntry[]): HTMLUListElement {
     checkbox.disabled = entry.disabled
     checkbox.dataset.entryId = entry.id
     checkbox.dataset.action = 'toggle'
-    const swatch = document.createElement('span')
-    swatch.className = 'legend-swatch'
-    swatch.style.backgroundColor = symbolColor(entry.symbol)
-    swatch.setAttribute('aria-hidden', 'true')
+    const swatch = createLegendSwatch(entry.symbol, { width: 36, height: 20 })
+    swatch.classList.add('legend-swatch')
     label.append(checkbox, swatch, document.createTextNode(entry.label))
     const visibility = document.createElement('span')
     visibility.className = 'legend-visibility'

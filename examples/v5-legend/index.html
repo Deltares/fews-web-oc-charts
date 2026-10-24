@@ -14,7 +14,8 @@
     <p>
       This application-owned HTML legend uses the core model, not a legend plugin. Toggle a layer to
       restack the areas and autoscale the value axis. Parent checkboxes show partial visibility.
-      Isolation affects siblings at the selected hierarchy level.
+      Isolation affects siblings at the selected hierarchy level. Library-rendered SVG swatches show
+      each mark's styles, including the dashed line with markers and multicolour stack groups.
     </p>
     <fieldset class="controls">
       <legend>Legend actions</legend>
@@ -43,6 +44,11 @@
     <h2>Public API</h2>
     <pre><code>const plot = createPlot(host, { scales, axes, marks })
 const entries = plot.legend.entries.get()
+const swatch = createLegendSwatch(entries[0].symbol, { width: 36, height: 20 })
+label.append(swatch) // Application-owned label and layout.
+// Framework renderers can use typed geometry instead of DOM elements.
+const primitives = legendSymbolPrimitives(entries[0].symbol, { width: 36, height: 20 })
+
 plot.legend.toggle(entries[0].id, 'external')
 plot.legend.isolate(entries[0].id, 'external')
 plot.legend.showAll('external')

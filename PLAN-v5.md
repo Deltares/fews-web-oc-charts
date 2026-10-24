@@ -729,6 +729,21 @@ children }`. `visibility` is `'visible' | 'hidden' | 'mixed'`; `children` is an 
   style cache, never by scraping a rendered SVG path. The same spec works for SVG and
   canvas marks; a pure symbol-to-SVG-primitives helper supports framework rendering
   without raw HTML injection or an imperative DOM renderer.
+  The current core exports `createLegendSwatch(entry.symbol, { width: 36, height: 20 })`
+  for a decorative SVG element and `legendSymbolPrimitives(entry.symbol, { width: 36,
+  height: 20 })` for typed `{ type, attributes }` geometry (`line`, `circle`, `rect`).
+  Both use the same pure geometry; neither owns labels, controls, layout or visibility.
+  `composite` parts overlay (area, line, markers); `stack` parts form bottom-to-top
+  coloured bands, including all constituent layers of a parent or named stack group.
+  Marker `size` is a radius; `opacity` on area/bar symbols is fill opacity, matching
+  chart rendering without dimming their outlines. Hidden entries keep their symbols:
+  the application dims the swatch and uses a checkbox for hidden/mixed state.
+  Optional `MarkDefinition.legend` capabilities supply symbols and visibility operations;
+  the model owns IDs, hierarchy and commands without mark-kind checks. Series, bars and
+  stacked areas use shared `resolveLineStyles`/`resolveCompositeStyle` helpers with the
+  SVG/canvas mark renderers. These helpers are also exported for tooltip/highlight consumers.
+  Currently `series()`, `bar()` and `stackedArea()` opt in; low-level static marks
+  remain excluded from the legend model.
 - Commands change authoritative mark/ensemble/composite-layer visibility via the runtime option/state
   path (3.1.1), not a Vue-local mirror. Parent toggle hides all children when fully
   visible, otherwise shows all; child changes recompute the parent's mixed state.

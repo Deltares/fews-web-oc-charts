@@ -1,5 +1,6 @@
 import type { CompositeStyle } from './composite.js'
 import { svgElement } from './render-axes.js'
+import { resolveCompositeStyle } from './mark-styles.js'
 
 export interface CanvasShape {
   readonly layerId: string
@@ -68,17 +69,15 @@ export function styleCompositeCanvas(
       { fill: string; stroke: string; opacity: number; width: number }
     >()
     for (const [id, layer] of layers) {
-      probe.setAttribute(
-        'fill',
-        layer.fill ?? options.fill ?? `var(--fews-chart-accent, ${accent})`,
-      )
-      probe.setAttribute('stroke', layer.stroke ?? options.stroke ?? 'none')
+      const style = resolveCompositeStyle(layer, options, accent)
+      probe.setAttribute('fill', style.fill)
+      probe.setAttribute('stroke', style.stroke)
       const computed = getComputedStyle(probe)
       styles.set(id, {
         fill: computed.fill,
         stroke: computed.stroke,
-        opacity: layer.opacity ?? options.opacity ?? 1,
-        width: layer.strokeWidth ?? options.strokeWidth ?? 0,
+        opacity: style.opacity,
+        width: style.strokeWidth,
       })
     }
     for (const shape of surface.shapes) {
