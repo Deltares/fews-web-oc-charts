@@ -18,6 +18,7 @@ import {
   type MarkRenderContext,
   type MarkRenderer,
 } from './mark-definition.js'
+import { compositeLegend } from './composite-legend.js'
 
 function createStackedAreaRenderer(): MarkRenderer<StackedAreaMark> {
   const group = svgElement('g', { 'data-mark': 'stacked-area' })
@@ -68,6 +69,14 @@ function validateDirections(
 export const stackedAreaDefinition: MarkDefinition<StackedAreaMark> = {
   name: 'stackedArea',
   is: isStackedAreaMark,
+  legend: (mark, tokens) =>
+    compositeLegend(
+      'area',
+      () => mark.options.get().resolved,
+      () => mark.options.get().resolved.layers,
+      (visible, layers) => mark.update({ visible, layers }),
+      tokens.accent,
+    ),
   validate(mark, { scales, coordinateSystem, direction }) {
     if (coordinateSystem !== 'cartesian') {
       throw new Error('stackedArea() supports cartesian plots only.')

@@ -107,6 +107,9 @@ export type {
   SeriesChange,
 } from './data-store/series.js'
 export { series } from './plot/series.js'
+export { createLegendSwatch, legendSymbolPrimitives } from './plot/legend-swatch.js'
+export type { LegendSwatchOptions, LegendSymbolPrimitive } from './plot/legend-swatch.js'
+export { resolveCompositeStyle, resolveLineStyles } from './plot/mark-styles.js'
 export { createTable } from './data-store/table.js'
 export type {
   TableStore,

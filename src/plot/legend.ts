@@ -1,10 +1,9 @@
 import type { ReadonlySignal, ReactiveScope } from '../core/reactive.js'
 import { reactive } from '../core/runtime.js'
-import { barLayers, isBarMark, type BarMark } from './bar.js'
+import type { ThemeTokens } from '../theme/theme.js'
+import type { MarkLegendLayer } from './mark-definition.js'
 import type { PlotMark } from './marks.js'
-import type { SeriesMark } from './series.js'
-import { isSeriesMark } from './series.js'
-import { isStackedAreaMark, type StackedAreaMark } from './stacked-area.js'
+import { markDefinition } from './marks.js'
 
 export type LegendVisibility = 'visible' | 'hidden' | 'mixed'
 export type LegendActionSource = 'api' | 'built-in' | 'external' | 'programmatic'
@@ -18,6 +17,7 @@ export type SymbolPrimitiveSpec =
       readonly strokeDasharray?: string
       readonly strokeLinecap?: 'butt' | 'round' | 'square'
       readonly strokeLinejoin?: 'miter' | 'round' | 'bevel'
+      readonly opacity?: number
     }
   | {
       readonly type: 'marker'
@@ -26,6 +26,7 @@ export type SymbolPrimitiveSpec =
       readonly stroke?: string
       readonly strokeWidth?: number
       readonly size?: number
+      readonly opacity?: number
     }
   | {
       readonly type: 'area'
@@ -45,6 +46,7 @@ export type SymbolPrimitiveSpec =
 export type SymbolSpec =
   | SymbolPrimitiveSpec
   | { readonly type: 'composite'; readonly parts: readonly SymbolPrimitiveSpec[] }
+  | { readonly type: 'stack'; readonly parts: readonly SymbolPrimitiveSpec[] }
   | { readonly type: 'group' }
 
 export interface LegendEntry {
@@ -75,17 +77,6 @@ export interface LegendModel {
   isolate(id: string, source?: LegendCommandSource): void
   showAll(source?: LegendCommandSource): void
   dispose(): void
-}
-
-interface LegendLayer {
-  readonly id: string
-  readonly label?: string
-  readonly visible?: boolean
-  readonly stack?: string
-  readonly fill?: string
-  readonly stroke?: string
-  readonly opacity?: number
-  readonly strokeWidth?: number
 }
 
 interface CommandNode {
@@ -126,58 +117,11 @@ function visibilityOf(values: readonly boolean[]): LegendVisibility {
   return 'mixed'
 }
 
-function seriesSymbol(mark: SeriesMark): SymbolSpec {
-  const options = mark.options.get().resolved
-  const parts: SymbolPrimitiveSpec[] = []
-  if (options.area !== false) {
-    parts.push({ type: 'area', fill: options.area.fill, opacity: options.area.opacity })
-  }
-  if (options.line !== false) {
-    parts.push({
-      type: 'line',
-      stroke: options.line.stroke,
-      strokeWidth: options.line.width,
-      strokeDasharray: options.line.strokeDasharray,
-      strokeLinecap: options.line.strokeLinecap,
-      strokeLinejoin: options.line.strokeLinejoin,
-    })
-  }
-  if (options.markers !== false) {
-    parts.push({
-      type: 'marker',
-      shape: 'circle',
-      fill: options.markers.fill,
-      stroke: options.markers.stroke,
-      strokeWidth: options.markers.strokeWidth,
-      size: options.markers.size,
-    })
-  }
-  return { type: 'composite', parts }
-}
-
-function layerSymbol(layer: LegendLayer, type: 'bar' | 'area'): SymbolPrimitiveSpec {
-  if (type === 'bar') {
-    return {
-      type,
-      fill: layer.fill,
-      stroke: layer.stroke,
-      strokeWidth: layer.strokeWidth,
-      opacity: layer.opacity,
-    }
-  }
-  return {
-    type,
-    fill: layer.fill,
-    opacity: layer.opacity,
-    stroke: layer.stroke,
-    strokeWidth: layer.strokeWidth,
-  }
-}
-
 export function createLegendModel(
   parentScope: ReactiveScope,
   marks: () => readonly PlotMark[],
   element: SVGSVGElement,
+  theme: () => ThemeTokens,
 ): LegendModel {
   const scope = parentScope.createScope()
   const entries = reactive.signal<readonly LegendEntry[]>(Object.freeze([]))
@@ -187,63 +131,14 @@ export function createLegendModel(
   let nextLabel = 0
   let disposed = false
 
-  function readMarkVisible(mark: SeriesMark | BarMark | StackedAreaMark) {
-    if (isSeriesMark(mark)) return mark.visible
-    return mark.options.get().resolved.visible
-  }
-
-  function updateMarkVisible(mark: SeriesMark | BarMark | StackedAreaMark, visible: boolean) {
-    if (isSeriesMark(mark)) mark.update({ visible })
-    else mark.update({ visible })
-  }
-
-  function compositeLayers(mark: BarMark | StackedAreaMark, visible: boolean) {
-    if (isBarMark(mark)) {
-      mark.update({
-        visible,
-        layers: barLayers(mark.options.get().resolved).map((layer) => ({ ...layer, visible })),
-      })
-    } else {
-      mark.update({
-        visible,
-        layers: mark.options.get().resolved.layers.map((layer) => ({ ...layer, visible })),
-      })
-    }
-  }
-
-  function layersOf(mark: BarMark | StackedAreaMark) {
-    return isBarMark(mark)
-      ? barLayers(mark.options.get().resolved)
-      : mark.options.get().resolved.layers
-  }
-
-  function setLayerVisible(mark: BarMark | StackedAreaMark, layerId: string, visible: boolean) {
-    if (isBarMark(mark)) {
-      const options = mark.options.get().resolved
-      mark.update({
-        visible: true,
-        layers: barLayers(options).map((layer) =>
-          layer.id === layerId ? { ...layer, visible } : layer,
-        ),
-      })
-    } else {
-      const options = mark.options.get().resolved
-      mark.update({
-        visible: true,
-        layers: options.layers.map((layer) =>
-          layer.id === layerId ? { ...layer, visible } : layer,
-        ),
-      })
-    }
-  }
-
   function buildSnapshot(): readonly LegendEntry[] {
     nodeCommands.clear()
     const ids = new Set<string>()
     const roots: LegendEntry[] = []
 
     for (const mark of marks()) {
-      if (!isSeriesMark(mark) && !isBarMark(mark) && !isStackedAreaMark(mark)) continue
+      const legend = markDefinition(mark).legend?.(mark, theme())
+      if (!legend) continue
       const rootId = markId(mark)
       if (ids.has(rootId)) throw new Error(`Duplicate legend entry id "${rootId}".`)
       ids.add(rootId)
@@ -255,18 +150,15 @@ export function createLegendModel(
         }
         return key
       })()
-      const markLabel = mark.options.get().resolved.label
+      const markLabel = legend.label
       const label = markLabel || mark.id || labelIndex
-      const markVisible = readMarkVisible(mark)
+      const markVisible = legend.visible()
       const leafEntries: LegendEntry[] = []
-      let symbol: SymbolSpec
+      const symbol = legend.symbol
 
-      if (isSeriesMark(mark)) {
-        symbol = seriesSymbol(mark)
-      } else {
-        const type = isBarMark(mark) ? 'bar' : 'area'
-        const layers = layersOf(mark) as readonly LegendLayer[]
-        const stackGroups = new Map<string, LegendLayer[]>()
+      if (legend.layers) {
+        const layers = legend.layers
+        const stackGroups = new Map<string, MarkLegendLayer[]>()
         for (const layer of layers) {
           if (layer.stack) {
             const group = stackGroups.get(layer.stack) ?? []
@@ -274,16 +166,16 @@ export function createLegendModel(
             stackGroups.set(layer.stack, group)
           }
         }
-        const createLayerEntry = (layer: LegendLayer, parentId: string): LegendEntry => {
+        const createLayerEntry = (layer: MarkLegendLayer, parentId: string): LegendEntry => {
           const id = `${parentId}::layer:${encodeURIComponent(layer.id)}`
           if (ids.has(id)) throw new Error(`Duplicate legend entry id "${id}".`)
           ids.add(id)
-          const layerVisible = layer.visible !== false
+          const layerVisible = layer.visible()
           const layerEntry = freezeEntry({
             id,
             markId: rootId,
             label: layer.label || layer.id,
-            symbol: layerSymbol(layer, type),
+            symbol: layer.symbol,
             visibility: markVisible && layerVisible ? 'visible' : 'hidden',
             disabled: false,
             children: Object.freeze([]),
@@ -291,12 +183,8 @@ export function createLegendModel(
           nodeCommands.set(id, {
             id,
             parentId,
-            visibility: () =>
-              readMarkVisible(mark) &&
-              layersOf(mark).find(({ id: candidate }) => candidate === layer.id)?.visible !== false
-                ? 'visible'
-                : 'hidden',
-            setVisible: (visible) => setLayerVisible(mark, layer.id, visible),
+            visibility: () => (legend.visible() && layer.visible() ? 'visible' : 'hidden'),
+            setVisible: layer.setVisible,
           })
           return layerEntry
         }
@@ -316,18 +204,21 @@ export function createLegendModel(
           ids.add(groupId)
           const stackChildren = stackLayers.map((layer) => createLayerEntry(layer, groupId))
           const groupVisibility = () =>
-            visibilityOf(
-              stackLayers.map(
-                ({ id }) =>
-                  readMarkVisible(mark) &&
-                  layersOf(mark).find((layer) => layer.id === id)?.visible !== false,
-              ),
-            )
+            visibilityOf(stackLayers.map((layer) => legend.visible() && layer.visible()))
           const groupEntry = freezeEntry({
             id: groupId,
             markId: rootId,
             label: stack,
-            symbol: { type: 'group' },
+            symbol: {
+              type: 'stack',
+              parts: stackLayers.flatMap((layer) =>
+                layer.symbol.type === 'composite' || layer.symbol.type === 'stack'
+                  ? layer.symbol.parts
+                  : layer.symbol.type === 'group'
+                    ? []
+                    : [layer.symbol],
+              ),
+            },
             visibility: groupVisibility(),
             disabled: false,
             children: Object.freeze(stackChildren),
@@ -337,35 +228,27 @@ export function createLegendModel(
             parentId: rootId,
             visibility: groupVisibility,
             setVisible(visible) {
-              for (const layer of stackLayers) setLayerVisible(mark, layer.id, visible)
+              for (const layer of stackLayers) layer.setVisible(visible)
             },
           })
           leafEntries.push(groupEntry)
         }
 
-        symbol = {
-          type: 'composite',
-          parts: layers.map((layer) => layerSymbol(layer, type)),
-        }
         const rootVisibility = () =>
-          readMarkVisible(mark)
-            ? visibilityOf(layersOf(mark).map((layer) => layer.visible !== false))
-            : 'hidden'
+          legend.visible() ? visibilityOf(layers.map((layer) => layer.visible())) : 'hidden'
         nodeCommands.set(rootId, {
           id: rootId,
           visibility: rootVisibility,
-          setVisible: (visible) => compositeLayers(mark, visible),
+          setVisible: legend.setVisible,
         })
       }
 
-      if (isSeriesMark(mark)) {
-        const currentVisible = () => (readMarkVisible(mark) ? 'visible' : 'hidden')
+      if (!legend.layers) {
+        const currentVisible = () => (legend.visible() ? 'visible' : 'hidden')
         nodeCommands.set(rootId, {
           id: rootId,
           visibility: currentVisible,
-          setVisible(visible) {
-            updateMarkVisible(mark, visible)
-          },
+          setVisible: legend.setVisible,
         })
       }
       const rootVisibility = nodeCommands.get(rootId)?.visibility() ?? 'visible'

@@ -2,6 +2,7 @@ import type { ScaleBinding } from '../scales/scale.js'
 import { barLayers, type BarMark } from './bar.js'
 import { barRectangles } from './bar-geometry.js'
 import { svgElement } from './render-axes.js'
+import { resolveCompositeStyle } from './mark-styles.js'
 import {
   clearCompositeCanvas,
   renderCompositeCanvas,
@@ -83,9 +84,10 @@ export function styleBars(group: SVGGElement, mark: BarMark, accent: string) {
     if (node.getAttribute('data-mark') === 'bar-label') continue
     const layer = layers.get(node.getAttribute('data-layer-id')!)
     if (!layer) throw new Error('Missing bar layer for rendered segment.')
-    node.setAttribute('fill', layer.fill ?? options.fill ?? `var(--fews-chart-accent, ${accent})`)
-    node.setAttribute('fill-opacity', String(layer.opacity ?? options.opacity))
-    node.setAttribute('stroke', layer.stroke ?? options.stroke ?? 'none')
-    node.setAttribute('stroke-width', String(layer.strokeWidth ?? options.strokeWidth))
+    const style = resolveCompositeStyle(layer, options, accent)
+    node.setAttribute('fill', style.fill)
+    node.setAttribute('fill-opacity', String(style.opacity))
+    node.setAttribute('stroke', style.stroke)
+    node.setAttribute('stroke-width', String(style.strokeWidth))
   }
 }
