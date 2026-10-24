@@ -56,6 +56,8 @@ export type {
   TooltipOptions,
   TooltipPlacementPosition,
 } from './plot/tooltip.js'
+export { legend } from './plot/legend-plugin.js'
+export type { LegendHandle, LegendOptions, LegendPosition } from './plot/legend-plugin.js'
 export type {
   LegendActionSource,
   LegendCommandSource,

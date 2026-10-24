@@ -504,6 +504,7 @@ function createPlotInternal(
     markLayer.render(dirty, current, tokens)
   }
 
+  host.append(element)
   reconcile()
   const stopPixelRatio = watchCanvasPixelRatio(() => markLayer.invalidateAll())
   const stopSize = observeSize(host, (value) => {
@@ -568,8 +569,6 @@ function createPlotInternal(
       invalidate(render, DirtyLayer.style | (fontChanged ? DirtyLayer.layout : 0))
     })
   })
-  host.append(element)
-
   function apply(patch: PlotConfig, replace: boolean) {
     if (destroyed) throw new Error('Cannot update a destroyed plot.')
     validatePatch(patch)

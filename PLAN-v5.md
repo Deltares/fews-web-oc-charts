@@ -2019,7 +2019,9 @@ creation returns; subsequent handle changes are tracked reactively.
 The [v5 legend example](./examples/v5-legend/index.html) demonstrates an application-owned
 HTML legend with nested stacks, mixed visibility, sibling isolation, direct mark updates,
 and SVG/canvas area rendering without a legend plugin.
-The built-in legend renderer, broader mark-kind support, composite-layer hit
+The optional built-in HTML `legend()` plugin renders the same reactive model with nested
+checkboxes, SVG swatches, isolate actions and a show-all control; it can be added, removed
+and repositioned at runtime. Broader mark-kind support, composite-layer hit
 testing and remaining Phase 3 examples/exit criteria remain.
 
 Plugins are installed by a plugin host that reconciles `plot.plugins` by handle
