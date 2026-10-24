@@ -7,12 +7,14 @@ import {
 } from './histogram.js'
 import type { MarkDefinition, MarkLegend } from '../mark-definition.js'
 import { compositeHits } from '../../interaction/composite-hit-testing.js'
+import { barHighlight } from '../highlight-shapes.js'
 
 export const histogramDefinition: MarkDefinition<HistogramMark> = {
   name: 'histogram',
   is: isHistogramMark,
   hits: (mark, { scales, point, axis, plot }) =>
     compositeHits(histogramBar(mark), scales, point, axis, plot),
+  highlight: (mark, hit, { scales, color }) => barHighlight(histogramBar(mark), hit, scales, color),
   legend(mark, tokens): MarkLegend {
     const options = () => mark.options.get().resolved
     return {

@@ -2,6 +2,7 @@ import { validateGridUpdates, type GridView } from '../../../data-store/grid.js'
 import type { ScaleHandle } from '../../../scales/scale.js'
 import { isHeatmapMark, type HeatmapMark } from './heatmap.js'
 import { heatmapHit } from '../../interaction/heatmap-hit-testing.js'
+import { heatmapHighlight } from '../highlight-shapes.js'
 import {
   createKeyCache,
   extentWindow,
@@ -146,6 +147,7 @@ export const heatmapDefinition: MarkDefinition<HeatmapMark> = {
     const hit = heatmapHit(mark, scales, point, axis, plot)
     return hit ? [hit] : []
   },
+  highlight: (mark, hit, { scales }) => heatmapHighlight(mark, hit, scales),
   validate(mark, { coordinateSystem, scales, direction }) {
     if (coordinateSystem !== 'cartesian')
       throw new Error('heatmap() supports cartesian plots only.')

@@ -63,6 +63,13 @@ export type {
   TooltipOptions,
   TooltipPlacementPosition,
 } from './plot/plugins/tooltip/tooltip.js'
+export { highlight } from './plot/plugins/highlight/highlight.js'
+export type {
+  HighlightAxis,
+  HighlightHandle,
+  HighlightMark,
+  HighlightOptions,
+} from './plot/plugins/highlight/highlight.js'
 export { legend } from './plot/plugins/legend/legend-plugin.js'
 export type {
   LegendHandle,

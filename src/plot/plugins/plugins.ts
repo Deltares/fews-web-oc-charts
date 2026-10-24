@@ -8,6 +8,7 @@ import { brushDefinition } from './brush/brush-plugin.js'
 import { zoomDefinition } from './zoom/zoom-plugin.js'
 import { crosshairDefinition } from './crosshair/crosshair-plugin.js'
 import { tooltipDefinition } from './tooltip/tooltip-plugin.js'
+import { highlightDefinition } from './highlight/highlight-plugin.js'
 import { legendDefinition } from './legend/legend-plugin.js'
 import { crossSectionSelectDefinition } from './cross-section-select/cross-section-select-plugin.js'
 
@@ -18,6 +19,7 @@ const pluginDefinitions = [
   brushDefinition,
   crosshairDefinition,
   tooltipDefinition,
+  highlightDefinition,
   legendDefinition,
   crossSectionSelectDefinition,
 ] as const

@@ -6,6 +6,7 @@ import {
   createPlot,
   createTable,
   crosshair,
+  highlight,
   line,
   linearScale,
   stackedArea,
@@ -64,6 +65,7 @@ const guide = crosshair({
   labels: { x: 't', y: 'q' },
 })
 const interaction = tooltip({ marks: [observed, forecast], crosshair: guide })
+const emphasis = highlight({ marks: [observed, forecast], crosshair: guide })
 const plot = createPlot(host, {
   title: 'Observed and forecast values',
   scales: {
@@ -75,7 +77,7 @@ const plot = createPlot(host, {
     axis('q', { position: 'left', label: 'Value', grid: true }),
   ],
   marks: [observed, forecast],
-  plugins: [guide, interaction],
+  plugins: [guide, interaction, emphasis],
 })
 
 const end = start + 48 * hour
@@ -151,7 +153,7 @@ const flowPlot = createPlot(flowHost, {
     axis('q', { style: 'classic', position: 'left', label: 'Discharge', unit: 'm3/s', grid: true }),
   ],
   marks: [flowMark],
-  plugins: [subplotCrosshair, flowTooltip],
+  plugins: [subplotCrosshair, flowTooltip, highlight({ crosshair: subplotCrosshair })],
 })
 const rainTooltip = tooltip({
   marks: [rainMark],
@@ -168,7 +170,7 @@ const rainPlot = createPlot(rainHost, {
     axis('rain', { style: 'classic', position: 'left', label: 'Rainfall', unit: 'mm', grid: true }),
   ],
   marks: [rainMark],
-  plugins: [subplotCrosshair, rainTooltip],
+  plugins: [subplotCrosshair, rainTooltip, highlight({ crosshair: subplotCrosshair })],
 })
 const storageTooltip = tooltip({
   marks: [flowAreas],
@@ -186,7 +188,7 @@ const storagePlot = createPlot(storageHost, {
     axis('flow', { style: 'classic', position: 'left', label: 'Inflow', unit: 'm3/s', grid: true }),
   ],
   marks: [flowAreas],
-  plugins: [subplotCrosshair, storageTooltip],
+  plugins: [subplotCrosshair, storageTooltip, highlight({ crosshair: subplotCrosshair })],
 })
 const advancedPlots = [flowPlot, rainPlot, storagePlot]
 let relayingPointer = false
@@ -271,11 +273,13 @@ modeOption.addEventListener(
     }
     if (mode === 'none') {
       interaction.update({ crosshair: undefined })
-      plot.update({ plugins: [interaction] })
+      emphasis.update({ crosshair: undefined })
+      plot.update({ plugins: [interaction, emphasis] })
     } else {
       guide.update({ mode })
-      plot.update({ plugins: [guide, interaction] })
+      plot.update({ plugins: [guide, interaction, emphasis] })
       interaction.update({ crosshair: guide })
+      emphasis.update({ crosshair: guide })
     }
     updateStatus()
   },
@@ -310,6 +314,7 @@ axisOption.addEventListener(
       throw new Error(`Unknown tooltip axis "${axisOption.value}".`)
     }
     interaction.update({ axis: axisOption.value })
+    emphasis.update({ axis: axisOption.value })
   },
   events,
 )
