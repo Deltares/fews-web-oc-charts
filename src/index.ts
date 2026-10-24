@@ -29,6 +29,8 @@ export type {
   ZoomResetMode,
   ZoomWheelMode,
 } from './plot/zoom.js'
+export { pan } from './plot/pan.js'
+export type { PanHandle, PanMode, PanOptions } from './plot/pan.js'
 export { line } from './plot/line.js'
 export { rule } from './plot/rule.js'
 export type { RuleMark, RuleOptions } from './plot/rule.js'
