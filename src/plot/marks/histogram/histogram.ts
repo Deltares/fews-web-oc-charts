@@ -55,7 +55,6 @@ export interface HistogramMark {
 
 const handles = new WeakSet<object>()
 const validators = new WeakMap<HistogramMark, Set<(candidate: BarMark) => void>>()
-const tableChecks = new WeakMap<HistogramMark, (candidate: TableView) => void>()
 const bars = new WeakMap<
   HistogramMark,
   { bins: readonly HistogramBin[]; version: number; mark: BarMark }
@@ -79,8 +78,7 @@ function validateBinning(data: TableView, options: Readonly<HistogramOptions>) {
       throw new RangeError('histogram.domain requires two ascending finite values.')
   }
   if (
-    edges &&
-    edges.some((edge, index) => !Number.isFinite(edge) || (index > 0 && edge <= edges[index - 1]))
+    edges?.some((edge, index) => !Number.isFinite(edge) || (index > 0 && edge <= edges[index - 1]))
   )
     throw new RangeError('Histogram edges must be finite and strictly increasing.')
   if (!['count', 'probability', 'density'].includes(options.normalization))
@@ -114,7 +112,9 @@ function computeBins(
     }
     edges = Array.from({ length: count + 1 }, (_, index) => {
       const ratio = index / count
-      return index === 0 ? low : index === count ? high : low * (1 - ratio) + high * ratio
+      if (index === 0) return low
+      if (index === count) return high
+      return low * (1 - ratio) + high * ratio
     })
   }
   for (let index = 1; index < edges.length; index += 1) {
@@ -143,12 +143,10 @@ function computeBins(
       const start = edges[index]
       const end = edges[index + 1]
       const probability = total ? count / total : 0
-      const value =
-        options.normalization === 'count'
-          ? count
-          : options.normalization === 'probability'
-            ? probability
-            : probability / (end - start)
+      let value: number
+      if (options.normalization === 'count') value = count
+      else if (options.normalization === 'probability') value = probability
+      else value = probability / (end - start)
       if (!Number.isFinite(value)) throw new RangeError('Histogram density must be finite.')
       return Object.freeze({ start, end, count, value })
     }),
@@ -256,7 +254,6 @@ export function histogram(data: TableStore, initial: OptionPatch<HistogramOption
   const check = (candidate: TableView) => {
     computeBins(candidate, state.getSnapshot().resolved)
   }
-  tableChecks.set(mark, check)
   validateTableUpdates(data, check)
   handles.add(mark)
   validators.set(mark, consumers)
@@ -270,7 +267,7 @@ export function histogramBar(mark: HistogramMark): BarMark {
   const version = mark.options.version
   return untracked(() => {
     let cached = bars.get(mark)
-    if (!cached || cached.bins !== bins) {
+    if (cached?.bins !== bins) {
       cached = { bins, version, mark: bar(binTable(bins), barOptions(options)) }
       bars.set(mark, cached)
     } else if (cached.version !== version) {
