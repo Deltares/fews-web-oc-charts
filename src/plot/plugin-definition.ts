@@ -8,6 +8,7 @@ import type { GestureHandler, GestureType, PlotPointer, PlotPosition } from './p
 import type { LegendModel } from './legend.js'
 import type { CrosshairHandle } from './crosshair.js'
 import type { CrosshairInspection } from './inspection.js'
+import type { ThemeTokens } from '../theme/theme.js'
 
 /** The read-only view of a plot that an installed plugin receives. */
 export interface PlotContext {
@@ -18,6 +19,9 @@ export interface PlotContext {
   readonly regions: ReadonlySignal<PlotLayout>
   readonly pointer: ReadonlySignal<PlotPointer>
   readonly legend: LegendModel
+  readonly theme: ReadonlySignal<ThemeTokens>
+  /** Measures an application-layout viewport instead of the original plot host. */
+  useViewport(element: HTMLElement): () => void
   /** Plot-local scale bindings with ranges in SVG coordinates. */
   readonly scales: Readonly<Record<string, ScaleBinding>>
   /** Owned by the installed plugin and disposed when it is removed. */

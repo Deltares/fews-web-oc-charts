@@ -709,13 +709,13 @@ ensemble(fc, {
 
 #### 3.8.1 Headless legend model
 
-Legend state belongs to the core, not to the HTML legend plugin. A Vue component must
+Legend state belongs to the core, not to the built-in SVG legend plugin. A Vue component must
 be able to render its own legend without installing that plugin, querying chart DOM,
 calling `drawLegendSymbol`, or maintaining a second list of visible series.
 
 - Every plot exposes `plot.legend`: a read-only reactive `entries` signal and commands
   `toggle(id)`, `setVisible(id, boolean)`, `isolate(id)` and `showAll()`. The model is
-  available without a legend renderer; the built-in HTML plugin consumes this same
+  available without a legend renderer; the built-in SVG plugin consumes this same
   model and commands. It contains metadata/references only, never copies of columns,
   DOM nodes or per-point data.
 - Each immutable entry snapshot has `{ id, markId, label, symbol, visibility, disabled,
@@ -731,7 +731,7 @@ children }`. `visibility` is `'visible' | 'hidden' | 'mixed'`; `children` is an 
   without raw HTML injection or an imperative DOM renderer.
   The current core exports `createLegendSwatch(entry.symbol, { width: 36, height: 20 })`
   for a decorative SVG element and `legendSymbolPrimitives(entry.symbol, { width: 36,
-  height: 20 })` for typed `{ type, attributes }` geometry (`line`, `circle`, `rect`).
+height: 20 })` for typed `{ type, attributes }` geometry (`line`, `circle`, `rect`).
   Both use the same pure geometry; neither owns labels, controls, layout or visibility.
   `composite` parts overlay (area, line, markers); `stack` parts form bottom-to-top
   coloured bands, including all constituent layers of a parent or named stack group.
@@ -2019,10 +2019,33 @@ creation returns; subsequent handle changes are tracked reactively.
 The [v5 legend example](./examples/v5-legend/index.html) demonstrates an application-owned
 HTML legend with nested stacks, mixed visibility, sibling isolation, direct mark updates,
 and SVG/canvas area rendering without a legend plugin.
-The optional built-in HTML `legend()` plugin renders the same reactive model with nested
-checkboxes, SVG swatches, isolate actions and a show-all control; it can be added, removed
-and repositioned at runtime. Broader mark-kind support, composite-layer hit
+The optional built-in SVG `legend()` plugin renders the same reactive model as clickable
+swatches and labels, without checkboxes, isolate actions or a show-all control. Entries
+toggle with a click or Enter/Space. Visible, mixed and hidden entries use opacity 1,
+0.75 and 0.5 respectively. `showGroups: false` omits all parent and named-stack headings,
+displaying only leaf series/layers without changing their IDs or the headless model;
+`showGroups` defaults to true and is editable at runtime. It supports top,
+bottom, left and right docks plus four plot-overlay corners, and can be repositioned at
+runtime. Broader mark-kind support, composite-layer hit
 testing and remaining Phase 3 examples/exit criteria remain.
+
+Docked legends use a separate SVG outside the entire chart SVG, including its axes and
+title. A grid reserves space within the configured host size, and the chart observes its
+remaining viewport. Corner overlays stay inside the plot and reserve no outside space;
+removing the plugin restores the original chart host and size.
+Top/bottom legend SVGs match the chart width and align their entry columns with the
+plot's left/right margins. Left/right legend SVGs match the chart height and lay out
+entries within the plot's top/bottom margins. Text is measured using the chart theme.
+All built-in legend entries share the same cell width and height, including their
+clickable bounds; the common width accommodates the widest displayed label and hierarchy
+indentation and updates when labels, grouping, size or placement change.
+In top/bottom positions, groups are laid out row by row like a table instead of with
+indentation. Each top-level group starts a new section, with its semi-bold heading and
+swatch in the first column and its entries alongside it. Nested groups such as named
+stacks start a new line in the next column. Thin dividers separate sections, and
+consecutive ungrouped series share a section. Left/right docks and corner overlays use the
+same root-group sections: a small gap with a divider spanning the column separates groups
+(omitted at the top of a column), and multi-column docks balance their column heights.
 
 Plugins are installed by a plugin host that reconciles `plot.plugins` by handle
 identity. Each built-in plugin registers a `PluginDefinition` (`is`, `validate`,
