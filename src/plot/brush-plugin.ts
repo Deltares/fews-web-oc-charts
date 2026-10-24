@@ -46,8 +46,8 @@ function installBrush(handle: BrushHandle, context: PlotContext) {
   function renderSelection(gesture: NonNullable<typeof active>) {
     const region = context.regions.get().plot
     const { x0, x1, y0, y1 } = bounds(gesture)
-    const x = gesture.mode === 'x' ? region.x : x0
-    const y = gesture.mode === 'y' ? region.y : y0
+    const x = gesture.mode === 'y' ? region.x : x0
+    const y = gesture.mode === 'x' ? region.y : y0
     const width = gesture.mode === 'y' ? region.width : x1 - x0
     const height = gesture.mode === 'x' ? region.height : y1 - y0
     selection.setAttribute('x', String(x))
