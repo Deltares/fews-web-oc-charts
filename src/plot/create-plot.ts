@@ -458,13 +458,72 @@ function createPlotInternal(
     else element.removeAttribute('aria-label')
   }
 
+  function updateInsetMargin(
+    current: PlotOptions,
+    axis: AxisHandle,
+    index: number,
+    groups: Element[],
+  ) {
+    if (axis.options.get().resolved.crossAt) return false
+    const tickGroup = groups[index]?.querySelector('[data-axis-ticks]')
+    if (!tickGroup) return false
+    const bounds = tickGroup.getBoundingClientRect()
+    const side = axis.options.get().resolved.position
+    if (!isCartesianSide(side)) return false
+    const extent = side === 'top' || side === 'bottom' ? bounds.height : bounds.width
+    const needed = Math.ceil(extent / 10) * 10
+    const previous = Math.max(current.margins[side], insetWidths.get(axis) ?? 0)
+    if (needed <= previous) return false
+    insetWidths.set(axis, needed)
+    return true
+  }
+
+  function adjustInsetMargins(current: PlotOptions, tokens: ThemeTokens) {
+    if (current.axisLayout !== 'inset' || !current.autoMargins) return
+    let changed = false
+    const groups = [...axesLayer.children]
+    current.axes.forEach((axis, index) => {
+      if (updateInsetMargin(current, axis, index, groups)) changed = true
+    })
+    if (!changed) return
+    renderLayout(current, tokens)
+    renderAxes(axesLayer, gridLayer, current.axes, scaleBindings.scales, regions.get(), tokens)
+  }
+
+  function renderAxesForCurrent(current: PlotOptions, tokens: ThemeTokens) {
+    if (coordinateSystem === 'skewT') {
+      renderSkewTAxes(
+        axesLayer,
+        gridLayer,
+        current.axes,
+        scaleBindings.scales,
+        regions.get(),
+        tokens,
+        current.skewT!.skew,
+      )
+      return
+    }
+    if (coordinateSystem === 'polar') {
+      renderPolarAxes(
+        axesLayer,
+        gridLayer,
+        current.axes,
+        scaleBindings.scales,
+        regions.get(),
+        tokens,
+      )
+      return
+    }
+
+    renderAxes(axesLayer, gridLayer, current.axes, scaleBindings.scales, regions.get(), tokens)
+    adjustInsetMargins(current, tokens)
+  }
+
   function render(dirty: DirtyLayers) {
     if (destroyed) return
     const current = options.get().resolved
     const tokens = theme.get()
-    if (dirty & DirtyLayer.layout) {
-      renderLayout(current, tokens)
-    }
+    if (dirty & DirtyLayer.layout) renderLayout(current, tokens)
     if (dirty & DirtyLayer.style) {
       background.setAttribute('fill', `var(--fews-chart-background, ${tokens.background})`)
       polarBackground.setAttribute('fill', `var(--fews-chart-background, ${tokens.background})`)
@@ -474,59 +533,7 @@ function createPlotInternal(
       title.setAttribute('fill', 'currentColor')
       gridLayer.setAttribute('stroke', `var(--fews-chart-grid, ${tokens.grid})`)
     }
-    if (dirty & (DirtyLayer.layout | DirtyLayer.axes)) {
-      if (coordinateSystem === 'skewT') {
-        renderSkewTAxes(
-          axesLayer,
-          gridLayer,
-          current.axes,
-          scaleBindings.scales,
-          regions.get(),
-          tokens,
-          current.skewT!.skew,
-        )
-      } else if (coordinateSystem === 'polar') {
-        renderPolarAxes(
-          axesLayer,
-          gridLayer,
-          current.axes,
-          scaleBindings.scales,
-          regions.get(),
-          tokens,
-        )
-      } else {
-        renderAxes(axesLayer, gridLayer, current.axes, scaleBindings.scales, regions.get(), tokens)
-        if (current.axisLayout === 'inset' && current.autoMargins) {
-          let changed = false
-          const groups = [...axesLayer.children]
-          current.axes.forEach((axis, index) => {
-            if (axis.options.get().resolved.crossAt) return
-            const tickGroup = groups[index]?.querySelector('[data-axis-ticks]')
-            if (!tickGroup) return
-            const bounds = tickGroup.getBoundingClientRect()
-            const side = axis.options.get().resolved.position
-            if (!isCartesianSide(side)) return
-            const extent = side === 'top' || side === 'bottom' ? bounds.height : bounds.width
-            const needed = Math.ceil(extent / 10) * 10
-            const previous = Math.max(current.margins[side], insetWidths.get(axis) ?? 0)
-            if (needed <= previous) return
-            insetWidths.set(axis, needed)
-            changed = true
-          })
-          if (changed) {
-            renderLayout(current, tokens)
-            renderAxes(
-              axesLayer,
-              gridLayer,
-              current.axes,
-              scaleBindings.scales,
-              regions.get(),
-              tokens,
-            )
-          }
-        }
-      }
-    }
+    if (dirty & (DirtyLayer.layout | DirtyLayer.axes)) renderAxesForCurrent(current, tokens)
     markLayer.render(dirty, current, tokens)
   }
 
