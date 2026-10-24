@@ -5,11 +5,20 @@ import {
   validateHistogramUpdates,
   type HistogramMark,
 } from './histogram.js'
-import type { MarkDefinition } from '../mark-definition.js'
+import type { MarkDefinition, MarkLegend } from '../mark-definition.js'
 
 export const histogramDefinition: MarkDefinition<HistogramMark> = {
   name: 'histogram',
   is: isHistogramMark,
+  legend(mark, tokens): MarkLegend {
+    const options = () => mark.options.get().resolved
+    return {
+      label: options().label,
+      symbol: { type: 'bar', fill: options().fill ?? tokens.accent, opacity: options().opacity },
+      visible: () => options().visible,
+      setVisible: (visible) => mark.update({ visible }),
+    }
+  },
   validate(mark, context) {
     if (context.coordinateSystem !== 'cartesian')
       throw new Error('histogram() supports cartesian plots only.')

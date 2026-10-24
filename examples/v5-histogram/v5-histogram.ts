@@ -1,5 +1,5 @@
 import '../shared/v5.css'
-import { axis, createPlot, createTable, histogram, linearScale } from '@lib'
+import { axis, createPlot, createTable, crosshair, histogram, linearScale, tooltip } from '@lib'
 
 function required<T extends HTMLElement>(selector: string) {
   const element = document.querySelector<T>(selector)
@@ -27,11 +27,17 @@ const sample = linearScale()
 const frequency = linearScale({ nice: true })
 let sampleAxis = axis('sample', { position: 'bottom', label: 'Sample' })
 let frequencyAxis = axis('frequency', { position: 'left', label: 'Count', grid: true })
+const guide = crosshair({
+  mode: 'xy',
+  snap: { mark, axis: 'x' },
+  labels: { x: 'sample', y: 'frequency' },
+})
 const plot = createPlot(required('#histogram'), {
   title: 'Sample distribution',
   scales: { sample, frequency },
   axes: [sampleAxis, frequencyAxis],
   marks: [mark],
+  plugins: [guide, tooltip({ crosshair: guide })],
 })
 function summary() {
   required('#summary').textContent = mark.bins
@@ -68,6 +74,7 @@ horizontal.addEventListener(
       ...mark.options.get().resolved,
       orientation: horizontal.checked ? 'horizontal' : 'vertical',
     })
+    guide.update({ snap: undefined, labels: undefined })
     const nextSampleAxis = axis('sample', {
       position: horizontal.checked ? 'left' : 'bottom',
       label: 'Sample',
@@ -78,9 +85,22 @@ horizontal.addEventListener(
       grid: true,
     })
     plot.update({ marks: [replacement], axes: [nextSampleAxis, nextFrequencyAxis] })
+    guide.update({
+      snap: { mark: replacement, axis: 'x' },
+      labels: horizontal.checked
+        ? { x: 'frequency', y: 'sample' }
+        : { x: 'sample', y: 'frequency' },
+    })
     mark = replacement
     sampleAxis = nextSampleAxis
     frequencyAxis = nextFrequencyAxis
+  },
+  events,
+)
+required<HTMLInputElement>('#visible').addEventListener(
+  'change',
+  (event) => {
+    plot.legend.setVisible('distribution', (event.currentTarget as HTMLInputElement).checked)
   },
   events,
 )

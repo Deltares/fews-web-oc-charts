@@ -13,6 +13,7 @@ import { displayInspectionValue } from '../../interaction/inspection.js'
 import { svgElement } from '../../rendering/svg.js'
 import { barLayers, isBarMark } from '../../marks/bar/bar.js'
 import { isStackedAreaMark } from '../../marks/stacked-area/stacked-area.js'
+import { histogramBar, isHistogramMark } from '../../marks/histogram/histogram.js'
 
 interface CrosshairCallout {
   readonly group: SVGGElement
@@ -88,6 +89,13 @@ function installCrosshair(handle: CrosshairHandle, context: PlotContext) {
     if (!snap || snap.axis !== 'x') return []
     if (isBarMark(snap.mark)) {
       const options = snap.mark.options.get().resolved
+      if (options.orientation !== 'vertical') return []
+      return barLayers(options)
+        .filter((candidate) => candidate.visible !== false)
+        .map((candidate) => candidate.id)
+    }
+    if (isHistogramMark(snap.mark)) {
+      const options = histogramBar(snap.mark).options.get().resolved
       if (options.orientation !== 'vertical') return []
       return barLayers(options)
         .filter((candidate) => candidate.visible !== false)

@@ -12,9 +12,17 @@ import {
 } from '../../interaction/inspection.js'
 import type { Region } from '../../../layout/layout.js'
 import type { PlotPointer } from '../../interaction/pointer-hub.js'
+import { histogramBar, isHistogramMark } from '../../marks/histogram/histogram.js'
+import { isHeatmapMark } from '../../marks/heatmap/heatmap.js'
+import { heatmapHit, type HeatmapHit } from '../../interaction/heatmap-hit-testing.js'
 
-type TooltipHit = PointHit | CompositeHit
+type TooltipHit = PointHit | CompositeHit | HeatmapHit
 type TooltipContext = Pick<PlotContext, 'scales' | 'inspectCrosshair'>
+
+function isHeatmapHit(hit: TooltipHit): hit is HeatmapHit {
+  return 'xStart' in hit
+}
+
 interface TooltipHitEntry {
   readonly mark: TooltipMark
   readonly hit: TooltipHit
@@ -42,7 +50,14 @@ export interface TooltipModel {
 }
 
 export function isTooltipMark(mark: object): mark is TooltipMark {
-  return isLineMark(mark) || isSeriesMark(mark) || isBarMark(mark) || isStackedAreaMark(mark)
+  return (
+    isLineMark(mark) ||
+    isSeriesMark(mark) ||
+    isBarMark(mark) ||
+    isStackedAreaMark(mark) ||
+    isHistogramMark(mark) ||
+    isHeatmapMark(mark)
+  )
 }
 
 function label(mark: TooltipMark, index: number) {
@@ -51,6 +66,10 @@ function label(mark: TooltipMark, index: number) {
   if (isBarMark(mark) || isStackedAreaMark(mark)) {
     const options = mark.options.get().resolved
     return options.label || mark.id || `Mark ${index + 1}`
+  }
+  if (isHistogramMark(mark)) {
+    const options = mark.options.get().resolved
+    return options.label || mark.id || `Histogram ${index + 1}`
   }
   return mark.id || mark.y
 }
@@ -64,12 +83,21 @@ function tooltipColor(mark: TooltipMark, hit: TooltipHit) {
   if (isLineMark(mark) || isSeriesMark(mark)) {
     return mark.stroke ?? mark.markers?.fill ?? 'var(--fews-chart-accent, currentColor)'
   }
+  if (isHistogramMark(mark)) {
+    return mark.options.get().resolved.fill ?? 'var(--fews-chart-accent, currentColor)'
+  }
+  if (isHeatmapMark(mark) && isHeatmapHit(hit)) {
+    return mark.options.get().resolved.color.map(hit.value)
+  }
   return 'var(--fews-chart-accent, currentColor)'
 }
 
 function compositeValueAxis(mark: TooltipMark, hit: TooltipHit) {
   if (!('layerId' in hit)) return undefined
-  return isBarMark(mark) && mark.options.get().resolved.orientation === 'horizontal' ? 'x' : 'y'
+  return (isBarMark(mark) || isHistogramMark(mark)) &&
+    mark.options.get().resolved.orientation === 'horizontal'
+    ? 'x'
+    : 'y'
 }
 
 function compositeDetails(
@@ -79,7 +107,10 @@ function compositeDetails(
   digits: number | undefined,
 ) {
   const valueScale =
-    isBarMark(mark) && mark.options.get().resolved.orientation === 'horizontal' ? mark.x : mark.y
+    (isBarMark(mark) || isHistogramMark(mark)) &&
+    mark.options.get().resolved.orientation === 'horizontal'
+      ? mark.x
+      : mark.y
   const format = (value: number) => displayValue(value, context, valueScale, digits)
   const parts = [format(hit.value)]
   if (hit.stack !== undefined) parts.push(`stack: ${hit.stack}`)
@@ -93,6 +124,32 @@ function tooltipEntry(
   options: Readonly<TooltipOptions>,
   inspection: CrosshairInspection | undefined,
 ): TooltipEntry {
+  if (isHeatmapMark(mark) && isHeatmapHit(hit)) {
+    const heatmapOptions = mark.options.get().resolved
+    const name = label(mark, index)
+    const value = displayValue(hit.value, context, mark.y, options.digits ?? 2)
+    const xStart = displayValue(hit.xStart, context, mark.x)
+    const xEnd = displayValue(hit.xEnd, context, mark.x)
+    const yStart = displayValue(hit.yStart, context, mark.y)
+    const yEnd = displayValue(hit.yEnd, context, mark.y)
+    const details = [
+      ...(options.showX ? [`x: ${xStart}–${xEnd}`] : []),
+      `y: ${yStart}–${yEnd}`,
+      `value: ${value}`,
+    ]
+    return {
+      label: name,
+      color: heatmapOptions.color.map(hit.value),
+      details: ` · ${details.join(' · ')}`,
+      accessibleLabel: `${name} · ${details.join(' · ')}`,
+      symbol: {
+        size: 8,
+        radius: '1px',
+        fill: heatmapOptions.color.map(hit.value),
+        border: undefined,
+      },
+    }
+  }
   const pointMark = isLineMark(mark) || isSeriesMark(mark)
   const markers = pointMark && !('layerId' in hit) ? mark.markers : undefined
   const color = tooltipColor(mark, hit)
@@ -166,20 +223,29 @@ export function computeTooltipModel(
           if (axis === 'xy' && inspection?.options.snap && mark !== inspection.options.snap.mark) {
             return []
           }
-          if (isBarMark(mark) || isStackedAreaMark(mark)) {
+          if (isBarMark(mark) || isStackedAreaMark(mark) || isHistogramMark(mark)) {
             if (inspection?.options.snap?.mark === mark) {
               return inspection.hits.flatMap((hit) =>
                 'layerId' in hit ? [{ mark, hit, index }] : [],
               )
             }
             return compositeHits(
-              mark,
+              isHistogramMark(mark) ? histogramBar(mark) : mark,
               context.scales,
               point,
               axis,
               region,
               isStackedAreaMark(mark) ? pathContext() : undefined,
             ).map((hit) => ({ mark, hit, index }))
+          }
+          if (isHeatmapMark(mark)) {
+            const hit =
+              inspection?.options.snap?.mark === mark &&
+              inspection.hit &&
+              isHeatmapHit(inspection.hit)
+                ? inspection.hit
+                : heatmapHit(mark, context.scales, point, axis, region)
+            return hit ? [{ mark, hit, index }] : []
           }
           if (isLineMark(mark) || isSeriesMark(mark)) {
             const hit =

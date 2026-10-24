@@ -2035,8 +2035,30 @@ displaying only leaf series/layers without changing their IDs or the headless mo
 `showGroups` defaults to true and is editable at runtime. It supports top,
 bottom, left and right docks plus four plot-overlay corners, and can be repositioned at
 runtime. Composite bar and stacked-area hit testing are implemented; remaining Phase 3
-examples and exit criteria, including interaction coverage for the remaining mark kinds,
-remain. Crosshair snapping now supports composite bar and stacked-area layers; snapping vertical
+examples and exit criteria remain. The current mark interaction contract is:
+
+| Mark kind                 | Hover / hit behavior                                    | Crosshair snapping                                                            | Tooltip                                    | Visibility                                                                   |
+| ------------------------- | ------------------------------------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------ | ---------------------------------------------------------------------------- |
+| `line()`, `series()`      | Nearest visible sample by x, y or screen distance       | Yes; x/y choose nearest projected sample and xy chooses nearest actual sample | Yes                                        | `series()` supports legend and mark visibility; static `line()` is immutable |
+| `bar()`                   | Bar rectangle or nearest category/value row             | Yes; composite layer hits                                                     | Yes; raw layer value and stack bounds      | Mark and layers support legend commands                                      |
+| `stackedArea()`           | Filled-path hit, topmost painted layer wins             | Yes; composite layer hits                                                     | Yes; raw layer value and cumulative bounds | Mark and layers support legend commands                                      |
+| `histogram()`             | Bin rectangle, including empty bins                     | Yes; through its derived interval-bar geometry                                | Yes; bin range and normalized value        | Mark visibility and single-entry legend commands                             |
+| `heatmap()`               | Containing finite-valued cell; missing cells do not hit | Yes; snaps to cell centre                                                     | Yes; cell bounds and value                 | Direct `visible` option; no legend entry                                     |
+| `band()`                  | No mark-specific hit                                    | No                                                                            | No                                         | Static mark; no visibility control                                           |
+| `rule()`                  | No mark-specific hit                                    | No                                                                            | No                                         | Static annotation; no visibility control                                     |
+| `text()`                  | No mark-specific hit                                    | No                                                                            | No                                         | Static mark; no visibility control                                           |
+| `arrows()`, `direction()` | No mark-specific hit                                    | No                                                                            | No                                         | Static marks; no visibility control                                          |
+| `progress()`              | No mark-specific hit                                    | No                                                                            | No                                         | Static polar mark; no visibility control                                     |
+
+The pointer hub remains available over every plot; “no mark-specific hit” means the
+mark does not add datum inspection. These interval, annotation, glyph and polar marks
+have no defined tooltip datum or Cartesian crosshair-snap contract yet. Their omission
+is intentional rather than an incomplete fallback. Focused browser coverage and the
+histogram/heatmap examples now exercise the newly supported kinds, including missing
+cell handling and visibility. Further mark kinds need an explicit datum/visibility UX
+decision before being added to the inspection API.
+
+Crosshair snapping now supports composite bar and stacked-area layers; snapping vertical
 stacks along x draws one y guide and cumulative-upper callout per visible layer.
 Crosshair callout nodes are reused across pointer leaves, hidden marks and empty data;
 inactive callouts are hidden rather than removed, then updated when inspection resumes.

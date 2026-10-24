@@ -10,10 +10,13 @@ import { isLineMark, type LineMark } from '../../marks/line/line.js'
 import { isSeriesMark, type SeriesMark } from '../../marks/line/series.js'
 import { isBarMark, type BarMark } from '../../marks/bar/bar.js'
 import { isStackedAreaMark, type StackedAreaMark } from '../../marks/stacked-area/stacked-area.js'
+import { isHistogramMark, type HistogramMark } from '../../marks/histogram/histogram.js'
+import { isHeatmapMark, type HeatmapMark } from '../../marks/heatmap/heatmap.js'
 
 export type CrosshairMode = 'x' | 'y' | 'xy'
 export type CrosshairSnapAxis = 'x' | 'y' | 'xy'
-export type CrosshairSnapMark = LineMark | SeriesMark | BarMark | StackedAreaMark
+export type CrosshairSnapMark =
+  LineMark | SeriesMark | BarMark | StackedAreaMark | HistogramMark | HeatmapMark
 
 export interface CrosshairSnapOptions {
   mark: CrosshairSnapMark
@@ -51,10 +54,12 @@ function validateSnap(snap: CrosshairSnapOptions | undefined) {
     (!isLineMark(snap.mark) &&
       !isSeriesMark(snap.mark) &&
       !isBarMark(snap.mark) &&
-      !isStackedAreaMark(snap.mark))
+      !isStackedAreaMark(snap.mark) &&
+      !isHistogramMark(snap.mark) &&
+      !isHeatmapMark(snap.mark))
   ) {
     throw new TypeError(
-      'crosshair.snap.mark must be a line(), series(), bar() or stackedArea() mark.',
+      'crosshair.snap.mark must be a line(), series(), bar(), stackedArea(), histogram() or heatmap() mark.',
     )
   }
   if (!['x', 'y', 'xy'].includes(snap.axis)) {
@@ -81,7 +86,12 @@ export function crosshair(initial: OptionPatch<CrosshairOptions> = {}): Crosshai
   const consumers = new Set<(options: Readonly<CrosshairOptions>) => void>()
   const state = createOptionState<CrosshairOptions>(initial, {
     isAtomicReference: (value) =>
-      isLineMark(value) || isSeriesMark(value) || isBarMark(value) || isStackedAreaMark(value),
+      isLineMark(value) ||
+      isSeriesMark(value) ||
+      isBarMark(value) ||
+      isStackedAreaMark(value) ||
+      isHistogramMark(value) ||
+      isHeatmapMark(value),
     defaults: () => ({ mode: 'xy', snap: undefined, labels: undefined }),
     validate(options) {
       if (!['x', 'y', 'xy'].includes(options.mode)) {

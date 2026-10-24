@@ -16,6 +16,8 @@
       Unsorted observations are binned into irregular intervals. Interior boundaries belong to the
       following bin; the final boundary is included. NaN and out-of-domain observations are ignored.
       Empty bins remain visible in the domain. Both renderers use the existing interval bar path.
+      Hover or move across bins to inspect ranges and normalized values; the crosshair snaps to the
+      same bin, and the legend visibility command hides or restores the histogram.
     </p>
     <fieldset class="controls">
       <legend>Update retained histogram</legend>
@@ -36,6 +38,7 @@
       </label>
       <label><input id="horizontal" type="checkbox" /> Horizontal</label>
       <label><input id="reverse" type="checkbox" /> Reverse sample scale</label>
+      <label><input id="visible" type="checkbox" checked /> Show histogram</label>
       <button id="append" type="button">Append observations</button>
       <button id="rebin" type="button">Toggle equal-width bins</button>
       <button id="clear" type="button">Clear data</button>
