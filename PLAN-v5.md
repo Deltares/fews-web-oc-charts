@@ -2007,8 +2007,16 @@ are explicit line/series marks; x and y select samples by projected screen coord
 xy selects the nearest actual sample by screen distance. Both guides use that same sample,
 and snapped guides hide when the target has no visible sample. The reusable nearest-point
 hit-test is shared with the tooltip plugin. Tooltip supports nearest-x samples across selected
-line/series marks or one nearest actual sample in xy mode, safe text-only HTML content,
-viewport-aware placement, runtime option updates and plugin lifecycle cleanup. The
+line/series marks or one nearest actual sample in xy mode, plus rectangle hits for bars and
+filled-path hits for stacked areas. Composite entries retain layer identity and report raw
+values, named stacks and cumulative bounds; overlapping area stacks resolve to the topmost
+painted layer. `tooltip({ showX: false, digits: 2 })` hides sample x coordinates and rounds
+numeric y values, composite raw values and bounds to at most two decimal places, including
+accessible labels, without changing source data. Defaults preserve x coordinates and existing
+mark precision. Composite tooltips show the raw value once, without a `value:` label, rather than repeating
+it as a coordinate on the value axis; the category coordinate and stack bounds remain available.
+Content remains text-only, with viewport-aware placement, runtime option
+updates and plugin lifecycle cleanup. The
 [v5 tooltip example](./examples/v5-tooltip/index.html) demonstrates its public API. Tooltip is
 implemented. The core now exposes a headless `plot.legend` model for series, bars and
 stacked areas, including immutable metadata snapshots, line/marker/area/bar symbol
@@ -2026,8 +2034,9 @@ toggle with a click or Enter/Space. Visible, mixed and hidden entries use opacit
 displaying only leaf series/layers without changing their IDs or the headless model;
 `showGroups` defaults to true and is editable at runtime. It supports top,
 bottom, left and right docks plus four plot-overlay corners, and can be repositioned at
-runtime. Broader mark-kind support, composite-layer hit
-testing and remaining Phase 3 examples/exit criteria remain.
+runtime. Composite bar and stacked-area hit testing are implemented; remaining Phase 3
+examples and exit criteria, including crosshair snapping to composite layers and interaction
+coverage for the remaining mark kinds, remain.
 
 Docked legends use a separate SVG outside the entire chart SVG, including its axes and
 title. A grid reserves space within the configured host size, and the chart observes its

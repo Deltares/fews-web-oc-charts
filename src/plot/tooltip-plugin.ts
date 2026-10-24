@@ -10,7 +10,10 @@ import {
 } from './tooltip.js'
 import { isLineMark } from './line.js'
 import { isSeriesMark } from './series.js'
-import { nearestPoint } from './point-hit-testing.js'
+import { nearestPoint, type PointHit } from './point-hit-testing.js'
+import { compositeHits, type CompositeHit } from './composite-hit-testing.js'
+import { isBarMark } from './bar.js'
+import { isStackedAreaMark } from './stacked-area.js'
 import { TooltipPosition } from '../Tooltip/tooltip.js'
 import { calculateTooltipPlacement } from '../Utils/tooltipPlacement.js'
 import { displayInspectionValue as displayValue } from './inspection.js'
@@ -20,7 +23,79 @@ let nextTooltipId = 0
 function label(mark: TooltipMark, index: number) {
   if (isSeriesMark(mark))
     return mark.options.get().resolved.label || mark.id || `Series ${index + 1}`
+  if (isBarMark(mark) || isStackedAreaMark(mark)) {
+    const options = mark.options.get().resolved
+    return options.label || mark.id || `Mark ${index + 1}`
+  }
   return mark.id || mark.y
+}
+
+type TooltipHit = PointHit | CompositeHit
+interface TooltipHitEntry {
+  readonly mark: TooltipMark
+  readonly hit: TooltipHit
+  readonly index: number
+}
+
+function tooltipColor(mark: TooltipMark, hit: TooltipHit) {
+  if ('layerId' in hit && (isBarMark(mark) || isStackedAreaMark(mark))) {
+    if (isBarMark(mark)) {
+      const options = mark.options.get().resolved
+      const layer = options.layers?.find((candidate) => candidate.id === hit.layerId)
+      return layer?.fill ?? options.fill ?? 'var(--fews-chart-accent, currentColor)'
+    }
+
+    const options = mark.options.get().resolved
+    const layer = options.layers.find((candidate) => candidate.id === hit.layerId)
+    return layer?.fill ?? options.fill ?? 'var(--fews-chart-accent, currentColor)'
+  }
+  if (isLineMark(mark) || isSeriesMark(mark)) {
+    return mark.stroke ?? mark.markers?.fill ?? 'var(--fews-chart-accent, currentColor)'
+  }
+  return 'var(--fews-chart-accent, currentColor)'
+}
+
+function tooltipDigits(mark: TooltipMark, options: Readonly<TooltipOptions>) {
+  return options.digits ?? (isLineMark(mark) || isSeriesMark(mark) ? mark.digits : undefined)
+}
+
+function compositeValueAxis(mark: TooltipMark, hit: TooltipHit) {
+  if (!('layerId' in hit)) return undefined
+  return isBarMark(mark) && mark.options.get().resolved.orientation === 'horizontal' ? 'x' : 'y'
+}
+
+function compositeDetails(
+  mark: TooltipMark,
+  hit: CompositeHit,
+  context: PlotContext,
+  digits: number | undefined,
+) {
+  const valueScale =
+    isBarMark(mark) && mark.options.get().resolved.orientation === 'horizontal' ? mark.x : mark.y
+  const format = (value: number) => displayValue(value, context, valueScale, digits)
+  const parts = [format(hit.value)]
+  if (hit.stack !== undefined) parts.push(`stack: ${hit.stack}`)
+  parts.push(`bounds: ${format(hit.lower)}–${format(hit.upper)}`)
+  return parts
+}
+
+function accessibleLabel(
+  mark: TooltipMark,
+  hit: TooltipHit,
+  index: number,
+  context: PlotContext,
+  options: Readonly<TooltipOptions>,
+) {
+  const digits = tooltipDigits(mark, options)
+  const parts = [label(mark, index)]
+  const valueAxis = compositeValueAxis(mark, hit)
+  if (options.showX && valueAxis !== 'x') parts.push(displayValue(hit.x, context, mark.x))
+  if (valueAxis !== 'y') parts.push(`y: ${displayValue(hit.y, context, mark.y, digits)}`)
+  if ('layerId' in hit) {
+    parts[0] += ` · ${hit.layerLabel}`
+    parts.push(...compositeDetails(mark, hit, context, digits))
+  }
+  return parts.join(' · ')
 }
 
 function positionTooltip(
@@ -94,6 +169,7 @@ function installTooltip(handle: TooltipHandle, context: PlotContext) {
   describedBy.add(element.id)
   context.element.setAttribute('aria-describedby', [...describedBy].join(' '))
   document.body.append(element)
+  let pathContext: CanvasRenderingContext2D | undefined
 
   const stopValidation = validateTooltipUpdates(handle, (options) => {
     validateTargets(options.marks, context.options.get().resolved.marks, context)
@@ -113,9 +189,9 @@ function installTooltip(handle: TooltipHandle, context: PlotContext) {
           : undefined
         const point = inspection?.point ?? { x: pointer.px + region.x, y: pointer.py + region.y }
         const axis = inspection?.options.snap?.axis ?? options.axis
-        const hits =
+        const hits: TooltipHitEntry[] =
           pointer.inside && (!inspection || inspection.visible)
-            ? marks.flatMap((mark, index) => {
+            ? marks.flatMap<TooltipHitEntry>((mark, index): TooltipHitEntry[] => {
                 if (
                   axis === 'xy' &&
                   inspection?.options.snap &&
@@ -123,11 +199,28 @@ function installTooltip(handle: TooltipHandle, context: PlotContext) {
                 ) {
                   return []
                 }
-                const hit =
-                  inspection?.options.snap?.mark === mark
-                    ? inspection.hit
-                    : nearestPoint(mark, context.scales, point, axis, region)
-                return hit ? [{ mark, hit, index }] : []
+                if (isBarMark(mark) || isStackedAreaMark(mark)) {
+                  const canvasContext = isStackedAreaMark(mark)
+                    ? (pathContext ??=
+                        document.createElement('canvas').getContext('2d') ?? undefined)
+                    : undefined
+                  return compositeHits(
+                    mark,
+                    context.scales,
+                    point,
+                    axis,
+                    region,
+                    canvasContext,
+                  ).map((hit) => ({ mark, hit, index }))
+                }
+                if (isLineMark(mark) || isSeriesMark(mark)) {
+                  const hit: TooltipHit | undefined =
+                    inspection?.options.snap?.mark === mark
+                      ? inspection.hit
+                      : nearestPoint(mark, context.scales, point, axis, region)
+                  return hit ? [{ mark, hit, index }] : []
+                }
+                return []
               })
             : []
         const selected =
@@ -146,31 +239,45 @@ function installTooltip(handle: TooltipHandle, context: PlotContext) {
           row.style.display = 'flex'
           row.style.alignItems = 'center'
           row.style.gap = '5px'
-          const markColor =
-            item.mark.stroke ?? item.mark.markers?.fill ?? 'var(--fews-chart-accent, currentColor)'
+          const markColor = tooltipColor(item.mark, item.hit)
           const symbol = document.createElement('span')
           symbol.dataset.tooltipSymbol = ''
           symbol.setAttribute('aria-hidden', 'true')
-          const markerSize = item.mark.markers?.size ?? 4
+          const markerSize =
+            isLineMark(item.mark) || isSeriesMark(item.mark) ? (item.mark.markers?.size ?? 4) : 4
           Object.assign(symbol.style, {
             flex: 'none',
             width: `${markerSize * 2}px`,
             height: `${markerSize * 2}px`,
             boxSizing: 'border-box',
-            borderRadius: '50%',
-            backgroundColor: item.mark.markers?.fill || markColor,
+            borderRadius: 'layerId' in item.hit ? '1px' : '50%',
+            backgroundColor:
+              !('layerId' in item.hit) && (isLineMark(item.mark) || isSeriesMark(item.mark))
+                ? item.mark.markers?.fill || markColor
+                : markColor,
           })
-          const markerStroke = item.mark.markers?.stroke
+          const markerStroke =
+            !('layerId' in item.hit) && (isLineMark(item.mark) || isSeriesMark(item.mark))
+              ? item.mark.markers?.stroke
+              : undefined
           if (markerStroke && markerStroke !== 'none') {
-            symbol.style.border = `${item.mark.markers?.strokeWidth ?? 0}px solid ${markerStroke}`
+            const strokeWidth =
+              isLineMark(item.mark) || isSeriesMark(item.mark)
+                ? (item.mark.markers?.strokeWidth ?? 0)
+                : 0
+            symbol.style.border = `${strokeWidth}px solid ${markerStroke}`
           }
           const name = document.createElement('span')
           name.dataset.tooltipLabel = ''
           name.style.color = markColor
-          name.textContent = label(item.mark, item.index)
+          name.textContent =
+            'layerLabel' in item.hit
+              ? `${label(item.mark, item.index)} · ${item.hit.layerLabel}`
+              : label(item.mark, item.index)
           const xScale = context.scales[item.mark.x]
           const x = displayValue(item.hit.x, context, item.mark.x)
-          const y = displayValue(item.hit.y, context, item.mark.y, item.mark.digits)
+          const digits = tooltipDigits(item.mark, options)
+          const y = displayValue(item.hit.y, context, item.mark.y, digits)
           const values = document.createElement('span')
           const redundant = (axis: 'x' | 'y') =>
             inspection?.coordinates.some(
@@ -182,8 +289,14 @@ function installTooltip(handle: TooltipHandle, context: PlotContext) {
                   (axis === 'x' ? x : y),
             )
           const details: string[] = []
-          if (!redundant('x')) details.push(xScale?.scale.kind === 'time' ? x : `x: ${x}`)
-          if (!redundant('y')) details.push(inspection ? y : `y: ${y}`)
+          const valueAxis = compositeValueAxis(item.mark, item.hit)
+          if (options.showX && valueAxis !== 'x' && !redundant('x')) {
+            details.push(xScale?.scale.kind === 'time' ? x : `x: ${x}`)
+          }
+          if (valueAxis !== 'y' && !redundant('y')) details.push(inspection ? y : `y: ${y}`)
+          if ('layerId' in item.hit) {
+            details.push(...compositeDetails(item.mark, item.hit, context, digits))
+          }
           values.textContent = details.length ? ` · ${details.join(' · ')}` : ''
           row.append(symbol, name, values)
           element.append(row)
@@ -191,10 +304,7 @@ function installTooltip(handle: TooltipHandle, context: PlotContext) {
         element.setAttribute(
           'aria-label',
           selected
-            .map(
-              ({ mark, hit, index }) =>
-                `${label(mark, index)} · ${displayValue(hit.x, context, mark.x)} · y: ${displayValue(hit.y, context, mark.y, mark.digits)}`,
-            )
+            .map(({ mark, hit, index }) => accessibleLabel(mark, hit, index, context, options))
             .join('; '),
         )
         if (!selected.length) {
@@ -234,7 +344,7 @@ function removeTooltipDescription(element: SVGSVGElement, id: string) {
 }
 
 function isEligibleMark(mark: object): mark is TooltipMark {
-  return isLineMark(mark) || isSeriesMark(mark)
+  return isLineMark(mark) || isSeriesMark(mark) || isBarMark(mark) || isStackedAreaMark(mark)
 }
 
 function validateCrosshair(options: Readonly<TooltipOptions>, plugins: readonly object[]) {

@@ -11,6 +11,7 @@ import {
   styleCompositeCanvas,
   type CanvasShape,
 } from './render-composite-canvas.js'
+import { scaleKey } from './mark-definition.js'
 
 function viewportRows(data: TableView, x: string, domain: readonly ScaleValue[]) {
   const low = Number(domain[0])
@@ -147,10 +148,70 @@ export function renderStackedAreas(
   mark: StackedAreaMark,
   scales: Readonly<Record<string, ScaleBinding>>,
 ) {
+  const paths = stackedAreaPaths(mark, scales)
   const options = mark.options.get().resolved
-  const layout = stackedAreaEndpoints(mark)
+  if (options.renderer === 'svg') clearCompositeCanvas(group)
+  const existing = new Map(
+    Array.from(group.children, (node) => [node.getAttribute('data-layer-id')!, node]),
+  )
+  const shapes: CanvasShape[] = []
+  for (const shape of paths) {
+    const { layer, d } = shape
+    if (options.renderer === 'canvas') {
+      shapes.push({ layerId: layer.id, path: stackedAreaPath(shape) })
+      continue
+    }
+    let node = existing.get(layer.id)
+    if (!node)
+      node = svgElement('path', {
+        'data-mark': 'stacked-area-layer',
+        'data-layer-id': layer.id,
+      })
+    existing.delete(layer.id)
+    node.setAttribute('d', d)
+    group.append(node)
+  }
+  if (options.renderer === 'canvas') renderCompositeCanvas(group, shapes)
+  else for (const node of existing.values()) node.remove()
+}
+
+export interface StackedAreaPath {
+  readonly layer: StackEndpoints
+  readonly d: string
+}
+
+const path2dCache = new WeakMap<StackedAreaPath, Path2D>()
+const pathCache = new WeakMap<
+  StackedAreaMark,
+  { readonly key: readonly unknown[]; readonly paths: readonly StackedAreaPath[] }
+>()
+
+export function stackedAreaPath(shape: StackedAreaPath) {
+  let path = path2dCache.get(shape)
+  if (!path) {
+    path = new Path2D(shape.d)
+    path2dCache.set(shape, path)
+  }
+  return path
+}
+
+export function stackedAreaPaths(
+  mark: StackedAreaMark,
+  scales: Readonly<Record<string, ScaleBinding>>,
+): readonly StackedAreaPath[] {
+  const options = mark.options.get().resolved
   const x = scales[mark.x]
   const y = scales[mark.y]
+  const key = [mark.data.version, mark.options.version, ...scaleKey(x), ...scaleKey(y)]
+  const cached = pathCache.get(mark)
+  if (
+    cached?.key.length === key.length &&
+    key.every((value, index) => value === cached.key[index])
+  ) {
+    return cached.paths
+  }
+
+  const layout = stackedAreaEndpoints(mark)
   const visibleRows = options.visible
     ? viewportRows(mark.data, options.x, x.scale.domain.get())
     : []
@@ -166,12 +227,8 @@ export function renderStackedAreas(
       stackLodRows(mark.data, options.x, visibleRows, layers, x),
     ]),
   )
-  if (options.renderer === 'svg') clearCompositeCanvas(group)
-  const existing = new Map(
-    Array.from(group.children, (node) => [node.getAttribute('data-layer-id')!, node]),
-  )
   const layers = [...layout.layers].sort((a, b) => a.slot - b.slot)
-  const shapes: CanvasShape[] = []
+  const paths: StackedAreaPath[] = []
   for (const layer of layers) {
     const path = area<number>()
       .defined((row) => Number.isFinite(layer.lowerAt(row)) && Number.isFinite(layer.upperAt(row)))
@@ -180,22 +237,11 @@ export function renderStackedAreas(
       .y1((row) => y.project(layer.upperAt(row)))
       .curve(options.curve === 'step' ? curveStep : curveLinear)
     const d = path(rowsByStack.get(layer.stack) ?? []) ?? ''
-    if (options.renderer === 'canvas') {
-      shapes.push({ layerId: layer.id, path: new Path2D(d) })
-      continue
-    }
-    let node = existing.get(layer.id)
-    if (!node)
-      node = svgElement('path', {
-        'data-mark': 'stacked-area-layer',
-        'data-layer-id': layer.id,
-      })
-    existing.delete(layer.id)
-    node.setAttribute('d', d)
-    group.append(node)
+    paths.push(Object.freeze({ layer, d }))
   }
-  if (options.renderer === 'canvas') renderCompositeCanvas(group, shapes)
-  else for (const node of existing.values()) node.remove()
+  const result = Object.freeze(paths)
+  pathCache.set(mark, { key, paths: result })
+  return result
 }
 
 export function styleStackedAreas(group: SVGGElement, mark: StackedAreaMark, accent: string) {

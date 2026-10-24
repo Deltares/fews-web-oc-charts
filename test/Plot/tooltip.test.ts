@@ -1,11 +1,15 @@
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import {
   createPlot,
+  createTable,
   createSeries,
   crosshair,
+  bandScale,
+  bar,
   linearScale,
   line,
   series,
+  stackedArea,
   tooltip,
   type Plot,
 } from '../../src/index.js'
@@ -81,6 +85,36 @@ afterEach(() => {
 })
 
 describe('tooltip plugin', () => {
+  test('validates display options atomically and restores defaults', () => {
+    const handle = tooltip({ showX: false, digits: 2 })
+    for (const digits of [-1, 1.5, 16, NaN, Infinity]) {
+      expect(() => handle.update({ digits })).toThrow('tooltip.digits')
+      expect(handle.options.get().resolved.digits).toBe(2)
+    }
+    expect(() => tooltip({ showX: null })).toThrow('tooltip.showX')
+    handle.update({ showX: undefined, digits: undefined })
+    expect(handle.options.get().resolved.showX).toBe(true)
+    expect(handle.options.get().resolved.digits).toBeUndefined()
+  })
+
+  test('hides x coordinates and rounds values without changing source samples', async () => {
+    const { plot, interaction, guide, move, entries } = await linkedPlot()
+    guide.update({ snap: undefined, labels: undefined })
+    const data = createSeries({ x: [5], y: [20.12345] })
+    const mark = series(data, { id: 'precise', x: 't', y: 'q' })
+    interaction.update({ marks: undefined, showX: false, digits: 2 })
+    plot.update({ marks: [mark] })
+    await move(4.2, 20)
+    expect(entries()).toEqual(['precise · 20.12'])
+    expect(document.querySelector('[data-layer="tooltip"]')?.getAttribute('aria-label')).toBe(
+      'precise · y: 20.12',
+    )
+    expect(data.yAt(0)).toBe(20.12345)
+    interaction.update({ showX: true, digits: undefined })
+    await frame()
+    expect(entries()).toEqual(['precise · x: 5 · 20.12345'])
+  })
+
   test('shows nearest x samples as text and removes its DOM on destroy', async () => {
     const host = document.createElement('div')
     document.body.append(host)
@@ -94,6 +128,7 @@ describe('tooltip plugin', () => {
       stroke: '#1677a6',
       markers: { fill: '#1677a6' },
     })
+
     const forecast = line({
       id: 'forecast',
       x: 't',
@@ -145,6 +180,123 @@ describe('tooltip plugin', () => {
     await frame()
     expect(document.querySelector('[data-layer="tooltip"]')).toBeNull()
     expect(plot.element.hasAttribute('aria-describedby')).toBe(false)
+  })
+
+  test('reports raw bar values and stack bounds for rectangle hits', async () => {
+    const host = document.createElement('div')
+    document.body.append(host)
+    hosts.push(host)
+    const data = createTable({ t: ['one'], observed: [3.12345], forecast: [4.23456] })
+    const mark = bar(data, {
+      id: 'flow',
+      x: 't',
+      scales: { x: 't', y: 'q' },
+      layers: [
+        { id: 'observed', y: 'observed', label: 'Observed', stack: 'total' },
+        { id: 'forecast', y: 'forecast', label: 'Forecast', stack: 'total' },
+      ],
+      layout: 'stacked',
+    })
+    const interaction = tooltip({ axis: 'xy', marks: [mark] })
+    const plot = createPlot(host, {
+      width: 100,
+      height: 100,
+      margins: { top: 0, right: 0, bottom: 0, left: 0 },
+      scales: { t: bandScale({ domain: ['one'] }), q: linearScale({ domain: [0, 7] }) },
+      marks: [mark],
+      plugins: [interaction],
+    })
+    plots.push(plot)
+    await frame()
+    vi.spyOn(plot.element, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 100, 100))
+    const rectangle = plot.element.querySelector<SVGRectElement>('[data-layer-id="forecast"]')!
+    plot.element.dispatchEvent(
+      new PointerEvent('pointermove', {
+        clientX: Number(rectangle.getAttribute('x')) + Number(rectangle.getAttribute('width')) / 2,
+        clientY: Number(rectangle.getAttribute('y')) + Number(rectangle.getAttribute('height')) / 2,
+        isPrimary: true,
+      }),
+    )
+    await frame()
+
+    const node = document.querySelector<HTMLDivElement>('[data-layer="tooltip"]')!
+    expect(node.textContent).toContain('Forecast')
+    expect(node.textContent).toContain(' · 4.23456 · ')
+    expect(node.textContent).not.toContain('value:')
+    expect(node.textContent).toContain('stack: total')
+    expect(node.textContent).toContain('bounds: 3.12345–7.35801')
+
+    interaction.update({ showX: false, digits: 2 })
+    await frame()
+    expect(node.textContent).toBe('flow · Forecast · 4.23 · stack: total · bounds: 3.12–7.36')
+    expect(node.getAttribute('aria-label')).toBe(
+      'flow · Forecast · 4.23 · stack: total · bounds: 3.12–7.36',
+    )
+    expect(data.valueAt('forecast', 0)).toBe(4.23456)
+    interaction.update({ showX: undefined, digits: undefined })
+    await frame()
+    expect(node.textContent).toContain('x: one')
+    expect(node.textContent).toContain(' · 4.23456 · ')
+    expect(node.textContent).not.toContain('y:')
+
+    interaction.update({ axis: 'x' })
+    plot.element.dispatchEvent(
+      new PointerEvent('pointermove', {
+        clientX: plot.scales.t.project('one'),
+        clientY: 50,
+        isPrimary: true,
+      }),
+    )
+    await frame()
+    expect(
+      [...node.querySelectorAll('[data-tooltip-entry]')].map((row) => row.textContent),
+    ).toEqual([expect.stringContaining('Observed'), expect.stringContaining('Forecast')])
+  })
+
+  test('uses filled stacked-area geometry and reports the raw layer value', async () => {
+    const host = document.createElement('div')
+    document.body.append(host)
+    hosts.push(host)
+    const mark = stackedArea(createTable({ t: [0, 1], observed: [2, 2], forecast: [3, 3] }), {
+      id: 'flow',
+      x: 't',
+      scales: { x: 't', y: 'q' },
+      layers: [
+        { id: 'observed', y: 'observed', label: 'Observed', stack: 'total' },
+        { id: 'forecast', y: 'forecast', label: 'Forecast', stack: 'total' },
+      ],
+    })
+    const interaction = tooltip({ axis: 'xy', marks: [mark] })
+    const plot = createPlot(host, {
+      width: 100,
+      height: 100,
+      margins: { top: 0, right: 0, bottom: 0, left: 0 },
+      scales: { t: linearScale({ domain: [0, 1] }), q: linearScale({ domain: [0, 10] }) },
+      marks: [mark],
+      plugins: [interaction],
+    })
+    plots.push(plot)
+    await frame()
+    vi.spyOn(plot.element, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 100, 100))
+    plot.element.dispatchEvent(
+      new PointerEvent('pointermove', {
+        clientX: plot.scales.t.project(0.5),
+        clientY: plot.scales.q.project(4),
+        isPrimary: true,
+      }),
+    )
+    await frame()
+
+    const node = document.querySelector<HTMLDivElement>('[data-layer="tooltip"]')!
+    expect(node.textContent).toContain('Forecast')
+    expect(node.textContent).toContain(' · 3 · ')
+    expect(node.textContent).not.toContain('value:')
+    expect(node.textContent).toContain('stack: total')
+    expect(node.textContent).toContain('bounds: 2–5')
+    interaction.update({ showX: false, digits: 0 })
+    await frame()
+    expect(node.textContent).toBe('flow · Forecast · 3 · stack: total · bounds: 2–5')
+    expect(node.getAttribute('aria-label')).toBe('flow · Forecast · 3 · stack: total · bounds: 2–5')
   })
 
   test('limits xy mode to the closest actual sample and hides outside the plot', async () => {

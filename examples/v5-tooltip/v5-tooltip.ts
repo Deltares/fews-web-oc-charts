@@ -1,5 +1,17 @@
 import '../shared/v5.css'
-import { axis, createPlot, crosshair, line, linearScale, timeScale, tooltip } from '@lib'
+import './v5-tooltip.css'
+import {
+  axis,
+  bar,
+  createPlot,
+  createTable,
+  crosshair,
+  line,
+  linearScale,
+  stackedArea,
+  timeScale,
+  tooltip,
+} from '@lib'
 
 function required<T extends Element>(selector: string): T {
   const element = document.querySelector<T>(selector)
@@ -65,6 +77,175 @@ const plot = createPlot(host, {
   marks: [observed, forecast],
   plugins: [guide, interaction],
 })
+
+const end = start + 48 * hour
+const flowHost = required<HTMLElement>('#flow-chart')
+const rainHost = required<HTMLElement>('#rain-chart')
+const storageHost = required<HTMLElement>('#storage-chart')
+const sharedTime = timeScale({ domain: [start, end], timeZone: 'UTC' })
+const sharedFlowValues = Float64Array.from(
+  { length: times.length },
+  (_, index) => 36 + 12 * Math.sin(index / 4) + 5 * Math.cos(index / 8),
+)
+const rainValues = Float64Array.from({ length: times.length - 1 }, (_, index) =>
+  Math.max(0, 2.4 + 1.8 * Math.sin(index / 3) + 1.1 * Math.cos(index / 6)),
+)
+const rainData = createTable({
+  start: times.slice(0, -1),
+  end: times.slice(1),
+  rainfall: rainValues,
+})
+const flowData = createTable({
+  t: times,
+  observed: Float64Array.from(
+    { length: times.length },
+    (_, index) => 18 + 7 * Math.sin(index / 4) + 2 * Math.cos(index / 7),
+  ),
+  forecast: Float64Array.from(
+    { length: times.length },
+    (_, index) => 9 + 4 * Math.cos(index / 5) + 1.5 * Math.sin(index / 3),
+  ),
+})
+const flowMark = line({
+  id: 'discharge',
+  x: 't',
+  y: 'q',
+  xValues: times,
+  yValues: sharedFlowValues,
+  stroke: '#1677a6',
+  strokeWidth: 2,
+  markers: { size: 3, fill: '#1677a6', skip: 4 },
+})
+const rainMark = bar(rainData, {
+  id: 'rainfall',
+  x: 'start',
+  y: 'rainfall',
+  scales: { x: 't', y: 'rain' },
+  interval: { start: 'start', end: 'end' },
+  fill: '#d17b0f',
+})
+const flowAreas = stackedArea(flowData, {
+  id: 'inflow',
+  x: 't',
+  scales: { x: 't', y: 'flow' },
+  layers: [
+    { id: 'observed-inflow', y: 'observed', label: 'Observed inflow', fill: '#168c70' },
+    { id: 'forecast-inflow', y: 'forecast', label: 'Forecast inflow', fill: '#8abf4d' },
+  ],
+  opacity: 0.85,
+})
+const subplotCrosshair = crosshair({ mode: 'x', labels: { x: 't' } })
+const subplotMargins = { left: 80, right: 24, top: 12 }
+const flowTooltip = tooltip({
+  marks: [flowMark],
+  crosshair: subplotCrosshair,
+  showX: false,
+  digits: 2,
+})
+const flowPlot = createPlot(flowHost, {
+  axisLayout: 'inset',
+  margins: { ...subplotMargins, bottom: 16 },
+  directions: { t: 'x' },
+  scales: { t: sharedTime, q: linearScale({ domain: [0, 70] }) },
+  axes: [
+    axis('q', { style: 'classic', position: 'left', label: 'Discharge', unit: 'm3/s', grid: true }),
+  ],
+  marks: [flowMark],
+  plugins: [subplotCrosshair, flowTooltip],
+})
+const rainTooltip = tooltip({
+  marks: [rainMark],
+  crosshair: subplotCrosshair,
+  showX: false,
+  digits: 2,
+})
+const rainPlot = createPlot(rainHost, {
+  axisLayout: 'inset',
+  margins: { ...subplotMargins, bottom: 16 },
+  directions: { t: 'x' },
+  scales: { t: sharedTime, rain: linearScale({ domain: [0, 7], reverse: true }) },
+  axes: [
+    axis('rain', { style: 'classic', position: 'left', label: 'Rainfall', unit: 'mm', grid: true }),
+  ],
+  marks: [rainMark],
+  plugins: [subplotCrosshair, rainTooltip],
+})
+const storageTooltip = tooltip({
+  marks: [flowAreas],
+  crosshair: subplotCrosshair,
+  showX: false,
+  digits: 2,
+})
+const storagePlot = createPlot(storageHost, {
+  axisLayout: 'inset',
+  margins: { ...subplotMargins, bottom: 56 },
+  directions: { t: 'x' },
+  scales: { t: sharedTime, flow: linearScale({ domain: [0, 45] }) },
+  axes: [
+    axis('t', { style: 'classic', position: 'bottom', label: 'Time (UTC)', tickCount: 5 }),
+    axis('flow', { style: 'classic', position: 'left', label: 'Inflow', unit: 'm3/s', grid: true }),
+  ],
+  marks: [flowAreas],
+  plugins: [subplotCrosshair, storageTooltip],
+})
+const advancedPlots = [flowPlot, rainPlot, storagePlot]
+let relayingPointer = false
+
+function relayPointer(source: (typeof advancedPlots)[number], event: PointerEvent) {
+  if (relayingPointer || !event.isPrimary) return
+  const sourceRect = source.element.getBoundingClientRect()
+  const sourceSize = source.size.get()
+  if (sourceRect.width <= 0 || sourceRect.height <= 0 || !sourceSize.width || !sourceSize.height) {
+    return
+  }
+  const svgX = ((event.clientX - sourceRect.left) / sourceRect.width) * sourceSize.width
+  const svgY = ((event.clientY - sourceRect.top) / sourceRect.height) * sourceSize.height
+  const region = source.regions.get().plot
+  const inside =
+    svgX >= region.x &&
+    svgX <= region.x + region.width &&
+    svgY >= region.y &&
+    svgY <= region.y + region.height
+
+  relayingPointer = true
+  try {
+    for (const target of advancedPlots) {
+      if (target === source) continue
+      if (event.type === 'pointerleave' || !inside) {
+        target.element.dispatchEvent(new PointerEvent('pointerleave', { isPrimary: true }))
+        continue
+      }
+      const time = source.scales.t.invert(svgX)
+      const targetRect = target.element.getBoundingClientRect()
+      const targetSize = target.size.get()
+      if (
+        targetRect.width <= 0 ||
+        targetRect.height <= 0 ||
+        !targetSize.width ||
+        !targetSize.height
+      ) {
+        continue
+      }
+      const targetRegion = target.regions.get().plot
+      const targetSvgX = target.scales.t.project(time)
+      const targetSvgY = targetRegion.y + targetRegion.height / 2
+      target.element.dispatchEvent(
+        new PointerEvent('pointermove', {
+          clientX: targetRect.left + (targetSvgX / targetSize.width) * targetRect.width,
+          clientY: targetRect.top + (targetSvgY / targetSize.height) * targetRect.height,
+          isPrimary: true,
+        }),
+      )
+    }
+  } finally {
+    relayingPointer = false
+  }
+}
+
+for (const subplot of advancedPlots) {
+  subplot.element.addEventListener('pointermove', (event) => relayPointer(subplot, event), events)
+  subplot.element.addEventListener('pointerleave', (event) => relayPointer(subplot, event), events)
+}
 
 function updateStatus() {
   const linked = modeOption.value !== 'none'
@@ -143,11 +324,11 @@ positionOption.addEventListener(
   },
   events,
 )
-window.addEventListener(
-  'pagehide',
-  () => {
-    events.abort()
-    plot.destroy()
-  },
-  { once: true },
-)
+function dispose() {
+  events.abort()
+  plot.destroy()
+  for (const subplot of advancedPlots) subplot.destroy()
+}
+
+window.addEventListener('pagehide', dispose, { once: true })
+import.meta.hot?.dispose(dispose)

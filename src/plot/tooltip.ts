@@ -5,15 +5,21 @@ import { validateKeys } from '../core/validation.js'
 import { isLineMark, type LineMark } from './line.js'
 import { isSeriesMark, type SeriesMark } from './series.js'
 import { isCrosshairHandle, type CrosshairHandle } from './crosshair.js'
+import { isBarMark, type BarMark } from './bar.js'
+import { isStackedAreaMark, type StackedAreaMark } from './stacked-area.js'
 
 export type TooltipAxis = 'x' | 'y' | 'xy'
 export type TooltipPlacementPosition = 'bottom' | 'left' | 'right' | 'top'
-export type TooltipMark = LineMark | SeriesMark
+export type TooltipMark = LineMark | SeriesMark | BarMark | StackedAreaMark
 
 export interface TooltipOptions {
   axis: TooltipAxis
   marks?: readonly TooltipMark[]
   position: TooltipPlacementPosition
+  /** Includes the sample's x coordinate, independently of crosshair callouts. */
+  showX: boolean
+  /** Decimal places for values and composite bounds; defaults to the mark's precision. */
+  digits?: number
   /** Follows this installed crosshair and omits coordinates already shown by its callouts. */
   crosshair?: CrosshairHandle
 }
@@ -25,13 +31,21 @@ export interface TooltipHandle {
 
 const handles = new WeakSet<object>()
 const validators = new WeakMap<TooltipHandle, Set<(options: Readonly<TooltipOptions>) => void>>()
-const optionKeys = ['axis', 'marks', 'position', 'crosshair']
+const optionKeys = ['axis', 'marks', 'position', 'crosshair', 'showX', 'digits']
 
 function validateMarks(marks: readonly TooltipMark[] | undefined) {
   if (marks === undefined) return
   if (!Array.isArray(marks)) throw new TypeError('tooltip.marks must be an array.')
-  if (marks.some((mark) => !mark || (!isLineMark(mark) && !isSeriesMark(mark)))) {
-    throw new TypeError('tooltip.marks must contain line() or series() marks.')
+  if (
+    marks.some(
+      (mark) =>
+        !mark ||
+        (!isLineMark(mark) && !isSeriesMark(mark) && !isBarMark(mark) && !isStackedAreaMark(mark)),
+    )
+  ) {
+    throw new TypeError(
+      'tooltip.marks must contain line(), series(), bar() or stackedArea() marks.',
+    )
   }
   if (new Set(marks).size !== marks.length) {
     throw new Error('tooltip.marks must not contain duplicate marks.')
@@ -57,9 +71,29 @@ export function tooltip(initial: OptionPatch<TooltipOptions> = {}): TooltipHandl
   const consumers = new Set<(options: Readonly<TooltipOptions>) => void>()
   const state = createOptionState<TooltipOptions>(initial, {
     isAtomicReference: (value) =>
-      isLineMark(value) || isSeriesMark(value) || isCrosshairHandle(value),
-    defaults: () => ({ axis: 'x', marks: undefined, position: 'right', crosshair: undefined }),
+      isLineMark(value) ||
+      isSeriesMark(value) ||
+      isBarMark(value) ||
+      isStackedAreaMark(value) ||
+      isCrosshairHandle(value),
+    defaults: () => ({
+      axis: 'x',
+      marks: undefined,
+      position: 'right',
+      crosshair: undefined,
+      showX: true,
+      digits: undefined,
+    }),
     validate(options) {
+      if (typeof options.showX !== 'boolean') {
+        throw new TypeError('tooltip.showX must be boolean.')
+      }
+      if (
+        options.digits !== undefined &&
+        (!Number.isInteger(options.digits) || options.digits < 0 || options.digits > 15)
+      ) {
+        throw new RangeError('tooltip.digits must be an integer in [0, 15].')
+      }
       if (!['x', 'y', 'xy'].includes(options.axis)) {
         throw new Error('tooltip.axis must be x, y or xy.')
       }
