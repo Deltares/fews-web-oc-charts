@@ -375,6 +375,54 @@ describe('createPlot named scales', () => {
     expect(current.element.querySelector('[data-layer="brush"]')).toBeNull()
   })
 
+  test.each(['x', 'y', 'xy'] as const)(
+    'positions the %s brush overlay at the selected interval',
+    async (mode) => {
+      const current = plot(host(), {
+        width: 500,
+        height: 300,
+        margins: { top: 30, right: 40, bottom: 50, left: 60 },
+        directions: { x: 'x', y: 'y' },
+        scales: {
+          x: linearScale({ domain: [0, 100] }),
+          y: linearScale({ domain: [0, 100] }),
+        },
+        plugins: [brush({ mode, modifier: 'none' })],
+      })
+      await frame()
+      vi.spyOn(current.element, 'getBoundingClientRect').mockReturnValue(
+        new DOMRect(0, 0, 500, 300),
+      )
+      const pointer = (type: string, clientX: number, clientY: number) =>
+        new PointerEvent(type, {
+          clientX,
+          clientY,
+          pointerId: 1,
+          button: 0,
+          isPrimary: true,
+          cancelable: true,
+        })
+      for (const [startX, startY, endX, endY] of [
+        [100, 80, 300, 200],
+        [300, 200, 100, 80],
+      ]) {
+        current.element.dispatchEvent(pointer('pointerdown', startX, startY))
+        current.element.dispatchEvent(pointer('pointermove', endX, endY))
+        const overlay = current.element.querySelector('[data-layer="brush"] rect')!
+        const region = current.regions.get().plot
+        expect(
+          ['x', 'y', 'width', 'height'].map((name) => Number(overlay.getAttribute(name))),
+        ).toEqual([
+          mode === 'y' ? region.x : 100,
+          mode === 'x' ? region.y : 80,
+          mode === 'y' ? region.width : 200,
+          mode === 'x' ? region.height : 120,
+        ])
+        current.element.dispatchEvent(pointer('pointerup', endX, endY))
+      }
+    },
+  )
+
   test('brush selection includes band categories intersecting the selected interval', async () => {
     const categories = bandScale({ domain: ['a', 'b', 'c'] })
     const interaction = brush({ mode: 'x', modifier: 'none' })
