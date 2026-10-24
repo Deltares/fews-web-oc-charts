@@ -71,7 +71,7 @@ function layerGuides(
 
 export function displayInspectionValue(
   value: ScaleValue,
-  context: PlotContext,
+  context: Pick<PlotContext, 'scales'>,
   scaleName: string,
   digits?: number,
 ) {
