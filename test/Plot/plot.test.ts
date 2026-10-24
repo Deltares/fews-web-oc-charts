@@ -439,6 +439,50 @@ describe('createPlot named scales', () => {
     expect(x.domain.get()).toEqual(stopped)
   })
 
+  test.each(['pointerup', 'pointercancel', 'lostpointercapture'])(
+    'ends pan on %s only for the active pointer and allows another drag',
+    async (termination) => {
+      const x = linearScale({ domain: [0, 100] })
+      const current = plot(host(), {
+        width: 500,
+        height: 300,
+        directions: { x: 'x' },
+        scales: { x },
+        plugins: [pan({ mode: 'x' })],
+      })
+      await frame()
+      vi.spyOn(current.element, 'getBoundingClientRect').mockReturnValue(
+        new DOMRect(0, 0, 500, 300),
+      )
+      const pointer = (type: string, clientX: number, pointerId = 1) =>
+        current.element.dispatchEvent(
+          new PointerEvent(type, {
+            clientX,
+            clientY: 150,
+            pointerId,
+            button: 0,
+            isPrimary: true,
+            cancelable: true,
+          }),
+        )
+
+      pointer('pointerdown', 250)
+      pointer(termination, 250, 2)
+      pointer('pointermove', 300)
+      expect(x.domain.get()[0]).toBeLessThan(0)
+
+      pointer(termination, 300)
+      const stopped = [...x.domain.get()]
+      pointer('pointermove', 350)
+      expect(x.domain.get()).toEqual(stopped)
+
+      pointer('pointerdown', 250, 2)
+      pointer('pointermove', 300, 2)
+      expect(x.domain.get()[0]).toBeLessThan(Number(stopped[0]))
+      pointer('pointerup', 300, 2)
+    },
+  )
+
   test.each(['pan', 'zoom'] as const)(
     'ignores %s updates outside the Date range without changing the domain',
     async (gesture) => {
