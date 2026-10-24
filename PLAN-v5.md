@@ -1949,6 +1949,11 @@ identity. Each built-in plugin registers a `PluginDefinition` (`is`, `validate`,
 its own reactive scope. Gesture handlers it registers through the plot's single
 pointer hub are released automatically on removal or plot destruction.
 
+Mark membership reconciliation, per-mark tracking and update validation, renderer
+mounting, geometry and style passes are owned by `src/plot/mark-layer.ts`. The plot
+coordinator supplies current options, scales and regions, then delegates dirty mark
+rendering and teardown to that layer.
+
 ## 8. Additional improvements to consider
 
 - **Missing-value & quality flags**: render gaps, flag-based styling (FEWS flags/doubtful

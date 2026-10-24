@@ -22,13 +22,8 @@ import { svgElement, renderAxes, renderPolarAxes, axisTickLabels } from './rende
 import { arc } from 'd3'
 import { projectPolarPoint } from './polar-geometry.js'
 import { watchCanvasPixelRatio } from './render-composite-canvas.js'
-import type {
-  CoordinateSystem,
-  MarkDefinition,
-  MarkRenderContext,
-  MarkRenderer,
-} from './mark-definition.js'
-import { isPlotMark, markDefinition, type PlotMark } from './marks.js'
+import type { CoordinateSystem } from './mark-definition.js'
+import { isPlotMark, type PlotMark } from './marks.js'
 import { createPluginHost, isPlotPlugin, type PlotPlugin } from './plugins.js'
 import {
   projectSkewTPoint,
@@ -39,13 +34,13 @@ import {
 } from './skew-t-geometry.js'
 import { renderSkewTAxes } from './render-skew-t-axes.js'
 import { createScaleBindings } from './scale-bindings.js'
+import { createMarkLayer } from './mark-layer.js'
 import { createPointerHub, type PlotPointer } from './pointer-hub.js'
 
 export type { PlotPointer } from './pointer-hub.js'
 import {
   direction,
   marginKeys,
-  markValidationContext,
   validateAxisAppearance,
   validateClassicPolarAxes,
   validatePatch,
@@ -196,7 +191,6 @@ function createPlotInternal(
   const axisWidths = new Map<AxisHandle, { version: number; thickness: number }>()
   const insetWidths = new Map<AxisHandle, number>()
   const axisValidators = new Map<AxisHandle, () => void>()
-  const markValidators = new Map<PlotMark, { dispose(): void }>()
   const scaleBindings = createScaleBindings({
     scope,
     coordinateSystem,
@@ -227,14 +221,6 @@ function createPlotInternal(
   definitions.append(clipPath)
   marksLayer.setAttribute('clip-path', `url(#${clipId})`)
   if (coordinateSystem === 'skewT') gridLayer.setAttribute('clip-path', `url(#${clipId})`)
-  interface MountedMark {
-    readonly mark: PlotMark
-    readonly definition: MarkDefinition<PlotMark>
-    readonly renderer: MarkRenderer<PlotMark>
-  }
-  let mountedMarks: readonly MountedMark[] = []
-  const dirtyMarks = new Set<PlotMark>()
-  let allMarksDirty = false
   element.append(background, polarBackground, definitions, gridLayer, marksLayer, axesLayer, title)
   const pointerHub = createPointerHub({
     element,
@@ -243,6 +229,15 @@ function createPlotInternal(
     regions,
     scales: () => scaleBindings.scales,
     options: () => options.get().resolved,
+  })
+  const markLayer = createMarkLayer({
+    scope,
+    layer: marksLayer,
+    coordinateSystem,
+    regions,
+    scales: () => scaleBindings.markScales,
+    options: () => options.get().resolved,
+    requestRender: () => invalidate(render, DirtyLayer.marks),
   })
   const pluginHost = createPluginHost(scope, {
     element,
@@ -260,94 +255,9 @@ function createPlotInternal(
     on: (type, handler) => pointerHub.on(type, handler),
   })
 
-  function mountMarks(marks: readonly PlotMark[]) {
-    if (
-      marks.length === mountedMarks.length &&
-      marks.every((mark, index) => mark === mountedMarks[index].mark)
-    ) {
-      return false
-    }
-    const remaining = new Map(
-      mountedMarks.map((entry) => [entry.mark.id ?? entry.mark, entry] as const),
-    )
-    mountedMarks = marks.map((mark) => {
-      const definition = markDefinition(mark)
-      const key = mark.id ?? mark
-      const match = remaining.get(key)
-      const renderer =
-        match?.definition === definition ? match.renderer : definition.createRenderer()
-      if (match?.definition === definition) remaining.delete(key)
-      renderer.mount(marksLayer, mark)
-      return { mark, definition, renderer }
-    })
-    for (const entry of remaining.values()) entry.renderer.destroy()
-    return true
-  }
-
-  function invalidateMark(mark: PlotMark) {
-    dirtyMarks.add(mark)
-    invalidate(render, DirtyLayer.marks)
-  }
-
-  function invalidateAllMarks() {
-    allMarksDirty = true
-    invalidate(render, DirtyLayer.marks)
-  }
-
-  function renderMarkGeometry(current: PlotOptions, selectedMarks?: ReadonlySet<PlotMark>) {
-    const context: MarkRenderContext = {
-      skew: current.skewT?.skew,
-      localCoordinates: current.axisLayout === 'inset',
-      coordinateSystem,
-      scales: scaleBindings.markScales,
-      plot:
-        current.axisLayout === 'inset' && coordinateSystem === 'cartesian'
-          ? { ...regions.get().plot, x: 0, y: 0 }
-          : regions.get().plot,
-      direction: (name) => direction(current, name, undefined, undefined, coordinateSystem),
-    }
-    for (const { mark, renderer } of mountedMarks) {
-      if (!selectedMarks || selectedMarks.has(mark)) renderer.geometry(mark, context)
-    }
-  }
-
-  function renderMarkStyles(tokens: ThemeTokens, selectedMarks?: ReadonlySet<PlotMark>) {
-    for (const { mark, renderer } of mountedMarks) {
-      if (!selectedMarks || selectedMarks.has(mark)) renderer.style(mark, tokens)
-    }
-  }
-
   function reconcile() {
     const current = options.get().resolved
-    for (const [mark, entry] of markValidators) {
-      if (!current.marks.includes(mark)) {
-        entry.dispose()
-        markValidators.delete(mark)
-      }
-    }
-    for (const mark of current.marks) {
-      const definition = markDefinition(mark)
-      if (markValidators.has(mark) || (!definition.track && !definition.validateUpdates)) continue
-      const markScope = scope.createScope()
-      const stopValidation = definition.validateUpdates?.(mark, () =>
-        markValidationContext(options.get().resolved, coordinateSystem),
-      )
-      if (definition.track) {
-        const track = definition.track
-        markScope.run(() => {
-          reactive.effect(() => {
-            track(mark)
-            invalidateMark(mark)
-          })
-        })
-      }
-      markValidators.set(mark, {
-        dispose() {
-          stopValidation?.()
-          markScope.dispose()
-        },
-      })
-    }
+    markLayer.reconcile(current)
     for (const [axis, dispose] of axisValidators) {
       if (!current.axes.includes(axis)) {
         dispose()
@@ -517,12 +427,6 @@ function createPlotInternal(
     if (destroyed) return
     const current = options.get().resolved
     const tokens = theme.get()
-    const fullMarkRender = Boolean(dirty & (DirtyLayer.layout | DirtyLayer.axes)) || allMarksDirty
-    const markUpdates = new Set(dirtyMarks)
-    dirtyMarks.clear()
-    allMarksDirty = false
-    const marksChanged = mountMarks(current.marks)
-    const renderAllMarks = fullMarkRender || marksChanged
     if (dirty & DirtyLayer.layout) {
       renderLayout(current, tokens)
     }
@@ -588,19 +492,11 @@ function createPlotInternal(
         }
       }
     }
-    if (dirty & (DirtyLayer.layout | DirtyLayer.axes | DirtyLayer.marks)) {
-      if (renderAllMarks) renderMarkGeometry(current)
-      else if (markUpdates.size > 0) renderMarkGeometry(current, markUpdates)
-    }
-    if (dirty & (DirtyLayer.layout | DirtyLayer.axes | DirtyLayer.marks | DirtyLayer.style)) {
-      if (dirty & (DirtyLayer.layout | DirtyLayer.axes | DirtyLayer.style) || renderAllMarks) {
-        renderMarkStyles(tokens)
-      } else if (markUpdates.size > 0) renderMarkStyles(tokens, markUpdates)
-    }
+    markLayer.render(dirty, current, tokens)
   }
 
   reconcile()
-  const stopPixelRatio = watchCanvasPixelRatio(invalidateAllMarks)
+  const stopPixelRatio = watchCanvasPixelRatio(() => markLayer.invalidateAll())
   const stopSize = observeSize(host, (value) => {
     axisWidths.clear()
     measured.set(value)
@@ -638,7 +534,7 @@ function createPlotInternal(
         insetWidths.clear()
         invalidate(render, DirtyLayer.layout | DirtyLayer.axes)
       } else if (marksChanged) {
-        invalidateAllMarks()
+        markLayer.invalidateAll()
       }
     })
     reactive.effect(() => {
@@ -711,17 +607,12 @@ function createPlotInternal(
       stopSize()
       stopPixelRatio()
       stopTheme()
+      markLayer.dispose()
       scaleBindings.dispose()
       scope.dispose()
       for (const dispose of axisValidators.values()) dispose()
       axisValidators.clear()
-      for (const entry of markValidators.values()) entry.dispose()
-      markValidators.clear()
       cancelRender(render)
-      for (const { renderer } of mountedMarks) renderer.destroy()
-      mountedMarks = []
-      dirtyMarks.clear()
-      allMarksDirty = false
       axisWidths.clear()
       insetWidths.clear()
       measurer.clear()

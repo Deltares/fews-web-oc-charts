@@ -11,6 +11,8 @@ import {
   degreesScale,
   sharedScale,
   line,
+  series,
+  createSeries,
   zoom,
   batch,
   type Plot,
@@ -597,6 +599,33 @@ describe('createPlot named scales', () => {
     q.domain.set([10, 20])
     await frame()
     expect(reactive.getDiagnostics().effectRuns).toBe(diagnostics.effectRuns)
+  })
+
+  test('releases plugin, mark and scale-binding scopes on removal and destroy', async () => {
+    const x = linearScale({ domain: [0, 1] })
+    const y = linearScale({ domain: [0, 1] })
+    x.domain.get()
+    y.domain.get()
+    const baseline = reactive.getDiagnostics()
+    const current = plot(host(), { directions: { x: 'x', y: 'y' }, scales: { x, y } })
+    await frame()
+    const empty = reactive.getDiagnostics()
+    const mark = series(createSeries({ x: [0, 1], y: [0, 1] }), { x: 'x', y: 'y' })
+    for (let index = 0; index < 5; index += 1) {
+      current.update({ plugins: [zoom()], marks: [mark] })
+      await frame()
+      current.update({ plugins: [], marks: [] })
+      await frame()
+    }
+    expect(reactive.getDiagnostics().activeScopes).toBe(empty.activeScopes)
+    expect(reactive.getDiagnostics().activeEffects).toBe(empty.activeEffects)
+    current.update({ plugins: [zoom()], marks: [mark] })
+    current.destroy()
+    await frame()
+    const diagnostics = reactive.getDiagnostics()
+    expect(diagnostics.activeScopes).toBe(baseline.activeScopes)
+    expect(diagnostics.activeEffects).toBe(baseline.activeEffects)
+    expect(diagnostics.activeComputeds).toBe(baseline.activeComputeds)
   })
 
   test('coalesces shared updates into one plot render and ignores no-ops', async () => {
