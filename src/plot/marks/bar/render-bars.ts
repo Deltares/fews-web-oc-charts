@@ -30,15 +30,18 @@ export function renderBars(
   }
   clearCompositeCanvas(group)
   const existing = new Map(
-    Array.from(group.children, (node) => [node.getAttribute('data-key')!, node]),
+    Array.from(group.querySelectorAll<SVGElement>(':scope > *'), (node) => [
+      node.dataset.key!,
+      node,
+    ]),
   )
   for (const rectangle of rectangles) {
     const key = JSON.stringify([rectangle.layerId, rectangle.sampleId])
     let node = existing.get(key)
     if (!node) node = svgElement('rect', { 'data-mark': 'bar-segment', 'data-key': key })
     existing.delete(key)
-    node.setAttribute('data-layer-id', rectangle.layerId)
-    node.setAttribute('data-sample-id', String(rectangle.sampleId))
+    node.dataset.layerId = rectangle.layerId
+    node.dataset.sampleId = String(rectangle.sampleId)
     for (const property of ['x', 'y', 'width', 'height'] as const) {
       node.setAttribute(property, String(rectangle[property]))
     }
@@ -80,9 +83,9 @@ export function styleBars(group: SVGGElement, mark: BarMark, accent: string) {
   const options = mark.options.get().resolved
   const layers = new Map(barLayers(options).map((layer) => [layer.id, layer]))
   if (styleCompositeCanvas(group, layers, options, accent)) return
-  for (const node of group.children) {
-    if (node.getAttribute('data-mark') === 'bar-label') continue
-    const layer = layers.get(node.getAttribute('data-layer-id')!)
+  for (const node of group.querySelectorAll<SVGElement>(':scope > *')) {
+    if (node.dataset.mark === 'bar-label') continue
+    const layer = layers.get(node.dataset.layerId!)
     if (!layer) throw new Error('Missing bar layer for rendered segment.')
     const style = resolveCompositeStyle(layer, options, accent)
     node.setAttribute('fill', style.fill)
