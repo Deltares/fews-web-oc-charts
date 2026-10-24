@@ -256,6 +256,8 @@ describe('headless legend model', () => {
       marks: [areas, short],
       plugins: [handle],
     })
+    await expect.poll(() => current.size.get().width).toBe(900)
+    await frame()
     const layer = current.element
       .closest('[data-legend-layout]')!
       .querySelector<SVGGElement>('[data-layer="legend"]')!
