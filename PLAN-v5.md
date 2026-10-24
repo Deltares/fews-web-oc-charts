@@ -2001,6 +2001,9 @@ specifications, named-stack grouping, visibility commands, and bubbling `legendt
 events. Unlabelled entries use their mark ID, or a stable generated label when no ID
 exists. Initial entries and visibility commands are available synchronously when plot
 creation returns; subsequent handle changes are tracked reactively.
+The [v5 legend example](./examples/v5-legend/index.html) demonstrates an application-owned
+HTML legend with nested stacks, mixed visibility, sibling isolation, direct mark updates,
+and SVG/canvas area rendering without a legend plugin.
 The built-in legend renderer, broader mark-kind support, composite-layer hit
 testing and remaining Phase 3 examples/exit criteria remain.
 
