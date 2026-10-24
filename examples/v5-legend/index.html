@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>v5: headless legend</title>
+  </head>
+  <body>
+    <nav aria-label="Examples">
+      <a href="/">All examples</a>
+      <a href="../v5-tooltip/">Tooltip</a>
+    </nav>
+    <h1>v5: headless legend</h1>
+    <p>
+      This application-owned HTML legend uses the core model, not a legend plugin. Toggle a layer to
+      restack the areas and autoscale the value axis. Parent checkboxes show partial visibility.
+      Isolation affects siblings at the selected hierarchy level.
+    </p>
+    <fieldset class="controls">
+      <legend>Legend actions</legend>
+      <button id="show-all" type="button">Show all</button>
+      <button id="toggle-observed" type="button">Update observed visibility directly</button>
+      <label for="renderer">
+        Area renderer
+        <select id="renderer">
+          <option value="svg">SVG</option>
+          <option value="canvas">Canvas</option>
+        </select>
+      </label>
+    </fieldset>
+    <figure>
+      <div id="chart" class="plot-host"></div>
+      <figcaption>
+        Named observed and forecast stacks share the value scale. The observed line is a separate
+        series. Legend commands and direct mark updates use the same visibility state.
+      </figcaption>
+    </figure>
+    <section aria-labelledby="legend-heading">
+      <h2 id="legend-heading">External legend</h2>
+      <div id="legend"></div>
+      <p id="legend-status" role="status">No visibility changes yet.</p>
+    </section>
+    <h2>Public API</h2>
+    <pre><code>const plot = createPlot(host, { scales, axes, marks })
+const entries = plot.legend.entries.get()
+plot.legend.toggle(entries[0].id, 'external')
+plot.legend.isolate(entries[0].id, 'external')
+plot.legend.showAll('external')
+
+// Direct handle updates also refresh the legend.
+observed.update({ visible: false })
+plot.element.addEventListener('legendtoggle', event => {
+  console.log(event.detail.source, event.detail.changes)
+})</code></pre>
+    <script type="module" src="./v5-legend.ts"></script>
+  </body>
+</html>
