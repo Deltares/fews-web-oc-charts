@@ -14,6 +14,7 @@ import {
   series,
   createSeries,
   zoom,
+  pan,
   batch,
   type Plot,
 } from '../../src/index.js'
@@ -216,6 +217,7 @@ describe('createPlot named scales', () => {
       scales: { x, y },
       plugins: [interaction],
     })
+
     await frame()
     vi.spyOn(current.element, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 500, 300))
     const wheel = (ctrlKey: boolean) =>
@@ -272,6 +274,96 @@ describe('createPlot named scales', () => {
     expect(x.domain.get()).toEqual([0, 100])
     expect(y.domain.get()[0]).toBeGreaterThan(0)
     expect(y.domain.get()[1]).toBeLessThan(100)
+  })
+
+  test('pans selected continuous Cartesian domains while dragging', async () => {
+    const x = linearScale({ domain: [0, 100] })
+    const y = linearScale({ domain: [0, 100] })
+    const interaction = pan({ mode: 'x' })
+    const current = plot(host(), {
+      width: 500,
+      height: 300,
+      directions: { x: 'x', y: 'y' },
+      scales: { x, y },
+      plugins: [interaction],
+    })
+    await frame()
+    vi.spyOn(current.element, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 500, 300))
+    const pointer = (type: string, clientX: number, clientY: number, button = 0) =>
+      new PointerEvent(type, {
+        clientX,
+        clientY,
+        pointerId: 1,
+        button,
+        isPrimary: true,
+        pointerType: 'mouse',
+        cancelable: true,
+      })
+    const down = pointer('pointerdown', 250, 150)
+    current.element.dispatchEvent(down)
+    expect(down.defaultPrevented).toBe(true)
+    current.element.dispatchEvent(pointer('pointermove', 300, 170))
+    expect(x.domain.get()[0]).toBeLessThan(0)
+    expect(x.domain.get()[1]).toBeLessThan(100)
+    expect(y.domain.get()).toEqual([0, 100])
+    current.element.dispatchEvent(pointer('pointerup', 300, 170))
+    const stopped = x.domain.get()
+    current.element.dispatchEvent(pointer('pointermove', 350, 170))
+    expect(x.domain.get()).toEqual(stopped)
+  })
+
+  test('requires configured modifiers and releases pan listeners when removed', async () => {
+    const x = linearScale({ domain: [0, 100] })
+    const interaction = pan({ mode: 'x', modifier: 'ctrl' })
+    const current = plot(host(), {
+      width: 500,
+      height: 300,
+      directions: { x: 'x' },
+      scales: { x },
+      plugins: [interaction],
+    })
+    await frame()
+    vi.spyOn(current.element, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 500, 300))
+    const dispatch = (type: string, clientX: number, ctrlKey = false) =>
+      current.element.dispatchEvent(
+        new PointerEvent(type, {
+          clientX,
+          clientY: 150,
+          pointerId: 1,
+          button: 0,
+          ctrlKey,
+          isPrimary: true,
+          pointerType: 'mouse',
+          cancelable: true,
+        }),
+      )
+    dispatch('pointerdown', 250)
+    dispatch('pointermove', 300)
+    expect(x.domain.get()).toEqual([0, 100])
+    dispatch('pointerdown', 250, true)
+    dispatch('pointermove', 300, true)
+    expect(x.domain.get()[0]).toBeLessThan(0)
+    current.update({ plugins: [] })
+    const stopped = x.domain.get()
+    dispatch('pointerdown', 250, true)
+    dispatch('pointermove', 300, true)
+    expect(x.domain.get()).toEqual(stopped)
+  })
+
+  test('adapts touch gestures to pan direction and restores the host style', async () => {
+    const interaction = pan({ mode: 'x' })
+    const current = plot(host(), {
+      directions: { x: 'x' },
+      scales: { x: linearScale({ domain: [0, 100] }) },
+    })
+    current.element.style.setProperty('touch-action', 'manipulation')
+    current.update({ plugins: [interaction] })
+    expect(current.element.style.getPropertyValue('touch-action')).toBe('pan-y')
+    interaction.update({ mode: 'xy' })
+    await frame()
+    expect(current.element.style.getPropertyValue('touch-action')).toBe('none')
+    current.update({ plugins: [] })
+    expect(current.element.style.getPropertyValue('touch-action')).toBe('manipulation')
   })
 
   test('stops wheel zoom when its plugin is removed or disabled', async () => {
@@ -377,13 +469,16 @@ describe('createPlot named scales', () => {
     const interaction = zoom()
     const current = plot(host(), { scales: { x: linearScale({ domain: [0, 1] }) } })
     expect(() => current.update({ plugins: [{} as never] })).toThrow(
-      'plot.plugins accepts zoom() plugins only.',
+      'plot.plugins accepts zoom() or pan() plugins only.',
     )
     expect(() => current.update({ plugins: [interaction, interaction] })).toThrow(
       'Duplicate plugin handle in plot.plugins.',
     )
     expect(() => current.update({ plugins: [interaction, zoom()] })).toThrow(
       'A plot can install at most one zoom plugin.',
+    )
+    expect(() => current.update({ plugins: [pan(), pan()] })).toThrow(
+      'A plot can install at most one pan plugin.',
     )
     expect(current.options.get().resolved.plugins).toEqual([])
     const polar = createPolarPlot(host(), {
@@ -392,6 +487,9 @@ describe('createPlot named scales', () => {
     plots.push(polar)
     expect(() => polar.update({ plugins: [interaction] })).toThrow(
       'The zoom plugin currently supports Cartesian plots only.',
+    )
+    expect(() => polar.update({ plugins: [pan()] })).toThrow(
+      'The pan plugin currently supports Cartesian plots only.',
     )
   })
 

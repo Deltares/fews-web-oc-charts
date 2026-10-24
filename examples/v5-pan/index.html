@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>v5: drag to pan</title>
+  </head>
+  <body>
+    <nav aria-label="Examples">
+      <a href="/">All examples</a>
+      <a href="../v5-zoom/">Interactive zoom</a>
+    </nav>
+    <h1>v5: drag to pan</h1>
+    <p>
+      Drag inside the plot to move its visible domain. Choose which scale directions respond and
+      optionally require Ctrl or Shift.
+    </p>
+    <fieldset class="controls">
+      <legend>Pan interaction</legend>
+      <label for="mode">
+        Pan mode
+        <select id="mode">
+          <option value="x" selected>Horizontal (x)</option>
+          <option value="y">Vertical (y)</option>
+          <option value="xy">Both (xy)</option>
+        </select>
+      </label>
+      <label for="modifier">
+        Required modifier
+        <select id="modifier">
+          <option value="none">None</option>
+          <option value="ctrl">Ctrl</option>
+          <option value="shift">Shift</option>
+        </select>
+      </label>
+      <button id="reset" type="button">Reset domains</button>
+    </fieldset>
+    <figure>
+      <div id="chart" class="plot-host"></div>
+      <figcaption>
+        Band scales are not panned. Pan works with continuous Cartesian scales.
+      </figcaption>
+    </figure>
+    <p id="status" class="status" role="status"></p>
+    <h2>Current domains</h2>
+    <pre id="snapshot" aria-label="Current scale domains"></pre>
+    <h2>Public API</h2>
+    <pre><code>const interaction = pan({ mode: 'x' })
+const plot = createPlot(host, { scales: { t, q }, axes, marks, plugins: [interaction] })
+interaction.update({ mode: 'xy', modifier: ModifierKey.Ctrl })</code></pre>
+    <script type="module" src="./v5-pan.ts"></script>
+  </body>
+</html>

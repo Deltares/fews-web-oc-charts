@@ -27,6 +27,10 @@ export interface PlotPosition {
 interface GestureEvents {
   wheel: WheelEvent
   dblclick: MouseEvent
+  pointerdown: PointerEvent
+  pointermove: PointerEvent
+  pointerup: PointerEvent
+  pointercancel: PointerEvent
 }
 
 export type GestureType = keyof GestureEvents

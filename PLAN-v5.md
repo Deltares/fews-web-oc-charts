@@ -1932,16 +1932,27 @@ events are coalesced per animation frame, support primary mouse/pen/touch pointe
 are detached with plot destruction. Cartesian continuous and band scales and polar
 angular/radial scales are inverted from the pointer position.
 
-### Phase 3 zoom foundation
+### Phase 3 zoom and pan foundation
 
-**Status: wheel zoom and reset implemented.** Install one `zoom()` handle through
+**Status: wheel zoom, reset and drag pan implemented.** Install one `zoom()` handle through
 `createPlot({ plugins: [zoom({ mode: 'x', wheel: 'x' })] })`. Wheel zoom is anchored
 under the pointer, supports x/y/xy selection and an optional Ctrl/Shift modifier, and
 skips band scales. Double-click applies the handle's `reset` policy (`initial`, `full`
 or `toggle`). Removing the plugin or destroying the plot releases its event listeners.
 The [v5 zoom example](./examples/v5-zoom/index.html) demonstrates the public API and
-live option updates. The current zoom plugin supports Cartesian plots; drag-zoom, pan and
-brush are later Phase 3 work.
+live option updates. The zoom plugin supports Cartesian plots.
+
+Install one `pan()` handle through
+`createPlot({ plugins: [pan({ mode: 'x' })] })`. Primary-button dragging inside the
+plot translates selected continuous Cartesian scale domains; band scales are skipped.
+The mode (`x`, `y` or `xy`) and optional Ctrl/Shift modifier are editable at runtime.
+Pointer capture keeps an active drag connected when it leaves the plot. Directional
+touch gestures preserve scrolling on the orthogonal axis; two-axis panning disables
+native touch gestures over the plot. The original touch-action style is restored when
+the plugin is removed or the plot is destroyed. Both also end an active gesture and
+release its listeners. The
+[v5 pan example](./examples/v5-pan/index.html) demonstrates the public API.
+Brush selection, crosshair, tooltip and legend remain Phase 3 work.
 
 Plugins are installed by a plugin host that reconciles `plot.plugins` by handle
 identity. Each built-in plugin registers a `PluginDefinition` (`is`, `validate`,
