@@ -10,6 +10,7 @@ import {
 } from './tooltip.js'
 import { TooltipPosition } from '../../../Tooltip/tooltip.js'
 import { calculateTooltipPlacement } from '../../../Utils/tooltipPlacement.js'
+import { positionTooltipArrow } from '../../../Utils/tooltipArrow.js'
 import { computeTooltipModel, type TooltipModel } from './tooltip-model.js'
 
 let nextTooltipId = 0
@@ -51,6 +52,7 @@ function positionTooltip(
         : position.position === TooltipPosition.Left
           ? 'translate(calc(-100% - 6px), -50%)'
           : 'translate(6px, -50%)'
+  positionTooltipArrow(element, position, clientX, clientY)
 }
 
 function renderTooltip(element: HTMLDivElement, context: PlotContext, model: TooltipModel) {

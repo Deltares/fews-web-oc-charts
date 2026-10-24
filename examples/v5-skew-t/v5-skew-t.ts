@@ -2,6 +2,7 @@ import '../shared/v5.css'
 import { axis, createSkewTPlot, line, linearScale, logScale } from '@lib'
 import { TooltipPosition } from '../../src/Tooltip/tooltip'
 import { calculateTooltipPlacement } from '../../src/Utils/tooltipPlacement'
+import { positionTooltipArrow } from '../../src/Utils/tooltipArrow'
 
 const host = document.querySelector<HTMLElement>('#chart')
 const skew = document.querySelector<HTMLInputElement>('#skew')
@@ -172,10 +173,12 @@ function showSounding(sample: number, x: number, y: number) {
   )
   const bounds = plot.element.getBoundingClientRect()
   const size = plot.size.get()
+  const anchorX = bounds.left + (x / size.width) * bounds.width
+  const anchorY = bounds.top + (y / size.height) * bounds.height
   const position = calculateTooltipPlacement({
-    x: bounds.left + (x / size.width) * bounds.width,
-    y: bounds.top + (y / size.height) * bounds.height,
-    preferredPosition: TooltipPosition.Right,
+    x: anchorX,
+    y: anchorY,
+    preferredPosition: TooltipPosition.Top,
     containerWidth: window.innerWidth,
     containerHeight: window.innerHeight,
     tooltipWidth: tooltip.offsetWidth,
@@ -183,10 +186,8 @@ function showSounding(sample: number, x: number, y: number) {
   })
   tooltip.style.left = `${position.x}px`
   tooltip.style.top = `${position.y}px`
-  tooltip.style.transform =
-    position.position === TooltipPosition.Left
-      ? 'translate(calc(-100% - 6px), -50%)'
-      : 'translate(6px, -50%)'
+  tooltip.style.transform = 'translate(-50%, calc(-100% - 6px))'
+  positionTooltipArrow(tooltip, position, anchorX, anchorY)
   tooltip.style.visibility = 'visible'
   tooltip.setAttribute('aria-hidden', 'false')
 }
