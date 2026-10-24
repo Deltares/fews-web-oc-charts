@@ -20,6 +20,7 @@ import {
 import { lineLegendSymbol, resolveLineStyles } from '../mark-styles.js'
 import { nearestPoint } from '../../interaction/point-hit-testing.js'
 import type { MarkHitContext } from '../mark-definition.js'
+import { pointHighlight } from '../highlight-shapes.js'
 
 type LineLikeMark = LineMark | SeriesMark
 let nextSymbolId = 0
@@ -323,6 +324,7 @@ export const lineDefinition: MarkDefinition<LineMark> = {
   name: 'line',
   is: isLineMark,
   hits: pointMarkHits,
+  highlight: (mark, hit, { color }) => pointHighlight(mark, hit, color),
   validate: (mark, context) => validateLineLike(mark, context, false),
   extents: lineExtents,
   createRenderer: createLineRenderer,
@@ -332,6 +334,7 @@ export const seriesDefinition: MarkDefinition<SeriesMark> = {
   name: 'series',
   is: isSeriesMark,
   hits: pointMarkHits,
+  highlight: (mark, hit, { color }) => pointHighlight(mark, hit, color),
   legend(mark, tokens) {
     const options = mark.options.get().resolved
     return {

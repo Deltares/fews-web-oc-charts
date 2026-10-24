@@ -21,6 +21,33 @@ export interface MarkHitContext {
   pathContext(): CanvasRenderingContext2D | undefined
 }
 
+/** Pixel-space shape drawn over a hovered datum; strokes default to `currentColor`. */
+export type HighlightShape =
+  | {
+      readonly type: 'circle'
+      readonly cx: number
+      readonly cy: number
+      readonly r: number
+      readonly fill: string
+      readonly stroke?: string
+    }
+  | {
+      readonly type: 'rect'
+      readonly x: number
+      readonly y: number
+      readonly width: number
+      readonly height: number
+      readonly fill?: string
+      readonly stroke?: string
+    }
+  | { readonly type: 'path'; readonly d: string; readonly fill?: string; readonly stroke?: string }
+
+export interface MarkHighlightContext {
+  readonly scales: Readonly<Record<string, ScaleBinding>>
+  /** Resolved color of the hovered datum. */
+  readonly color: string
+}
+
 export interface MarkLegendLayer {
   readonly id: string
   readonly label?: string
@@ -87,6 +114,8 @@ export interface MarkDefinition<M extends object> {
   createRenderer(): MarkRenderer<M>
   /** Returns datum hits; omitted for marks without an inspection contract. */
   hits?(mark: M, context: MarkHitContext): readonly MarkHit[]
+  /** Returns shapes that mark one of this mark's hits as selected. */
+  highlight?(mark: M, hit: MarkHit, context: MarkHighlightContext): readonly HighlightShape[]
   /** Supplies symbols and visibility operations without reading data or rendered nodes. */
   legend?(mark: M, tokens: ThemeTokens): MarkLegend
   /** Reads reactive state for this handle; subscriptions are replaced even when its renderer is reused. */

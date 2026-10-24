@@ -13,7 +13,7 @@ import type { Region } from '../../../layout/layout.js'
 import type { PlotPointer } from '../../interaction/pointer-hub.js'
 import { isHistogramMark } from '../../marks/histogram/histogram.js'
 import { isHeatmapMark } from '../../marks/heatmap/heatmap.js'
-import type { HeatmapHit } from '../../interaction/heatmap-hit-testing.js'
+import { isHeatmapHit, isHoverMark, markColor, selectHoverHits } from '../hover-hits.js'
 import { markDefinition } from '../../marks/marks.js'
 import type { MarkHit } from '../../marks/mark-definition.js'
 import type { SymbolSpec } from '../legend/legend.js'
@@ -21,10 +21,6 @@ import { lineLegendSymbol } from '../../marks/mark-styles.js'
 
 type TooltipHit = MarkHit
 type TooltipContext = Pick<PlotContext, 'scales' | 'inspectCrosshair' | 'theme'>
-
-function isHeatmapHit(hit: TooltipHit): hit is HeatmapHit {
-  return 'xStart' in hit
-}
 
 interface TooltipHitEntry {
   readonly mark: TooltipMark
@@ -47,16 +43,7 @@ export interface TooltipModel {
   readonly accessibleLabel: string
 }
 
-export function isTooltipMark(mark: object): mark is TooltipMark {
-  return (
-    isLineMark(mark) ||
-    isSeriesMark(mark) ||
-    isBarMark(mark) ||
-    isStackedAreaMark(mark) ||
-    isHistogramMark(mark) ||
-    isHeatmapMark(mark)
-  )
-}
+export const isTooltipMark: (mark: object) => mark is TooltipMark = isHoverMark
 
 function label(mark: TooltipMark, index: number) {
   if (isSeriesMark(mark))
@@ -70,24 +57,6 @@ function label(mark: TooltipMark, index: number) {
     return options.label || mark.id || `Histogram ${index + 1}`
   }
   return mark.id || mark.y
-}
-
-function tooltipColor(mark: TooltipMark, hit: TooltipHit) {
-  if ('layerId' in hit && (isBarMark(mark) || isStackedAreaMark(mark))) {
-    const options = mark.options.get().resolved
-    const layer = options.layers?.find((candidate) => candidate.id === hit.layerId)
-    return layer?.fill ?? options.fill ?? 'var(--fews-chart-accent, currentColor)'
-  }
-  if (isLineMark(mark) || isSeriesMark(mark)) {
-    return mark.stroke ?? mark.markers?.fill ?? 'var(--fews-chart-accent, currentColor)'
-  }
-  if (isHistogramMark(mark)) {
-    return mark.options.get().resolved.fill ?? 'var(--fews-chart-accent, currentColor)'
-  }
-  if (isHeatmapMark(mark) && isHeatmapHit(hit)) {
-    return mark.options.get().resolved.color.map(hit.value)
-  }
-  return 'var(--fews-chart-accent, currentColor)'
 }
 
 function compositeValueAxis(mark: TooltipMark, hit: TooltipHit) {
@@ -153,7 +122,7 @@ function tooltipEntry(
   if (!symbol) throw new Error('Tooltip marks must provide a legend symbol.')
   const layer =
     'layerId' in hit ? legend?.layers?.find((candidate) => candidate.id === hit.layerId) : undefined
-  const color = tooltipColor(mark, hit)
+  const color = markColor(mark, hit)
   const digits = options.digits ?? (pointMark ? mark.digits : undefined)
   const x = displayValue(hit.x, context, mark.x)
   const y = displayValue(hit.y, context, mark.y, digits)
@@ -205,38 +174,11 @@ export function computeTooltipModel(
   },
   pathContext: () => CanvasRenderingContext2D | undefined,
 ): TooltipModel {
-  const { pointer, region } = state
-  const marks = options.marks ?? state.marks.filter(isTooltipMark)
-  const inspection = options.crosshair ? context.inspectCrosshair(options.crosshair) : undefined
-  const point = inspection?.point ?? { x: pointer.px + region.x, y: pointer.py + region.y }
-  const axis = inspection?.options.snap?.axis ?? options.axis
-  const hits: TooltipHitEntry[] =
-    pointer.inside && (!inspection || inspection.visible)
-      ? marks.flatMap<TooltipHitEntry>((mark, index): TooltipHitEntry[] => {
-          if (axis === 'xy' && inspection?.options.snap && mark !== inspection.options.snap.mark) {
-            return []
-          }
-          const markHits =
-            inspection?.options.snap?.mark === mark
-              ? inspection.hits
-              : (markDefinition(mark).hits?.(mark, {
-                  scales: context.scales,
-                  point,
-                  axis,
-                  plot: region,
-                  pathContext,
-                }) ?? [])
-          return markHits.map((hit) => ({ mark, hit, index }))
-        })
-      : []
-  const selected =
-    axis === 'xy'
-      ? hits.reduce<typeof hits>(
-          (closest, item) =>
-            !closest.length || item.hit.distance < closest[0].hit.distance ? [item] : closest,
-          [],
-        )
-      : hits
+  const {
+    point,
+    inspection,
+    hits: selected,
+  } = selectHoverHits(options, context, state, pathContext)
   const entries = selected.map((item) => tooltipEntry(item, context, options, inspection))
   return {
     point,
