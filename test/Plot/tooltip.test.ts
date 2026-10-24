@@ -166,6 +166,12 @@ describe('tooltip plugin', () => {
     const entries = node?.querySelectorAll<HTMLElement>('[data-tooltip-entry]')
     expect(entries).toHaveLength(2)
     expect(entries?.[0].querySelector('[data-tooltip-symbol]')).toBeTruthy()
+    expect(entries?.[0].querySelector('[data-tooltip-symbol] line')?.getAttribute('stroke')).toBe(
+      '#1677a6',
+    )
+    expect(entries?.[0].querySelector('[data-tooltip-symbol] circle')?.getAttribute('fill')).toBe(
+      '#1677a6',
+    )
     expect(entries?.[0].querySelector<HTMLElement>('[data-tooltip-label]')?.style.color).toBe(
       'rgb(22, 119, 166)',
     )

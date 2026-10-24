@@ -12,6 +12,7 @@ import { TooltipPosition } from '../../../Tooltip/tooltip.js'
 import { calculateTooltipPlacement } from '../../../Utils/tooltipPlacement.js'
 import { positionTooltipArrow } from '../../../Utils/tooltipArrow.js'
 import { computeTooltipModel, type TooltipModel } from './tooltip-model.js'
+import { createLegendSwatch } from '../legend/legend-swatch.js'
 
 let nextTooltipId = 0
 
@@ -63,18 +64,10 @@ function renderTooltip(element: HTMLDivElement, context: PlotContext, model: Too
     row.style.display = 'flex'
     row.style.alignItems = 'center'
     row.style.gap = '5px'
-    const symbol = document.createElement('span')
+    const symbol = createLegendSwatch(entry.symbol, { width: 20, height: 20 })
     symbol.dataset.tooltipSymbol = ''
     symbol.setAttribute('aria-hidden', 'true')
-    Object.assign(symbol.style, {
-      flex: 'none',
-      width: `${entry.symbol.size}px`,
-      height: `${entry.symbol.size}px`,
-      boxSizing: 'border-box',
-      borderRadius: entry.symbol.radius,
-      backgroundColor: entry.symbol.fill,
-    })
-    if (entry.symbol.border) symbol.style.border = entry.symbol.border
+    symbol.style.flex = 'none'
     const name = document.createElement('span')
     name.dataset.tooltipLabel = ''
     name.style.color = entry.color

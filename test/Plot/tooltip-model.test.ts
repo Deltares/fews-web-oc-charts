@@ -3,6 +3,8 @@ import {
   bandScale,
   bar,
   createTable,
+  createSeries,
+  series,
   crosshair,
   line,
   linearScale,
@@ -14,6 +16,8 @@ import type { PlotContext } from '../../src/plot/plugins/plugin-definition.js'
 import { bindScale } from '../../src/scales/scale.js'
 import { barRectangles } from '../../src/plot/marks/bar/bar-geometry.js'
 import { lineDefinition } from '../../src/plot/marks/line/line-mark.js'
+import { resolveTheme } from '../../src/theme/theme.js'
+import { lineLegendSymbol } from '../../src/plot/marks/mark-styles.js'
 
 function setup() {
   const first = line({
@@ -34,6 +38,7 @@ function setup() {
   })
   const pointer = reactive.signal({ px: 50, py: 50, inside: true, x: new Map<string, number>() })
   const context = {
+    theme: reactive.signal(resolveTheme(document.documentElement, 'light', false)),
     scales: {
       x: bindScale(linearScale({ domain: [0, 10] }), reactive.signal([0, 100] as const)),
       y: bindScale(linearScale({ domain: [0, 40] }), reactive.signal([100, 0] as const)),
@@ -84,7 +89,7 @@ describe('tooltip model', () => {
   })
 
   test('computes text, accessibility and symbols without constructing DOM', () => {
-    const { model, pathContext } = setup()
+    const { model, pathContext, first, context } = setup()
     const result = model()
     expect(result.entries).toHaveLength(2)
     expect(result.entries[0]).toEqual({
@@ -92,7 +97,7 @@ describe('tooltip model', () => {
       color: 'blue',
       details: ' · x: 5 · y: 20.12',
       accessibleLabel: '<First> · 5 · y: 20.12',
-      symbol: { size: 12, radius: '50%', fill: 'red', border: '2px solid black' },
+      symbol: lineLegendSymbol(first, context.theme.get()),
     })
     expect(result.accessibleLabel).toBe('<First> · 5 · y: 20.12; Second · 5 · y: 20.12')
     expect(result.point).toEqual({ x: 50, y: 50 })
@@ -105,6 +110,44 @@ describe('tooltip model', () => {
     expect(model().entries.map((entry) => entry.label)).toEqual(['Second', '<First>'])
     handle.update({ axis: 'xy' })
     expect(model().entries.map((entry) => entry.label)).toEqual(['Second'])
+  })
+
+  test('preserves line dashes, area and marker styles and reacts to style changes', () => {
+    const { handle, context, pointer, pathContext } = setup()
+    const first = series(createSeries({ x: [5], y: [20] }), {
+      x: 'x',
+      y: 'y',
+      line: { stroke: 'blue' },
+      markers: { size: 6, fill: 'red', stroke: 'black', strokeWidth: 2 },
+    })
+    const model = () =>
+      computeTooltipModel(
+        handle.options.get().resolved,
+        context,
+        {
+          marks: [first],
+          pointer: pointer.get(),
+          region: { x: 0, y: 0, width: 100, height: 100 },
+        },
+        pathContext,
+      )
+    first.update({
+      line: { strokeDasharray: '6 3', width: 3 },
+      area: { to: 0, fill: 'orange', opacity: 0.3 },
+    })
+    expect(model().entries[0].symbol).toMatchObject({
+      type: 'composite',
+      parts: [
+        { type: 'area', fill: 'orange', opacity: 0.3 },
+        { type: 'line', stroke: 'blue', strokeWidth: 3, strokeDasharray: '6 3' },
+        { type: 'marker', shape: 'circle', size: 6, fill: 'red', stroke: 'black', strokeWidth: 2 },
+      ],
+    })
+    first.update({ line: false, area: false })
+    expect(model().entries[0].symbol).toMatchObject({
+      type: 'composite',
+      parts: [{ type: 'marker', shape: 'circle', fill: 'red' }],
+    })
   })
 
   test('omits x only when requested and returns an empty model outside the plot', () => {
@@ -194,7 +237,11 @@ describe('tooltip model', () => {
       const options = tooltip({ axis: 'xy', digits: 2 }).options.get().resolved
       const result = computeTooltipModel(
         options,
-        { scales, inspectCrosshair: vi.fn<PlotContext['inspectCrosshair']>() },
+        {
+          scales,
+          theme: reactive.signal(resolveTheme(document.documentElement, 'light', false)),
+          inspectCrosshair: vi.fn<PlotContext['inspectCrosshair']>(),
+        },
         {
           marks: [mark],
           region: { x: 0, y: 0, width: 100, height: 100 },
@@ -214,7 +261,7 @@ describe('tooltip model', () => {
         color: 'red',
         details: ` · ${categoryLabel} · 4.23 · stack: total · bounds: 3.12–7.36`,
         accessibleLabel: `flow · Forecast · ${orientation === 'vertical' ? 'one' : categoryLabel} · 4.23 · stack: total · bounds: 3.12–7.36`,
-        symbol: { size: 8, radius: '1px', fill: 'red', border: undefined },
+        symbol: { type: 'bar', fill: 'red' },
       })
     },
   )

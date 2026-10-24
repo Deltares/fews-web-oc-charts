@@ -1,8 +1,10 @@
 import '../shared/v5.css'
-import { axis, createSkewTPlot, line, linearScale, logScale } from '@lib'
+import { axis, createLegendSwatch, createSkewTPlot, line, linearScale, logScale } from '@lib'
 import { TooltipPosition } from '../../src/Tooltip/tooltip'
 import { calculateTooltipPlacement } from '../../src/Utils/tooltipPlacement'
 import { positionTooltipArrow } from '../../src/Utils/tooltipArrow'
+import { isLineMark } from '../../src/plot/marks/line/line'
+import { lineLegendSymbol } from '../../src/plot/marks/mark-styles'
 
 const host = document.querySelector<HTMLElement>('#chart')
 const skew = document.querySelector<HTMLInputElement>('#skew')
@@ -136,21 +138,19 @@ const describedBy = plot.element.getAttribute('aria-describedby')
 plot.element.setAttribute('aria-describedby', [describedBy, tooltip.id].filter(Boolean).join(' '))
 document.body.append(tooltip)
 
-function createTooltipRow(label: string, color: string, size: number) {
+function createTooltipRow(markId: string, label: string, color: string) {
   const row = document.createElement('div')
   row.dataset.tooltipEntry = ''
   Object.assign(row.style, { display: 'flex', alignItems: 'center', gap: '5px' })
-  const symbol = document.createElement('span')
+  const mark = plot.options.get().resolved.marks.find((mark) => mark.id === markId)
+  if (!mark || !isLineMark(mark)) throw new Error(`Missing sounding line "${markId}".`)
+  const symbol = createLegendSwatch(lineLegendSymbol(mark, plot.theme.get()), {
+    width: 20,
+    height: 20,
+  })
   symbol.dataset.tooltipSymbol = ''
   symbol.setAttribute('aria-hidden', 'true')
-  Object.assign(symbol.style, {
-    flex: 'none',
-    width: `${size}px`,
-    height: `${size}px`,
-    boxSizing: 'border-box',
-    borderRadius: '50%',
-    backgroundColor: color,
-  })
+  symbol.style.flex = 'none'
   const name = document.createElement('span')
   name.dataset.tooltipLabel = ''
   name.style.color = color
@@ -161,8 +161,8 @@ function createTooltipRow(label: string, color: string, size: number) {
   return value
 }
 
-const temperatureValue = createTooltipRow('Temperature', '#d33', 5)
-const dewPointValue = createTooltipRow('Dew point', '#198754', 8)
+const temperatureValue = createTooltipRow('temperature', 'Temperature', '#d33')
+const dewPointValue = createTooltipRow('dew-point', 'Dew point', '#198754')
 
 function showSounding(sample: number, x: number, y: number) {
   temperatureValue.textContent = ` · ${temperature[sample].toFixed(1)} °C`

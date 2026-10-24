@@ -21,6 +21,7 @@ export type TooltipMark =
 
 export interface TooltipOptions {
   axis: TooltipAxis
+  /** Inspected marks; symbols reuse their legend styles, with layer and heatmap hit colors. */
   marks?: readonly TooltipMark[]
   position: TooltipPlacementPosition
   /** Includes the sample's x coordinate, independently of crosshair callouts. */
