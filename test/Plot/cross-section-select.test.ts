@@ -1,0 +1,207 @@
+import { afterEach, describe, expect, test, vi } from 'vitest'
+import {
+  axis,
+  createPlot,
+  crossSectionSelect,
+  linearScale,
+  line,
+  ModifierKey,
+  pan,
+  brush,
+  type Plot,
+} from '../../src/index.js'
+
+const plots: Plot[] = []
+const hosts: HTMLElement[] = []
+
+async function frame() {
+  await new Promise(requestAnimationFrame)
+  await new Promise(requestAnimationFrame)
+}
+
+async function setup(
+  interaction = crossSectionSelect(5, undefined, { x: 't' }),
+  config: Parameters<typeof createPlot>[1] = {},
+) {
+  const host = document.createElement('div')
+  document.body.append(host)
+  hosts.push(host)
+  const first = line({
+    id: 'first',
+    x: 't',
+    y: 'q',
+    xValues: [0, 5, 10],
+    yValues: [2, 20, 4],
+    stroke: '#1677a6',
+  })
+  const second = line({
+    id: 'second',
+    x: 't',
+    y: 'q',
+    xValues: [0, 4, 10],
+    yValues: [8, 30, 6],
+    stroke: '#d55e00',
+  })
+  const plot = createPlot(host, {
+    width: 500,
+    height: 300,
+    scales: { t: linearScale({ domain: [0, 10] }), q: linearScale({ domain: [0, 40] }) },
+    axes: [axis('t', { position: 'bottom' }), axis('q', { position: 'left' })],
+    marks: [first, second],
+    plugins: [interaction],
+    ...config,
+  })
+  plots.push(plot)
+  await frame()
+  vi.spyOn(plot.element, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 500, 300))
+  return { plot, interaction, first, second }
+}
+
+function pointer(plot: Plot, type: string, x: number, target: Element) {
+  target.dispatchEvent(
+    new PointerEvent(type, {
+      clientX: x,
+      clientY: 280,
+      pointerId: 1,
+      button: 0,
+      isPrimary: true,
+      bubbles: true,
+      cancelable: true,
+    }),
+  )
+}
+
+afterEach(() => {
+  for (const plot of plots.splice(0)) plot.destroy()
+  for (const host of hosts.splice(0)) host.remove()
+  vi.restoreAllMocks()
+})
+
+describe('cross-section select plugin', () => {
+  test('renders a guide and sample values from each selected line', async () => {
+    const { plot, interaction } = await setup()
+    expect(plot.element.querySelector('[data-cross-section-line]')?.getAttribute('x1')).toBe(
+      String(plot.scales.t.project(5)),
+    )
+    expect(interaction.currentData.get().map(({ id, data }) => [id, data])).toEqual([
+      ['first', { x: 5, y: 20 }],
+      ['second', { x: 10, y: 6 }],
+    ])
+    expect(
+      [...plot.element.querySelectorAll('[data-cross-section-label]')].map(
+        (node) => node.textContent,
+      ),
+    ).toEqual(['20.0', '6.0'])
+    const labelTops = [...plot.element.querySelectorAll('[data-cross-section-entry]')].map(
+      (node) => node.getBoundingClientRect().top,
+    )
+    expect(labelTops[0]).toBeLessThan(labelTops[1])
+    expect(plot.element.querySelectorAll('[data-cross-section-stem]')).toHaveLength(2)
+
+    interaction.update({ marks: [interaction.currentData.get()[0].mark] })
+    await frame()
+    expect(interaction.currentData.get()).toHaveLength(1)
+    expect(plot.element.querySelectorAll('[data-cross-section-point]')).toHaveLength(1)
+  })
+
+  test('clamps a drag to the selected scale domain and calls back on release only', async () => {
+    const changed = vi.fn()
+    const interaction = crossSectionSelect(5, changed, { x: 't', draggable: true })
+    const { plot } = await setup(interaction)
+    const handle = plot.element.querySelector('[data-cross-section-handle]')!
+    const startX = plot.scales.t.project(5)
+    pointer(plot, 'pointerdown', startX, handle)
+    pointer(plot, 'pointermove', plot.scales.t.project(8), plot.element)
+    expect(interaction.value.get()).toBeCloseTo(8)
+    expect(changed).not.toHaveBeenCalled()
+    pointer(plot, 'pointerup', plot.scales.t.project(8), plot.element)
+    expect(changed).toHaveBeenCalledWith(expect.closeTo(8))
+
+    pointer(plot, 'pointerdown', plot.scales.t.project(8), handle)
+    pointer(plot, 'pointermove', 900, plot.element)
+    pointer(plot, 'pointerup', 900, plot.element)
+    expect(interaction.value.get()).toBe(10)
+  })
+
+  test('drags from the guide line and from the handle below the plot area', async () => {
+    const interaction = crossSectionSelect(5, undefined, { x: 't', draggable: true })
+    const { plot } = await setup(interaction)
+    const hitLine = plot.element.querySelector('[data-cross-section-hitline]')!
+    expect(hitLine.getAttribute('pointer-events')).toBe('stroke')
+    pointer(plot, 'pointerdown', plot.scales.t.project(5), hitLine)
+    pointer(plot, 'pointermove', plot.scales.t.project(7), plot.element)
+    pointer(plot, 'pointerup', plot.scales.t.project(7), plot.element)
+    expect(interaction.value.get()).toBeCloseTo(7)
+
+    const callout = plot.element.querySelector('[data-cross-section-hitbox]')!
+    expect(callout.getAttribute('pointer-events')).toBe('all')
+    callout.dispatchEvent(
+      new PointerEvent('pointerdown', {
+        clientX: plot.scales.t.project(7),
+        clientY: 299,
+        pointerId: 1,
+        button: 0,
+        isPrimary: true,
+        bubbles: true,
+        cancelable: true,
+      }),
+    )
+    pointer(plot, 'pointermove', plot.scales.t.project(3), plot.element)
+    pointer(plot, 'pointerup', plot.scales.t.project(3), plot.element)
+    expect(interaction.value.get()).toBeCloseTo(3)
+
+    interaction.update({ draggable: false })
+    await frame()
+    expect(hitLine.getAttribute('pointer-events')).toBe('none')
+  })
+
+  test('does not let selector dragging start pan or brush gestures', async () => {
+    const interaction = crossSectionSelect(5, undefined, { x: 't', draggable: true })
+    const brushSelection = brush({ mode: 'x', modifier: ModifierKey.None })
+    const { plot } = await setup(interaction, {
+      plugins: [pan({ mode: 'x' }), brushSelection, interaction],
+    })
+    const handle = plot.element.querySelector('[data-cross-section-handle]')!
+    const initialDomain = plot.options.get().resolved.scales.t.domain.get()
+    const x = plot.scales.t.project(5)
+    pointer(plot, 'pointerdown', x, handle)
+    pointer(plot, 'pointermove', plot.scales.t.project(8), plot.element)
+    pointer(plot, 'pointerup', plot.scales.t.project(8), plot.element)
+
+    expect(plot.options.get().resolved.scales.t.domain.get()).toBe(initialDomain)
+    expect(brushSelection.selection.get()).toBeUndefined()
+    expect(interaction.value.get()).toBeCloseTo(8)
+  })
+
+  test('supports explicit value changes, hides out-of-domain values and cleans up', async () => {
+    const { plot, interaction } = await setup()
+    interaction.setValue(20)
+    await frame()
+    expect(
+      plot.element.querySelector('[data-layer="cross-section-select"]')?.getAttribute('display'),
+    ).toBe('none')
+    expect(interaction.currentData.get()).toEqual([])
+    interaction.setValue(0)
+    await frame()
+    expect(
+      plot.element.querySelector('[data-layer="cross-section-select"]')?.getAttribute('display'),
+    ).toBeNull()
+
+    plot.update({ plugins: [] })
+    await frame()
+    expect(plot.element.querySelector('[data-layer="cross-section-select"]')).toBeNull()
+  })
+
+  test('rejects invalid options and incompatible plot targets atomically', async () => {
+    const interaction = crossSectionSelect(5, undefined, { x: 't' })
+    const { plot, first } = await setup(interaction)
+    expect(() => interaction.setValue(Number.NaN)).toThrow('finite number')
+    expect(() => interaction.update({ x: 'missing' })).toThrow('continuous x-direction scale')
+    expect(() =>
+      interaction.update({ marks: [line({ x: 't', y: 'q', xValues: [], yValues: [] })] }),
+    ).toThrow('included in plot.marks')
+    expect(interaction.value.get()).toBe(5)
+    expect(interaction.options.get().resolved.x).toBe('t')
+    expect(() => interaction.update({ marks: [first] })).not.toThrow()
+  })
+})

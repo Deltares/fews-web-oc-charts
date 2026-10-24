@@ -47,6 +47,14 @@ export type {
   CrosshairSnapAxis,
   CrosshairSnapOptions,
 } from './plot/crosshair.js'
+export { crossSectionSelect } from './plot/cross-section-select.js'
+export type {
+  CrossSectionMark,
+  CrossSectionMarkFilter,
+  CrossSectionPoint,
+  CrossSectionSelectHandle,
+  CrossSectionSelectOptions,
+} from './plot/cross-section-select.js'
 export { tooltip } from './plot/tooltip.js'
 export type {
   TooltipAxis,
