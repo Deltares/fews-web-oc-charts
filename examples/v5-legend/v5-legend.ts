@@ -6,6 +6,7 @@ import {
   createTable,
   createLegendSwatch,
   linearScale,
+  legend,
   series,
   stackedArea,
   timeScale,
@@ -24,6 +25,7 @@ const scope = reactive.createScope()
 const legendHost = required('#legend')
 const status = required('#legend-status')
 const renderer = required<HTMLSelectElement>('#renderer')
+const builtInLegend = legend({ position: 'top' })
 const start = Date.UTC(2026, 0, 1)
 const hour = 3_600_000
 const times = Array.from({ length: 49 }, (_, index) => start + index * hour)
@@ -148,6 +150,18 @@ legendHost.addEventListener(
   events,
 )
 required('#show-all').addEventListener('click', () => plot.legend.showAll('external'), events)
+required('#toggle-built-in').addEventListener(
+  'click',
+  (event) => {
+    const button = event.currentTarget
+    if (!(button instanceof HTMLButtonElement)) throw new Error('Expected a button.')
+    const enabled = button.dataset.enabled !== 'true'
+    button.dataset.enabled = String(enabled)
+    button.textContent = enabled ? 'Remove built-in legend' : 'Add built-in legend'
+    plot.update({ plugins: enabled ? [builtInLegend] : [] })
+  },
+  events,
+)
 required('#toggle-observed').addEventListener(
   'click',
   () => observed.update({ visible: !observed.visible }),

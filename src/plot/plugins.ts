@@ -8,6 +8,7 @@ import { brushDefinition } from './brush-plugin.js'
 import { zoomDefinition } from './zoom-plugin.js'
 import { crosshairDefinition } from './crosshair-plugin.js'
 import { tooltipDefinition } from './tooltip-plugin.js'
+import { legendDefinition } from './legend-plugin.js'
 
 /** Registering a definition here is all that is needed to make a plugin installable. */
 const pluginDefinitions = [
@@ -16,6 +17,7 @@ const pluginDefinitions = [
   brushDefinition,
   crosshairDefinition,
   tooltipDefinition,
+  legendDefinition,
 ] as const
 
 type PluginOf<D> = D extends PluginDefinition<infer H> ? H : never

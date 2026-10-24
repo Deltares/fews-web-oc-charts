@@ -8,6 +8,7 @@ import {
   bar,
   stackedArea,
   legendSymbolPrimitives,
+  legend,
   type Plot,
 } from '../../src/index.js'
 import { seriesDefinition } from '../../src/plot/line-mark.js'
@@ -42,6 +43,46 @@ afterEach(() => {
 })
 
 describe('headless legend model', () => {
+  test('renders the reactive model with the optional built-in HTML legend plugin', async () => {
+    const mark = series(createSeries({ x: [0, 1], y: [2, 3] }), {
+      id: 'flow',
+      label: 'Flow',
+      x: 'x',
+      y: 'y',
+    })
+    const handle = legend()
+    const current = plot({
+      scales: { x: linearScale(), y: linearScale() },
+      directions: { x: 'x' },
+      marks: [mark],
+    })
+    expect(current.element.parentElement?.querySelector('.fews-chart-legend')).toBeNull()
+
+    current.update({ plugins: [handle] })
+    const container =
+      current.element.parentElement?.querySelector<HTMLElement>('.fews-chart-legend')
+    expect(container?.dataset.position).toBe('top')
+    expect(container?.textContent).toContain('Flow')
+    expect(container?.querySelector('svg')).not.toBeNull()
+
+    const changes = vi.fn()
+    current.element.addEventListener('legendtoggle', changes)
+    const checkbox = container?.querySelector<HTMLInputElement>('input[data-entry-id="flow"]')
+    expect(checkbox).not.toBeNull()
+    checkbox!.click()
+    expect(current.legend.entries.get()[0].visibility).toBe('hidden')
+    expect(changes.mock.calls[0][0].detail.source).toBe('built-in')
+
+    container?.querySelector<HTMLButtonElement>('.fews-chart-legend__show-all')?.click()
+    expect(current.legend.entries.get()[0].visibility).toBe('visible')
+    handle.update({ position: 'bottom' })
+    expect(container?.dataset.position).toBe('bottom')
+    expect(current.element.nextElementSibling).toBe(container)
+
+    current.update({ plugins: [] })
+    expect(current.element.parentElement?.querySelector('.fews-chart-legend')).toBeNull()
+  })
+
   test('keeps single-column bar commands in single-column mode', () => {
     const columns = bar(createTable({ x: [0, 1], y: [2, 3] }), {
       id: 'columns',
