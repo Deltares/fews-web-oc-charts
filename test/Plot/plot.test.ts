@@ -831,7 +831,7 @@ describe('createPlot named scales', () => {
     const interaction = zoom()
     const current = plot(host(), { scales: { x: linearScale({ domain: [0, 1] }) } })
     expect(() => current.update({ plugins: [{} as never] })).toThrow(
-      'plot.plugins accepts zoom(), pan(), brush(), crosshair() or tooltip() plugins only.',
+      'plot.plugins accepts zoom(), pan(), brush(), crosshair(), tooltip(), legend() or crossSectionSelect() plugins only.',
     )
     expect(() => current.update({ plugins: [interaction, interaction] })).toThrow(
       'Duplicate plugin handle in plot.plugins.',
