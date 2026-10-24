@@ -4,12 +4,15 @@ import type { ReadonlySignal } from '../core/reactive.js'
 import { validateKeys } from '../core/validation.js'
 import { isLineMark, type LineMark } from './line.js'
 import { isSeriesMark, type SeriesMark } from './series.js'
+import { isBarMark, type BarMark } from './bar.js'
+import { isStackedAreaMark, type StackedAreaMark } from './stacked-area.js'
 
 export type CrosshairMode = 'x' | 'y' | 'xy'
 export type CrosshairSnapAxis = 'x' | 'y' | 'xy'
+export type CrosshairSnapMark = LineMark | SeriesMark | BarMark | StackedAreaMark
 
 export interface CrosshairSnapOptions {
-  mark: LineMark | SeriesMark
+  mark: CrosshairSnapMark
   axis: CrosshairSnapAxis
 }
 
@@ -41,9 +44,14 @@ function validateSnap(snap: CrosshairSnapOptions | undefined) {
   if (
     !snap.mark ||
     typeof snap.mark !== 'object' ||
-    (!isLineMark(snap.mark) && !isSeriesMark(snap.mark))
+    (!isLineMark(snap.mark) &&
+      !isSeriesMark(snap.mark) &&
+      !isBarMark(snap.mark) &&
+      !isStackedAreaMark(snap.mark))
   ) {
-    throw new TypeError('crosshair.snap.mark must be a line() or series() mark.')
+    throw new TypeError(
+      'crosshair.snap.mark must be a line(), series(), bar() or stackedArea() mark.',
+    )
   }
   if (!['x', 'y', 'xy'].includes(snap.axis)) {
     throw new Error('crosshair.snap.axis must be x, y or xy.')
@@ -68,7 +76,8 @@ export function crosshair(initial: OptionPatch<CrosshairOptions> = {}): Crosshai
   validateKeys(initial, optionKeys, 'crosshair')
   const consumers = new Set<(options: Readonly<CrosshairOptions>) => void>()
   const state = createOptionState<CrosshairOptions>(initial, {
-    isAtomicReference: (value) => isLineMark(value) || isSeriesMark(value),
+    isAtomicReference: (value) =>
+      isLineMark(value) || isSeriesMark(value) || isBarMark(value) || isStackedAreaMark(value),
     defaults: () => ({ mode: 'xy', snap: undefined, labels: undefined }),
     validate(options) {
       if (!['x', 'y', 'xy'].includes(options.mode)) {

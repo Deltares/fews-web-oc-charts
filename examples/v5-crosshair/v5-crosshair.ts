@@ -1,5 +1,17 @@
 import '../shared/v5.css'
-import { axis, createPlot, crosshair, line, linearScale, timeScale } from '@lib'
+import {
+  axis,
+  bar,
+  bandScale,
+  createPlot,
+  createTable,
+  crosshair,
+  line,
+  linearScale,
+  stackedArea,
+  timeScale,
+  tooltip,
+} from '@lib'
 
 function required<T extends Element>(selector: string): T {
   const element = document.querySelector<T>(selector)
@@ -28,6 +40,43 @@ const observations = line({
   strokeWidth: 2,
 })
 const interaction = crosshair({ mode: 'xy' })
+const barMark = bar(
+  createTable({
+    t: ['01:00', '02:00', '03:00', '04:00', '05:00'],
+    observed: [4, 6, 3, 5, 4],
+    forecast: [2, 1, 4, 3, 5],
+  }),
+  {
+    id: 'hourly-flow',
+    x: 't',
+    scales: { x: 't', y: 'q' },
+    layout: 'stacked',
+    layers: [
+      { id: 'observed', y: 'observed', label: 'Observed', fill: '#1677a6' },
+      { id: 'forecast', y: 'forecast', label: 'Forecast', fill: '#d17b0f' },
+    ],
+  },
+)
+const areaMark = stackedArea(
+  createTable({
+    t: [0, 1, 2, 3, 4],
+    observed: [4, 5, 3, 6, 4],
+    forecast: [2, 1, 3, 2, 4],
+  }),
+  {
+    id: 'hourly-flow-area',
+    x: 't',
+    scales: { x: 't', y: 'q' },
+    layers: [
+      { id: 'observed', y: 'observed', label: 'Observed', fill: '#1677a6' },
+      { id: 'forecast', y: 'forecast', label: 'Forecast', fill: '#d17b0f' },
+    ],
+  },
+)
+const barCrosshair = crosshair({ mode: 'xy', labels: { x: 't', y: 'q' } })
+const areaCrosshair = crosshair({ mode: 'xy', labels: { x: 't', y: 'q' } })
+const crosshairs = [interaction, barCrosshair, areaCrosshair]
+const snapMarks = [observations, barMark, areaMark]
 const plot = createPlot(host, {
   title: 'Hourly observations',
   scales: {
@@ -41,6 +90,32 @@ const plot = createPlot(host, {
   marks: [observations],
   plugins: [interaction],
 })
+const barPlot = createPlot(required<HTMLElement>('#bar-chart'), {
+  title: 'Stacked hourly flow',
+  scales: {
+    t: bandScale({ domain: ['01:00', '02:00', '03:00', '04:00', '05:00'] }),
+    q: linearScale({ domain: [0, 10] }),
+  },
+  axes: [
+    axis('t', { position: 'bottom', label: 'Hour' }),
+    axis('q', { position: 'left', label: 'Flow', grid: true }),
+  ],
+  marks: [barMark],
+  plugins: [barCrosshair, tooltip({ marks: [barMark], crosshair: barCrosshair })],
+})
+const areaPlot = createPlot(required<HTMLElement>('#area-chart'), {
+  title: 'Observed and forecast flow',
+  scales: {
+    t: linearScale({ domain: [0, 4] }),
+    q: linearScale({ domain: [0, 10] }),
+  },
+  axes: [
+    axis('t', { position: 'bottom', label: 'Sample' }),
+    axis('q', { position: 'left', label: 'Flow', grid: true }),
+  ],
+  marks: [areaMark],
+  plugins: [areaCrosshair, tooltip({ marks: [areaMark], crosshair: areaCrosshair })],
+})
 
 function updateStatus() {
   status.textContent = `Showing ${mode.value === 'xy' ? 'both' : mode.value === 'x' ? 'vertical' : 'horizontal'} guide${mode.value === 'xy' ? 's' : ''}.`
@@ -52,7 +127,7 @@ mode.addEventListener(
     if (mode.value !== 'x' && mode.value !== 'y' && mode.value !== 'xy') {
       throw new Error(`Unknown crosshair mode "${mode.value}".`)
     }
-    interaction.update({ mode: mode.value })
+    for (const guide of crosshairs) guide.update({ mode: mode.value })
     updateStatus()
   },
   events,
@@ -65,9 +140,11 @@ snapAxis.addEventListener(
     if (axis !== 'none' && axis !== 'x' && axis !== 'y' && axis !== 'xy') {
       throw new Error(`Unknown crosshair snap axis "${axis}".`)
     }
-    interaction.update({
-      snap: axis === 'none' ? undefined : { mark: observations, axis },
-    })
+    for (let index = 0; index < crosshairs.length; index += 1) {
+      crosshairs[index].update({
+        snap: axis === 'none' ? undefined : { mark: snapMarks[index], axis },
+      })
+    }
   },
   events,
 )
@@ -76,6 +153,8 @@ window.addEventListener(
   () => {
     events.abort()
     plot.destroy()
+    barPlot.destroy()
+    areaPlot.destroy()
   },
   { once: true },
 )
