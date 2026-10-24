@@ -1999,7 +1999,9 @@ implemented. The core now exposes a headless `plot.legend` model for series, bar
 stacked areas, including immutable metadata snapshots, line/marker/area/bar symbol
 specifications, named-stack grouping, visibility commands, and bubbling `legendtoggle`
 events. Unlabelled entries use their mark ID, or a stable generated label when no ID
-exists. The built-in legend renderer, broader mark-kind support, composite-layer hit
+exists. Initial entries and visibility commands are available synchronously when plot
+creation returns; subsequent handle changes are tracked reactively.
+The built-in legend renderer, broader mark-kind support, composite-layer hit
 testing and remaining Phase 3 examples/exit criteria remain.
 
 Plugins are installed by a plugin host that reconciles `plot.plugins` by handle
