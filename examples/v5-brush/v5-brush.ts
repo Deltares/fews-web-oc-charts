@@ -1,26 +1,33 @@
 import '../shared/v5.css'
 import {
   axis,
+  batch,
   brush,
   brushEvent,
   createPlot,
   line,
   linearScale,
   ModifierKey,
+  pan,
   timeScale,
+  zoom,
   type BrushMode,
   type BrushSelection,
 } from '@lib'
 
-const host = document.querySelector<HTMLElement>('#chart')
-const mode = document.querySelector<HTMLSelectElement>('#mode')
-const modifier = document.querySelector<HTMLSelectElement>('#modifier')
-const clear = document.querySelector<HTMLButtonElement>('#clear')
-const status = document.querySelector<HTMLElement>('#status')
-const snapshot = document.querySelector<HTMLElement>('#snapshot')
-if (!host || !mode || !modifier || !clear || !status || !snapshot) {
-  throw new Error('The brush example is missing required elements.')
+function required<T extends Element>(selector: string): T {
+  const element = document.querySelector<T>(selector)
+  if (!element) throw new Error(`The brush example is missing "${selector}".`)
+  return element
 }
+const host = required<HTMLElement>('#chart')
+const overviewHost = required<HTMLElement>('#overview')
+const applyZoom = required<HTMLInputElement>('#apply-zoom')
+const mode = required<HTMLSelectElement>('#mode')
+const modifier = required<HTMLSelectElement>('#modifier')
+const clear = required<HTMLButtonElement>('#clear')
+const status = required<HTMLElement>('#status')
+const snapshot = required<HTMLElement>('#snapshot')
 
 const hour = 3_600_000
 const start = Date.UTC(2026, 0, 1)
@@ -29,9 +36,9 @@ const values = Float64Array.from(
   { length: 49 },
   (_, index) => 44 + 22 * Math.sin(index / 3) + 13 * Math.cos(index / 7),
 )
-const t = timeScale({ domain: [start, start + 48 * hour], timeZone: 'UTC' })
+const t = timeScale({ domain: [start + 12 * hour, start + 36 * hour], timeZone: 'UTC' })
 const q = linearScale({ domain: [0, 100] })
-const interaction = brush({ mode: 'x' })
+const interaction = brush({ mode: 'auto' })
 const plot = createPlot(host, {
   title: 'Select hourly observations',
   scales: { t, q },
@@ -50,17 +57,31 @@ const plot = createPlot(host, {
       strokeWidth: 2,
     }),
   ],
-  plugins: [interaction],
+  plugins: [interaction, zoom({ mode: 'x', wheel: 'x', reset: 'full' }), pan({ mode: 'x' })],
+})
+const navigator = brush({ mode: 'x', persistent: true, modifier: ModifierKey.None })
+navigator.setSelection({ mode: 'x', scales: { t: t.domain.get() } })
+const overview = createPlot(overviewHost, {
+  height: 170,
+  scales: {
+    t: timeScale({ domain: [start, start + 48 * hour], timeZone: 'UTC' }),
+    q: linearScale({ domain: [0, 100] }),
+  },
+  axes: [axis('t', { position: 'bottom', label: 'Full time range (UTC)', tickCount: 6 })],
+  marks: [
+    line({ x: 't', y: 'q', xValues: times, yValues: values, stroke: '#1677a6', strokeWidth: 2 }),
+  ],
+  plugins: [navigator],
 })
 const events = new AbortController()
 
 function updateStatus() {
   const requirement = modifier.value === 'none' ? 'Drag' : `Hold ${modifier.value} and drag`
-  status.textContent = `${requirement} to select ${mode.value}. Scale domains are unchanged.`
+  status.textContent = `${requirement} to select ${mode.value}. ${applyZoom.checked ? 'Release to zoom.' : 'Selection only; main chart domains are unchanged.'}`
 }
 
 function selectedMode(value: string): BrushMode {
-  if (value === 'x' || value === 'y' || value === 'xy') return value
+  if (value === 'x' || value === 'y' || value === 'xy' || value === 'auto') return value
   throw new Error(`Unknown brush mode "${value}".`)
 }
 
@@ -77,7 +98,7 @@ function selectedModifier(value: string): ModifierKey {
   }
 }
 
-for (const control of [mode, modifier]) {
+for (const control of [mode, modifier, applyZoom]) {
   control.addEventListener(
     'change',
     () => {
@@ -94,6 +115,13 @@ plot.element.addEventListener(
   brushEvent,
   (event) => {
     const selection = (event as CustomEvent<BrushSelection>).detail
+    if (applyZoom.checked) {
+      batch(() => {
+        if (selection.scales.t) t.domain.set(selection.scales.t)
+        if (selection.scales.q) q.domain.set(selection.scales.q)
+      })
+      syncNavigator()
+    }
     snapshot.textContent = JSON.stringify(
       {
         mode: selection.mode,
@@ -107,20 +135,50 @@ plot.element.addEventListener(
       null,
       2,
     )
-    status.textContent = `Selected ${selection.mode} ranges. Scale domains are unchanged.`
+    status.textContent = `Selected ${selection.mode} ranges.${applyZoom.checked ? ' Main chart zoomed.' : ''}`
   },
   events,
 )
 function clearReadout() {
+  batch(() => {
+    t.domain.set([start, start + 48 * hour])
+    q.domain.set([0, 100])
+  })
+  navigator.setSelection(undefined)
   snapshot.textContent = 'No selection yet.'
   updateStatus()
 }
 clear.addEventListener('click', clearReadout, events)
-clearReadout()
+snapshot.textContent = 'No selection yet.'
+updateStatus()
+
+function syncNavigator() {
+  navigator.setSelection({ mode: 'x', scales: { t: t.domain.get() } })
+}
+overview.element.addEventListener(
+  brushEvent,
+  (event) => {
+    const selection = (event as CustomEvent<BrushSelection>).detail
+    t.domain.set(selection.scales.t)
+    status.textContent = 'Overview selection updated the main chart time domain.'
+  },
+  events,
+)
+for (const type of ['wheel', 'dblclick', 'pointerup']) {
+  plot.element.addEventListener(type, syncNavigator, events)
+}
+plot.element.addEventListener(
+  'pointermove',
+  (event) => {
+    if (event.buttons === 1 && !event.shiftKey) syncNavigator()
+  },
+  events,
+)
 
 function dispose() {
   events.abort()
   plot.destroy()
+  overview.destroy()
 }
 window.addEventListener(
   'pagehide',

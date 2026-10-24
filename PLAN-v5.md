@@ -1955,10 +1955,36 @@ release its listeners. The
 The `brush()` plugin selects configured Cartesian x/y ranges by Shift-drag by default
 and emits a bubbling `brush` event from the plot SVG. Its immutable `detail` contains
 the selected mode and scale ranges; band scales report the intersected categories.
-`mode` and `modifier` are editable at runtime. The
-[v5 brush example](./examples/v5-brush/index.html) demonstrates mode/modifier updates
-and displays selected time/value ranges without changing scale domains.
-Brush selection is implemented;
+Fixed `x`, `y` and `xy` modes retain their behavior. Opt-in `mode: 'auto'` follows the
+v4 zoom handler's movement bounds: movements within 25 SVG pixels in both directions
+are ignored; moving beyond one bound selects that axis, and beyond both selects xy.
+The mode is re-evaluated during drawing. The 50-pixel-long single-axis handles show
+the current mode and the +/-25-pixel perpendicular bounds around the start point;
+temporary xy selections have no handles, matching v4.
+
+`persistent: true` retains the selection on release, with draggable interiors,
+edge-resize handles and, for xy, corner handles. Movement and resizing are constrained
+to the plot. Persistent brushes emit live `brush` events during movement as well as
+on release; temporary brushes emit only on release. The brush itself never changes
+scale domains. Apply the event's named ranges to the desired scale handles to zoom.
+Matching brush gestures take precedence over pan regardless of plugin order.
+
+`handle.selection` is a read-only signal containing the persistent domain selection.
+Initialize or synchronize it with
+`handle.setSelection({ mode: 'x', scales: { t: [start, end] } })`; clear it with
+`handle.setSelection(undefined)`. Programmatic changes emit no `brush` event, avoiding
+feedback loops in bidirectional synchronization. Ranges are validated and copied into
+immutable snapshots, then reprojected on domain, layout, size and direction changes.
+Off-screen selections are clipped/hidden without changing their stored domain.
+Changing the brush mode or disabling persistence clears the stored selection.
+Cancelled gestures keep the last published persistent selection; removing the plugin
+or destroying the plot releases capture, listeners, validators and overlay DOM.
+
+The [v5 brush example](./examples/v5-brush/index.html) demonstrates automatic and fixed
+selection modes, brush-to-zoom, and a full-domain overview with a persistent navigator
+that controls a separate main-chart time scale. The overview follows main-chart zoom
+and pan without narrowing its own domain. Both plots reuse data arrays, not scale handles.
+Brush selection and persistent navigation are implemented;
 crosshair, tooltip, legend and the remaining Phase 3 examples/exit criteria remain.
 
 Plugins are installed by a plugin host that reconciles `plot.plugins` by handle

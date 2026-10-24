@@ -72,13 +72,18 @@ function validatePlotCollections(
   if (!Array.isArray(options.axes)) throw new Error('plot.axes must be an array.')
   if (!Array.isArray(options.marks)) throw new Error('plot.marks must be an array.')
   if (!Array.isArray(options.plugins)) throw new Error('plot.plugins must be an array.')
-  validatePlugins(options.plugins, { coordinateSystem, plugins: options.plugins })
   for (const key of ['scales', 'directions'] as const) {
     const value = options[key]
     if (!value || typeof value !== 'object' || Array.isArray(value)) {
       throw new Error(`plot.${key} must be a named map.`)
     }
   }
+  validatePlugins(options.plugins, {
+    coordinateSystem,
+    plugins: options.plugins,
+    scales: options.scales,
+    direction: (name) => direction(options, name, undefined, undefined, coordinateSystem),
+  })
 }
 
 function validateAxisPosition(position: AxisSide, coordinateSystem: CoordinateSystem) {

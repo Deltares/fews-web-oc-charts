@@ -13,15 +13,17 @@
     </nav>
     <h1>v5: brush selection</h1>
     <p>
-      Hold Shift and drag inside the plot to select a range. The brush emits a selection event
-      without changing the scale domains.
+      Hold Shift and drag in the main chart to zoom. Auto mode follows the v4 zoom gesture: stay
+      within 25 pixels of the starting x position to select vertically, or the starting y position
+      to select horizontally. Move beyond both bounds to select both axes.
     </p>
     <fieldset class="controls">
       <legend>Brush interaction</legend>
       <label for="mode">
         Selection mode
         <select id="mode">
-          <option value="x" selected>Horizontal (x)</option>
+          <option value="auto" selected>Automatic (auto)</option>
+          <option value="x">Horizontal (x)</option>
           <option value="y">Vertical (y)</option>
           <option value="xy">Both (xy)</option>
         </select>
@@ -34,26 +36,49 @@
           <option value="shift" selected>Shift</option>
         </select>
       </label>
-      <button id="clear" type="button">Clear selection readout</button>
+      <label for="apply-zoom">
+        <input id="apply-zoom" type="checkbox" checked />
+        Apply selection to main chart domains
+      </label>
+      <button id="clear" type="button">Reset domains and selection</button>
     </fieldset>
     <figure>
       <div id="chart" class="plot-host"></div>
       <figcaption>
-        Release the pointer to publish the selected ranges. The temporary overlay disappears when
-        the gesture ends; drag in either direction to make another selection.
+        The short handles indicate the current single-axis mode and its 25-pixel movement bounds.
+        Release to zoom; wheel to zoom horizontally, drag without Shift to pan, or double-click to
+        reset.
+      </figcaption>
+    </figure>
+    <h2>Overview navigator</h2>
+    <p>
+      Drag in the overview without a modifier to select a time window. The selection stays visible:
+      drag its interior to move it, or its left/right handles to resize it. Updates zoom the main
+      chart live, while the overview keeps the full 48-hour domain.
+    </p>
+    <figure>
+      <div id="overview"></div>
+      <figcaption>
+        The navigator also follows time-domain changes from the main chart. Both charts share data
+        arrays, not time-scale handles.
       </figcaption>
     </figure>
     <p id="status" class="status" role="status"></p>
     <h2>Last selection</h2>
     <pre id="snapshot" aria-label="Last selected scale ranges"></pre>
     <h2>Public API</h2>
-    <pre><code>const interaction = brush({ mode: 'x' })
-const plot = createPlot(host, { scales: { t, q }, axes, marks, plugins: [interaction] })
-plot.element.addEventListener(brushEvent, (event) =&gt; {
-  const selection = (event as CustomEvent&lt;BrushSelection&gt;).detail
-  console.log(selection.scales)
+    <pre><code>const navigator = brush({ mode: 'x', persistent: true, modifier: ModifierKey.None })
+navigator.setSelection({ mode: 'x', scales: { t: [visibleStart, visibleEnd] } })
+const overview = createPlot(host, {
+  scales: { t: overviewTime, q }, axes, marks, plugins: [navigator],
 })
-interaction.update({ mode: 'xy', modifier: ModifierKey.None })</code></pre>
+overview.element.addEventListener(brushEvent, (event) =&gt; {
+  const selection = (event as CustomEvent&lt;BrushSelection&gt;).detail
+  mainTime.domain.set(selection.scales.t)
+})
+// Programmatic updates do not emit brush events, so bidirectional sync does not loop:
+navigator.setSelection({ mode: 'x', scales: { t: mainTime.domain.get() } })
+navigator.setSelection(undefined) // Clear the persistent selection.</code></pre>
     <script type="module" src="./v5-brush.ts"></script>
   </body>
 </html>
