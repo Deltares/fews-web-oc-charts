@@ -69,6 +69,45 @@ describe('named scale domain state', () => {
     expect(() => handle.update({ id: undefined })).toThrow(/immutable/)
     expect(() => handle.update({ tickCount: 0 })).toThrow(/positive integer/)
   })
+
+  test('validates axis crossings without publishing invalid updates', () => {
+    const handle = axis('q', { crossAt: { scale: 'x', value: 0 } })
+    handle.update({ crossAt: { value: 'category' } })
+    expect(handle.options.get().resolved.crossAt).toEqual({ scale: 'x', value: 'category' })
+    const version = handle.options.version
+    expect(() => handle.update({ crossAt: { scale: '' } })).toThrow(
+      'axis.crossAt.scale must name a plot scale.',
+    )
+    for (const value of [NaN, Infinity, -Infinity]) {
+      expect(() => handle.update({ crossAt: { value } })).toThrow(
+        new TypeError('axis.crossAt.value must be a finite number or string.'),
+      )
+    }
+    // @ts-expect-error Unknown crossing options must fail at runtime as well as compile time.
+    expect(() => handle.update({ crossAt: { unknown: true } })).toThrow(
+      'Unknown option "axis.crossAt.unknown".',
+    )
+    expect(handle.options.version).toBe(version)
+    expect(handle.options.get().resolved.crossAt).toEqual({ scale: 'x', value: 'category' })
+    handle.update({ crossAt: undefined })
+    expect(handle.options.get().resolved.crossAt).toBeUndefined()
+  })
+
+  test('validates axis time formatting without publishing invalid updates', () => {
+    const handle = axis('t', { locale: 'en-US', timeZone: 'UTC' })
+    const version = handle.options.version
+    // @ts-expect-error Non-string locales must fail at runtime as well as compile time.
+    expect(() => handle.update({ locale: 42 })).toThrow('axis.locale must be a string.')
+    // @ts-expect-error Non-string time zones must fail at runtime as well as compile time.
+    expect(() => handle.update({ timeZone: 42 })).toThrow('axis.timeZone must be a string.')
+    expect(() => handle.update({ locale: 'invalid_locale' })).toThrow(RangeError)
+    expect(() => handle.update({ timeZone: 'invalid' })).toThrow(RangeError)
+    expect(handle.options.version).toBe(version)
+    expect(handle.options.get().resolved).toMatchObject({ locale: 'en-US', timeZone: 'UTC' })
+    handle.update({ locale: undefined, timeZone: undefined })
+    expect(handle.options.get().resolved.locale).toBeUndefined()
+    expect(handle.options.get().resolved.timeZone).toBeUndefined()
+  })
 })
 
 describe('pure plot layout', () => {

@@ -46,6 +46,30 @@ export function validateAxisUpdates(
   }
 }
 
+function validateCrossAt(crossAt: AxisOptions['crossAt']) {
+  if (crossAt === undefined) return
+  validateKeys(crossAt, ['scale', 'value'], 'axis.crossAt')
+  if (typeof crossAt.scale !== 'string' || !crossAt.scale) {
+    throw new Error('axis.crossAt.scale must name a plot scale.')
+  }
+  const value = crossAt.value
+  if (typeof value !== 'string' && !(typeof value === 'number' && Number.isFinite(value))) {
+    throw new TypeError('axis.crossAt.value must be a finite number or string.')
+  }
+}
+
+function validateTimeFormat(options: Readonly<AxisOptions>) {
+  if (options.locale !== undefined && typeof options.locale !== 'string') {
+    throw new Error('axis.locale must be a string.')
+  }
+  if (options.timeZone !== undefined && typeof options.timeZone !== 'string') {
+    throw new Error('axis.timeZone must be a string.')
+  }
+  if (options.locale !== undefined || options.timeZone !== undefined) {
+    new Intl.DateTimeFormat(options.locale, { timeZone: options.timeZone }).resolvedOptions()
+  }
+}
+
 export function axis(scale: string, initial: OptionPatch<AxisOptions> = {}): AxisHandle {
   if (typeof scale !== 'string' || scale.length === 0) throw new Error('axis.scale must be a name.')
   const keys = [
@@ -78,16 +102,7 @@ export function axis(scale: string, initial: OptionPatch<AxisOptions> = {}): Axi
       if (!['default', 'classic'].includes(options.style)) {
         throw new Error('axis.style must be default or classic.')
       }
-      if (options.crossAt !== undefined) {
-        validateKeys(options.crossAt, ['scale', 'value'], 'axis.crossAt')
-        if (typeof options.crossAt.scale !== 'string' || !options.crossAt.scale) {
-          throw new Error('axis.crossAt.scale must name a plot scale.')
-        }
-        const value = options.crossAt.value
-        if (typeof value !== 'string' && !(typeof value === 'number' && Number.isFinite(value))) {
-          throw new Error('axis.crossAt.value must be a finite number or string.')
-        }
-      }
+      validateCrossAt(options.crossAt)
       if (!['top', 'right', 'bottom', 'left', 'angular', 'radial'].includes(options.position)) {
         throw new Error('axis.position must be a cartesian side, angular or radial.')
       }
@@ -106,15 +121,7 @@ export function axis(scale: string, initial: OptionPatch<AxisOptions> = {}): Axi
       if (options.format !== undefined && typeof options.format !== 'function') {
         throw new Error('axis.format must be a function.')
       }
-      if (options.locale !== undefined && typeof options.locale !== 'string') {
-        throw new Error('axis.locale must be a string.')
-      }
-      if (options.timeZone !== undefined && typeof options.timeZone !== 'string') {
-        throw new Error('axis.timeZone must be a string.')
-      }
-      if (options.locale !== undefined || options.timeZone !== undefined) {
-        new Intl.DateTimeFormat(options.locale, { timeZone: options.timeZone }).resolvedOptions()
-      }
+      validateTimeFormat(options)
       for (const validate of consumers) validate(options)
     },
   })
