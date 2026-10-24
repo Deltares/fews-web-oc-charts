@@ -1,4 +1,5 @@
 import { validateKeys } from '../../../core/validation.js'
+import { copyNumericRanges } from '../mark-values.js'
 
 export type ProgressValue = number | null | undefined
 export type ProgressValues = ArrayLike<ProgressValue>
@@ -31,29 +32,6 @@ const progressMarks = new WeakSet<object>()
 
 export function isProgressMark(value: object): value is ProgressMark {
   return progressMarks.has(value)
-}
-
-function copyAngleRanges(values: ProgressAngleRanges): readonly ProgressAngleRange[] {
-  if (!values || !Number.isSafeInteger(values.length) || values.length < 0) {
-    throw new Error('progress.xValues must be an array-like value.')
-  }
-  return Object.freeze(
-    Array.from({ length: values.length }, (_, index) => {
-      const value = values[index]
-      if (value === null || value === undefined) return value
-      if (
-        !value ||
-        typeof value !== 'object' ||
-        value.length !== 2 ||
-        !Number.isFinite(value[0]) ||
-        !Number.isFinite(value[1]) ||
-        value[0] > value[1]
-      ) {
-        throw new Error(`progress.xValues[${index}] must be an ascending pair of finite numbers.`)
-      }
-      return Object.freeze([value[0], value[1]] as const)
-    }),
-  )
 }
 
 function copyValues(values: ProgressValues): readonly ProgressValue[] {
@@ -93,7 +71,7 @@ export function progress(options: ProgressOptions): ProgressMark {
   }
   if (options.x === options.y)
     throw new Error('progress.x and progress.y must name distinct scales.')
-  const xValues = copyAngleRanges(options.xValues)
+  const xValues = copyNumericRanges(options.xValues, 'progress', 'xValues')
   const yValues = copyValues(options.yValues)
   if (xValues.length !== yValues.length) {
     throw new Error('progress.xValues and progress.yValues must have equal lengths.')

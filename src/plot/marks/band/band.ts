@@ -1,4 +1,5 @@
 import { validateKeys } from '../../../core/validation.js'
+import { copyNumericRanges } from '../mark-values.js'
 
 export type BandRange = readonly [number, number]
 export type BandRangeValue = BandRange | null | undefined
@@ -32,30 +33,6 @@ const bandMarks = new WeakSet<object>()
 
 export function isBandMark(value: object): value is BandMark {
   return bandMarks.has(value)
-}
-
-function copyRanges(values: BandRangeValues, name: string): readonly BandRangeValue[] {
-  if (!values || !Number.isSafeInteger(values.length) || values.length < 0) {
-    throw new Error(`band.${name} must be an array-like value.`)
-  }
-  return Object.freeze(
-    Array.from({ length: values.length }, (_, index) => {
-      const value = values[index]
-      if (value === null || value === undefined) return value
-      if (
-        !value ||
-        typeof value !== 'object' ||
-        value.length !== 2 ||
-        !Number.isFinite(value[0]) ||
-        !Number.isFinite(value[1]) ||
-        value[0] > value[1]
-      ) {
-        throw new Error(`band.${name}[${index}] must be an ascending pair of finite numbers.`)
-      }
-      const range: BandRange = Object.freeze([value[0], value[1]])
-      return range
-    }),
-  )
 }
 
 function validateCurve(curve: BandOptions['curve'], xValues: readonly BandRangeValue[]) {
@@ -93,8 +70,8 @@ export function band(options: BandOptions): BandMark {
     throw new Error('band.id must be a non-empty string.')
   }
   validateScaleNames(options)
-  const xValues = copyRanges(options.xValues, 'xValues')
-  const yValues = copyRanges(options.yValues, 'yValues')
+  const xValues = copyNumericRanges(options.xValues, 'band', 'xValues')
+  const yValues = copyNumericRanges(options.yValues, 'band', 'yValues')
   if (xValues.length !== yValues.length) {
     throw new Error('band.xValues and band.yValues must have equal lengths.')
   }
