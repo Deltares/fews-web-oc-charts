@@ -93,6 +93,8 @@ export function createPluginHost(
       regions: shared.regions,
       pointer: shared.pointer,
       legend: shared.legend,
+      theme: shared.theme,
+      useViewport: (element) => shared.useViewport(element),
       get scales() {
         return shared.scales
       },

@@ -13,15 +13,37 @@
     <h1>v5: headless legend</h1>
     <p>
       The application-owned HTML legend uses the core model directly; the button can also install
-      the optional built-in renderer. Toggle a layer to restack the areas and autoscale the value
-      axis. Parent checkboxes show partial visibility. Isolation affects siblings at the selected
-      hierarchy level. Library-rendered SVG swatches show each mark's styles, including the dashed
-      line with markers and multicolour stack groups.
+      the optional built-in SVG renderer. Toggle a layer to restack the areas and autoscale the
+      value axis. Parent checkboxes show partial visibility. Isolation affects siblings at the
+      selected hierarchy level. When enabled, choose a docked or corner-overlay position for the
+      built-in SVG legend. Library-rendered SVG swatches show each mark's styles, including the
+      dashed line with markers and multicolour stack groups. Click a built-in swatch or label to
+      toggle visibility; dimmed entries are hidden. Turn off group headings to show only individual
+      series and layers.
     </p>
     <fieldset class="controls">
       <legend>Legend actions</legend>
       <button id="show-all" type="button">Show all</button>
-      <button id="toggle-built-in" type="button" data-enabled="false">Add built-in legend</button>
+      <button id="toggle-built-in" type="button" data-enabled="false">
+        Add built-in SVG legend
+      </button>
+      <label for="legend-position">
+        Built-in legend position
+        <select id="legend-position">
+          <option value="top">Top</option>
+          <option value="bottom">Bottom</option>
+          <option value="left">Left</option>
+          <option value="right">Right</option>
+          <option value="top-left">Top-left overlay</option>
+          <option value="top-right">Top-right overlay</option>
+          <option value="bottom-left">Bottom-left overlay</option>
+          <option value="bottom-right">Bottom-right overlay</option>
+        </select>
+      </label>
+      <label for="legend-groups">
+        <input id="legend-groups" type="checkbox" checked />
+        Show built-in legend groups
+      </label>
       <button id="toggle-observed" type="button">Update observed visibility directly</button>
       <label for="renderer">
         Area renderer
@@ -44,7 +66,11 @@
       <p id="legend-status" role="status">No visibility changes yet.</p>
     </section>
     <h2>Public API</h2>
-    <pre><code>const plot = createPlot(host, { scales, axes, marks })
+    <pre><code>const builtIn = legend({ position: 'top', showGroups: false })
+const plot = createPlot(host, { scales, axes, marks, plugins: [builtIn] })
+builtIn.update({ showGroups: true })
+// Built-in entries toggle on click or Enter/Space; opacity shows visibility.
+
 const entries = plot.legend.entries.get()
 const swatch = createLegendSwatch(entries[0].symbol, { width: 36, height: 20 })
 label.append(swatch) // Application-owned label and layout.

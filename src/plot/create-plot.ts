@@ -182,6 +182,7 @@ function createPlotInternal(
     (a, b) => a.width === b.width && a.height === b.height,
   )
   const size = reactive.signal<Readonly<Size>>(Object.freeze({ width: 0, height: 0 }))
+  const viewportSize = reactive.signal<Size | undefined>(undefined)
   const regions = reactive.signal(layout({ width: 0, height: 0 }))
   const initialThemeMode = options.get().resolved.theme
   const theme = reactive.signal(
@@ -255,6 +256,19 @@ function createPlotInternal(
     regions,
     pointer: pointerHub.pointer,
     legend,
+    theme,
+    useViewport(viewport) {
+      const update = (value: Size) => {
+        axisWidths.clear()
+        viewportSize.set(value)
+      }
+      update({ width: viewport.clientWidth, height: viewport.clientHeight })
+      const stop = observeSize(viewport, update)
+      return () => {
+        stop()
+        viewportSize.set(undefined)
+      }
+    },
     get scales() {
       return scaleBindings.scales
     },
@@ -308,8 +322,8 @@ function createPlotInternal(
     if (current.axisLayout === 'inset') marksLayer.before(axesLayer)
     else axesLayer.before(marksLayer)
     const actualSize = Object.freeze({
-      width: current.width ?? measured.get().width,
-      height: current.height ?? measured.get().height,
+      width: viewportSize.get()?.width ?? current.width ?? measured.get().width,
+      height: viewportSize.get()?.height ?? current.height ?? measured.get().height,
     })
     size.set(actualSize)
     const cartesianAxes = current.axes.filter((axis) =>
@@ -514,12 +528,15 @@ function createPlotInternal(
   scope.run(() => {
     reactive.effect(() => {
       const current = options.get().resolved
-      const measuredSize = measured.get()
+      const measuredSize = viewportSize.get() ?? measured.get()
       reconcile()
       const scaleDependencies = scaleBindings.trackDependencies()
       const nextDependencies: PlotDependencySnapshot = {
         layout: {
-          size: [current.width ?? measuredSize.width, current.height ?? measuredSize.height],
+          size: [
+            viewportSize.get()?.width ?? current.width ?? measuredSize.width,
+            viewportSize.get()?.height ?? current.height ?? measuredSize.height,
+          ],
           options: [
             current.title,
             current.axisLayout,

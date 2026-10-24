@@ -11,8 +11,24 @@ import {
   stackedArea,
   timeScale,
   type LegendEntry,
+  type LegendPosition,
 } from '@lib'
 import { reactive } from '../../src/core/runtime.js'
+
+const legendPositions = [
+  'top',
+  'bottom',
+  'left',
+  'right',
+  'top-left',
+  'top-right',
+  'bottom-left',
+  'bottom-right',
+] as const
+
+function isLegendPosition(value: string): value is LegendPosition {
+  return legendPositions.some((candidate) => candidate === value)
+}
 
 function required<T extends HTMLElement>(selector: string): T {
   const element = document.querySelector<T>(selector)
@@ -25,6 +41,8 @@ const scope = reactive.createScope()
 const legendHost = required('#legend')
 const status = required('#legend-status')
 const renderer = required<HTMLSelectElement>('#renderer')
+const legendPosition = required<HTMLSelectElement>('#legend-position')
+const showGroups = required<HTMLInputElement>('#legend-groups')
 const builtInLegend = legend({ position: 'top' })
 const start = Date.UTC(2026, 0, 1)
 const hour = 3_600_000
@@ -157,9 +175,25 @@ required('#toggle-built-in').addEventListener(
     if (!(button instanceof HTMLButtonElement)) throw new Error('Expected a button.')
     const enabled = button.dataset.enabled !== 'true'
     button.dataset.enabled = String(enabled)
-    button.textContent = enabled ? 'Remove built-in legend' : 'Add built-in legend'
+    button.textContent = enabled ? 'Remove built-in SVG legend' : 'Add built-in SVG legend'
     plot.update({ plugins: enabled ? [builtInLegend] : [] })
   },
+  events,
+)
+legendPosition.addEventListener(
+  'change',
+  () => {
+    const position = legendPosition.value
+    if (!isLegendPosition(position)) {
+      throw new Error(`Unknown legend position "${position}".`)
+    }
+    builtInLegend.update({ position })
+  },
+  events,
+)
+showGroups.addEventListener(
+  'change',
+  () => builtInLegend.update({ showGroups: showGroups.checked }),
   events,
 )
 required('#toggle-observed').addEventListener(

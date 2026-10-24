@@ -4,6 +4,7 @@ import {
   createSeries,
   createTable,
   linearScale,
+  axis,
   series,
   bar,
   stackedArea,
@@ -43,7 +44,7 @@ afterEach(() => {
 })
 
 describe('headless legend model', () => {
-  test('renders the reactive model with the optional built-in HTML legend plugin', async () => {
+  test('renders the reactive model as SVG with docked and overlay positions', async () => {
     const mark = series(createSeries({ x: [0, 1], y: [2, 3] }), {
       id: 'flow',
       label: 'Flow',
@@ -54,33 +55,311 @@ describe('headless legend model', () => {
     const current = plot({
       scales: { x: linearScale(), y: linearScale() },
       directions: { x: 'x' },
+      title: 'Flow chart',
+      axes: [
+        axis('x', { position: 'bottom', label: 'Time' }),
+        axis('y', { position: 'left', label: 'Flow' }),
+      ],
       marks: [mark],
     })
     expect(current.element.parentElement?.querySelector('.fews-chart-legend')).toBeNull()
 
     current.update({ plugins: [handle] })
-    const container =
-      current.element.parentElement?.querySelector<HTMLElement>('.fews-chart-legend')
-    expect(container?.dataset.position).toBe('top')
-    expect(container?.textContent).toContain('Flow')
-    expect(container?.querySelector('svg')).not.toBeNull()
+    const layout = current.element.closest<HTMLElement>('[data-legend-layout]')!
+    const layer = layout.querySelector<SVGGElement>('[data-layer="legend"]')
+    expect(current.element.getAttribute('role')).toBe('img')
+    expect(layer?.namespaceURI).toBe('http://www.w3.org/2000/svg')
+    expect(layer?.dataset.position).toBe('top')
+    expect(layer?.textContent).toContain('Flow')
+    expect(layer?.querySelector('svg')).toBeNull()
 
     const changes = vi.fn()
     current.element.addEventListener('legendtoggle', changes)
-    const checkbox = container?.querySelector<HTMLInputElement>('input[data-entry-id="flow"]')
-    expect(checkbox).not.toBeNull()
-    checkbox!.click()
+    const entry = layer!.querySelector<SVGGElement>('[role="button"][data-entry-id="flow"]')!
+    expect(layer?.querySelector('[role="checkbox"]')).toBeNull()
+    expect(layer?.textContent).not.toMatch(/Isolate|Show all/)
+    entry.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     expect(current.legend.entries.get()[0].visibility).toBe('hidden')
     expect(changes.mock.calls[0][0].detail.source).toBe('built-in')
-
-    container?.querySelector<HTMLButtonElement>('.fews-chart-legend__show-all')?.click()
+    await expect
+      .poll(() => layer!.querySelector('[data-entry-id="flow"]')?.getAttribute('opacity'))
+      .toBe('0.5')
+    const hidden = layer!.querySelector<SVGGElement>('[data-entry-id="flow"]')!
+    hidden.focus()
+    hidden.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }))
     expect(current.legend.entries.get()[0].visibility).toBe('visible')
-    handle.update({ position: 'bottom' })
-    expect(container?.dataset.position).toBe('bottom')
-    expect(current.element.nextElementSibling).toBe(container)
+    await expect
+      .poll(() => layer!.querySelector('[data-entry-id="flow"]')?.getAttribute('opacity'))
+      .toBe('1')
+    expect(document.activeElement).toBe(layer!.querySelector('[data-entry-id="flow"]'))
+    for (const position of ['top', 'bottom', 'left', 'right'] as const) {
+      handle.update({ position })
+      await expect
+        .poll(() => {
+          const chart = current.element.getBoundingClientRect()
+          const legend = layout.querySelector('.fews-chart-legend-svg')!.getBoundingClientRect()
+          if (position === 'top') return chart.top - legend.bottom
+          if (position === 'bottom') return legend.top - chart.bottom
+          if (position === 'left') return chart.left - legend.right
+          return legend.left - chart.right
+        })
+        .toBeGreaterThanOrEqual(7.9)
+      expect(layer?.dataset.position).toBe(position)
+      expect(current.element.contains(layer)).toBe(false)
+      expect(layout.clientWidth).toBe(500)
+      expect(layout.clientHeight).toBe(300)
+      await expect
+        .poll(() => {
+          const chart = current.element.getBoundingClientRect()
+          const legend = layout.querySelector('.fews-chart-legend-svg')!.getBoundingClientRect()
+          return Math.abs(
+            position === 'top' || position === 'bottom'
+              ? chart.width - legend.width
+              : chart.height - legend.height,
+          )
+        })
+        .toBeLessThan(0.1)
+      await expect
+        .poll(() => {
+          const transform = layer!
+            .querySelector<SVGGElement>('[data-entry-id="flow"]')!
+            .transform.baseVal.consolidate()!.matrix
+          return Math.abs(
+            position === 'top' || position === 'bottom'
+              ? transform.e - current.regions.get().plot.x
+              : transform.f - current.regions.get().plot.y,
+          )
+        })
+        .toBeLessThan(0.1)
+      await expect
+        .poll(() => {
+          const chart = current.element.getBoundingClientRect()
+          const bounds = layout.getBoundingClientRect()
+          return chart.right <= bounds.right + 0.1 && chart.bottom <= bounds.bottom + 0.1
+        })
+        .toBe(true)
+    }
+    for (const position of ['top-left', 'top-right', 'bottom-left', 'bottom-right'] as const) {
+      handle.update({ position })
+      await expect.poll(() => layer?.dataset.position).toBe(position)
+      expect(layer?.dataset.overlay).toBe('true')
+      expect(current.element.contains(layer)).toBe(true)
+      expect(current.element.getAttribute('role')).toBe('group')
+    }
 
+    handle.update({ position: 'top' })
+    await expect.poll(() => layer?.dataset.position).toBe('top')
     current.update({ plugins: [] })
-    expect(current.element.parentElement?.querySelector('.fews-chart-legend')).toBeNull()
+    expect(current.element.querySelector('[data-layer="legend"]')).toBeNull()
+    expect(current.element.parentElement?.querySelector('[data-legend-layout]')).toBeNull()
+    expect(current.element.getAttribute('role')).toBe('img')
+    await expect.poll(() => current.size.get()).toEqual({ width: 500, height: 300 })
+  })
+
+  test('can omit all parent headings while preserving leaf IDs, visibility and commands', async () => {
+    const areas = stackedArea(createTable({ x: [0, 1], a: [2, 3], b: [3, 4] }), {
+      id: 'areas',
+      label: 'Contributions',
+      x: 'x',
+      scales: { x: 'x', y: 'y' },
+      layers: [
+        { id: 'a', y: 'a', label: 'Upstream', stack: 'Observed' },
+        { id: 'b', y: 'b', label: 'Lateral', stack: 'Observed' },
+      ],
+    })
+    const handle = legend({ showGroups: false })
+    const current = plot({
+      scales: { x: linearScale(), y: linearScale() },
+      directions: { x: 'x' },
+      marks: [areas],
+      plugins: [handle],
+    })
+    const layer = current.element
+      .closest('[data-legend-layout]')!
+      .querySelector('[data-layer="legend"]')!
+    const labels = () =>
+      [...layer.querySelectorAll('[data-entry-id]')].map((entry) =>
+        entry.getAttribute('aria-label'),
+      )
+    expect(labels()).toEqual(['Upstream', 'Lateral'])
+    const leaf = current.legend.entries.get()[0].children[0].children[0]
+    layer.querySelector<SVGGElement>('[data-entry-id]')!.dispatchEvent(new MouseEvent('click'))
+    expect(current.legend.entries.get()[0].visibility).toBe('mixed')
+    expect(current.legend.entries.get()[0].children[0].children[0].id).toBe(leaf.id)
+    handle.update({ showGroups: true })
+    await expect.poll(labels).toEqual(['Contributions', 'Observed', 'Upstream', 'Lateral'])
+    expect(layer.querySelector('[data-entry-id="areas"]')?.getAttribute('opacity')).toBe('0.75')
+    expect(layer.querySelector('[data-entry-id="areas"]')?.getAttribute('aria-pressed')).toBe(
+      'mixed',
+    )
+    handle.update({ showGroups: false })
+    await expect.poll(labels).toEqual(['Upstream', 'Lateral'])
+    expect(layer.querySelector('[data-entry-id]')?.getAttribute('opacity')).toBe('0.5')
+  })
+
+  test('sizes an initially docked legend within explicit dimensions and restores its host on destroy', async () => {
+    const node = host()
+    const current = createPlot(node, {
+      width: 600,
+      height: 400,
+      marks: [
+        series(createSeries({ x: [0, 1], y: [2, 3] }), {
+          id: 'flow',
+          x: 'x',
+          y: 'y',
+        }),
+      ],
+      scales: { x: linearScale(), y: linearScale() },
+      directions: { x: 'x' },
+      plugins: [legend({ position: 'left' })],
+    })
+    plots.push(current)
+    const layout = node.querySelector<HTMLElement>('[data-legend-layout]')!
+    await expect.poll(() => current.size.get().height).toBe(400)
+    await expect
+      .poll(() => {
+        const legend = layout.querySelector('.fews-chart-legend-svg')!.getBoundingClientRect()
+        return Math.abs(current.size.get().width + legend.width + 8 - 600)
+      })
+      .toBeLessThan(0.1)
+    current.update({ width: 700, height: 450 })
+    await expect.poll(() => current.size.get().height).toBe(450)
+    await expect
+      .poll(() => {
+        const legend = layout.querySelector('.fews-chart-legend-svg')!.getBoundingClientRect()
+        return Math.abs(current.size.get().width + legend.width + 8 - 700)
+      })
+      .toBeLessThan(0.1)
+    current.destroy()
+    expect(node.children).toHaveLength(0)
+  })
+
+  test('separates root groups into sections in docked and overlay layouts', async () => {
+    const handle = legend()
+    const short = series(createSeries({ x: [0, 1], y: [1, 2] }), { id: 'short', x: 'x', y: 'y' })
+    const areas = stackedArea(createTable({ x: [0, 1], a: [2, 3], b: [3, 4] }), {
+      id: 'areas',
+      label: 'Contributions',
+      x: 'x',
+      scales: { x: 'x', y: 'y' },
+      layers: [
+        { id: 'a', y: 'a', label: 'Upstream', stack: 'Observed' },
+        { id: 'b', y: 'b', label: 'Lateral', stack: 'Observed' },
+        { id: 'c', y: 'a', label: 'Upstream', stack: 'Forecast' },
+        { id: 'd', y: 'b', label: 'Lateral', stack: 'Forecast' },
+      ],
+    })
+    const current = plot({
+      width: 900,
+      scales: { x: linearScale(), y: linearScale() },
+      directions: { x: 'x' },
+      marks: [areas, short],
+      plugins: [handle],
+    })
+    const layer = current.element
+      .closest('[data-legend-layout]')!
+      .querySelector<SVGGElement>('[data-layer="legend"]')!
+    const offset = (id: string) => {
+      const matrix = layer
+        .querySelector<SVGGElement>(`[data-entry-id="${id}"]`)!
+        .transform.baseVal.consolidate()!.matrix
+      return { x: matrix.e, y: matrix.f }
+    }
+    const heading = current.legend.entries.get()[0]
+    const [observed, forecast] = heading.children
+    expect(
+      layer.querySelector(`[data-entry-id="${heading.id}"] text`)?.getAttribute('font-weight'),
+    ).toBe('600')
+    expect(offset(observed.id).y).toBeCloseTo(offset(heading.id).y, 4)
+    expect(offset(observed.id).x).toBeGreaterThan(offset(heading.id).x)
+    expect(offset(forecast.id).x).toBeCloseTo(offset(observed.id).x, 4)
+    expect(offset(forecast.id).y).toBeGreaterThan(offset(observed.id).y)
+    for (const group of [observed, forecast]) {
+      for (const child of group.children) {
+        expect(offset(child.id).y).toBeCloseTo(offset(group.id).y, 4)
+        expect(offset(child.id).x).toBeGreaterThan(offset(group.id).x)
+      }
+    }
+    expect(offset('short').x).toBeCloseTo(offset(heading.id).x, 4)
+    expect(offset('short').y).toBeGreaterThan(offset(forecast.id).y)
+    expect(layer.querySelectorAll('.fews-chart-legend__divider')).toHaveLength(1)
+    for (const position of ['left', 'right', 'top-left', 'bottom-right'] as const) {
+      handle.update({ position })
+      await expect.poll(() => layer.dataset.position).toBe(position)
+      const dividers = layer.querySelectorAll<SVGLineElement>('.fews-chart-legend__divider')
+      expect(dividers).toHaveLength(1)
+      const dividerY = dividers[0].y1.baseVal.value
+      expect(dividerY).toBeGreaterThan(offset(forecast.children[forecast.children.length - 1].id).y)
+      expect(dividerY).toBeLessThan(offset('short').y)
+      expect(
+        offset('short').y - offset(forecast.children[forecast.children.length - 1].id).y,
+      ).toBeCloseTo(33, 4)
+    }
+    handle.update({ showGroups: false })
+    await expect.poll(() => layer.querySelectorAll('[data-entry-id]').length).toBe(5)
+    expect(layer.querySelectorAll('.fews-chart-legend__divider')).toHaveLength(0)
+  })
+
+  test('gives every entry equal bounds across positions, grouping and label updates', async () => {
+    const short = series(createSeries({ x: [0, 1], y: [1, 2] }), {
+      id: 'short',
+      label: 'A',
+      x: 'x',
+      y: 'y',
+    })
+    const areas = stackedArea(createTable({ x: [0, 1], a: [2, 3], b: [3, 4] }), {
+      id: 'areas',
+      label: 'Longer parent heading',
+      x: 'x',
+      scales: { x: 'x', y: 'y' },
+      layers: [
+        { id: 'a', y: 'a', label: 'Upstream', stack: 'Observed' },
+        { id: 'b', y: 'b', label: 'Lateral contributions', stack: 'Observed' },
+      ],
+    })
+    const handle = legend()
+    const current = plot({
+      scales: { x: linearScale(), y: linearScale() },
+      directions: { x: 'x' },
+      marks: [short, areas],
+      plugins: [handle],
+    })
+    const layer = current.element
+      .closest('[data-legend-layout]')!
+      .querySelector<SVGGElement>('[data-layer="legend"]')!
+    function expectEqualBounds() {
+      const entries = [...layer.querySelectorAll<SVGGElement>('[data-entry-id]')]
+      expect(entries.length).toBeGreaterThan(1)
+      const bounds = entries.map((entry) => entry.getBBox())
+      const hitAreas = entries.map((entry) => entry.querySelector('rect')!)
+      for (const [index, area] of hitAreas.entries()) {
+        expect(area.width.baseVal.value).toBe(hitAreas[0].width.baseVal.value)
+        expect(area.height.baseVal.value).toBe(26)
+        expect(bounds[index].width).toBeCloseTo(bounds[0].width, 4)
+        expect(bounds[index].height).toBeCloseTo(bounds[0].height, 4)
+      }
+    }
+    for (const position of [
+      'top',
+      'bottom',
+      'left',
+      'right',
+      'top-left',
+      'top-right',
+      'bottom-left',
+      'bottom-right',
+    ] as const) {
+      handle.update({ position })
+      await expect.poll(() => layer.dataset.position).toBe(position)
+      await frame()
+      expectEqualBounds()
+    }
+    handle.update({ showGroups: false })
+    await expect.poll(() => layer.querySelectorAll('[data-entry-id]').length).toBe(3)
+    expectEqualBounds()
+    short.update({ label: 'A much longer series label that changes the common entry width' })
+    await expect.poll(() => layer.textContent).toContain('A much longer series label')
+    expectEqualBounds()
   })
 
   test('keeps single-column bar commands in single-column mode', () => {
