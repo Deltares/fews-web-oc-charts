@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>v5: cross-section select</title>
+  </head>
+  <body>
+    <nav aria-label="Examples">
+      <a href="/">All examples</a>
+      <a href="../v5-crosshair/">Crosshair</a>
+    </nav>
+    <h1>v5: cross-section select</h1>
+    <p>
+      Inspect values across multiple series at one x value. Enable dragging to move the guide and
+      report the selected value when released.
+    </p>
+    <fieldset class="controls">
+      <legend>Cross-section</legend>
+      <label><input id="draggable" type="checkbox" checked /> Allow dragging</label>
+      <label for="traces">
+        Series
+        <select id="traces">
+          <option value="all">All</option>
+          <option value="observed">Observed only</option>
+          <option value="forecast">Forecast only</option>
+        </select>
+      </label>
+    </fieldset>
+    <figure>
+      <div id="chart" class="plot-host"></div>
+      <figcaption id="status" class="status" role="status"></figcaption>
+    </figure>
+    <h2>Public API</h2>
+    <pre><code>const selection = crossSectionSelect(initialTime, onChange, {
+  x: 'time',
+  marks: 'all',
+  draggable: true,
+})
+createPlot(host, { scales, axes, marks, plugins: [selection] })
+selection.setValue(nextTime)
+selection.currentData.get()</code></pre>
+    <script type="module" src="./v5-cross-section-select.ts"></script>
+  </body>
+</html>

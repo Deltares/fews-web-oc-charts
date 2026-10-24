@@ -67,6 +67,7 @@ function installPan(handle: PanHandle, context: PlotContext) {
       active ||
       event.defaultPrevented ||
       brushOwnsGesture ||
+      (event.target instanceof Element && !!event.target.closest('[data-cross-section-handle]')) ||
       !event.isPrimary ||
       event.button !== 0 ||
       !matchesModifierKey(event, handle.options.get().resolved.modifier)

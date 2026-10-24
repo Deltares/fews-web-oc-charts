@@ -339,6 +339,7 @@ function installBrush(handle: BrushHandle, context: PlotContext) {
     if (
       active ||
       event.defaultPrevented ||
+      (event.target instanceof Element && !!event.target.closest('[data-cross-section-handle]')) ||
       !event.isPrimary ||
       event.button !== 0 ||
       !matchesModifierKey(event, config.modifier)
