@@ -21,6 +21,7 @@ import {
   type MarkRenderer,
 } from '../mark-definition.js'
 import { compositeLegend } from '../composite-legend.js'
+import { compositeHits } from '../../interaction/composite-hit-testing.js'
 
 export function createBarRenderer(kind = 'bar'): MarkRenderer<BarMark> {
   const group = svgElement('g', { 'data-mark': kind })
@@ -69,6 +70,7 @@ export function createBarRenderer(kind = 'bar'): MarkRenderer<BarMark> {
 export const barDefinition: MarkDefinition<BarMark> = {
   name: 'bar',
   is: isBarMark,
+  hits: (mark, { scales, point, axis, plot }) => compositeHits(mark, scales, point, axis, plot),
   legend: (mark, tokens) =>
     compositeLegend(
       'bar',

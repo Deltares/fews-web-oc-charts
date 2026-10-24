@@ -19,6 +19,7 @@ import {
   type MarkRenderer,
 } from '../mark-definition.js'
 import { compositeLegend } from '../composite-legend.js'
+import { compositeHits } from '../../interaction/composite-hit-testing.js'
 
 function createStackedAreaRenderer(): MarkRenderer<StackedAreaMark> {
   const group = svgElement('g', { 'data-mark': 'stacked-area' })
@@ -69,6 +70,8 @@ function validateDirections(
 export const stackedAreaDefinition: MarkDefinition<StackedAreaMark> = {
   name: 'stackedArea',
   is: isStackedAreaMark,
+  hits: (mark, { scales, point, axis, plot, pathContext }) =>
+    compositeHits(mark, scales, point, axis, plot, pathContext()),
   legend: (mark, tokens) =>
     compositeLegend(
       'area',

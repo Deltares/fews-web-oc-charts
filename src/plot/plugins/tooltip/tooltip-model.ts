@@ -2,8 +2,7 @@ import type { PlotContext } from '../plugin-definition.js'
 import type { TooltipMark, TooltipOptions, TooltipPlacementPosition } from './tooltip.js'
 import { isLineMark } from '../../marks/line/line.js'
 import { isSeriesMark } from '../../marks/line/series.js'
-import { nearestPoint, type PointHit } from '../../interaction/point-hit-testing.js'
-import { compositeHits, type CompositeHit } from '../../interaction/composite-hit-testing.js'
+import type { CompositeHit } from '../../interaction/composite-hit-testing.js'
 import { isBarMark } from '../../marks/bar/bar.js'
 import { isStackedAreaMark } from '../../marks/stacked-area/stacked-area.js'
 import {
@@ -12,11 +11,13 @@ import {
 } from '../../interaction/inspection.js'
 import type { Region } from '../../../layout/layout.js'
 import type { PlotPointer } from '../../interaction/pointer-hub.js'
-import { histogramBar, isHistogramMark } from '../../marks/histogram/histogram.js'
+import { isHistogramMark } from '../../marks/histogram/histogram.js'
 import { isHeatmapMark } from '../../marks/heatmap/heatmap.js'
-import { heatmapHit, type HeatmapHit } from '../../interaction/heatmap-hit-testing.js'
+import type { HeatmapHit } from '../../interaction/heatmap-hit-testing.js'
+import { markDefinition } from '../../marks/marks.js'
+import type { MarkHit } from '../../marks/mark-definition.js'
 
-type TooltipHit = PointHit | CompositeHit | HeatmapHit
+type TooltipHit = MarkHit
 type TooltipContext = Pick<PlotContext, 'scales' | 'inspectCrosshair'>
 
 function isHeatmapHit(hit: TooltipHit): hit is HeatmapHit {
@@ -223,38 +224,17 @@ export function computeTooltipModel(
           if (axis === 'xy' && inspection?.options.snap && mark !== inspection.options.snap.mark) {
             return []
           }
-          if (isBarMark(mark) || isStackedAreaMark(mark) || isHistogramMark(mark)) {
-            if (inspection?.options.snap?.mark === mark) {
-              return inspection.hits.flatMap((hit) =>
-                'layerId' in hit ? [{ mark, hit, index }] : [],
-              )
-            }
-            return compositeHits(
-              isHistogramMark(mark) ? histogramBar(mark) : mark,
-              context.scales,
-              point,
-              axis,
-              region,
-              isStackedAreaMark(mark) ? pathContext() : undefined,
-            ).map((hit) => ({ mark, hit, index }))
-          }
-          if (isHeatmapMark(mark)) {
-            const hit =
-              inspection?.options.snap?.mark === mark &&
-              inspection.hit &&
-              isHeatmapHit(inspection.hit)
-                ? inspection.hit
-                : heatmapHit(mark, context.scales, point, axis, region)
-            return hit ? [{ mark, hit, index }] : []
-          }
-          if (isLineMark(mark) || isSeriesMark(mark)) {
-            const hit =
-              inspection?.options.snap?.mark === mark
-                ? inspection.hit
-                : nearestPoint(mark, context.scales, point, axis, region)
-            return hit ? [{ mark, hit, index }] : []
-          }
-          return []
+          const markHits =
+            inspection?.options.snap?.mark === mark
+              ? inspection.hits
+              : (markDefinition(mark).hits?.(mark, {
+                  scales: context.scales,
+                  point,
+                  axis,
+                  plot: region,
+                  pathContext,
+                }) ?? [])
+          return markHits.map((hit) => ({ mark, hit, index }))
         })
       : []
   const selected =

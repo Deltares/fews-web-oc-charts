@@ -13,6 +13,7 @@ import { computeTooltipModel } from '../../src/plot/plugins/tooltip/tooltip-mode
 import type { PlotContext } from '../../src/plot/plugins/plugin-definition.js'
 import { bindScale } from '../../src/scales/scale.js'
 import { barRectangles } from '../../src/plot/marks/bar/bar-geometry.js'
+import { lineDefinition } from '../../src/plot/marks/line/line-mark.js'
 
 function setup() {
   const first = line({
@@ -60,6 +61,28 @@ afterEach(() => {
 })
 
 describe('tooltip model', () => {
+  test('queries each selected mark through its registered hit function', () => {
+    const { first, second, context, pathContext, handle, model } = setup()
+    const hits = vi.spyOn(lineDefinition, 'hits')
+
+    expect(model().entries).toHaveLength(2)
+    expect(hits).toHaveBeenCalledTimes(2)
+    expect(hits).toHaveBeenNthCalledWith(1, first, {
+      scales: context.scales,
+      point: { x: 50, y: 50 },
+      axis: 'x',
+      plot: { x: 0, y: 0, width: 100, height: 100 },
+      pathContext,
+    })
+    expect(hits.mock.calls[1][0]).toBe(second)
+
+    hits.mockClear()
+    handle.update({ marks: [second] })
+    expect(model().entries).toHaveLength(1)
+    expect(hits).toHaveBeenCalledTimes(1)
+    expect(hits.mock.calls[0][0]).toBe(second)
+  })
+
   test('computes text, accessibility and symbols without constructing DOM', () => {
     const { model, pathContext } = setup()
     const result = model()
@@ -96,6 +119,7 @@ describe('tooltip model', () => {
 
   test('reuses linked snap hits and suppresses only identically formatted visible coordinates', () => {
     const { first, context, handle, model } = setup()
+    const hits = vi.spyOn(lineDefinition, 'hits')
     const guide = crosshair({ mode: 'xy', snap: { mark: first, axis: 'xy' } })
     const hit = { index: 0, x: 5, y: 20.12345, px: 50, py: 49.691375, distance: 0 }
     const inspection = {
@@ -134,6 +158,7 @@ describe('tooltip model', () => {
     expect(model().entries[0].details).toBe(' · 20.123')
     context.inspectCrosshair.mockReturnValue({ ...inspection, visible: false })
     expect(model().entries).toEqual([])
+    expect(hits).not.toHaveBeenCalled()
   })
 
   test.each(['vertical', 'horizontal'] as const)(

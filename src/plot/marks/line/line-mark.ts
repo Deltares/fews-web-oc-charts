@@ -19,6 +19,8 @@ import {
 } from '../mark-definition.js'
 import { resolveLineStyles } from '../mark-styles.js'
 import type { SymbolPrimitiveSpec } from '../../plugins/legend/legend.js'
+import { nearestPoint } from '../../interaction/point-hit-testing.js'
+import type { MarkHitContext } from '../mark-definition.js'
 
 type LineLikeMark = LineMark | SeriesMark
 let nextSymbolId = 0
@@ -313,9 +315,15 @@ function createLineRenderer(): MarkRenderer<LineLikeMark> {
   }
 }
 
+function pointMarkHits(mark: LineLikeMark, { scales, point, axis, plot }: MarkHitContext) {
+  const hit = nearestPoint(mark, scales, point, axis, plot)
+  return hit ? [hit] : []
+}
+
 export const lineDefinition: MarkDefinition<LineMark> = {
   name: 'line',
   is: isLineMark,
+  hits: pointMarkHits,
   validate: (mark, context) => validateLineLike(mark, context, false),
   extents: lineExtents,
   createRenderer: createLineRenderer,
@@ -324,6 +332,7 @@ export const lineDefinition: MarkDefinition<LineMark> = {
 export const seriesDefinition: MarkDefinition<SeriesMark> = {
   name: 'series',
   is: isSeriesMark,
+  hits: pointMarkHits,
   legend(mark, tokens) {
     const options = mark.options.get().resolved
     const styles = resolveLineStyles(mark, tokens)

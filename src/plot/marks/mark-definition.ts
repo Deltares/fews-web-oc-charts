@@ -7,6 +7,19 @@ import {
 } from '../../scales/scale.js'
 import type { ThemeTokens } from '../../theme/theme.js'
 import type { SymbolSpec } from '../plugins/legend/legend.js'
+import type { PointHit } from '../interaction/point-hit-testing.js'
+import type { CompositeHit } from '../interaction/composite-hit-testing.js'
+import type { HeatmapHit } from '../interaction/heatmap-hit-testing.js'
+
+export type MarkHit = PointHit | CompositeHit | HeatmapHit
+
+export interface MarkHitContext {
+  readonly scales: Readonly<Record<string, ScaleBinding>>
+  readonly point: { readonly x: number; readonly y: number }
+  readonly axis: 'x' | 'y' | 'xy'
+  readonly plot: Readonly<Region>
+  pathContext(): CanvasRenderingContext2D | undefined
+}
 
 export interface MarkLegendLayer {
   readonly id: string
@@ -72,6 +85,8 @@ export interface MarkDefinition<M extends object> {
   validate(mark: M, context: MarkValidationContext): void
   extents(mark: M, context: MarkExtentContext): void
   createRenderer(): MarkRenderer<M>
+  /** Returns datum hits; omitted for marks without an inspection contract. */
+  hits?(mark: M, context: MarkHitContext): readonly MarkHit[]
   /** Supplies symbols and visibility operations without reading data or rendered nodes. */
   legend?(mark: M, tokens: ThemeTokens): MarkLegend
   /** Reads reactive state for this handle; subscriptions are replaced even when its renderer is reused. */

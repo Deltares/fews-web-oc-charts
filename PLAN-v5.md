@@ -2094,6 +2094,14 @@ lifecycle. Brush bounds and scale-selection conversions live in
 publication and SVG rendering explicit. The model and bounds helpers are tested
 independently of DOM rendering.
 
+Inspectable mark definitions provide `hits(mark, context)` in their own mark
+directories, using the shared `MarkHitContext` and `MarkHit` contract. Crosshair
+snapping queries only its explicit target through the mark registry. Tooltips query
+each eligible plot mark (or their explicit `marks` list) through the same contract,
+reusing linked crosshair hits rather than repeating hit testing. Marks without
+datum inspection omit `hits`; filled-path context creation remains lazy and owned
+by the interaction consumer.
+
 Mark membership reconciliation, per-mark tracking and update validation, renderer
 mounting, geometry and style passes are owned by `src/plot/marks/mark-layer.ts`. The plot
 coordinator supplies current options, scales and regions, then delegates dirty mark
