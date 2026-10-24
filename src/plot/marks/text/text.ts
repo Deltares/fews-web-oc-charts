@@ -1,6 +1,7 @@
 import type { ScaleKind, ScaleValue } from '../../../scales/scale.js'
 import { validateKeys } from '../../../core/validation.js'
 import type { LineValue, LineValues } from '../line/line.js'
+import { validateCoordinateValues } from '../mark-values.js'
 
 export type TextValue = string | number | null | undefined
 export type TextValues = ArrayLike<TextValue>
@@ -56,24 +57,6 @@ const textMarks = new WeakSet<object>()
 
 export function isTextMark(value: object): value is TextMark {
   return textMarks.has(value)
-}
-
-function validateCoordinates(values: LineValues, name: string) {
-  if (!values || !Number.isSafeInteger(values.length) || values.length < 0) {
-    throw new Error(`text.${name} must be an array-like value.`)
-  }
-  for (let index = 0; index < values.length; index += 1) {
-    const value = values[index]
-    if (
-      value !== null &&
-      value !== undefined &&
-      !(typeof value === 'number' && !Number.isFinite(value)) &&
-      typeof value !== 'number' &&
-      typeof value !== 'string'
-    ) {
-      throw new Error(`text.${name}[${index}] must be a finite number, string, or gap.`)
-    }
-  }
 }
 
 function validateValues(values: TextValues) {
@@ -147,8 +130,8 @@ export function text(options: TextOptions): TextMark {
       throw new Error(`text.${coordinate} must name a plot scale.`)
     }
   }
-  validateCoordinates(options.xValues, 'xValues')
-  validateCoordinates(options.yValues, 'yValues')
+  validateCoordinateValues(options.xValues, 'text', 'xValues')
+  validateCoordinateValues(options.yValues, 'text', 'yValues')
   validateValues(options.textValues)
   if (
     options.xValues.length !== options.yValues.length ||
