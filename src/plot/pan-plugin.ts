@@ -101,6 +101,7 @@ function installPan(handle: PanHandle, context: PlotContext) {
 
   context.on('pointerup', finish)
   context.on('pointercancel', finish)
+  context.on('lostpointercapture', finish)
   return {
     destroy() {
       finish()
