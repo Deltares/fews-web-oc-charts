@@ -97,6 +97,11 @@ describe('cross-section select plugin', () => {
     )
     expect(labelTops[0]).toBeLessThan(labelTops[1])
     expect(plot.element.querySelectorAll('[data-cross-section-stem]')).toHaveLength(2)
+    const layer = plot.element.querySelector('[data-layer="cross-section-select"]')!
+    const order = [...layer.children].map((child) => [...child.attributes].map((a) => a.name))
+    expect(order.findIndex((names) => names.includes('data-cross-section-points'))).toBeGreaterThan(
+      order.findIndex((names) => names.includes('data-cross-section-labels')),
+    )
 
     interaction.update({ marks: [interaction.currentData.get()[0].mark] })
     await frame()
@@ -153,6 +158,33 @@ describe('cross-section select plugin', () => {
     interaction.update({ draggable: false })
     await frame()
     expect(hitLine.getAttribute('pointer-events')).toBe('none')
+  })
+
+  test('keeps labels of many lines clear of each other and of highlighted points', async () => {
+    const marks = Array.from({ length: 6 }, (_, k) =>
+      line({
+        id: `line-${k}`,
+        x: 't',
+        y: 'q',
+        xValues: [0, 5, 10],
+        yValues: [10, 20 + k * 0.8, 10],
+      }),
+    )
+    const interaction = crossSectionSelect(5, undefined, { x: 't' })
+    const { plot } = await setup(interaction, { marks })
+    const labels = [...plot.element.querySelectorAll('[data-cross-section-entry] rect')].map(
+      (node) => node.getBoundingClientRect(),
+    )
+    const points = [...plot.element.querySelectorAll('[data-cross-section-point]')].map((node) =>
+      node.getBoundingClientRect(),
+    )
+    expect(labels).toHaveLength(6)
+    const overlaps = (a: DOMRect, b: DOMRect) =>
+      a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom
+    for (const [index, label] of labels.entries()) {
+      for (const other of labels.slice(index + 1)) expect(overlaps(label, other)).toBe(false)
+      for (const point of points) expect(overlaps(label, point)).toBe(false)
+    }
   })
 
   test('does not let selector dragging start pan or brush gestures', async () => {

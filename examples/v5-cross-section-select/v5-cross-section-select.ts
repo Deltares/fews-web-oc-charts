@@ -14,13 +14,14 @@ const status = required<HTMLElement>('#status')
 const start = Date.UTC(2026, 0, 1)
 const hour = 3_600_000
 const times = Float64Array.from({ length: 49 }, (_, index) => start + index * hour)
+const observedTimes = times.filter((time) => time <= Date.UTC(2026, 0, 2))
 const observed = line({
   id: 'observed',
   x: 'time',
   y: 'level',
-  xValues: times,
+  xValues: observedTimes,
   yValues: Float64Array.from(
-    { length: times.length },
+    { length: observedTimes.length },
     (_, index) => 45 + 18 * Math.sin(index / 3) + 12 * Math.cos(index / 7),
   ),
   digits: 2,
