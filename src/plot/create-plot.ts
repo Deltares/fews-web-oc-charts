@@ -137,11 +137,7 @@ function dependenciesChanged(previous: DependencyGroups | undefined, current: De
   return currentKeys.some((key) => {
     const before = previous[key]
     const after = current[key]
-    return (
-      !before ||
-      before.length !== after.length ||
-      after.some((value, index) => value !== before[index])
-    )
+    return before?.length !== after.length || after.some((value, index) => value !== before[index])
   })
 }
 
@@ -409,6 +405,7 @@ function createPlotInternal(
       const classic = current.axes.some((axis) => axis.options.get().resolved.style === 'classic')
       const sign = angularOptions.direction === 'anticlockwise' ? -1 : 1
       const intercept = angularOptions.intercept ?? 0
+      const classicOffset = sign === -1 ? Math.PI : 0
       const [start, end] = angular.range.get()
       polarBackground.setAttribute(
         'transform',
@@ -419,12 +416,8 @@ function createPlotInternal(
         arc<null>()
           .innerRadius(radial.range.get()[0])
           .outerRadius(radial.range.get()[1])
-          .startAngle(
-            classic ? intercept + start + (sign === -1 ? Math.PI : 0) : intercept + sign * start,
-          )
-          .endAngle(
-            classic ? intercept + end + (sign === -1 ? Math.PI : 0) : intercept + sign * end,
-          )(null) ?? '',
+          .startAngle(classic ? intercept + start + classicOffset : intercept + sign * start)
+          .endAngle(classic ? intercept + end + classicOffset : intercept + sign * end)(null) ?? '',
       )
     }
     const localMarks = current.axisLayout === 'inset' && coordinateSystem === 'cartesian'
