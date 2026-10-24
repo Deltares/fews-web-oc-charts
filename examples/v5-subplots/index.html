@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>v5: stacked subplots with a shared time axis</title>
+  </head>
+  <body>
+    <nav aria-label="Examples">
+      <a href="/">All examples</a>
+      <a href="../v5-shared-scales/">Shared domains, local ranges</a>
+    </nav>
+    <h1>v5: stacked subplots</h1>
+    <p>
+      Two vertically stacked subplots share one UTC time scale. Discharge is shown above rainfall,
+      each with its own y-axis and domain. Rainfall bars extend down from zero on a reversed y-axis.
+      Both plots resize to the available page width.
+    </p>
+    <figure aria-labelledby="subplots-caption">
+      <section aria-labelledby="discharge-heading">
+        <h2 id="discharge-heading">Subplot 1: discharge</h2>
+        <div id="discharge" class="plot-host"></div>
+      </section>
+      <section aria-labelledby="rainfall-heading">
+        <h2 id="rainfall-heading">Subplot 2: rainfall</h2>
+        <div id="rainfall" class="plot-host"></div>
+      </section>
+      <figcaption id="subplots-caption">
+        Hourly example observations on 1 January 2026. Each rainfall bar covers one hour. The time
+        axis below subplot 2 applies to both panels; matching horizontal margins keep timestamps
+        aligned.
+      </figcaption>
+    </figure>
+    <h2>Shared x-scale, independent y-scales</h2>
+    <pre><code>const t = timeScale({ domain: [start, end], timeZone: 'UTC' })
+const q = linearScale({ domain: [0, 80] })
+const rain = linearScale({ domain: [0, 10], reverse: true })
+
+// Pass the same time-scale handle to both plots.
+createPlot(topHost, { scales: { t, q }, ... })
+createPlot(bottomHost, { scales: { t, rain }, ... })
+
+// Updating t.domain updates both plots. Each y-domain is independent.
+// Host sizes are observed automatically; no fixed plot width is needed.</code></pre>
+    <script type="module" src="./v5-subplots.ts"></script>
+  </body>
+</html>

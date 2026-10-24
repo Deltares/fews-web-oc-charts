@@ -1,0 +1,13 @@
+body {
+  max-width: none;
+}
+
+.plot-host {
+  width: 100%;
+  height: 280px;
+}
+
+figure h2 {
+  margin: 12px 0 0;
+  font-size: 1rem;
+}
