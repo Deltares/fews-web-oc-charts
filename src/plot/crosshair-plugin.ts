@@ -5,10 +5,11 @@ import {
   validateCrosshairUpdates,
   type CrosshairHandle,
   type CrosshairSnapOptions,
+  type CrosshairOptions,
 } from './crosshair.js'
 import type { ScaleHandle } from '../scales/scale.js'
 import type { Orientation } from './mark-definition.js'
-import { nearestPoint } from './point-hit-testing.js'
+import { displayInspectionValue } from './inspection.js'
 import { svgElement } from './svg.js'
 
 function validateSnapTarget(
@@ -26,6 +27,21 @@ function validateSnapTarget(
   }
   if (direction(snap.mark.x) !== 'x' || direction(snap.mark.y) !== 'y') {
     throw new Error('crosshair.snap.mark requires Cartesian x and y scales.')
+  }
+}
+
+function validateLabels(
+  options: Readonly<CrosshairOptions>,
+  context: {
+    readonly scales: Readonly<Record<string, unknown>>
+    direction(name: string): Orientation
+  },
+) {
+  for (const axis of ['x', 'y'] as const) {
+    const name = options.labels?.[axis]
+    if (name && (!Object.hasOwn(context.scales, name) || context.direction(name) !== axis)) {
+      throw new Error(`crosshair.labels.${axis} requires a ${axis}-direction scale.`)
+    }
   }
 }
 
@@ -51,35 +67,26 @@ function installCrosshair(handle: CrosshairHandle, context: PlotContext) {
     'vector-effect': 'non-scaling-stroke',
   })
   layer.append(vertical, horizontal)
+  const callouts = svgElement('g', { 'data-crosshair-labels': '' })
+  layer.append(callouts)
   context.element.append(layer)
 
-  const validateSnap = (snap: CrosshairSnapOptions | undefined) => {
+  const validateOptions = (options: Readonly<CrosshairOptions>) => {
     const current = context.options.get().resolved
-    validateSnapTarget(snap, current.marks, current.scales, context.direction)
+    validateSnapTarget(options.snap, current.marks, current.scales, context.direction)
+    validateLabels(options, context)
   }
-  const stopValidation = validateCrosshairUpdates(handle, validateSnap)
-  validateSnap(handle.options.get().resolved.snap)
+  const stopValidation = validateCrosshairUpdates(handle, validateOptions)
+  validateOptions(handle.options.get().resolved)
 
   context.scope.run(() =>
     reactive.effect(() => {
-      const mode = handle.options.get().resolved.mode
-      const snap = handle.options.get().resolved.snap
-      context.options.get()
-      const pointer = context.pointer.get()
+      const inspection = context.inspectCrosshair(handle)
+      const { mode } = inspection.options
       const region = context.regions.get().plot
-      const visible = pointer.inside
-      const hit =
-        visible && snap
-          ? nearestPoint(
-              snap.mark,
-              context.scales,
-              { x: pointer.px + region.x, y: pointer.py + region.y },
-              snap.axis,
-              region,
-            )
-          : undefined
-      const x = hit ? hit.px - region.x : pointer.px
-      const y = hit ? hit.py - region.y : pointer.py
+      const visible = inspection.visible
+      const x = inspection.point.x - region.x
+      const y = inspection.point.y - region.y
       layer.setAttribute('transform', `translate(${region.x} ${region.y})`)
       layer.setAttribute('display', visible ? '' : 'none')
 
@@ -87,19 +94,46 @@ function installCrosshair(handle: CrosshairHandle, context: PlotContext) {
       vertical.setAttribute('x2', String(x))
       vertical.setAttribute('y1', '0')
       vertical.setAttribute('y2', String(region.height))
-      vertical.setAttribute(
-        'display',
-        visible && (!snap || hit) && mode.includes('x') ? '' : 'none',
-      )
+      vertical.setAttribute('display', visible && mode.includes('x') ? '' : 'none')
 
       horizontal.setAttribute('x1', '0')
       horizontal.setAttribute('x2', String(region.width))
       horizontal.setAttribute('y1', String(y))
       horizontal.setAttribute('y2', String(y))
-      horizontal.setAttribute(
-        'display',
-        visible && (!snap || hit) && mode.includes('y') ? '' : 'none',
-      )
+      horizontal.setAttribute('display', visible && mode.includes('y') ? '' : 'none')
+      callouts.replaceChildren()
+      for (const coordinate of inspection.coordinates) {
+        const group = svgElement('g', { 'data-crosshair-label': coordinate.axis })
+        const background = svgElement('rect', {
+          height: 22,
+          rx: 3,
+          fill: 'var(--fews-chart-tooltip-background, #fff)',
+          stroke: 'currentColor',
+          'stroke-opacity': 0.4,
+        })
+        const text = svgElement('text', {
+          x: 6,
+          y: 15,
+          fill: 'var(--fews-chart-tooltip-color, #222)',
+          'font-size': 12,
+        })
+        text.textContent = displayInspectionValue(
+          coordinate.value,
+          context,
+          coordinate.scale,
+          coordinate.digits,
+        )
+        group.append(background, text)
+        callouts.append(group)
+        const width = text.getComputedTextLength() + 12
+        background.setAttribute('width', String(width))
+        const size = context.size.get()
+        const left = coordinate.axis === 'x' ? x - width / 2 : -width
+        const top = coordinate.axis === 'x' ? region.height : y - 11
+        const clampedX = Math.max(-region.x, Math.min(size.width - region.x - width, left))
+        const clampedY = Math.max(-region.y, Math.min(size.height - region.y - 22, top))
+        group.setAttribute('transform', `translate(${clampedX} ${clampedY})`)
+      }
     }),
   )
 
@@ -123,6 +157,7 @@ export const crosshairDefinition: PluginDefinition<CrosshairHandle> = {
     }
     const snap = handle.options.get().resolved.snap
     validateSnapTarget(snap, context.marks, context.scales, context.direction)
+    validateLabels(handle.options.get().resolved, context)
   },
   install: installCrosshair,
 }

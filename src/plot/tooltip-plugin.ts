@@ -6,12 +6,14 @@ import {
   type TooltipHandle,
   type TooltipMark,
   type TooltipPlacementPosition,
+  type TooltipOptions,
 } from './tooltip.js'
 import { isLineMark } from './line.js'
 import { isSeriesMark } from './series.js'
 import { nearestPoint } from './point-hit-testing.js'
 import { TooltipPosition } from '../Tooltip/tooltip.js'
 import { calculateTooltipPlacement } from '../Utils/tooltipPlacement.js'
+import { displayInspectionValue as displayValue } from './inspection.js'
 
 let nextTooltipId = 0
 
@@ -19,27 +21,6 @@ function label(mark: TooltipMark, index: number) {
   if (isSeriesMark(mark))
     return mark.options.get().resolved.label || mark.id || `Series ${index + 1}`
   return mark.id || mark.y
-}
-
-function displayValue(
-  value: number | string,
-  context: PlotContext,
-  scaleName: string,
-  digits?: number,
-) {
-  const scale = context.scales[scaleName]?.scale
-  if (scale?.kind === 'time' && typeof value === 'number') {
-    const options = scale.options.get().resolved
-    return new Intl.DateTimeFormat(options.locale, {
-      timeZone: options.timeZone,
-      dateStyle: 'medium',
-      timeStyle: 'short',
-    }).format(new Date(value))
-  }
-  if (typeof value === 'number' && digits !== undefined) {
-    return String(Number(value.toFixed(digits)))
-  }
-  return String(value)
 }
 
 function positionTooltip(
@@ -114,9 +95,10 @@ function installTooltip(handle: TooltipHandle, context: PlotContext) {
   context.element.setAttribute('aria-describedby', [...describedBy].join(' '))
   document.body.append(element)
 
-  const stopValidation = validateTooltipUpdates(handle, (marks) =>
-    validateTargets(marks, context.options.get().resolved.marks, context),
-  )
+  const stopValidation = validateTooltipUpdates(handle, (options) => {
+    validateTargets(options.marks, context.options.get().resolved.marks, context)
+    validateCrosshair(options, context.options.get().resolved.plugins)
+  })
 
   try {
     context.scope.run(() =>
@@ -126,15 +108,30 @@ function installTooltip(handle: TooltipHandle, context: PlotContext) {
         const pointer = context.pointer.get()
         const region = context.regions.get().plot
         const marks = options.marks ?? plotOptions.marks.filter(isEligibleMark)
-        const point = { x: pointer.px + region.x, y: pointer.py + region.y }
-        const hits = pointer.inside
-          ? marks.flatMap((mark, index) => {
-              const hit = nearestPoint(mark, context.scales, point, options.axis, region)
-              return hit ? [{ mark, hit, index }] : []
-            })
-          : []
+        const inspection = options.crosshair
+          ? context.inspectCrosshair(options.crosshair)
+          : undefined
+        const point = inspection?.point ?? { x: pointer.px + region.x, y: pointer.py + region.y }
+        const axis = inspection?.options.snap?.axis ?? options.axis
+        const hits =
+          pointer.inside && (!inspection || inspection.visible)
+            ? marks.flatMap((mark, index) => {
+                if (
+                  axis === 'xy' &&
+                  inspection?.options.snap &&
+                  mark !== inspection.options.snap.mark
+                ) {
+                  return []
+                }
+                const hit =
+                  inspection?.options.snap?.mark === mark
+                    ? inspection.hit
+                    : nearestPoint(mark, context.scales, point, axis, region)
+                return hit ? [{ mark, hit, index }] : []
+              })
+            : []
         const selected =
-          options.axis === 'xy'
+          axis === 'xy'
             ? hits.reduce<typeof hits>(
                 (closest, item) =>
                   !closest.length || item.hit.distance < closest[0].hit.distance ? [item] : closest,
@@ -172,14 +169,34 @@ function installTooltip(handle: TooltipHandle, context: PlotContext) {
           name.style.color = markColor
           name.textContent = label(item.mark, item.index)
           const xScale = context.scales[item.mark.x]
-          const yScale = context.scales[item.mark.y]
           const x = displayValue(item.hit.x, context, item.mark.x)
           const y = displayValue(item.hit.y, context, item.mark.y, item.mark.digits)
           const values = document.createElement('span')
-          values.textContent = ` · ${xScale?.scale.kind === 'time' ? x : `x: ${x}`} · y: ${y}`
+          const redundant = (axis: 'x' | 'y') =>
+            inspection?.coordinates.some(
+              (coordinate) =>
+                coordinate.axis === axis &&
+                coordinate.scale === item.mark[axis] &&
+                coordinate.value === item.hit[axis] &&
+                displayValue(coordinate.value, context, coordinate.scale, coordinate.digits) ===
+                  (axis === 'x' ? x : y),
+            )
+          const details: string[] = []
+          if (!redundant('x')) details.push(xScale?.scale.kind === 'time' ? x : `x: ${x}`)
+          if (!redundant('y')) details.push(inspection ? y : `y: ${y}`)
+          values.textContent = details.length ? ` · ${details.join(' · ')}` : ''
           row.append(symbol, name, values)
           element.append(row)
         }
+        element.setAttribute(
+          'aria-label',
+          selected
+            .map(
+              ({ mark, hit, index }) =>
+                `${label(mark, index)} · ${displayValue(hit.x, context, mark.x)} · y: ${displayValue(hit.y, context, mark.y, mark.digits)}`,
+            )
+            .join('; '),
+        )
         if (!selected.length) {
           element.style.visibility = 'hidden'
           element.setAttribute('aria-hidden', 'true')
@@ -187,13 +204,7 @@ function installTooltip(handle: TooltipHandle, context: PlotContext) {
         }
 
         element.style.visibility = 'hidden'
-        positionTooltip(
-          element,
-          context,
-          pointer.px + region.x,
-          pointer.py + region.y,
-          options.position,
-        )
+        positionTooltip(element, context, point.x, point.y, options.position)
         element.style.visibility = 'visible'
         element.setAttribute('aria-hidden', 'false')
       }),
@@ -224,6 +235,12 @@ function removeTooltipDescription(element: SVGSVGElement, id: string) {
 
 function isEligibleMark(mark: object): mark is TooltipMark {
   return isLineMark(mark) || isSeriesMark(mark)
+}
+
+function validateCrosshair(options: Readonly<TooltipOptions>, plugins: readonly object[]) {
+  if (options.crosshair && !plugins.includes(options.crosshair)) {
+    throw new Error('tooltip.crosshair must be included in plot.plugins.')
+  }
 }
 
 function validateTargets(
@@ -259,6 +276,7 @@ export const tooltipDefinition: PluginDefinition<TooltipHandle> = {
       throw new Error('A plot can install at most one tooltip plugin.')
     }
     validateTargets(handle.options.get().resolved.marks, context.marks, context)
+    validateCrosshair(handle.options.get().resolved, context.plugins)
   },
   install: installTooltip,
 }

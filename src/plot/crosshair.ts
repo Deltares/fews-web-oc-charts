@@ -16,6 +16,8 @@ export interface CrosshairSnapOptions {
 export interface CrosshairOptions {
   mode: CrosshairMode
   snap?: CrosshairSnapOptions
+  /** Named scales whose coordinates are shown next to the corresponding guides. */
+  labels?: { x?: string; y?: string }
 }
 
 export interface CrosshairHandle {
@@ -26,9 +28,9 @@ export interface CrosshairHandle {
 const handles = new WeakSet<object>()
 const validators = new WeakMap<
   CrosshairHandle,
-  Set<(snap: CrosshairSnapOptions | undefined) => void>
+  Set<(options: Readonly<CrosshairOptions>) => void>
 >()
-const optionKeys = ['mode', 'snap']
+const optionKeys = ['mode', 'snap', 'labels']
 
 function validateSnap(snap: CrosshairSnapOptions | undefined) {
   if (snap === undefined) return
@@ -50,7 +52,7 @@ function validateSnap(snap: CrosshairSnapOptions | undefined) {
 
 export function validateCrosshairUpdates(
   handle: CrosshairHandle,
-  validate: (snap: CrosshairSnapOptions | undefined) => void,
+  validate: (options: Readonly<CrosshairOptions>) => void,
 ) {
   const consumers = validators.get(handle)
   if (!consumers) throw new Error('Expected a crosshair handle.')
@@ -64,16 +66,32 @@ export function isCrosshairHandle(value: object): value is CrosshairHandle {
 
 export function crosshair(initial: OptionPatch<CrosshairOptions> = {}): CrosshairHandle {
   validateKeys(initial, optionKeys, 'crosshair')
-  const consumers = new Set<(snap: CrosshairSnapOptions | undefined) => void>()
+  const consumers = new Set<(options: Readonly<CrosshairOptions>) => void>()
   const state = createOptionState<CrosshairOptions>(initial, {
     isAtomicReference: (value) => isLineMark(value) || isSeriesMark(value),
-    defaults: () => ({ mode: 'xy', snap: undefined }),
+    defaults: () => ({ mode: 'xy', snap: undefined, labels: undefined }),
     validate(options) {
       if (!['x', 'y', 'xy'].includes(options.mode)) {
         throw new Error('crosshair.mode must be x, y or xy.')
       }
       validateSnap(options.snap)
-      for (const validate of consumers) validate(options.snap)
+      if (options.labels !== undefined) {
+        if (
+          !options.labels ||
+          typeof options.labels !== 'object' ||
+          Array.isArray(options.labels)
+        ) {
+          throw new TypeError('crosshair.labels must be an options object.')
+        }
+        validateKeys(options.labels, ['x', 'y'], 'crosshair.labels')
+        for (const axis of ['x', 'y'] as const) {
+          const scale = options.labels[axis]
+          if (scale !== undefined && (typeof scale !== 'string' || !scale)) {
+            throw new TypeError(`crosshair.labels.${axis} must name a scale.`)
+          }
+        }
+      }
+      for (const validate of consumers) validate(options)
     },
   })
   const optionState = optionSignal(state)

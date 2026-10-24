@@ -4,8 +4,9 @@ import type { ReadonlySignal } from '../core/reactive.js'
 import { validateKeys } from '../core/validation.js'
 import { isLineMark, type LineMark } from './line.js'
 import { isSeriesMark, type SeriesMark } from './series.js'
+import { isCrosshairHandle, type CrosshairHandle } from './crosshair.js'
 
-export type TooltipAxis = 'x' | 'xy'
+export type TooltipAxis = 'x' | 'y' | 'xy'
 export type TooltipPlacementPosition = 'bottom' | 'left' | 'right' | 'top'
 export type TooltipMark = LineMark | SeriesMark
 
@@ -13,6 +14,8 @@ export interface TooltipOptions {
   axis: TooltipAxis
   marks?: readonly TooltipMark[]
   position: TooltipPlacementPosition
+  /** Follows this installed crosshair and omits coordinates already shown by its callouts. */
+  crosshair?: CrosshairHandle
 }
 
 export interface TooltipHandle {
@@ -21,11 +24,8 @@ export interface TooltipHandle {
 }
 
 const handles = new WeakSet<object>()
-const validators = new WeakMap<
-  TooltipHandle,
-  Set<(marks: readonly TooltipMark[] | undefined) => void>
->()
-const optionKeys = ['axis', 'marks', 'position']
+const validators = new WeakMap<TooltipHandle, Set<(options: Readonly<TooltipOptions>) => void>>()
+const optionKeys = ['axis', 'marks', 'position', 'crosshair']
 
 function validateMarks(marks: readonly TooltipMark[] | undefined) {
   if (marks === undefined) return
@@ -40,7 +40,7 @@ function validateMarks(marks: readonly TooltipMark[] | undefined) {
 
 export function validateTooltipUpdates(
   handle: TooltipHandle,
-  validate: (marks: readonly TooltipMark[] | undefined) => void,
+  validate: (options: Readonly<TooltipOptions>) => void,
 ) {
   const consumers = validators.get(handle)
   if (!consumers) throw new Error('Expected a tooltip handle.')
@@ -54,19 +54,26 @@ export function isTooltipHandle(value: object): value is TooltipHandle {
 
 export function tooltip(initial: OptionPatch<TooltipOptions> = {}): TooltipHandle {
   validateKeys(initial, optionKeys, 'tooltip')
-  const consumers = new Set<(marks: readonly TooltipMark[] | undefined) => void>()
+  const consumers = new Set<(options: Readonly<TooltipOptions>) => void>()
   const state = createOptionState<TooltipOptions>(initial, {
-    isAtomicReference: (value) => isLineMark(value) || isSeriesMark(value),
-    defaults: () => ({ axis: 'x', marks: undefined, position: 'right' }),
+    isAtomicReference: (value) =>
+      isLineMark(value) || isSeriesMark(value) || isCrosshairHandle(value),
+    defaults: () => ({ axis: 'x', marks: undefined, position: 'right', crosshair: undefined }),
     validate(options) {
-      if (options.axis !== 'x' && options.axis !== 'xy') {
-        throw new Error('tooltip.axis must be x or xy.')
+      if (!['x', 'y', 'xy'].includes(options.axis)) {
+        throw new Error('tooltip.axis must be x, y or xy.')
+      }
+      if (
+        options.crosshair !== undefined &&
+        (!options.crosshair || !isCrosshairHandle(options.crosshair))
+      ) {
+        throw new TypeError('tooltip.crosshair must be a crosshair handle.')
       }
       if (!['bottom', 'left', 'right', 'top'].includes(options.position)) {
         throw new Error('tooltip.position must be bottom, left, right or top.')
       }
       validateMarks(options.marks)
-      for (const validate of consumers) validate(options.marks)
+      for (const validate of consumers) validate(options)
     },
   })
   const optionState = optionSignal(state)
