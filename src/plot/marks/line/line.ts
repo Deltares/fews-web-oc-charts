@@ -90,7 +90,7 @@ export function validateLineValuesForScale(
   }
 }
 
-export function line(options: LineOptions): LineMark {
+function validateLineOptionsObject(options: LineOptions): void {
   if (!options || typeof options !== 'object') throw new Error('line options must be an object.')
   validateKeys(
     options,
@@ -113,6 +113,9 @@ export function line(options: LineOptions): LineMark {
     ],
     'line',
   )
+}
+
+function validateLineCoordinates(options: LineOptions): void {
   if (options.id !== undefined && (typeof options.id !== 'string' || options.id.length === 0)) {
     throw new Error('line.id must be a non-empty string.')
   }
@@ -130,6 +133,9 @@ export function line(options: LineOptions): LineMark {
   if (options.line !== undefined && typeof options.line !== 'boolean') {
     throw new TypeError('line.line must be a boolean.')
   }
+}
+
+function validateStrokeOptions(options: LineOptions): number {
   if (options.stroke !== undefined && (typeof options.stroke !== 'string' || !options.stroke)) {
     throw new Error('line.stroke must be a non-empty string.')
   }
@@ -152,6 +158,10 @@ export function line(options: LineOptions): LineMark {
   ) {
     throw new Error('line.strokeLinejoin must be miter, round or bevel.')
   }
+  return strokeWidth
+}
+
+function validateLinePrecision(options: LineOptions): void {
   if (
     options.digits !== undefined &&
     (!Number.isInteger(options.digits) || options.digits < 0 || options.digits > 15)
@@ -164,85 +174,99 @@ export function line(options: LineOptions): LineMark {
   ) {
     throw new Error('line.vectorEffect must be none or non-scaling-stroke.')
   }
-  let markers: LineMark['markers']
-  if (options.markers !== undefined && options.markers !== false) {
-    const markerOptions = options.markers === true ? {} : options.markers
-    if (!markerOptions || typeof markerOptions !== 'object' || Array.isArray(markerOptions)) {
-      throw new Error('line.markers must be a boolean or an options object.')
-    }
-    validateKeys(
-      markerOptions,
-      ['size', 'fill', 'stroke', 'strokeWidth', 'symbolSize', 'skip'],
-      'line.markers',
-    )
-    if (
-      markerOptions.symbolSize !== undefined &&
-      (!Number.isFinite(markerOptions.symbolSize) || markerOptions.symbolSize <= 0)
-    ) {
-      throw new Error('line.markers.symbolSize must be positive.')
-    }
-    const skip = markerOptions.skip ?? 1
-    if (!Number.isSafeInteger(skip) || skip < 1)
-      throw new Error('line.markers.skip must be a positive integer.')
-    const size = markerOptions.size ?? 4
-    const markerStrokeWidth =
-      markerOptions.strokeWidth ?? (markerOptions.symbolSize === undefined ? 0 : 1)
-    for (const [key, value] of [
-      ['size', size],
-      ['strokeWidth', markerStrokeWidth],
-    ] as const) {
-      if (!Number.isFinite(value) || value < 0 || (key === 'size' && value === 0)) {
-        throw new Error(
-          `line.markers.${key} must be a ${key === 'size' ? 'positive' : 'nonnegative'} finite number.`,
-        )
-      }
-    }
-    for (const key of ['fill', 'stroke'] as const) {
-      if (
-        markerOptions[key] !== undefined &&
-        (typeof markerOptions[key] !== 'string' || !markerOptions[key])
-      ) {
-        throw new Error(`line.markers.${key} must be a non-empty string.`)
-      }
-    }
-    markers = Object.freeze({
-      symbolSize: markerOptions.symbolSize,
-      skip,
-      size,
-      fill: markerOptions.fill ?? '',
-      stroke: markerOptions.stroke ?? 'none',
-      strokeWidth: markerStrokeWidth,
-    })
-  }
-  let area: Readonly<Required<LineAreaOptions>> | undefined
-  if (options.area !== undefined) {
-    if (!options.area || typeof options.area !== 'object' || Array.isArray(options.area)) {
-      throw new Error('line.area must be an options object.')
-    }
-    validateKeys(options.area, ['to', 'fill', 'opacity'], 'line.area')
-    if (
-      (typeof options.area.to !== 'number' && typeof options.area.to !== 'string') ||
-      (typeof options.area.to === 'number' && !Number.isFinite(options.area.to))
-    ) {
-      throw new TypeError('line.area.to must be a finite number or string.')
-    }
-    if (
-      options.area.fill !== undefined &&
-      (typeof options.area.fill !== 'string' || !options.area.fill)
-    ) {
-      throw new Error('line.area.fill must be a non-empty string.')
-    }
-    const opacity = options.area.opacity ?? 0.2
-    if (!Number.isFinite(opacity) || opacity < 0 || opacity > 1) {
-      throw new Error('line.area.opacity must be between 0 and 1.')
-    }
-    area = Object.freeze({
-      to: options.area.to,
-      fill: options.area.fill ?? '',
-      opacity,
-    })
-  }
+}
 
+function normalizeLineMarkers(markers: LineOptions['markers']): LineMark['markers'] {
+  if (markers === undefined || markers === false) return undefined
+  const markerOptions = markers === true ? {} : markers
+  if (!markerOptions || typeof markerOptions !== 'object' || Array.isArray(markerOptions)) {
+    throw new Error('line.markers must be a boolean or an options object.')
+  }
+  validateKeys(
+    markerOptions,
+    ['size', 'fill', 'stroke', 'strokeWidth', 'symbolSize', 'skip'],
+    'line.markers',
+  )
+  if (
+    markerOptions.symbolSize !== undefined &&
+    (!Number.isFinite(markerOptions.symbolSize) || markerOptions.symbolSize <= 0)
+  ) {
+    throw new Error('line.markers.symbolSize must be positive.')
+  }
+  const skip = markerOptions.skip ?? 1
+  if (!Number.isSafeInteger(skip) || skip < 1)
+    throw new Error('line.markers.skip must be a positive integer.')
+  const size = markerOptions.size ?? 4
+  const strokeWidth = markerOptions.strokeWidth ?? (markerOptions.symbolSize === undefined ? 0 : 1)
+  validateMarkerDimensions(size, strokeWidth)
+  validateMarkerColors(markerOptions)
+  return Object.freeze({
+    symbolSize: markerOptions.symbolSize,
+    skip,
+    size,
+    fill: markerOptions.fill ?? '',
+    stroke: markerOptions.stroke ?? 'none',
+    strokeWidth,
+  })
+}
+
+function validateMarkerDimensions(size: number, strokeWidth: number): void {
+  for (const [key, value] of [
+    ['size', size],
+    ['strokeWidth', strokeWidth],
+  ] as const) {
+    if (!Number.isFinite(value) || value < 0 || (key === 'size' && value === 0)) {
+      throw new Error(
+        `line.markers.${key} must be a ${key === 'size' ? 'positive' : 'nonnegative'} finite number.`,
+      )
+    }
+  }
+}
+
+function validateMarkerColors(markerOptions: LineMarkerOptions): void {
+  for (const key of ['fill', 'stroke'] as const) {
+    if (
+      markerOptions[key] !== undefined &&
+      (typeof markerOptions[key] !== 'string' || !markerOptions[key])
+    ) {
+      throw new Error(`line.markers.${key} must be a non-empty string.`)
+    }
+  }
+}
+
+function normalizeLineArea(area: LineOptions['area']): LineMark['area'] {
+  if (area === undefined) return undefined
+  if (!area || typeof area !== 'object' || Array.isArray(area)) {
+    throw new Error('line.area must be an options object.')
+  }
+  validateKeys(area, ['to', 'fill', 'opacity'], 'line.area')
+  if (
+    (typeof area.to !== 'number' && typeof area.to !== 'string') ||
+    (typeof area.to === 'number' && !Number.isFinite(area.to))
+  ) {
+    throw new TypeError('line.area.to must be a finite number or string.')
+  }
+  if (area.fill !== undefined && (typeof area.fill !== 'string' || !area.fill)) {
+    throw new Error('line.area.fill must be a non-empty string.')
+  }
+  const opacity = area.opacity ?? 0.2
+  if (!Number.isFinite(opacity) || opacity < 0 || opacity > 1) {
+    throw new Error('line.area.opacity must be between 0 and 1.')
+  }
+  return Object.freeze({
+    to: area.to,
+    fill: area.fill ?? '',
+    opacity,
+  })
+}
+
+export function line(options: LineOptions): LineMark {
+  validateLineOptionsObject(options)
+  validateLineCoordinates(options)
+  const strokeWidth = validateStrokeOptions(options)
+  validateLinePrecision(options)
+  const markers = normalizeLineMarkers(options.markers)
+  const area = normalizeLineArea(options.area)
   const mark = Object.freeze({
     id: options.id,
     x: options.x,
