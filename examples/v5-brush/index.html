@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>v5: brush selection</title>
+  </head>
+  <body>
+    <nav aria-label="Examples">
+      <a href="/">All examples</a>
+      <a href="../v5-pan/">Drag to pan</a>
+      <a href="../v5-zoom/">Interactive zoom</a>
+    </nav>
+    <h1>v5: brush selection</h1>
+    <p>
+      Hold Shift and drag inside the plot to select a range. The brush emits a selection event
+      without changing the scale domains.
+    </p>
+    <fieldset class="controls">
+      <legend>Brush interaction</legend>
+      <label for="mode">
+        Selection mode
+        <select id="mode">
+          <option value="x" selected>Horizontal (x)</option>
+          <option value="y">Vertical (y)</option>
+          <option value="xy">Both (xy)</option>
+        </select>
+      </label>
+      <label for="modifier">
+        Required modifier
+        <select id="modifier">
+          <option value="none">None</option>
+          <option value="ctrl">Ctrl</option>
+          <option value="shift" selected>Shift</option>
+        </select>
+      </label>
+      <button id="clear" type="button">Clear selection readout</button>
+    </fieldset>
+    <figure>
+      <div id="chart" class="plot-host"></div>
+      <figcaption>
+        Release the pointer to publish the selected ranges. The temporary overlay disappears when
+        the gesture ends; drag in either direction to make another selection.
+      </figcaption>
+    </figure>
+    <p id="status" class="status" role="status"></p>
+    <h2>Last selection</h2>
+    <pre id="snapshot" aria-label="Last selected scale ranges"></pre>
+    <h2>Public API</h2>
+    <pre><code>const interaction = brush({ mode: 'x' })
+const plot = createPlot(host, { scales: { t, q }, axes, marks, plugins: [interaction] })
+plot.element.addEventListener(brushEvent, (event) =&gt; {
+  const selection = (event as CustomEvent&lt;BrushSelection&gt;).detail
+  console.log(selection.scales)
+})
+interaction.update({ mode: 'xy', modifier: ModifierKey.None })</code></pre>
+    <script type="module" src="./v5-brush.ts"></script>
+  </body>
+</html>

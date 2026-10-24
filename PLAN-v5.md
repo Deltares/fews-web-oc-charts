@@ -1955,7 +1955,10 @@ release its listeners. The
 The `brush()` plugin selects configured Cartesian x/y ranges by Shift-drag by default
 and emits a bubbling `brush` event from the plot SVG. Its immutable `detail` contains
 the selected mode and scale ranges; band scales report the intersected categories.
-`mode` and `modifier` are editable at runtime. Brush selection is implemented;
+`mode` and `modifier` are editable at runtime. The
+[v5 brush example](./examples/v5-brush/index.html) demonstrates mode/modifier updates
+and displays selected time/value ranges without changing scale domains.
+Brush selection is implemented;
 crosshair, tooltip, legend and the remaining Phase 3 examples/exit criteria remain.
 
 Plugins are installed by a plugin host that reconciles `plot.plugins` by handle
