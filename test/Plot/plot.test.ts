@@ -500,6 +500,7 @@ describe('createPlot named scales', () => {
         new DOMRect(0, 0, 500, 300),
       )
       const options = x.options.get()
+      const optionsVersion = x.options.version
       if (gesture === 'pan') {
         for (const [type, clientX] of [
           ['pointerdown', 250],
@@ -527,7 +528,8 @@ describe('createPlot named scales', () => {
         current.element.dispatchEvent(event)
         expect(event.defaultPrevented).toBe(false)
       }
-      expect(x.options.get()).toBe(options)
+      expect(x.options.get()).toStrictEqual(options)
+      expect(x.options.version).toBe(optionsVersion)
       expect(x.domain.get()).toEqual(domain)
     },
   )
