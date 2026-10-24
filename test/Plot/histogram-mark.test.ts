@@ -11,8 +11,8 @@ import {
   type OptionPatch,
   type Plot,
 } from '../../src/index.js'
-import { histogramBar } from '../../src/plot/histogram.js'
-import { barExtent, barRectangles } from '../../src/plot/bar-geometry.js'
+import { histogramBar } from '../../src/plot/marks/histogram/histogram.js'
+import { barExtent, barRectangles } from '../../src/plot/marks/bar/bar-geometry.js'
 import { bindScale } from '../../src/scales/scale.js'
 import { reactive } from '../../src/core/runtime.js'
 

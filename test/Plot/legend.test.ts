@@ -12,7 +12,7 @@ import {
   legend,
   type Plot,
 } from '../../src/index.js'
-import { seriesDefinition } from '../../src/plot/line-mark.js'
+import { seriesDefinition } from '../../src/plot/marks/line/line-mark.js'
 
 const plots: Plot[] = []
 const hosts: HTMLElement[] = []

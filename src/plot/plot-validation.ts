@@ -1,10 +1,14 @@
 import { validateKeys, finiteNonnegative } from '../core/validation.js'
 import { isScaleHandle } from '../scales/scale.js'
-import { isAxisHandle, type AxisHandle, type AxisOptions, type AxisSide } from './axis.js'
-import { coordinateAdapter } from './coordinate-system.js'
-import type { CoordinateSystem, MarkValidationContext, Orientation } from './mark-definition.js'
-import { findMarkDefinition, supportedMarks, type PlotMark } from './marks.js'
-import { validatePlugins } from './plugins.js'
+import { isAxisHandle, type AxisHandle, type AxisOptions, type AxisSide } from './axes/axis.js'
+import { coordinateAdapter } from './coordinates/coordinate-system.js'
+import type {
+  CoordinateSystem,
+  MarkValidationContext,
+  Orientation,
+} from './marks/mark-definition.js'
+import { findMarkDefinition, supportedMarks, type PlotMark } from './marks/marks.js'
+import { validatePlugins } from './plugins/plugins.js'
 import type { PlotConfig, PlotOptions } from './create-plot.js'
 
 const optionKeys = [

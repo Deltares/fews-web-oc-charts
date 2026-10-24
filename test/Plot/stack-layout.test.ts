@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'vitest'
 import { bar, createTable } from '../../src/index.js'
 import { computeStackLayout, stackLayout } from '../../src/layout/stack.js'
-import { barEndpoints } from '../../src/plot/bar.js'
-import { barExtent } from '../../src/plot/bar-geometry.js'
+import { barEndpoints } from '../../src/plot/marks/bar/bar.js'
+import { barExtent } from '../../src/plot/marks/bar/bar-geometry.js'
 
 describe('shared columnar stack layout', () => {
   const layers = [

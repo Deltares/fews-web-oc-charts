@@ -1,4 +1,4 @@
-import type { AxisSide } from '../plot/axis.js'
+import type { AxisSide } from '../plot/axes/axis.js'
 import { finiteNonnegative } from '../core/validation.js'
 
 export interface Size {

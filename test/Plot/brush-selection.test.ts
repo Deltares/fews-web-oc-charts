@@ -10,7 +10,7 @@ import {
   resizeBounds,
   selectionFor,
   validBounds,
-} from '../../src/plot/brush-selection.js'
+} from '../../src/plot/plugins/brush/brush-selection.js'
 
 const region = Object.freeze({ x0: 20, x1: 480, y0: 20, y1: 280 })
 const origin = Object.freeze({ x0: 100, x1: 300, y0: 80, y1: 200 })

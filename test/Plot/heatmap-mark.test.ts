@@ -12,8 +12,8 @@ import {
   type GridInput,
   type Plot,
 } from '../../src/index.js'
-import { heatmapDefinition } from '../../src/plot/heatmap-mark.js'
-import { markExtents } from '../../src/plot/mark-extents.js'
+import { heatmapDefinition } from '../../src/plot/marks/heatmap/heatmap-mark.js'
+import { markExtents } from '../../src/plot/marks/mark-extents.js'
 import { reactive } from '../../src/core/runtime.js'
 
 const plots: Plot[] = []

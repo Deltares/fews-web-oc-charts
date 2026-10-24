@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'vitest'
 import { bandScale, bar, createTable, linearScale } from '../../src/index.js'
 import { reactive } from '../../src/core/runtime.js'
-import { compositeHits } from '../../src/plot/composite-hit-testing.js'
-import { barRectangles } from '../../src/plot/bar-geometry.js'
+import { compositeHits } from '../../src/plot/interaction/composite-hit-testing.js'
+import { barRectangles } from '../../src/plot/marks/bar/bar-geometry.js'
 import { bindScale } from '../../src/scales/scale.js'
 
 describe('composite hit-test indexes', () => {
