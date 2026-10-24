@@ -60,6 +60,27 @@ describe('grouped and stacked bars', () => {
     layerPadding: 0,
   }
 
+  test('reuses projected rectangles until data, options or scale geometry changes', () => {
+    const mark = bar(createTable({ t: ['one'], a: [3], b: [2] }), options)
+    const category = bandScale({ domain: ['one'] })
+    const scales = {
+      t: binding(category, [0, 100]),
+      q: binding(linearScale({ domain: [0, 10] }), [100, 0]),
+    }
+    const initial = barRectangles(mark, scales)
+    expect(barRectangles(mark, scales)).toBe(initial)
+
+    category.update({ reverse: true })
+    const reversed = barRectangles(mark, scales)
+    expect(reversed).not.toBe(initial)
+    expect(barRectangles(mark, scales)).toBe(reversed)
+
+    mark.update({ visible: false })
+    expect(barRectangles(mark, scales)).toEqual([])
+    mark.update({ visible: true })
+    expect(barRectangles(mark, scales)).not.toBe(reversed)
+  })
+
   test('exact band slots, group/inner padding, reversed categories and horizontal geometry', () => {
     const data = createTable({ t: ['one'], a: [3], b: [-2] })
     const mark = bar(data, { ...options, groupPadding: 0.2, layerPadding: 0.4 })
