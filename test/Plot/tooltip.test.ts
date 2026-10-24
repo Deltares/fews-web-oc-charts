@@ -26,6 +26,8 @@ describe('tooltip plugin', () => {
       y: 'q',
       xValues: [0, 5, 10],
       yValues: [1, 20, 3],
+      stroke: '#1677a6',
+      markers: { fill: '#1677a6' },
     })
     const forecast = line({
       id: 'forecast',
@@ -33,6 +35,8 @@ describe('tooltip plugin', () => {
       y: 'q',
       xValues: [0, 4, 10],
       yValues: [2, 30, 4],
+      stroke: '#d55e00',
+      markers: { fill: '#d55e00' },
     })
     const interaction = tooltip({ marks: [observed, forecast] })
     const plot = createPlot(host, {
@@ -59,6 +63,15 @@ describe('tooltip plugin', () => {
     expect(node?.textContent).toContain('observed')
     expect(node?.textContent).toContain('y: 20')
     expect(node?.textContent).toContain('forecast')
+    const entries = node?.querySelectorAll<HTMLElement>('[data-tooltip-entry]')
+    expect(entries).toHaveLength(2)
+    expect(entries?.[0].querySelector('[data-tooltip-symbol]')).toBeTruthy()
+    expect(entries?.[0].querySelector<HTMLElement>('[data-tooltip-label]')?.style.color).toBe(
+      'rgb(22, 119, 166)',
+    )
+    expect(entries?.[1].querySelector<HTMLElement>('[data-tooltip-label]')?.style.color).toBe(
+      'rgb(213, 94, 0)',
+    )
     expect(node?.getAttribute('aria-hidden')).toBe('false')
     expect(node?.style.visibility).toBe('visible')
     expect(plot.element.getAttribute('aria-describedby')).toBe(node?.id)
