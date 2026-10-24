@@ -1,5 +1,7 @@
 import type { ScaleBinding, ScaleValue } from '../scales/scale.js'
 import { barEndpoints, type BarMark } from './bar.js'
+import { scaleKey } from './mark-definition.js'
+import { sameInteractionKey } from './interaction-index.js'
 
 export interface BarRectangle {
   readonly layerId: string
@@ -11,14 +13,23 @@ export interface BarRectangle {
   readonly height: number
 }
 
+const rectangleCache = new WeakMap<
+  BarMark,
+  { readonly key: readonly unknown[]; readonly rectangles: readonly BarRectangle[] }
+>()
+
 export function barRectangles(
   mark: BarMark,
   scales: Readonly<Record<string, ScaleBinding>>,
 ): readonly BarRectangle[] {
   const options = mark.options.get().resolved
-  if (!options.visible) return []
   const category = scales[options.scales.x]
   const value = scales[options.scales.y]
+  if (!category || !value) return []
+  const key = [mark.data.version, mark.options.version, ...scaleKey(category), ...scaleKey(value)]
+  const cached = rectangleCache.get(mark)
+  if (cached && sameInteractionKey(cached.key, key)) return cached.rectangles
+  if (!options.visible) return []
   const layout = barEndpoints(mark)
   const result: BarRectangle[] = []
   const horizontal = options.orientation === 'horizontal'
@@ -76,7 +87,9 @@ export function barRectangles(
       )
     }
   }
-  return result
+  const rectangles = Object.freeze(result)
+  rectangleCache.set(mark, { key, rectangles })
+  return rectangles
 }
 
 export function barExtent(
