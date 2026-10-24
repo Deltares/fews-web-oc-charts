@@ -74,7 +74,8 @@ export function legend(initial: OptionPatch<LegendOptions> = {}): LegendHandle {
 const itemHeight = 26
 const horizontalPadding = 8
 const verticalPadding = 6
-const swatchWidth = 36
+const swatchWidth = 20
+const swatchHeight = 20
 const sectionGap = 7
 
 interface FlatEntry {
@@ -223,7 +224,7 @@ function sectionPlacements(items: readonly FlatEntry[], columns: number): Placem
 function appendSymbol(group: SVGGElement, entry: LegendEntry) {
   for (const primitive of legendSymbolPrimitives(entry.symbol, {
     width: swatchWidth,
-    height: 18,
+    height: swatchHeight,
   })) {
     const node = svgElement(primitive.type)
     for (const [name, value] of Object.entries(primitive.attributes)) {
@@ -267,7 +268,7 @@ function appendEntry(
 
   const symbol = svgElement('g', {
     class: 'fews-chart-legend__swatch',
-    transform: `translate(${item.indent} 4)`,
+    transform: `translate(${item.indent} ${(itemHeight - swatchHeight) / 2})`,
     'aria-hidden': 'true',
   })
   appendSymbol(symbol, entry)

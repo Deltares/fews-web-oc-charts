@@ -246,6 +246,7 @@ function renderCartesianAxis(
 interface PolarAxisGeometry {
   centerX: number
   centerY: number
+  innerRadius: number
   outerRadius: number
 }
 
@@ -255,19 +256,22 @@ function renderRadialAxis(
   axis: AxisHandle,
   binding: ScaleBinding,
   { centerX, centerY }: PolarAxisGeometry,
+  gridStroke: string,
 ) {
   const options = axis.options.get().resolved
   for (const tick of axisTickLabels(binding, axis)) {
     const r = binding.project(tick.value)
-    const circle = svgElement('circle', {
-      cx: centerX,
-      cy: centerY,
-      r,
-      fill: 'none',
-      stroke: 'currentColor',
-    })
-    axisGroup.append(circle)
-    if (options.grid) gridLayer.append(circle.cloneNode(true))
+    if (options.grid) {
+      gridLayer.append(
+        svgElement('circle', {
+          cx: centerX,
+          cy: centerY,
+          r,
+          fill: 'none',
+          stroke: gridStroke,
+        }),
+      )
+    }
     const label = svgElement('text', {
       x: centerX + 4,
       y: centerY - r - 3,
@@ -283,7 +287,8 @@ function renderAngularAxis(
   gridLayer: SVGGElement,
   axis: AxisHandle,
   binding: ScaleBinding,
-  { centerX, centerY, outerRadius }: PolarAxisGeometry,
+  { centerX, centerY, innerRadius, outerRadius }: PolarAxisGeometry,
+  gridStroke: string,
 ) {
   const options = axis.options.get().resolved
   const config = binding.scale.options.get().resolved
@@ -292,15 +297,17 @@ function renderAngularAxis(
     const angle = config.intercept! + sign * binding.project(tick.value)
     const sin = Math.sin(angle)
     const cos = Math.cos(angle)
-    const line = svgElement('line', {
-      x1: centerX,
-      y1: centerY,
-      x2: centerX + outerRadius * sin,
-      y2: centerY - outerRadius * cos,
-      stroke: 'currentColor',
-    })
-    axisGroup.append(line)
-    if (options.grid) gridLayer.append(line.cloneNode(true))
+    if (options.grid) {
+      gridLayer.append(
+        svgElement('line', {
+          x1: centerX + innerRadius * sin,
+          y1: centerY - innerRadius * cos,
+          x2: centerX + outerRadius * sin,
+          y2: centerY - outerRadius * cos,
+          stroke: gridStroke,
+        }),
+      )
+    }
     let textAnchor = 'middle'
     if (sin > 0.15) {
       textAnchor = 'start'
@@ -359,12 +366,16 @@ export function renderPolarAxes(
   const angularAxis = axes.find((axis) => axis.options.get().resolved.position === 'angular')
   const radialAxis = axes.find((axis) => axis.options.get().resolved.position === 'radial')
   const angularBinding = angularAxis ? bindings[angularAxis.scale] : undefined
-  const radialBinding = radialAxis ? bindings[radialAxis.scale] : undefined
+  const radialBinding = radialAxis
+    ? bindings[radialAxis.scale]
+    : Object.values(bindings).find((binding) => binding.scale.kind === 'radial')
   const geometry: PolarAxisGeometry = {
     centerX: plot.x + plot.width / 2,
     centerY: plot.y + plot.height / 2,
+    innerRadius: radialBinding?.range.get()[0] ?? 0,
     outerRadius: radialBinding?.range.get()[1] ?? Math.min(plot.width, plot.height) / 2,
   }
+  const gridStroke = `var(--fews-chart-grid, ${theme.grid})`
   const axisGroup = svgElement('g', {
     'data-coordinate-system': 'polar',
     fill: 'currentColor',
@@ -372,7 +383,7 @@ export function renderPolarAxes(
   axesLayer.append(axisGroup)
 
   if (radialAxis && radialBinding) {
-    renderRadialAxis(axisGroup, gridLayer, radialAxis, radialBinding, geometry)
+    renderRadialAxis(axisGroup, gridLayer, radialAxis, radialBinding, geometry, gridStroke)
   } else {
     axisGroup.append(
       svgElement('circle', {
@@ -385,7 +396,7 @@ export function renderPolarAxes(
     )
   }
   if (angularAxis && angularBinding) {
-    renderAngularAxis(axisGroup, gridLayer, angularAxis, angularBinding, geometry)
+    renderAngularAxis(axisGroup, gridLayer, angularAxis, angularBinding, geometry, gridStroke)
   }
   renderPolarCaptions(axisGroup, axes, geometry, theme.fontSize)
   axisGroup.setAttribute('font-size', String(theme.fontSize))

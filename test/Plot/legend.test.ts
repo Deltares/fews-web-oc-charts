@@ -76,6 +76,21 @@ describe('headless legend model', () => {
     const changes = vi.fn()
     current.element.addEventListener('legendtoggle', changes)
     const entry = layer!.querySelector<SVGGElement>('[role="button"][data-entry-id="flow"]')!
+    const swatch = entry.querySelector('.fews-chart-legend__swatch')!
+    const expected = legendSymbolPrimitives(current.legend.entries.get()[0].symbol, {
+      width: 20,
+      height: 20,
+    })
+    expect(swatch.getAttribute('transform')).toBe('translate(0 3)')
+    expect(swatch.children).toHaveLength(expected.length)
+    expected.forEach((primitive, index) => {
+      expect(swatch.children[index].localName).toBe(primitive.type)
+      for (const [name, value] of Object.entries(primitive.attributes)) {
+        expect(swatch.children[index].getAttribute(name)).toBe(
+          value === undefined ? null : String(value),
+        )
+      }
+    })
     expect(layer?.querySelector('[role="checkbox"]')).toBeNull()
     expect(layer?.textContent).not.toMatch(/Isolate|Show all/)
     entry.dispatchEvent(new MouseEvent('click', { bubbles: true }))
