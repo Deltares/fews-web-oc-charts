@@ -4,7 +4,7 @@ import type { LineMark } from './line/line.js'
 import type { SeriesMark } from './line/series.js'
 import type { BarMark } from './bar/bar.js'
 import { barRectangles } from './bar/bar-geometry.js'
-import { stackedAreaEndpoints, type StackedAreaMark } from './stacked-area/stacked-area.js'
+import type { StackedAreaMark } from './stacked-area/stacked-area.js'
 import type { HeatmapMark } from './heatmap/heatmap.js'
 
 type Scales = Readonly<Record<string, ScaleBinding>>
@@ -39,7 +39,13 @@ export function barHighlight(
   return [{ type: 'rect', x, y, width, height, fill: color, stroke: 'currentColor' }]
 }
 
-/** Outlines the slice of the hovered layer that is nearest to the hovered sample. */
+/** Half the width of v4's area tick marker. */
+const areaTickHalfWidth = 5
+
+/**
+ * Follows v4's ChartArea highlight: step curves fill the flat step around the hovered
+ * sample; other curves mark the layer's lower and upper bounds with horizontal ticks.
+ */
 export function stackedAreaHighlight(
   mark: StackedAreaMark,
   hit: MarkHit,
@@ -48,41 +54,27 @@ export function stackedAreaHighlight(
 ): readonly HighlightShape[] {
   if (!('layerId' in hit)) return []
   const { index: row, lower, upper } = hit
-  const layer = stackedAreaEndpoints(mark).layers.find((item) => item.id === hit.layerId)
   const xScale = scales[mark.x]
   const yScale = scales[mark.y]
-  if (!layer || !xScale || !yScale) return []
+  if (!xScale || !yScale) return []
   const options = mark.options.get().resolved
   const px = xScale.project(mark.data.valueAt(options.x, row))
-  if (!finite(px, lower, upper)) return []
-  const edge = (neighbor: number) => {
-    const fallback = { x: px, lower, upper }
-    if (neighbor < 0 || neighbor >= mark.data.length) return fallback
-    const x = xScale.project(mark.data.valueAt(options.x, neighbor))
-    const nLower = layer.lowerAt(neighbor)
-    const nUpper = layer.upperAt(neighbor)
-    if (!finite(x, nLower, nUpper)) return fallback
-    // Step curves change value halfway between samples, so the slice is flat.
-    const step = options.curve === 'step'
-    return {
-      x: (px + x) / 2,
-      lower: step ? lower : (lower + nLower) / 2,
-      upper: step ? upper : (upper + nUpper) / 2,
-    }
+  const y0 = yScale.project(lower)
+  const y1 = yScale.project(upper)
+  if (!finite(px, y0, y1)) return []
+  if (options.curve !== 'step') {
+    const tick = (y: number) => `M${px - areaTickHalfWidth},${y}h${2 * areaTickHalfWidth}`
+    return [{ type: 'path', d: tick(y1) + tick(y0), stroke: 'currentColor' }]
   }
-  const before = edge(row - 1)
-  const after = edge(row + 1)
-  const y = (value: number) => yScale.project(value)
-  const d = [
-    `M${before.x},${y(before.upper)}`,
-    `L${px},${y(upper)}`,
-    `L${after.x},${y(after.upper)}`,
-    `L${after.x},${y(after.lower)}`,
-    `L${px},${y(lower)}`,
-    `L${before.x},${y(before.lower)}`,
-    'Z',
-  ].join('')
-  return [{ type: 'path', d, fill: color, stroke: 'currentColor' }]
+  // d3.curveStep changes value halfway between samples.
+  const edge = (neighbor: number) => {
+    if (neighbor < 0 || neighbor >= mark.data.length) return px
+    const x = xScale.project(mark.data.valueAt(options.x, neighbor))
+    return Number.isFinite(x) ? (px + x) / 2 : px
+  }
+  const x0 = edge(row - 1)
+  const x1 = edge(row + 1)
+  return [{ type: 'path', d: `M${x0},${y1}H${x1}V${y0}H${x0}Z`, fill: color }]
 }
 
 export function heatmapHighlight(

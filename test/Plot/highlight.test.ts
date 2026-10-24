@@ -138,42 +138,51 @@ describe('highlight plugin', () => {
     expect(node.getAttribute('stroke')).toBe('currentColor')
   })
 
-  test('draws the stacked-area slice around the hovered sample', async () => {
-    const mark = stackedArea(
-      createTable({ t: [0, 1, 2], observed: [2, 2, 2], forecast: [3, 3, 3] }),
-      {
-        id: 'flow',
-        x: 't',
-        scales: { x: 't', y: 'q' },
-        layers: [
-          { id: 'observed', y: 'observed', stack: 'total' },
-          { id: 'forecast', y: 'forecast', stack: 'total' },
-        ],
-      },
-    )
-    const guide = crosshair({ mode: 'x', snap: { mark, axis: 'x' } })
-    const plot = createPlot(host(), {
-      width: 100,
-      height: 100,
-      margins: { top: 0, right: 0, bottom: 0, left: 0 },
-      scales: { t: linearScale({ domain: [0, 2] }), q: linearScale({ domain: [0, 5] }) },
-      marks: [mark],
-      plugins: [guide, highlight({ crosshair: guide })],
-    })
-    plots.push(plot)
-    await frame()
-    vi.spyOn(plot.element, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 100, 100))
-    await pointer(plot, 'pointermove', plot.scales.t.project(1), 50)
-    const paths = highlights(plot)
-    expect(paths.map((node) => node.tagName)).toEqual(['path', 'path'])
-    const numbers = paths[1]
-      .getAttribute('d')!
-      .match(/-?\d+(\.\d+)?/g)!
-      .map(Number)
-    const xs = numbers.filter((_, index) => index % 2 === 0)
-    expect(Math.min(...xs)).toBeCloseTo(plot.scales.t.project(0.5))
-    expect(Math.max(...xs)).toBeCloseTo(plot.scales.t.project(1.5))
-  })
+  test.each(['linear', 'step'] as const)(
+    'draws the v4 stacked-area highlight for %s curves',
+    async (curve) => {
+      const mark = stackedArea(
+        createTable({ t: [0, 1, 2], observed: [2, 2, 2], forecast: [3, 3, 3] }),
+        {
+          id: 'flow',
+          x: 't',
+          scales: { x: 't', y: 'q' },
+          curve,
+          layers: [
+            { id: 'observed', y: 'observed', stack: 'total', fill: 'green' },
+            { id: 'forecast', y: 'forecast', stack: 'total', fill: 'blue' },
+          ],
+        },
+      )
+      const guide = crosshair({ mode: 'x', snap: { mark, axis: 'x' } })
+      const plot = createPlot(host(), {
+        width: 100,
+        height: 100,
+        margins: { top: 0, right: 0, bottom: 0, left: 0 },
+        scales: { t: linearScale({ domain: [0, 2] }), q: linearScale({ domain: [0, 5] }) },
+        marks: [mark],
+        plugins: [guide, highlight({ crosshair: guide })],
+      })
+      plots.push(plot)
+      await frame()
+      vi.spyOn(plot.element, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 100, 100))
+      await pointer(plot, 'pointermove', plot.scales.t.project(1), 50)
+      const paths = highlights(plot)
+      expect(paths.map((node) => node.tagName)).toEqual(['path', 'path'])
+      const { t, q } = plot.scales
+      const [x, lower, upper] = [t.project(1), q.project(2), q.project(5)]
+      if (curve === 'linear') {
+        expect(paths[1].getAttribute('d')).toBe(`M${x - 5},${upper}h10M${x - 5},${lower}h10`)
+        expect(paths[1].getAttribute('fill')).toBe('none')
+        expect(paths[1].getAttribute('stroke')).toBe('currentColor')
+      } else {
+        const [x0, x1] = [t.project(0.5), t.project(1.5)]
+        expect(paths[1].getAttribute('d')).toBe(`M${x0},${upper}H${x1}V${lower}H${x0}Z`)
+        expect(paths[1].getAttribute('fill')).toBe('blue')
+        expect(paths[1].getAttribute('stroke')).toBe('none')
+      }
+    },
+  )
 
   test('validates options and plot integration', () => {
     expect(() => highlight({ axis: 'z' as never })).toThrow('highlight.axis')
