@@ -86,6 +86,7 @@ export function createPluginHost(
       size: shared.size,
       regions: shared.regions,
       pointer: shared.pointer,
+      legend: shared.legend,
       get scales() {
         return shared.scales
       },

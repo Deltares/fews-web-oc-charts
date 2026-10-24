@@ -5,6 +5,7 @@ import type { ScaleBinding, ScaleHandle } from '../scales/scale.js'
 import type { PlotOptions } from './create-plot.js'
 import type { CoordinateSystem, Orientation } from './mark-definition.js'
 import type { GestureHandler, GestureType, PlotPointer, PlotPosition } from './pointer-hub.js'
+import type { LegendModel } from './legend.js'
 
 /** The read-only view of a plot that an installed plugin receives. */
 export interface PlotContext {
@@ -14,6 +15,7 @@ export interface PlotContext {
   readonly size: ReadonlySignal<Readonly<Size>>
   readonly regions: ReadonlySignal<PlotLayout>
   readonly pointer: ReadonlySignal<PlotPointer>
+  readonly legend: LegendModel
   /** Plot-local scale bindings with ranges in SVG coordinates. */
   readonly scales: Readonly<Record<string, ScaleBinding>>
   /** Owned by the installed plugin and disposed when it is removed. */
