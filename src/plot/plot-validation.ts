@@ -81,6 +81,7 @@ function validatePlotCollections(
   validatePlugins(options.plugins, {
     coordinateSystem,
     plugins: options.plugins,
+    marks: options.marks,
     scales: options.scales,
     direction: (name) => direction(options, name, undefined, undefined, coordinateSystem),
   })

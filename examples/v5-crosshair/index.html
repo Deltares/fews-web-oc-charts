@@ -22,16 +22,29 @@
           <option value="xy" selected>Both (xy)</option>
         </select>
       </label>
+      <label for="snap-axis">
+        Snap to sample by
+        <select id="snap-axis">
+          <option value="none" selected>Pointer</option>
+          <option value="x">X</option>
+          <option value="y">Y</option>
+          <option value="xy">Screen distance</option>
+        </select>
+      </label>
     </fieldset>
     <figure>
       <div id="chart" class="plot-host"></div>
-      <figcaption>The crosshair is hidden while the pointer is outside the plot region.</figcaption>
+      <figcaption>
+        Snapping is limited to visible samples of the selected mark. In xy mode both guides use the
+        same sample.
+      </figcaption>
     </figure>
     <p id="status" class="status" role="status"></p>
     <h2>Public API</h2>
     <pre><code>const interaction = crosshair({ mode: 'xy' })
 const plot = createPlot(host, { scales: { t, q }, axes, marks, plugins: [interaction] })
-interaction.update({ mode: 'x' })</code></pre>
+interaction.update({ mode: 'x' })
+interaction.update({ snap: { mark: observations, axis: 'xy' } })</code></pre>
     <script type="module" src="./v5-crosshair.ts"></script>
   </body>
 </html>
