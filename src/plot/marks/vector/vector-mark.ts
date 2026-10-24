@@ -104,10 +104,6 @@ function createVectorRenderer<M extends VectorMark>(
           item.setAttribute('display', 'none')
           continue
         }
-        if (isDirectionMark(mark) && !valid(directionValue)) {
-          item.setAttribute('display', 'none')
-          continue
-        }
         item.removeAttribute('display')
         const start = project(context, mark, x0, y0)
         let end = project(context, mark, x1, y1)
