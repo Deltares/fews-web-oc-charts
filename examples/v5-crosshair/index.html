@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>v5: crosshair</title>
+  </head>
+  <body>
+    <nav aria-label="Examples">
+      <a href="/">All examples</a>
+      <a href="../v5-brush/">Brush selection</a>
+    </nav>
+    <h1>v5: crosshair</h1>
+    <p>Move the pointer over the plot to follow its position with one or both guide lines.</p>
+    <fieldset class="controls">
+      <legend>Crosshair guides</legend>
+      <label for="mode">
+        Mode
+        <select id="mode">
+          <option value="x">Vertical (x)</option>
+          <option value="y">Horizontal (y)</option>
+          <option value="xy" selected>Both (xy)</option>
+        </select>
+      </label>
+    </fieldset>
+    <figure>
+      <div id="chart" class="plot-host"></div>
+      <figcaption>The crosshair is hidden while the pointer is outside the plot region.</figcaption>
+    </figure>
+    <p id="status" class="status" role="status"></p>
+    <h2>Public API</h2>
+    <pre><code>const interaction = crosshair({ mode: 'xy' })
+const plot = createPlot(host, { scales: { t, q }, axes, marks, plugins: [interaction] })
+interaction.update({ mode: 'x' })</code></pre>
+    <script type="module" src="./v5-crosshair.ts"></script>
+  </body>
+</html>

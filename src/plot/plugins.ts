@@ -3,9 +3,15 @@ import type { PlotContext, PluginDefinition, PluginValidationContext } from './p
 import { panDefinition } from './pan-plugin.js'
 import { brushDefinition } from './brush-plugin.js'
 import { zoomDefinition } from './zoom-plugin.js'
+import { crosshairDefinition } from './crosshair-plugin.js'
 
 /** Registering a definition here is all that is needed to make a plugin installable. */
-const pluginDefinitions = [zoomDefinition, panDefinition, brushDefinition] as const
+const pluginDefinitions = [
+  zoomDefinition,
+  panDefinition,
+  brushDefinition,
+  crosshairDefinition,
+] as const
 
 type PluginOf<D> = D extends PluginDefinition<infer H> ? H : never
 
