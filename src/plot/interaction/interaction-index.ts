@@ -30,6 +30,71 @@ export interface SpatialGrid<T> {
   at(x: number, y: number): readonly T[]
 }
 
+interface SpatialGridCellRange {
+  readonly left: number
+  readonly right: number
+  readonly top: number
+  readonly bottom: number
+}
+
+function clippedBounds(box: SpatialGridBounds, plot: SpatialGridBounds) {
+  const x0 = Math.max(box.x, plot.x)
+  const y0 = Math.max(box.y, plot.y)
+  const x1 = Math.min(box.x + box.width, plot.x + plot.width)
+  const y1 = Math.min(box.y + box.height, plot.y + plot.height)
+  return x0 > x1 || y0 > y1 ? undefined : { x0, y0, x1, y1 }
+}
+
+function cellRange(
+  box: NonNullable<ReturnType<typeof clippedBounds>>,
+  plot: SpatialGridBounds,
+  cellSize: number,
+): SpatialGridCellRange {
+  return {
+    left: Math.floor((box.x0 - plot.x) / cellSize),
+    right: Math.floor((box.x1 - plot.x) / cellSize),
+    top: Math.floor((box.y0 - plot.y) / cellSize),
+    bottom: Math.floor((box.y1 - plot.y) / cellSize),
+  }
+}
+
+function addBroadEntry<T>(entry: T, broad: T[]) {
+  broad.push(entry)
+  if (broad.length > maxInteractionCandidates) {
+    throw new RangeError(
+      `Hit testing exceeded the ${maxInteractionCandidates}-rectangle broad-phase budget.`,
+    )
+  }
+}
+
+function addEntryToCells<T>(
+  entry: T,
+  range: SpatialGridCellRange,
+  cells: Map<string, T[]>,
+  cellKey: (x: number, y: number) => string,
+  memberships: { count: number },
+) {
+  for (let row = range.top; row <= range.bottom; row += 1) {
+    for (let column = range.left; column <= range.right; column += 1) {
+      const key = cellKey(column, row)
+      const bucket = cells.get(key) ?? []
+      bucket.push(entry)
+      memberships.count += 1
+      if (memberships.count > maxInteractionIndexEntries * 2) {
+        throw new RangeError(
+          `Hit testing exceeded the ${maxInteractionIndexEntries * 2}-cell membership budget.`,
+        )
+      }
+      if (bucket.length > maxInteractionCandidates) {
+        throw new RangeError(
+          `Hit testing exceeded the ${maxInteractionCandidates}-rectangle cell budget.`,
+        )
+      }
+      cells.set(key, bucket)
+    }
+  }
+}
+
 export function createSpatialGrid<T>(
   entries: readonly T[],
   bounds: (entry: T) => SpatialGridBounds,
@@ -40,49 +105,18 @@ export function createSpatialGrid<T>(
   const cells = new Map<string, T[]>()
   const broad: T[] = []
   const cellKey = (x: number, y: number) => `${x}:${y}`
-  let memberships = 0
+  const memberships = { count: 0 }
 
   for (const entry of entries) {
-    const box = bounds(entry)
-    const x0 = Math.max(box.x, plot.x)
-    const y0 = Math.max(box.y, plot.y)
-    const x1 = Math.min(box.x + box.width, plot.x + plot.width)
-    const y1 = Math.min(box.y + box.height, plot.y + plot.height)
-    if (x0 > x1 || y0 > y1) continue
-
-    const left = Math.floor((x0 - plot.x) / cellSize)
-    const right = Math.floor((x1 - plot.x) / cellSize)
-    const top = Math.floor((y0 - plot.y) / cellSize)
-    const bottom = Math.floor((y1 - plot.y) / cellSize)
-    const covered = (right - left + 1) * (bottom - top + 1)
+    const clipped = clippedBounds(bounds(entry), plot)
+    if (!clipped) continue
+    const range = cellRange(clipped, plot, cellSize)
+    const covered = (range.right - range.left + 1) * (range.bottom - range.top + 1)
     if (covered > maxCellsPerEntry) {
-      broad.push(entry)
-      if (broad.length > maxInteractionCandidates) {
-        throw new RangeError(
-          `Hit testing exceeded the ${maxInteractionCandidates}-rectangle broad-phase budget.`,
-        )
-      }
+      addBroadEntry(entry, broad)
       continue
     }
-    for (let row = top; row <= bottom; row += 1) {
-      for (let column = left; column <= right; column += 1) {
-        const key = cellKey(column, row)
-        const bucket = cells.get(key) ?? []
-        bucket.push(entry)
-        memberships += 1
-        if (memberships > maxInteractionIndexEntries * 2) {
-          throw new RangeError(
-            `Hit testing exceeded the ${maxInteractionIndexEntries * 2}-cell membership budget.`,
-          )
-        }
-        if (bucket.length > maxInteractionCandidates) {
-          throw new RangeError(
-            `Hit testing exceeded the ${maxInteractionCandidates}-rectangle cell budget.`,
-          )
-        }
-        cells.set(key, bucket)
-      }
-    }
+    addEntryToCells(entry, range, cells, cellKey, memberships)
   }
 
   return {
