@@ -109,21 +109,25 @@ describe('persistent brush', () => {
       pointer(plot, 'pointerdown', 100, 80, resizeHandle(plot, handleName))
       pointer(plot, 'pointermove', 350, 230)
       pointer(plot, 'pointerup', 350, 230)
-      expect(rectangle(plot)).toEqual([
-        mode === 'y' ? 20 : 300,
-        mode === 'x' ? 20 : 200,
-        mode === 'y' ? 460 : 50,
-        mode === 'x' ? 260 : 30,
-      ])
+      expect(rectangle(plot)).toEqual(
+        [
+          mode === 'y' ? 20 : 300,
+          mode === 'x' ? 20 : 200,
+          mode === 'y' ? 460 : 50,
+          mode === 'x' ? 260 : 30,
+        ].map((value) => expect.closeTo(value, 10)),
+      )
       pointer(plot, 'pointerdown', 320, 215, plot.element.querySelector('[data-brush-selection]')!)
       pointer(plot, 'pointermove', 900, 900)
       pointer(plot, 'pointerup', 900, 900)
-      expect(rectangle(plot)).toEqual([
-        mode === 'y' ? 20 : 430,
-        mode === 'x' ? 20 : 250,
-        mode === 'y' ? 460 : 50,
-        mode === 'x' ? 260 : 30,
-      ])
+      expect(rectangle(plot)).toEqual(
+        [
+          mode === 'y' ? 20 : 430,
+          mode === 'x' ? 20 : 250,
+          mode === 'y' ? 460 : 50,
+          mode === 'x' ? 260 : 30,
+        ].map((value) => expect.closeTo(value, 10)),
+      )
     },
   )
 
