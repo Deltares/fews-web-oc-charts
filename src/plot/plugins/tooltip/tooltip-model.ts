@@ -16,9 +16,11 @@ import { isHeatmapMark } from '../../marks/heatmap/heatmap.js'
 import type { HeatmapHit } from '../../interaction/heatmap-hit-testing.js'
 import { markDefinition } from '../../marks/marks.js'
 import type { MarkHit } from '../../marks/mark-definition.js'
+import type { SymbolSpec } from '../legend/legend.js'
+import { lineLegendSymbol } from '../../marks/mark-styles.js'
 
 type TooltipHit = MarkHit
-type TooltipContext = Pick<PlotContext, 'scales' | 'inspectCrosshair'>
+type TooltipContext = Pick<PlotContext, 'scales' | 'inspectCrosshair' | 'theme'>
 
 function isHeatmapHit(hit: TooltipHit): hit is HeatmapHit {
   return 'xStart' in hit
@@ -35,12 +37,7 @@ export interface TooltipEntry {
   readonly color: string
   readonly details: string
   readonly accessibleLabel: string
-  readonly symbol: {
-    readonly size: number
-    readonly radius: string
-    readonly fill: string
-    readonly border: string | undefined
-  }
+  readonly symbol: SymbolSpec
 }
 
 export interface TooltipModel {
@@ -144,15 +141,18 @@ function tooltipEntry(
       details: ` · ${details.join(' · ')}`,
       accessibleLabel: `${name} · ${details.join(' · ')}`,
       symbol: {
-        size: 8,
-        radius: '1px',
+        type: 'bar',
         fill: heatmapOptions.color.map(hit.value),
-        border: undefined,
       },
     }
   }
   const pointMark = isLineMark(mark) || isSeriesMark(mark)
-  const markers = pointMark && !('layerId' in hit) ? mark.markers : undefined
+  const tokens = context.theme.get()
+  const legend = markDefinition(mark).legend?.(mark, tokens)
+  const symbol = isLineMark(mark) ? lineLegendSymbol(mark, tokens) : legend?.symbol
+  if (!symbol) throw new Error('Tooltip marks must provide a legend symbol.')
+  const layer =
+    'layerId' in hit ? legend?.layers?.find((candidate) => candidate.id === hit.layerId) : undefined
   const color = tooltipColor(mark, hit)
   const digits = options.digits ?? (pointMark ? mark.digits : undefined)
   const x = displayValue(hit.x, context, mark.x)
@@ -191,15 +191,7 @@ function tooltipEntry(
     color,
     details: details.length ? ` · ${details.join(' · ')}` : '',
     accessibleLabel: accessible.join(' · '),
-    symbol: {
-      size: (pointMark ? (mark.markers?.size ?? 4) : 4) * 2,
-      radius: 'layerId' in hit ? '1px' : '50%',
-      fill: markers?.fill || color,
-      border:
-        markers?.stroke && markers.stroke !== 'none'
-          ? `${markers.strokeWidth ?? 0}px solid ${markers.stroke}`
-          : undefined,
-    },
+    symbol: layer?.symbol ?? symbol,
   }
 }
 

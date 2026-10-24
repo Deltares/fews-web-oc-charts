@@ -143,6 +143,11 @@ export function createLegendSwatch(
     'aria-hidden': 'true',
     focusable: 'false',
   })
+  Object.assign(element.style, {
+    width: `${width}px`,
+    height: `${height}px`,
+    background: 'none',
+  })
   for (const primitive of legendSymbolPrimitives(symbol, { width, height })) {
     const node = svgElement(primitive.type)
     for (const [name, value] of Object.entries(primitive.attributes)) {

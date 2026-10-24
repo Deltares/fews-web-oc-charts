@@ -165,6 +165,26 @@ describe('legend symbol geometry', () => {
 })
 
 describe('SVG legend swatches', () => {
+  test('keeps its dimensions and no background under global SVG styling', () => {
+    const style = document.createElement('style')
+    style.textContent =
+      'svg { width: 100%; height: auto; background-image: linear-gradient(red, blue); }'
+    const swatch = createLegendSwatch({ type: 'line', stroke: 'red' }, { width: 20, height: 20 })
+    document.head.append(style)
+    document.body.append(swatch)
+    try {
+      const computed = getComputedStyle(swatch)
+      expect(computed.width).toBe('20px')
+      expect(computed.height).toBe('20px')
+      expect(computed.backgroundImage).toBe('none')
+      expect(swatch.getBoundingClientRect().width).toBe(20)
+      expect(swatch.getBoundingClientRect().height).toBe(20)
+    } finally {
+      swatch.remove()
+      style.remove()
+    }
+  })
+
   test('renders exactly the pure primitives without undefined attributes or UI', () => {
     const symbol: SymbolSpec = {
       type: 'composite',

@@ -17,8 +17,7 @@ import {
   type MarkRenderer,
   type MarkValidationContext,
 } from '../mark-definition.js'
-import { resolveLineStyles } from '../mark-styles.js'
-import type { SymbolPrimitiveSpec } from '../../plugins/legend/legend.js'
+import { lineLegendSymbol, resolveLineStyles } from '../mark-styles.js'
 import { nearestPoint } from '../../interaction/point-hit-testing.js'
 import type { MarkHitContext } from '../mark-definition.js'
 
@@ -335,14 +334,9 @@ export const seriesDefinition: MarkDefinition<SeriesMark> = {
   hits: pointMarkHits,
   legend(mark, tokens) {
     const options = mark.options.get().resolved
-    const styles = resolveLineStyles(mark, tokens)
-    const parts: SymbolPrimitiveSpec[] = []
-    if (mark.area) parts.push({ type: 'area', ...styles.area })
-    if (mark.line) parts.push({ type: 'line', ...styles.line })
-    if (mark.markers) parts.push({ type: 'marker', ...styles.marker })
     return {
       label: options.label,
-      symbol: { type: 'composite', parts },
+      symbol: lineLegendSymbol(mark, tokens),
       visible: () => mark.visible,
       setVisible: (visible) => mark.update({ visible }),
     }
