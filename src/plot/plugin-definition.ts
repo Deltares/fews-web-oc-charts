@@ -1,7 +1,7 @@
 import type { OptionStateSnapshot } from '../core/options.js'
 import type { ReactiveScope, ReadonlySignal } from '../core/reactive.js'
 import type { PlotLayout, Size } from '../layout/layout.js'
-import type { ScaleBinding } from '../scales/scale.js'
+import type { ScaleBinding, ScaleHandle } from '../scales/scale.js'
 import type { PlotOptions } from './create-plot.js'
 import type { CoordinateSystem, Orientation } from './mark-definition.js'
 import type { GestureHandler, GestureType, PlotPointer, PlotPosition } from './pointer-hub.js'
@@ -27,6 +27,8 @@ export interface PlotContext {
 export interface PluginValidationContext {
   readonly coordinateSystem: CoordinateSystem
   readonly plugins: readonly object[]
+  readonly scales: Readonly<Record<string, ScaleHandle>>
+  direction(name: string): Orientation
 }
 
 export interface InstalledPlugin {

@@ -31,6 +31,7 @@ interface GestureEvents {
   pointermove: PointerEvent
   pointerup: PointerEvent
   pointercancel: PointerEvent
+  lostpointercapture: PointerEvent
 }
 
 export type GestureType = keyof GestureEvents
