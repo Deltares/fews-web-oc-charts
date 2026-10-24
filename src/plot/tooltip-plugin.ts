@@ -145,11 +145,39 @@ function installTooltip(handle: TooltipHandle, context: PlotContext) {
         element.replaceChildren()
         for (const item of selected) {
           const row = document.createElement('div')
+          row.dataset.tooltipEntry = ''
+          row.style.display = 'flex'
+          row.style.alignItems = 'center'
+          row.style.gap = '5px'
+          const markColor =
+            item.mark.stroke ?? item.mark.markers?.fill ?? 'var(--fews-chart-accent, currentColor)'
+          const symbol = document.createElement('span')
+          symbol.dataset.tooltipSymbol = ''
+          symbol.setAttribute('aria-hidden', 'true')
+          const markerSize = item.mark.markers?.size ?? 4
+          Object.assign(symbol.style, {
+            flex: 'none',
+            width: `${markerSize * 2}px`,
+            height: `${markerSize * 2}px`,
+            boxSizing: 'border-box',
+            borderRadius: '50%',
+            backgroundColor: item.mark.markers?.fill || markColor,
+          })
+          const markerStroke = item.mark.markers?.stroke
+          if (markerStroke && markerStroke !== 'none') {
+            symbol.style.border = `${item.mark.markers?.strokeWidth ?? 0}px solid ${markerStroke}`
+          }
+          const name = document.createElement('span')
+          name.dataset.tooltipLabel = ''
+          name.style.color = markColor
+          name.textContent = label(item.mark, item.index)
           const xScale = context.scales[item.mark.x]
           const yScale = context.scales[item.mark.y]
           const x = displayValue(item.hit.x, context, item.mark.x)
           const y = displayValue(item.hit.y, context, item.mark.y, item.mark.digits)
-          row.textContent = `${label(item.mark, item.index)} · ${xScale?.scale.kind === 'time' ? x : `x: ${x}`} · y: ${y}`
+          const values = document.createElement('span')
+          values.textContent = ` · ${xScale?.scale.kind === 'time' ? x : `x: ${x}`} · y: ${y}`
+          row.append(symbol, name, values)
           element.append(row)
         }
         if (!selected.length) {

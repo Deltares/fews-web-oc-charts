@@ -26,6 +26,7 @@ const observed = line({
   digits: 2,
   stroke: '#1677a6',
   strokeWidth: 2,
+  markers: { size: 3.5, fill: '#1677a6', stroke: '#fff', strokeWidth: 1, skip: 4 },
 })
 const forecast = line({
   id: 'forecast',
@@ -39,6 +40,7 @@ const forecast = line({
   digits: 2,
   stroke: '#d55e00',
   strokeWidth: 2,
+  markers: { size: 3.5, fill: '#d55e00', stroke: '#fff', strokeWidth: 1, skip: 4 },
 })
 const interaction = tooltip({ marks: [observed, forecast] })
 const plot = createPlot(host, {
