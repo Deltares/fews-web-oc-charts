@@ -156,16 +156,21 @@ describe('createPolarPlot', () => {
     expect(getComputedStyle(label!).fill).toBe('rgb(237, 242, 244)')
   })
 
-  test.each([false, true])(
-    'preserves polar axis geometry and captions with grid=%s',
-    async (grid) => {
+  test.each([
+    { grid: false, innerRadius: 0 },
+    { grid: true, innerRadius: 0 },
+    { grid: false, innerRadius: 0.25 },
+    { grid: true, innerRadius: 0.25 },
+  ])(
+    'preserves polar axis geometry and captions with grid=$grid and innerRadius=$innerRadius',
+    async ({ grid, innerRadius }) => {
       const bearing = angularScale({
         domain: [0, 360],
         direction: 'anticlockwise',
         intercept: Math.PI / 2,
         range: [0, Math.PI],
       })
-      const distance = radialScale({ domain: [0, 10], innerRadius: 0.25 })
+      const distance = radialScale({ domain: [0, 10], innerRadius })
       const bearingAxis = axis('theta', {
         position: 'angular',
         grid,
@@ -195,29 +200,44 @@ describe('createPolarPlot', () => {
       const centerY = region.y + region.height / 2
       const outerRadius = current.scales.distance.range.get()[1]
       const radialTicks = current.scales.distance.ticks(2)
-      const circles = group.querySelectorAll('circle')
-      expect(circles).toHaveLength(radialTicks.length)
+      expect(group.querySelectorAll('circle')).toHaveLength(0)
+      const circles = gridLayer.querySelectorAll('circle')
+      expect(circles).toHaveLength(grid ? radialTicks.length : 0)
+      const radialLabels = [...group.querySelectorAll('text')].filter((label) =>
+        label.textContent?.startsWith('distance:'),
+      )
+      expect(radialLabels).toHaveLength(radialTicks.length)
       radialTicks.forEach((value, index) => {
         const radius = current.scales.distance.project(value)
-        expect(Number(circles[index].getAttribute('cx'))).toBeCloseTo(centerX)
-        expect(Number(circles[index].getAttribute('cy'))).toBeCloseTo(centerY)
-        expect(Number(circles[index].getAttribute('r'))).toBeCloseTo(radius)
-        const label = circles[index].nextElementSibling!
+        if (grid) {
+          expect(Number(circles[index].getAttribute('cx'))).toBeCloseTo(centerX)
+          expect(Number(circles[index].getAttribute('cy'))).toBeCloseTo(centerY)
+          expect(Number(circles[index].getAttribute('r'))).toBeCloseTo(radius)
+        }
+        const label = radialLabels[index]
         expect(label.textContent).toBe(`distance:${value}`)
         expect(Number(label.getAttribute('x'))).toBeCloseTo(centerX + 4)
         expect(Number(label.getAttribute('y'))).toBeCloseTo(centerY - radius - 3)
       })
       const angularTicks = current.scales.theta.ticks(4)
-      const lines = group.querySelectorAll('line')
-      expect(lines).toHaveLength(angularTicks.length)
+      expect(group.querySelectorAll('line')).toHaveLength(0)
+      const lines = gridLayer.querySelectorAll('line')
+      expect(lines).toHaveLength(grid ? angularTicks.length : 0)
+      const angularLabels = [...group.querySelectorAll('text')].filter((label) =>
+        label.textContent?.startsWith('bearing:'),
+      )
+      expect(angularLabels).toHaveLength(angularTicks.length)
       angularTicks.forEach((value, index) => {
+        const start = current.project(value, 0)
         const point = current.project(value, 10)
         const angle = Math.PI / 2 - current.scales.theta.project(value)
-        expect(Number(lines[index].getAttribute('x1'))).toBeCloseTo(centerX)
-        expect(Number(lines[index].getAttribute('y1'))).toBeCloseTo(centerY)
-        expect(Number(lines[index].getAttribute('x2'))).toBeCloseTo(point.x)
-        expect(Number(lines[index].getAttribute('y2'))).toBeCloseTo(point.y)
-        const label = lines[index].nextElementSibling!
+        if (grid) {
+          expect(Number(lines[index].getAttribute('x1'))).toBeCloseTo(start.x)
+          expect(Number(lines[index].getAttribute('y1'))).toBeCloseTo(start.y)
+          expect(Number(lines[index].getAttribute('x2'))).toBeCloseTo(point.x)
+          expect(Number(lines[index].getAttribute('y2'))).toBeCloseTo(point.y)
+        }
+        const label = angularLabels[index]
         expect(label.textContent).toBe(`bearing:${value}`)
         expect(Number(label.getAttribute('x'))).toBeCloseTo(
           centerX + (outerRadius + 12) * Math.sin(angle),
@@ -229,8 +249,11 @@ describe('createPolarPlot', () => {
           Math.sin(angle) > 0.15 ? 'start' : Math.sin(angle) < -0.15 ? 'end' : 'middle',
         )
       })
-      expect([...gridLayer.children].map((node) => node.outerHTML)).toEqual(
-        grid ? [...circles, ...lines].map((node) => node.outerHTML) : [],
+      expect([...gridLayer.children].map((node) => node.getAttribute('stroke'))).toEqual(
+        grid ? [...circles, ...lines].map(() => gridLayer.getAttribute('stroke')) : [],
+      )
+      expect([...gridLayer.children].some((node) => node.hasAttribute('stroke-dasharray'))).toBe(
+        false,
       )
       const angularCaption = group.querySelector('[data-axis-caption="theta"]')!
       const radialCaption = group.querySelector('[data-axis-caption="distance"]')!
@@ -248,6 +271,21 @@ describe('createPolarPlot', () => {
       distanceAxis.update({ grid: !grid, label: '', unit: '' })
       await frame()
       expect(current.element.querySelectorAll('[data-axis-caption]')).toHaveLength(0)
+      const updatedGroup = current.element.querySelector('[data-coordinate-system="polar"]')!
+      expect(updatedGroup.querySelectorAll('circle')).toHaveLength(0)
+      expect(updatedGroup.querySelectorAll('line')).toHaveLength(0)
+      expect(gridLayer.querySelectorAll('circle')).toHaveLength(grid ? 0 : radialTicks.length)
+      expect(gridLayer.querySelectorAll('line')).toHaveLength(grid ? 0 : angularTicks.length)
+      expect(
+        [...updatedGroup.querySelectorAll('text')].filter((label) =>
+          label.textContent?.startsWith('bearing:'),
+        ),
+      ).toHaveLength(angularTicks.length)
+      expect(
+        [...updatedGroup.querySelectorAll('text')].filter((label) =>
+          label.textContent?.startsWith('distance:'),
+        ),
+      ).toHaveLength(radialTicks.length)
       expect(current.element.querySelectorAll('[data-layer="grid"] > *')).toHaveLength(
         grid ? 0 : radialTicks.length + angularTicks.length,
       )
@@ -270,17 +308,13 @@ describe('createPolarPlot', () => {
       const group = current.element.querySelector('[data-coordinate-system="polar"]')!
       const region = current.regions.get().plot
       const circles = group.querySelectorAll('circle')
-      expect(circles).toHaveLength(
-        position === 'radial' ? current.scales.distance.ticks(6).length : 1,
-      )
+      expect(circles).toHaveLength(position === 'radial' ? 0 : 1)
       if (position !== 'radial') {
         expect(Number(circles[0].getAttribute('r'))).toBeCloseTo(
           Math.min(region.width, region.height) / 2,
         )
       }
-      expect(group.querySelectorAll('line')).toHaveLength(
-        position === 'angular' ? current.scales.theta.ticks(6).length : 0,
-      )
+      expect(group.querySelectorAll('line')).toHaveLength(0)
       expect(current.element.querySelectorAll('[data-layer="grid"] > *')).toHaveLength(0)
       expect(group.querySelectorAll('[data-axis-caption]')).toHaveLength(0)
     },
