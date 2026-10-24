@@ -252,13 +252,14 @@ function updateStatus() {
   axisOption.disabled = linked && snapOption.value !== 'none'
   snapOption.disabled = !linked
   calloutsOption.disabled = !linked
+  const snapDescription =
+    snapOption.value === 'none' ? 'Free pointer' : 'Snapped to an observed sample'
+  const calloutDescription = calloutsOption.checked
+    ? 'Axis callouts replace only matching coordinates; differing sample values stay in each entry.'
+    : 'Callouts are hidden, so all sample coordinates remain in the tooltip.'
   status.textContent = !linked
     ? 'Standalone tooltip: every entry includes its sample coordinates.'
-    : `${snapOption.value === 'none' ? 'Free pointer' : 'Snapped to an observed sample'}. ${
-        calloutsOption.checked
-          ? 'Axis callouts replace only matching coordinates; differing sample values stay in each entry.'
-          : 'Callouts are hidden, so all sample coordinates remain in the tooltip.'
-      }`
+    : `${snapDescription}. ${calloutDescription}`
 }
 
 modeOption.addEventListener(

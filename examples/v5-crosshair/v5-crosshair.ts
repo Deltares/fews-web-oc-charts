@@ -118,7 +118,11 @@ const areaPlot = createPlot(required<HTMLElement>('#area-chart'), {
 })
 
 function updateStatus() {
-  status.textContent = `Showing ${mode.value === 'xy' ? 'both' : mode.value === 'x' ? 'vertical' : 'horizontal'} guide${mode.value === 'xy' ? 's' : ''}.`
+  let guide = 'horizontal'
+  if (mode.value === 'xy') guide = 'both'
+  else if (mode.value === 'x') guide = 'vertical'
+  const plural = mode.value === 'xy' ? 's' : ''
+  status.textContent = `Showing ${guide} guide${plural}.`
 }
 
 mode.addEventListener(

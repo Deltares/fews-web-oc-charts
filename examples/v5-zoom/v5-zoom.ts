@@ -54,9 +54,14 @@ function updateStatus() {
   const xDomain = t.domain.get().map((value) => new Date(Number(value)).toISOString())
   const yDomain = q.domain.get()
   snapshot.textContent = JSON.stringify({ time: xDomain, value: yDomain }, null, 2)
+  const modifierDescription =
+    modifier.value === 'none' ? 'No modifier' : `${modifier.value} required`
+  const scaleDescription = q.options.get().explicit.domain
+    ? 'has a manual domain'
+    : 'autoscale is following visible data'
   status.textContent = !wheelEnabled.checked
     ? 'Wheel zoom is disabled.'
-    : `${modifier.value === 'none' ? 'No modifier' : `${modifier.value} required`}; wheel zoom affects ${mode.value}. The y scale ${q.options.get().explicit.domain ? 'has a manual domain' : 'autoscale is following visible data'}.`
+    : `${modifierDescription}; wheel zoom affects ${mode.value}. The y scale ${scaleDescription}.`
 }
 
 function selectedMode(value: string, name: string): 'x' | 'y' | 'xy' {
