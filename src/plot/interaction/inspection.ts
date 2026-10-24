@@ -8,6 +8,9 @@ import { isBarMark } from '../marks/bar/bar.js'
 import { isStackedAreaMark } from '../marks/stacked-area/stacked-area.js'
 import { compositeHits, type CompositeHit } from './composite-hit-testing.js'
 import type { PlotLayout } from '../../layout/layout.js'
+import { histogramBar, isHistogramMark } from '../marks/histogram/histogram.js'
+import { isHeatmapMark } from '../marks/heatmap/heatmap.js'
+import { heatmapHit, type HeatmapHit } from './heatmap-hit-testing.js'
 
 let areaPathContext: CanvasRenderingContext2D | undefined
 
@@ -22,7 +25,7 @@ function snapHits(
   context: Omit<PlotContext, 'scope' | 'inspectCrosshair'>,
   point: { readonly x: number; readonly y: number },
   regions: PlotLayout,
-): readonly (PointHit | CompositeHit)[] {
+): readonly (PointHit | CompositeHit | HeatmapHit)[] {
   if (isLineMark(snap.mark) || isSeriesMark(snap.mark)) {
     const hit = nearestPoint(snap.mark, context.scales, point, snap.axis, regions.plot)
     return hit ? [hit] : []
@@ -33,13 +36,18 @@ function snapHits(
     if (!areaPathContext) {
       throw new Error('Crosshair snapping to stacked areas requires a 2D canvas context.')
     }
+  } else if (isHeatmapMark(snap.mark)) {
+    const hit = heatmapHit(snap.mark, context.scales, point, snap.axis, regions.plot)
+    return hit ? [hit] : []
+  } else if (isHistogramMark(snap.mark)) {
+    return compositeHits(histogramBar(snap.mark), context.scales, point, snap.axis, regions.plot)
   } else if (!isBarMark(snap.mark)) {
     return []
   }
   return compositeHits(snap.mark, context.scales, point, snap.axis, regions.plot, areaPathContext)
 }
 
-function nearestHit<T extends PointHit | CompositeHit>(
+function nearestHit<T extends PointHit | CompositeHit | HeatmapHit>(
   hits: readonly T[],
   point: { readonly y: number },
 ) {
@@ -53,13 +61,14 @@ function nearestHit<T extends PointHit | CompositeHit>(
 /** Vertical composites snapped along x get one horizontal guide per visible layer. */
 function layerGuides(
   snap: CrosshairSnapOptions | undefined,
-  hits: readonly (PointHit | CompositeHit)[],
+  hits: readonly (PointHit | CompositeHit | HeatmapHit)[],
   context: Omit<PlotContext, 'scope' | 'inspectCrosshair'>,
 ): readonly CrosshairLayerGuide[] {
   if (snap?.axis !== 'x') return []
   const vertical =
     isStackedAreaMark(snap.mark) ||
-    (isBarMark(snap.mark) && snap.mark.options.get().resolved.orientation === 'vertical')
+    ((isBarMark(snap.mark) || isHistogramMark(snap.mark)) &&
+      snap.mark.options.get().resolved.orientation === 'vertical')
   if (!vertical) return []
   const valueScale = context.scales[snap.mark.y]
   return hits.flatMap((hit) => {

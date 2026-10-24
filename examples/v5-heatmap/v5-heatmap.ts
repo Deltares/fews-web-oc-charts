@@ -1,5 +1,15 @@
 import '../shared/v5.css'
-import { axis, colorScale, createGrid, createPlot, heatmap, linearScale, timeScale } from '@lib'
+import {
+  axis,
+  colorScale,
+  createGrid,
+  createPlot,
+  crosshair,
+  heatmap,
+  linearScale,
+  timeScale,
+  tooltip,
+} from '@lib'
 
 function required<T extends HTMLElement>(selector: string) {
   const element = document.querySelector<T>(selector)
@@ -25,8 +35,13 @@ const marks = [data, comparison].map((grid) =>
   }),
 )
 const levels = [linearScale(), linearScale()]
-const plots = marks.map((mark, index) =>
-  createPlot(required(index ? '#comparison' : '#heatmap'), {
+const plots = marks.map((mark, index) => {
+  const guide = crosshair({
+    mode: 'xy',
+    snap: { mark, axis: 'xy' },
+    labels: { x: 'time', y: 'level' },
+  })
+  return createPlot(required(index ? '#comparison' : '#heatmap'), {
     height: 300,
     scales: { time: timeScale(), level: levels[index] },
     axes: [
@@ -34,8 +49,9 @@ const plots = marks.map((mark, index) =>
       axis('level', { position: 'left', label: 'Level' }),
     ],
     marks: [mark],
-  }),
-)
+    plugins: [guide, tooltip({ crosshair: guide })],
+  })
+})
 const events = new AbortController()
 renderer.addEventListener(
   'change',
@@ -70,6 +86,11 @@ required('#replace').addEventListener(
     offset++
     data.replace({ xEdges, yEdges, values: values.map((value) => (value + offset * 3) % 21) })
   },
+  events,
+)
+required<HTMLInputElement>('#visible').addEventListener(
+  'change',
+  (event) => marks[0].update({ visible: (event.currentTarget as HTMLInputElement).checked }),
   events,
 )
 window.addEventListener(

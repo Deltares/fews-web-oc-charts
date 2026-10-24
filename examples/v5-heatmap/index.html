@@ -11,7 +11,8 @@
     <p>
       A time-by-level matrix with explicit irregular cell edges and row-major values. Missing values
       are transparent. Both plots share one colour scale with a fixed domain: changing its palette
-      recolours both without changing their cell geometry.
+      recolours both without changing their cell geometry. Hovering a cell reports its bounds and
+      value; the crosshair snaps to that cell. The first heatmap can be hidden directly.
     </p>
     <fieldset class="controls">
       <legend>Update heatmaps</legend>
@@ -25,6 +26,7 @@
       <label><input id="reverse" type="checkbox" /> Reverse levels</label>
       <button id="palette" type="button">Toggle palette</button>
       <button id="replace" type="button">Replace values</button>
+      <label><input id="visible" type="checkbox" checked /> Show first heatmap</label>
     </fieldset>
     <figure>
       <div id="heatmap" class="plot-host"></div>
