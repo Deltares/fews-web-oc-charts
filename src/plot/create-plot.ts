@@ -314,47 +314,38 @@ function createPlotInternal(
     pluginHost.reconcile(current.plugins)
   }
 
-  function renderLayout(current: PlotOptions, tokens: ThemeTokens) {
-    if (current.axisLayout === 'inset') marksLayer.before(axesLayer)
-    else axesLayer.before(marksLayer)
-    const actualSize = Object.freeze({
-      width: viewportSize.get()?.width ?? current.width ?? measured.get().width,
-      height: viewportSize.get()?.height ?? current.height ?? measured.get().height,
-    })
-    size.set(actualSize)
-    const cartesianAxes = current.axes.filter((axis) =>
-      isCartesianSide(axis.options.get().resolved.position),
+  function measureAxis(axis: AxisHandle, tokens: ThemeTokens) {
+    const axisOptions = axis.options.get().resolved
+    const binding = scaleBindings.scales[axis.scale]
+    const labels = axisTickLabels(binding, axis)
+    const maxWidth = Math.max(
+      0,
+      ...labels.flatMap(({ primary, secondary }) =>
+        [primary, secondary]
+          .filter(Boolean)
+          .map((label) => measurer.measure(label, `${tokens.fontSize}px ${tokens.fontFamily}`)),
+      ),
     )
-    const measures = cartesianAxes.map((axis) => {
-      const axisOptions = axis.options.get().resolved
-      const binding = scaleBindings.scales[axis.scale]
-      const labels = axisTickLabels(binding, axis)
-      const maxWidth = Math.max(
-        0,
-        ...labels.flatMap(({ primary, secondary }) =>
-          [primary, secondary]
-            .filter(Boolean)
-            .map((label) => measurer.measure(label, `${tokens.fontSize}px ${tokens.fontFamily}`)),
-        ),
-      )
-      const labelRows = labels.some(({ secondary }) => secondary) ? 2 : 1
-      const angle = Math.abs((axisOptions.labelAngle * Math.PI) / 180)
-      const horizontal = axisOptions.position === 'top' || axisOptions.position === 'bottom'
-      const labelExtent = horizontal
-        ? Math.abs(Math.sin(angle)) * maxWidth +
-          Math.abs(Math.cos(angle)) * tokens.fontSize * labelRows
-        : Math.abs(Math.cos(angle)) * maxWidth +
-          Math.abs(Math.sin(angle)) * tokens.fontSize * labelRows
-      const thickness = Math.ceil(
-        12 + labelExtent + (axisOptions.label || axisOptions.unit ? tokens.fontSize * 2 : 0),
-      )
-      const previous = axisWidths.get(axis)
-      const version = axis.options.version
-      const stable =
-        previous?.version === version ? Math.max(thickness, previous.thickness) : thickness
-      axisWidths.set(axis, { version, thickness: stable })
-      return { position: axisOptions.position as CartesianSide, thickness: stable }
-    })
+    const labelRows = labels.some(({ secondary }) => secondary) ? 2 : 1
+    const angle = Math.abs((axisOptions.labelAngle * Math.PI) / 180)
+    const horizontal = axisOptions.position === 'top' || axisOptions.position === 'bottom'
+    const labelExtent = horizontal
+      ? Math.abs(Math.sin(angle)) * maxWidth +
+        Math.abs(Math.cos(angle)) * tokens.fontSize * labelRows
+      : Math.abs(Math.cos(angle)) * maxWidth +
+        Math.abs(Math.sin(angle)) * tokens.fontSize * labelRows
+    const thickness = Math.ceil(
+      12 + labelExtent + (axisOptions.label || axisOptions.unit ? tokens.fontSize * 2 : 0),
+    )
+    const previous = axisWidths.get(axis)
+    const version = axis.options.version
+    const stable =
+      previous?.version === version ? Math.max(thickness, previous.thickness) : thickness
+    axisWidths.set(axis, { version, thickness: stable })
+    return { position: axisOptions.position as CartesianSide, thickness: stable }
+  }
+
+  function layoutMargins(current: PlotOptions, tokens: ThemeTokens, cartesianAxes: AxisHandle[]) {
     const margins =
       coordinateSystem === 'polar' && current.axisLayout !== 'inset'
         ? {
@@ -371,6 +362,72 @@ function createPlotInternal(
         insetMargins[position] = Math.max(insetMargins[position], insetWidths.get(axis) ?? 0)
       }
     }
+    return { margins, insetMargins }
+  }
+
+  function renderPolarBackground(current: PlotOptions, plotRegion: PlotLayout['plot']) {
+    const polarFill = coordinateSystem === 'polar' && current.background === 'plot'
+    background.setAttribute('display', polarFill ? 'none' : '')
+    polarBackground.setAttribute('display', polarFill ? '' : 'none')
+    if (!polarFill) return
+    const angular = Object.values(scaleBindings.scales).find(
+      (binding) => binding.scale.kind === 'angular',
+    )!
+    const radial = Object.values(scaleBindings.scales).find(
+      (binding) => binding.scale.kind === 'radial',
+    )!
+    const angularOptions = angular.scale.options.get().resolved
+    const classic = current.axes.some((axis) => axis.options.get().resolved.style === 'classic')
+    const sign = angularOptions.direction === 'anticlockwise' ? -1 : 1
+    const intercept = angularOptions.intercept ?? 0
+    const classicOffset = sign === -1 ? Math.PI : 0
+    const [start, end] = angular.range.get()
+    polarBackground.setAttribute(
+      'transform',
+      `translate(${plotRegion.x + plotRegion.width / 2},${plotRegion.y + plotRegion.height / 2})`,
+    )
+    polarBackground.setAttribute(
+      'd',
+      arc<null>()
+        .innerRadius(radial.range.get()[0])
+        .outerRadius(radial.range.get()[1])
+        .startAngle(classic ? intercept + start + classicOffset : intercept + sign * start)
+        .endAngle(classic ? intercept + end + classicOffset : intercept + sign * end)(null) ?? '',
+    )
+  }
+
+  function updateBackgroundAndClip(
+    current: PlotOptions,
+    actualSize: Readonly<Size>,
+    plotRegion: PlotLayout['plot'],
+    localMarks: boolean,
+  ) {
+    const backgroundRegion =
+      current.background === 'plot'
+        ? plotRegion
+        : { x: 0, y: 0, width: actualSize.width, height: actualSize.height }
+    for (const name of ['x', 'y', 'width', 'height'] as const) {
+      background.setAttribute(name, String(backgroundRegion[name]))
+    }
+    clipRect.setAttribute('x', String(localMarks ? 0 : plotRegion.x))
+    clipRect.setAttribute('y', String(localMarks ? 0 : plotRegion.y))
+    clipRect.setAttribute('width', String(plotRegion.width))
+    clipRect.setAttribute('height', String(plotRegion.height))
+  }
+
+  function renderLayout(current: PlotOptions, tokens: ThemeTokens) {
+    if (current.axisLayout === 'inset') marksLayer.before(axesLayer)
+    else axesLayer.before(marksLayer)
+    const actualSize = Object.freeze({
+      width: viewportSize.get()?.width ?? current.width ?? measured.get().width,
+      height: viewportSize.get()?.height ?? current.height ?? measured.get().height,
+    })
+    size.set(actualSize)
+    const cartesianAxes = current.axes.filter((axis) =>
+      isCartesianSide(axis.options.get().resolved.position),
+    )
+    const measures = cartesianAxes.map((axis) => measureAxis(axis, tokens))
+    const { margins, insetMargins } = layoutMargins(current, tokens, cartesianAxes)
     regions.set(
       layout(
         actualSize,
@@ -391,50 +448,12 @@ function createPlotInternal(
     const plotRegion = regions.get().plot
     if (current.clipMarks) marksLayer.setAttribute('clip-path', `url(#${clipId})`)
     else marksLayer.removeAttribute('clip-path')
-    const polarFill = coordinateSystem === 'polar' && current.background === 'plot'
-    background.setAttribute('display', polarFill ? 'none' : '')
-    polarBackground.setAttribute('display', polarFill ? '' : 'none')
-    if (polarFill) {
-      const angular = Object.values(scaleBindings.scales).find(
-        (binding) => binding.scale.kind === 'angular',
-      )!
-      const radial = Object.values(scaleBindings.scales).find(
-        (binding) => binding.scale.kind === 'radial',
-      )!
-      const angularOptions = angular.scale.options.get().resolved
-      const classic = current.axes.some((axis) => axis.options.get().resolved.style === 'classic')
-      const sign = angularOptions.direction === 'anticlockwise' ? -1 : 1
-      const intercept = angularOptions.intercept ?? 0
-      const classicOffset = sign === -1 ? Math.PI : 0
-      const [start, end] = angular.range.get()
-      polarBackground.setAttribute(
-        'transform',
-        `translate(${plotRegion.x + plotRegion.width / 2},${plotRegion.y + plotRegion.height / 2})`,
-      )
-      polarBackground.setAttribute(
-        'd',
-        arc<null>()
-          .innerRadius(radial.range.get()[0])
-          .outerRadius(radial.range.get()[1])
-          .startAngle(classic ? intercept + start + classicOffset : intercept + sign * start)
-          .endAngle(classic ? intercept + end + classicOffset : intercept + sign * end)(null) ?? '',
-      )
-    }
+    renderPolarBackground(current, plotRegion)
     const localMarks = current.axisLayout === 'inset' && coordinateSystem === 'cartesian'
     if (localMarks)
       marksLayer.setAttribute('transform', `translate(${plotRegion.x},${plotRegion.y})`)
     else marksLayer.removeAttribute('transform')
-    const backgroundRegion =
-      current.background === 'plot'
-        ? plotRegion
-        : { x: 0, y: 0, width: actualSize.width, height: actualSize.height }
-    for (const name of ['x', 'y', 'width', 'height'] as const) {
-      background.setAttribute(name, String(backgroundRegion[name]))
-    }
-    clipRect.setAttribute('x', String(localMarks ? 0 : plotRegion.x))
-    clipRect.setAttribute('y', String(localMarks ? 0 : plotRegion.y))
-    clipRect.setAttribute('width', String(plotRegion.width))
-    clipRect.setAttribute('height', String(plotRegion.height))
+    updateBackgroundAndClip(current, actualSize, plotRegion, localMarks)
     if (current.title) element.setAttribute('aria-label', current.title)
     else element.removeAttribute('aria-label')
   }
