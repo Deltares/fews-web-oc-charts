@@ -4,6 +4,7 @@ import { panDefinition } from './pan-plugin.js'
 import { brushDefinition } from './brush-plugin.js'
 import { zoomDefinition } from './zoom-plugin.js'
 import { crosshairDefinition } from './crosshair-plugin.js'
+import { tooltipDefinition } from './tooltip-plugin.js'
 
 /** Registering a definition here is all that is needed to make a plugin installable. */
 const pluginDefinitions = [
@@ -11,6 +12,7 @@ const pluginDefinitions = [
   panDefinition,
   brushDefinition,
   crosshairDefinition,
+  tooltipDefinition,
 ] as const
 
 type PluginOf<D> = D extends PluginDefinition<infer H> ? H : never
