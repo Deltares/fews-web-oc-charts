@@ -1,6 +1,7 @@
 import { autoscaleWindow, type ScaleHandle } from '../../scales/scale.js'
 import { isLineMark } from '../marks/line/line.js'
 import type { PlotMark } from '../marks/marks.js'
+import { isStaticMarkVisible } from '../marks/static-legend.js'
 import { skewTTemperature } from './skew-t-geometry.js'
 
 export function skewTMarkExtents(
@@ -23,7 +24,7 @@ export function skewTMarkExtents(
   let high = -Infinity
   for (const mark of marks) {
     if (!isLineMark(mark)) throw new Error('Skew-T extents require line() marks.')
-    if (!mark.line && !mark.markers) continue
+    if ((!mark.line && !mark.markers) || !isStaticMarkVisible(mark)) continue
     for (let index = 0; index < mark.xValues.length; index += 1) {
       const t = mark.xValues[index]
       const p = mark.yValues[index]

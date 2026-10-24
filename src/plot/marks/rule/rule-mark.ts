@@ -10,6 +10,7 @@ import {
   type MarkRenderContext,
   type MarkRenderer,
 } from '../mark-definition.js'
+import { applyStaticVisibility, isStaticMarkVisible, staticLegend } from '../static-legend.js'
 
 function createRuleRenderer(): MarkRenderer<RuleMark> {
   const line = svgElement('line', { 'vector-effect': 'non-scaling-stroke', 'data-mark': 'rule' })
@@ -21,6 +22,7 @@ function createRuleRenderer(): MarkRenderer<RuleMark> {
       layer.append(line)
     },
     geometry(mark: RuleMark, context: MarkRenderContext) {
+      if (!applyStaticVisibility(mark, line)) return
       const scale = context.scales[mark.scale]
       const region = context.plot
       const key = [mark, ...scaleKey(scale), region.x, region.y, region.width, region.height]
@@ -62,7 +64,14 @@ export const ruleDefinition: MarkDefinition<RuleMark> = {
     }
     direction(mark.scale)
   },
+  legend: (mark, tokens) =>
+    staticLegend(mark, {
+      type: 'rule',
+      stroke: mark.stroke ?? accent(tokens),
+      strokeWidth: mark.strokeWidth,
+    }),
   // Rules annotate a scale but never contribute to its autoscaled domain.
   extents() {},
   createRenderer: createRuleRenderer,
+  track: (mark) => isStaticMarkVisible(mark),
 }

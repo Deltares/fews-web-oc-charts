@@ -1,5 +1,10 @@
 import type { ScaleKind, ScaleValue } from '../../../scales/scale.js'
 import { validateKeys } from '../../../core/validation.js'
+import {
+  registerStaticLegend,
+  staticLegendKeys,
+  type StaticLegendOptions,
+} from '../static-legend.js'
 import { validateCoordinateValues } from '../mark-values.js'
 
 export type LineValue = ScaleValue | null | undefined
@@ -20,7 +25,7 @@ export interface LineAreaOptions {
   opacity?: number
 }
 
-export interface LineOptions {
+export interface LineOptions extends StaticLegendOptions {
   id?: string
   x: string
   y: string
@@ -110,6 +115,7 @@ function validateLineOptionsObject(options: LineOptions): void {
       'vectorEffect',
       'markers',
       'area',
+      ...staticLegendKeys,
     ],
     'line',
   )
@@ -285,5 +291,6 @@ export function line(options: LineOptions): LineMark {
     area,
   })
   lineMarks.add(mark)
+  registerStaticLegend(mark, options, 'line')
   return mark
 }

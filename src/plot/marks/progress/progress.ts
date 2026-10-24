@@ -1,4 +1,9 @@
 import { validateKeys } from '../../../core/validation.js'
+import {
+  registerStaticLegend,
+  staticLegendKeys,
+  type StaticLegendOptions,
+} from '../static-legend.js'
 import { copyNumericRanges } from '../mark-values.js'
 
 export type ProgressValue = number | null | undefined
@@ -6,7 +11,7 @@ export type ProgressValues = ArrayLike<ProgressValue>
 export type ProgressAngleRange = readonly [number, number] | null | undefined
 export type ProgressAngleRanges = ArrayLike<ProgressAngleRange>
 
-export interface ProgressOptions {
+export interface ProgressOptions extends StaticLegendOptions {
   id?: string
   x: string
   y: string
@@ -58,7 +63,7 @@ export function progress(options: ProgressOptions): ProgressMark {
     throw new Error('progress options must be an object.')
   validateKeys(
     options,
-    ['id', 'x', 'y', 'xValues', 'yValues', 'thickness', 'fill', 'opacity'],
+    ['id', 'x', 'y', 'xValues', 'yValues', 'thickness', 'fill', 'opacity', ...staticLegendKeys],
     'progress',
   )
   if (options.id !== undefined && (typeof options.id !== 'string' || !options.id)) {
@@ -98,5 +103,6 @@ export function progress(options: ProgressOptions): ProgressMark {
     opacity,
   })
   progressMarks.add(mark)
+  registerStaticLegend(mark, options, 'progress')
   return mark
 }

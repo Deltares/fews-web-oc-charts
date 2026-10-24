@@ -12,6 +12,7 @@ import {
   type MarkRenderContext,
   type MarkRenderer,
 } from '../mark-definition.js'
+import { applyStaticVisibility, isStaticMarkVisible, staticLegend } from '../static-legend.js'
 import { svgElement } from '../../axes/render-axes.js'
 
 function createProgressRenderer(): MarkRenderer<ProgressMark> {
@@ -24,6 +25,7 @@ function createProgressRenderer(): MarkRenderer<ProgressMark> {
       layer.append(group)
     },
     geometry(mark, context: MarkRenderContext) {
+      if (!applyStaticVisibility(mark, group)) return
       const angular = context.scales[mark.x]
       const radial = context.scales[mark.y]
       const region = context.plot
@@ -84,6 +86,7 @@ function createProgressRenderer(): MarkRenderer<ProgressMark> {
 }
 
 function progressExtents(mark: ProgressMark, context: MarkExtentContext) {
+  if (!isStaticMarkVisible(mark)) return
   const angular = mark.x === context.scale
   if (!angular && mark.y !== context.scale) return
   const window = extentWindow(context, angular ? mark.y : mark.x)
@@ -128,6 +131,9 @@ export const progressDefinition: MarkDefinition<ProgressMark> = {
       throw new Error(`progress "${mark.id ?? ''}" requires angular and radial scales.`)
     }
   },
+  legend: (mark, tokens) =>
+    staticLegend(mark, { type: 'area', fill: mark.fill ?? accent(tokens), opacity: mark.opacity }),
+  track: (mark) => isStaticMarkVisible(mark),
   extents(mark, context) {
     progressExtents(mark, context)
   },

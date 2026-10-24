@@ -148,6 +148,18 @@ export const heatmapDefinition: MarkDefinition<HeatmapMark> = {
     return hit ? [hit] : []
   },
   highlight: (mark, hit, { scales }) => heatmapHighlight(mark, hit, scales),
+  legend(mark) {
+    const options = () => mark.options.get().resolved
+    const { label, color, opacity } = options()
+    if (label === undefined) return undefined
+    const [low, high] = color.options.get().resolved.domain
+    return {
+      label,
+      symbol: { type: 'steps', fill: color.map((low + high) / 2), opacity },
+      visible: () => options().visible,
+      setVisible: (visible) => mark.update({ visible }),
+    }
+  },
   validate(mark, { coordinateSystem, scales, direction }) {
     if (coordinateSystem !== 'cartesian')
       throw new Error('heatmap() supports cartesian plots only.')

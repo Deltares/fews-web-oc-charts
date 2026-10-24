@@ -18,28 +18,36 @@ export function compositeLegend<L extends CompositeLayer>(
     type,
     ...resolveCompositeStyle(layer, options(), accent),
   })
+  const current = layers()
   return {
     label: options().label,
-    symbol: { type: 'stack', parts: layers().map(symbol) },
+    symbol: current.length ? symbol(current[0]) : { type: 'group' },
     visible: () => options().visible,
     setVisible: (visible) =>
       update(
         visible,
         layers().map((layer) => ({ ...layer, visible })),
       ),
-    layers: layers().map((layer) => ({
+    layers: current.map((layer) => ({
       id: layer.id,
       label: layer.label,
       stack: layer.stack,
       symbol: symbol(layer),
       visible: () => layers().find(({ id }) => id === layer.id)?.visible !== false,
-      setVisible: (visible) =>
+      setVisible: (visible) => {
+        // Showing one layer of a hidden mark must not bring back its other layers.
+        const markVisible = options().visible
         update(
           true,
           layers().map((candidate) =>
-            candidate.id === layer.id ? { ...candidate, visible } : candidate,
+            candidate.id === layer.id
+              ? { ...candidate, visible }
+              : markVisible
+                ? candidate
+                : { ...candidate, visible: false },
           ),
-        ),
+        )
+      },
     })),
   }
 }

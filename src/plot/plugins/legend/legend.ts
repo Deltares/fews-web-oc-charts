@@ -42,6 +42,43 @@ export type SymbolPrimitiveSpec =
       readonly strokeWidth?: number
       readonly opacity?: number
     }
+  | {
+      /** Three bottom-aligned bars of decreasing height (histogram/heatmap). */
+      readonly type: 'steps'
+      readonly fill?: string
+      readonly stroke?: string
+      readonly strokeWidth?: number
+      readonly opacity?: number
+    }
+  | {
+      /** Vertical line through the swatch centre. */
+      readonly type: 'rule'
+      readonly stroke?: string
+      readonly strokeWidth?: number
+      readonly strokeDasharray?: string
+      readonly opacity?: number
+    }
+  | {
+      /** Horizontal shaft with an arrowhead pointing right. */
+      readonly type: 'arrow'
+      readonly color?: string
+      readonly strokeWidth?: number
+      readonly opacity?: number
+    }
+  | {
+      /** Arrowhead pointing up. */
+      readonly type: 'direction'
+      readonly color?: string
+      readonly opacity?: number
+    }
+  | {
+      readonly type: 'text'
+      readonly text?: string
+      readonly fill?: string
+      readonly fontFamily?: string
+      readonly fontWeight?: string | number
+      readonly opacity?: number
+    }
 
 export type SymbolSpec =
   | SymbolPrimitiveSpec
@@ -155,9 +192,38 @@ export function createLegendModel(
       const markVisible = legend.visible()
       const leafEntries: LegendEntry[] = []
       const symbol = legend.symbol
+      const singleLayer =
+        legend.layers?.length === 1 && !legend.layers[0].stack ? legend.layers[0] : undefined
+
+      if (singleLayer) {
+        // A single unstacked layer collapses into one leaf entry.
+        const visibility = () => (legend.visible() && singleLayer.visible() ? 'visible' : 'hidden')
+        nodeCommands.set(rootId, {
+          id: rootId,
+          visibility,
+          setVisible(visible) {
+            if (visible && !legend.visible()) legend.setVisible(true)
+            singleLayer.setVisible(visible)
+          },
+        })
+        roots.push(
+          freezeEntry({
+            id: rootId,
+            markId: rootId,
+            label: markLabel || singleLayer.label || mark.id || labelIndex,
+            symbol: singleLayer.symbol,
+            visibility: visibility(),
+            disabled: false,
+            children: Object.freeze([]),
+          }),
+        )
+        continue
+      }
 
       if (legend.layers) {
         const layers = legend.layers
+        // Like v4, an unlabelled multi-layer mark has no heading; its layers are top-level entries.
+        const flat = !markLabel
         const stackGroups = new Map<string, MarkLegendLayer[]>()
         for (const layer of layers) {
           if (layer.stack) {
@@ -182,7 +248,7 @@ export function createLegendModel(
           })
           nodeCommands.set(id, {
             id,
-            parentId,
+            parentId: parentId === rootId && flat ? undefined : parentId,
             visibility: () => (legend.visible() && layer.visible() ? 'visible' : 'hidden'),
             setVisible: layer.setVisible,
           })
@@ -209,23 +275,14 @@ export function createLegendModel(
             id: groupId,
             markId: rootId,
             label: stack,
-            symbol: {
-              type: 'stack',
-              parts: stackLayers.flatMap((layer) =>
-                layer.symbol.type === 'composite' || layer.symbol.type === 'stack'
-                  ? layer.symbol.parts
-                  : layer.symbol.type === 'group'
-                    ? []
-                    : [layer.symbol],
-              ),
-            },
+            symbol: { type: 'group' },
             visibility: groupVisibility(),
             disabled: false,
             children: Object.freeze(stackChildren),
           })
           nodeCommands.set(groupId, {
             id: groupId,
-            parentId: rootId,
+            parentId: flat ? undefined : rootId,
             visibility: groupVisibility,
             setVisible(visible) {
               for (const layer of stackLayers) layer.setVisible(visible)
@@ -234,6 +291,10 @@ export function createLegendModel(
           leafEntries.push(groupEntry)
         }
 
+        if (flat) {
+          roots.push(...leafEntries)
+          continue
+        }
         const rootVisibility = () =>
           legend.visible() ? visibilityOf(layers.map((layer) => layer.visible())) : 'hidden'
         nodeCommands.set(rootId, {

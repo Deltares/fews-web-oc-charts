@@ -17,6 +17,7 @@ import {
   type MarkRenderContext,
   type MarkRenderer,
 } from '../mark-definition.js'
+import { applyStaticVisibility, isStaticMarkVisible, staticLegend } from '../static-legend.js'
 
 function createTextRenderer(): MarkRenderer<TextMark> {
   const group = svgElement('g', { 'data-mark': 'text' })
@@ -28,6 +29,7 @@ function createTextRenderer(): MarkRenderer<TextMark> {
       layer.append(group)
     },
     geometry(mark: TextMark, context: MarkRenderContext) {
+      if (!applyStaticVisibility(mark, group)) return
       const xScale = context.scales[mark.x]
       const yScale = context.scales[mark.y]
       if (
@@ -111,7 +113,16 @@ export const textDefinition: MarkDefinition<TextMark> = {
       validateTextValuesForScale(mark, coordinate, scale.kind)
     }
   },
+  legend: (mark, tokens) =>
+    staticLegend(mark, {
+      type: 'text',
+      fill: mark.fill ?? accent(tokens),
+      fontFamily: mark.fontFamily,
+      fontWeight: mark.fontWeight,
+    }),
+  track: (mark) => isStaticMarkVisible(mark),
   extents(mark, context) {
+    if (!isStaticMarkVisible(mark)) return
     const coordinate = mark.x === context.scale ? 'x' : mark.y === context.scale ? 'y' : undefined
     if (!coordinate) return
     const window = extentWindow(context, coordinate === 'x' ? mark.y : mark.x)

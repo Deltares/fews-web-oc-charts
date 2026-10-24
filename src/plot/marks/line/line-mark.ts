@@ -21,6 +21,7 @@ import { lineLegendSymbol, resolveLineStyles } from '../mark-styles.js'
 import { nearestPoint } from '../../interaction/point-hit-testing.js'
 import type { MarkHitContext } from '../mark-definition.js'
 import { pointHighlight } from '../highlight-shapes.js'
+import { isStaticMarkVisible, staticLegend } from '../static-legend.js'
 
 type LineLikeMark = LineMark | SeriesMark
 let nextSymbolId = 0
@@ -67,7 +68,7 @@ function lineExtents(mark: LineLikeMark, context: MarkExtentContext) {
   if (isSeriesMark(mark)) {
     mark.options.get()
     if (!mark.visible) return
-  }
+  } else if (!isStaticMarkVisible(mark)) return
   if (
     (!mark.line && !mark.markers && !mark.area) ||
     (mark.x !== context.scale && mark.y !== context.scale)
@@ -135,7 +136,7 @@ function createLineRenderer(): MarkRenderer<LineLikeMark> {
       const yScale = context.scales[mark.y]
       const store = isSeriesMark(mark) ? mark.data : undefined
       const staticMark = isLineMark(mark) ? mark : undefined
-      const visible = !isSeriesMark(mark) || mark.visible
+      const visible = isSeriesMark(mark) ? mark.visible : isStaticMarkVisible(mark)
       const polar = context.coordinateSystem === 'polar'
       const skewT = context.coordinateSystem === 'skewT'
       const angular = xScale.scale.options.get().resolved
@@ -316,6 +317,7 @@ function createLineRenderer(): MarkRenderer<LineLikeMark> {
 }
 
 function pointMarkHits(mark: LineLikeMark, { scales, point, axis, plot }: MarkHitContext) {
+  if (isLineMark(mark) && !isStaticMarkVisible(mark)) return []
   const hit = nearestPoint(mark, scales, point, axis, plot)
   return hit ? [hit] : []
 }
@@ -325,9 +327,11 @@ export const lineDefinition: MarkDefinition<LineMark> = {
   is: isLineMark,
   hits: pointMarkHits,
   highlight: (mark, hit, { color }) => pointHighlight(mark, hit, color),
+  legend: (mark, tokens) => staticLegend(mark, lineLegendSymbol(mark, tokens)),
   validate: (mark, context) => validateLineLike(mark, context, false),
   extents: lineExtents,
   createRenderer: createLineRenderer,
+  track: (mark) => isStaticMarkVisible(mark),
 }
 
 export const seriesDefinition: MarkDefinition<SeriesMark> = {

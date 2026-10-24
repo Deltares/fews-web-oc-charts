@@ -729,12 +729,22 @@ children }`. `visibility` is `'visible' | 'hidden' | 'mixed'`; `children` is an 
   style cache, never by scraping a rendered SVG path. The same spec works for SVG and
   canvas marks; a pure symbol-to-SVG-primitives helper supports framework rendering
   without raw HTML injection or an imperative DOM renderer.
-  The current core exports `createLegendSwatch(entry.symbol, { width: 36, height: 20 })`
-  for a decorative SVG element and `legendSymbolPrimitives(entry.symbol, { width: 36,
-height: 20 })` for typed `{ type, attributes }` geometry (`line`, `circle`, `rect`).
+  The current core exports `createLegendSwatch(entry.symbol)` for a decorative SVG element
+  and `legendSymbolPrimitives(entry.symbol)` for typed `{ type, attributes }` geometry
+  (`line`, `circle`, `rect`, `path`, `text`); both default to a 20×20 swatch.
   Both use the same pure geometry; neither owns labels, controls, layout or visibility.
+  Shapes match the v4 `drawLegendSymbol` output: `line` spans the width, `area` is a
+  centred half-height band (stacked area, band, progress), `bar` a centred square,
+  `steps` the three v4 step bars (histogram, heatmap), `rule` a vertical line, `arrow` a
+  shaft with arrowhead, `direction` an upward arrowhead and `text` the `+1.0` sample.
   `composite` parts overlay (area, line, markers); `stack` parts form bottom-to-top
-  coloured bands, including all constituent layers of a parent or named stack group.
+  coloured bands. Composite marks (`bar`, `stackedArea`) follow v4: a single unstacked
+  layer collapses into one leaf entry; an unlabelled multi-layer mark has no heading and
+  its layers (and named-stack groups) become top-level entries; a labelled multi-layer
+  mark is a heading showing its first layer's symbol. Named-stack headings use a `group`
+  symbol (no swatch); each layer entry carries its own symbol. Static marks (`line`, `rule`, `band`,
+  `progress`, `text`, `arrows`, `direction`) and `heatmap` join the legend only when they
+  have a `label`; their `visible` option is toggled by the legend.
   Marker `size` is a radius; `opacity` on area/bar symbols is fill opacity, matching
   chart rendering without dimming their outlines. Hidden entries keep their symbols:
   the application dims the swatch and uses a checkbox for hidden/mixed state.

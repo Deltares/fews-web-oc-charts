@@ -6,7 +6,7 @@ import {
 import { optionSignal, reactive } from '../../../core/runtime.js'
 import type { ReadonlySignal } from '../../../core/reactive.js'
 import { validateKeys } from '../../../core/validation.js'
-import { legendSymbolPrimitives } from './legend-swatch.js'
+import { legendSymbolNode, legendSymbolPrimitives } from './legend-swatch.js'
 import type { LegendEntry } from './legend.js'
 import type { PluginDefinition, PlotContext } from '../plugin-definition.js'
 import { svgElement } from '../../rendering/svg.js'
@@ -226,11 +226,7 @@ function appendSymbol(group: SVGGElement, entry: LegendEntry) {
     width: swatchWidth,
     height: swatchHeight,
   })) {
-    const node = svgElement(primitive.type)
-    for (const [name, value] of Object.entries(primitive.attributes)) {
-      if (value !== undefined) node.setAttribute(name, String(value))
-    }
-    group.append(node)
+    group.append(legendSymbolNode(primitive))
   }
 }
 

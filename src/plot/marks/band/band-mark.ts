@@ -12,6 +12,7 @@ import {
   type MarkRenderContext,
   type MarkRenderer,
 } from '../mark-definition.js'
+import { applyStaticVisibility, isStaticMarkVisible, staticLegend } from '../static-legend.js'
 
 function polarRangePath(
   xRange: BandRange,
@@ -92,6 +93,7 @@ function createBandRenderer(): MarkRenderer<BandMark> {
       layer.append(group)
     },
     geometry(mark: BandMark, context: MarkRenderContext) {
+      if (!applyStaticVisibility(mark, group)) return
       const xScale = context.scales[mark.x]
       const yScale = context.scales[mark.y]
       const polar = context.coordinateSystem === 'polar'
@@ -182,7 +184,11 @@ export const bandDefinition: MarkDefinition<BandMark> = {
       throw new Error(`band "${mark.id ?? ''}" requires numeric or time scales.`)
     }
   },
+  legend: (mark, tokens) =>
+    staticLegend(mark, { type: 'area', fill: mark.fill ?? accent(tokens), opacity: mark.opacity }),
+  track: (mark) => isStaticMarkVisible(mark),
   extents(mark, context) {
+    if (!isStaticMarkVisible(mark)) return
     let coordinate: 'x' | 'y' | undefined
     if (mark.x === context.scale) coordinate = 'x'
     else if (mark.y === context.scale) coordinate = 'y'

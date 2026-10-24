@@ -90,6 +90,7 @@ export type {
 export { line } from './plot/marks/line/line.js'
 export { rule } from './plot/marks/rule/rule.js'
 export type { RuleMark, RuleOptions } from './plot/marks/rule/rule.js'
+export type { StaticLegendOptions } from './plot/marks/static-legend.js'
 export { arrows } from './plot/marks/vector/arrows.js'
 export type {
   ArrowsMark,

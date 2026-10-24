@@ -1,9 +1,14 @@
 import { validateKeys } from '../../../core/validation.js'
+import {
+  registerStaticLegend,
+  staticLegendKeys,
+  type StaticLegendOptions,
+} from '../static-legend.js'
 
 export type VectorValue = number | null | undefined
 export type VectorValues = ArrayLike<VectorValue>
 
-export interface ArrowsOptions {
+export interface ArrowsOptions extends StaticLegendOptions {
   id?: string
   x: string
   y: string
@@ -66,6 +71,7 @@ export function arrows(options: ArrowsOptions): ArrowsMark {
       'color',
       'strokeWidth',
       'headSize',
+      ...staticLegendKeys,
     ],
     'arrows',
   )
@@ -112,5 +118,6 @@ export function arrows(options: ArrowsOptions): ArrowsMark {
     headSize,
   })
   arrowMarks.add(mark)
+  registerStaticLegend(mark, options, 'arrows')
   return mark
 }

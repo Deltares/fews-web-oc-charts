@@ -1,5 +1,10 @@
 import type { ScaleKind, ScaleValue } from '../../../scales/scale.js'
 import { validateKeys } from '../../../core/validation.js'
+import {
+  registerStaticLegend,
+  staticLegendKeys,
+  type StaticLegendOptions,
+} from '../static-legend.js'
 import type { LineValue, LineValues } from '../line/line.js'
 import { validateCoordinateValues } from '../mark-values.js'
 
@@ -17,7 +22,7 @@ export type TextBaseline =
   | 'hanging'
   | 'text-top'
 
-export interface TextOptions {
+export interface TextOptions extends StaticLegendOptions {
   id?: string
   x: string
   y: string
@@ -119,6 +124,7 @@ export function text(options: TextOptions): TextMark {
       'fontWeight',
       'textAnchor',
       'dominantBaseline',
+      ...staticLegendKeys,
     ],
     'text',
   )
@@ -204,5 +210,6 @@ export function text(options: TextOptions): TextMark {
     dominantBaseline: options.dominantBaseline ?? 'middle',
   })
   textMarks.add(mark)
+  registerStaticLegend(mark, options, 'text')
   return mark
 }
