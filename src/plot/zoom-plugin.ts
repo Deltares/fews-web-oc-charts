@@ -2,8 +2,7 @@ import type { ScaleHandle, ScaleValue } from '../scales/scale.js'
 import { matchesModifierKey } from '../Utils/modifierKey.js'
 import type { PlotContext, PluginDefinition } from './plugin-definition.js'
 import { isZoomHandle, type ZoomHandle } from './zoom.js'
-
-const maxTime = 8.64e15
+import { isValidScaleDomain } from './scale-domain.js'
 
 function installZoom(handle: ZoomHandle, context: PlotContext) {
   const initialDomains = new Map<
@@ -52,13 +51,7 @@ function installZoom(handle: ZoomHandle, context: PlotContext) {
               Math.exp(Math.log(anchor) + (Math.log(value) - Math.log(anchor)) * factor)
           : (value: number) => anchor + (value - anchor) * factor
       const nextDomain = [zoomValue(Number(domain[0])), zoomValue(Number(domain[1]))] as const
-      if (
-        nextDomain.some((value) => !Number.isFinite(value)) ||
-        (binding.scale.kind === 'log' && nextDomain.some((value) => value <= 0)) ||
-        (binding.scale.kind === 'time' && nextDomain.some((value) => Math.abs(value) > maxTime))
-      ) {
-        continue
-      }
+      if (!isValidScaleDomain(binding.scale.kind, nextDomain)) continue
       binding.scale.update({ domain: nextDomain })
       changed = true
     }
