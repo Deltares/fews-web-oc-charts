@@ -150,6 +150,23 @@ describe('grouped and stacked bars', () => {
     expect(pixels[0].sampleId).toBe(data.sampleId(0))
   })
 
+  test('bar extents filter category and value windows while excluding invalid and hidden layers', () => {
+    const mark = bar(
+      createTable({ t: ['one', 'two', 'invalid'], a: [3, -4, NaN], b: [5, 2, NaN] }),
+      options,
+    )
+    expect(barExtent(mark, 'category')).toEqual(['one', 'two'])
+    expect(barExtent(mark, 'category', [4, 6])).toEqual(['one'])
+    expect(barExtent(mark, 'category', [10, 20])).toBeUndefined()
+    expect(barExtent(mark, 'value', ['two'])).toEqual([-4, 2])
+    expect(barExtent(mark, 'value', ['missing'])).toBeUndefined()
+    mark.update({ layers: layers.map((layer) => ({ ...layer, visible: layer.id === 'a' })) })
+    expect(barExtent(mark, 'value')).toEqual([-4, 3])
+    mark.update({ visible: false })
+    expect(barExtent(mark, 'category')).toBeUndefined()
+    expect(barExtent(mark, 'value')).toBeUndefined()
+  })
+
   test('named stacks share widths, retain hidden slots and use independent gaps', () => {
     const data = createTable({ t: ['one'], a: [3], b: [4], c: [5], d: [NaN] })
     const named = [
