@@ -67,6 +67,52 @@
       </figcaption>
     </figure>
     <p id="status" class="status" role="status"></p>
+    <h2>Advanced: tooltips across shared-time subplots</h2>
+    <p>
+      Each mark type has its own subplot and value scale, while all three plots share the same UTC
+      time-scale handle. Hover any panel: the pointer time is relayed to the other panels, showing
+      an x crosshair and mark-specific tooltip in all three. The line, rainfall bars and stacked
+      area each resolve values against their own mark and y scale.
+    </p>
+    <figure class="advanced-subplots">
+      <section aria-labelledby="flow-heading">
+        <h3 id="flow-heading">Observed flow — line mark</h3>
+        <div id="flow-chart" class="plot-host"></div>
+      </section>
+      <section aria-labelledby="rain-heading">
+        <h3 id="rain-heading">Rainfall — interval bar mark</h3>
+        <div id="rain-chart" class="plot-host"></div>
+      </section>
+      <section aria-labelledby="storage-heading">
+        <h3 id="storage-heading">Inflow components — stacked-area mark</h3>
+        <div id="storage-chart" class="plot-host"></div>
+      </section>
+      <figcaption>
+        The shared x domain keeps the same timestamp aligned across all panels. Each subplot owns an
+        independent y scale. Moving over one plot relays its time coordinate to the others; leaving
+        the subplot group hides all three crosshairs and tooltips. Time appears in the crosshair
+        callouts rather than the tooltips; values and stack bounds are rounded to two decimal
+        places.
+      </figcaption>
+    </figure>
+    <h3>Advanced shared-x setup</h3>
+    <pre><code>const t = timeScale({ domain: [start, end], timeZone: 'UTC' })
+const flow = line({ x: 't', y: 'q', xValues: times, yValues: discharge })
+const rain = bar(rainfallData, {
+  x: 'start', y: 'rainfall', scales: { x: 't', y: 'rain' },
+  interval: { start: 'start', end: 'end' },
+})
+const components = stackedArea(flowData, {
+  x: 't', scales: { x: 't', y: 'flow' }, layers,
+})
+const guide = crosshair({ mode: 'x', labels: { x: 't' } })
+
+// Install the same x-only guide in each plot. Relay pointer time between SVGs,
+// projecting it with each plot's t binding; each tooltip stays local to its mark.
+const display = { crosshair: guide, showX: false, digits: 2 }
+createPlot(flowHost, { scales: { t, q }, marks: [flow], plugins: [guide, tooltip({ ...display, marks: [flow] })] })
+createPlot(rainHost, { scales: { t, rain }, marks: [rain], plugins: [guide, tooltip({ ...display, marks: [rain] })] })
+createPlot(areaHost, { scales: { t, flow }, marks: [components], plugins: [guide, tooltip({ ...display, marks: [components] })] })</code></pre>
     <h2>Public API</h2>
     <pre><code>const guide = crosshair({
   mode: 'x',
