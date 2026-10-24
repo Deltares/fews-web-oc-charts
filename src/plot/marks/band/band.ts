@@ -58,6 +58,24 @@ function copyRanges(values: BandRangeValues, name: string): readonly BandRangeVa
   )
 }
 
+function validateCurve(curve: BandOptions['curve'], xValues: readonly BandRangeValue[]) {
+  if (curve === undefined) return
+  if (!['linear', 'basis', 'step', 'step-before', 'step-after'].includes(curve)) {
+    throw new Error('band.curve must be linear, basis, step, step-before or step-after.')
+  }
+  if (xValues.some((value) => value && value[0] !== value[1])) {
+    throw new Error('Curved bands require equal x endpoints at each sample.')
+  }
+}
+
+function validateScaleNames(options: BandOptions) {
+  for (const key of ['x', 'y'] as const) {
+    if (typeof options[key] !== 'string' || options[key].length === 0) {
+      throw new Error(`band.${key} must name a plot scale.`)
+    }
+  }
+}
+
 export function band(options: BandOptions): BandMark {
   if (!options || typeof options !== 'object') throw new Error('band options must be an object.')
   validateKeys(
@@ -74,24 +92,13 @@ export function band(options: BandOptions): BandMark {
   if (options.id !== undefined && (typeof options.id !== 'string' || options.id.length === 0)) {
     throw new Error('band.id must be a non-empty string.')
   }
-  for (const key of ['x', 'y'] as const) {
-    if (typeof options[key] !== 'string' || options[key].length === 0) {
-      throw new Error(`band.${key} must name a plot scale.`)
-    }
-  }
+  validateScaleNames(options)
   const xValues = copyRanges(options.xValues, 'xValues')
   const yValues = copyRanges(options.yValues, 'yValues')
   if (xValues.length !== yValues.length) {
     throw new Error('band.xValues and band.yValues must have equal lengths.')
   }
-  if (options.curve !== undefined) {
-    if (!['linear', 'basis', 'step', 'step-before', 'step-after'].includes(options.curve)) {
-      throw new Error('band.curve must be linear, basis, step, step-before or step-after.')
-    }
-    if (xValues.some((value) => value && value[0] !== value[1])) {
-      throw new Error('Curved bands require equal x endpoints at each sample.')
-    }
-  }
+  validateCurve(options.curve, xValues)
   if (options.fill !== undefined && (typeof options.fill !== 'string' || !options.fill)) {
     throw new Error('band.fill must be a non-empty string.')
   }
