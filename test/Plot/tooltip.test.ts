@@ -458,6 +458,23 @@ describe('tooltip plugin', () => {
       ).toEqual(['3', '7'])
       expect(document.querySelectorAll('[data-tooltip-entry]')).toHaveLength(2)
 
+      const guideNodes = [...plot.element.querySelectorAll('line[data-crosshair-layer]')]
+      const calloutNodes = [...plot.element.querySelectorAll('[data-crosshair-label="y"]')]
+      plot.element.dispatchEvent(
+        new PointerEvent('pointerleave', { clientX: 40, clientY: 90, isPrimary: true }),
+      )
+      await frame()
+      plot.element.dispatchEvent(
+        new PointerEvent('pointermove', { clientX: 40, clientY: 90, isPrimary: true }),
+      )
+      await frame()
+      const guidesAfterMove = [...plot.element.querySelectorAll('line[data-crosshair-layer]')]
+      const calloutsAfterMove = [...plot.element.querySelectorAll('[data-crosshair-label="y"]')]
+      expect(guidesAfterMove).toHaveLength(guideNodes.length)
+      expect(calloutsAfterMove).toHaveLength(calloutNodes.length)
+      guidesAfterMove.forEach((node, index) => expect(node).toBe(guideNodes[index]))
+      calloutsAfterMove.forEach((node, index) => expect(node).toBe(calloutNodes[index]))
+
       guide.update({ snap: { mark, axis: 'xy' } })
       await frame()
       expect(plot.element.querySelector('line[data-crosshair-layer]')).toBeNull()
