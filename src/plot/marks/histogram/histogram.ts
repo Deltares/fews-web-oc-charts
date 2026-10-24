@@ -85,47 +85,38 @@ function validateBinning(data: TableView, options: Readonly<HistogramOptions>) {
     throw new Error('histogram.normalization must be count, probability or density.')
 }
 
-function computeBins(
-  data: TableView,
-  options: Readonly<HistogramOptions>,
-): readonly HistogramBin[] {
-  validateBinning(data, options)
-  let edges: readonly number[]
-  if (typeof options.bins !== 'number') edges = options.bins
-  else {
-    const count = options.bins
-    let low = options.domain?.[0] ?? Infinity
-    let high = options.domain?.[1] ?? -Infinity
-    if (!options.domain) {
-      for (let row = 0; row < data.length; row += 1) {
-        const value = Number(data.valueAt(options.x, row))
-        if (!Number.isFinite(value)) continue
-        low = Math.min(low, value)
-        high = Math.max(high, value)
-      }
-      if (low > high) return Object.freeze([])
-      if (low === high) {
-        const padding = Math.max(0.5, Math.abs(low) * 0.01)
-        low -= padding
-        high += padding
-      }
+function binEdges(data: TableView, options: Readonly<HistogramOptions>): readonly number[] {
+  if (typeof options.bins !== 'number') return options.bins
+  const count = options.bins
+  let low = options.domain?.[0] ?? Infinity
+  let high = options.domain?.[1] ?? -Infinity
+  if (!options.domain) {
+    for (let row = 0; row < data.length; row += 1) {
+      const value = Number(data.valueAt(options.x, row))
+      if (!Number.isFinite(value)) continue
+      low = Math.min(low, value)
+      high = Math.max(high, value)
     }
-    edges = Array.from({ length: count + 1 }, (_, index) => {
-      const ratio = index / count
-      if (index === 0) return low
-      if (index === count) return high
-      return low * (1 - ratio) + high * ratio
-    })
+    if (low > high) return []
+    if (low === high) {
+      const padding = Math.max(0.5, Math.abs(low) * 0.01)
+      low -= padding
+      high += padding
+    }
   }
-  for (let index = 1; index < edges.length; index += 1) {
-    const width = edges[index] - edges[index - 1]
-    if (!Number.isFinite(edges[index - 1]) || !Number.isFinite(width) || width <= 0)
-      throw new RangeError('Histogram bin widths must be positive, finite and representable.')
-  }
+  return Array.from({ length: count + 1 }, (_, index) => {
+    const ratio = index / count
+    if (index === 0) return low
+    if (index === count) return high
+    return low * (1 - ratio) + high * ratio
+  })
+}
+
+function binCounts(data: TableView, x: string, edges: readonly number[]) {
   const counts = new Float64Array(edges.length - 1)
   let total = 0
   for (let row = 0; row < data.length; row += 1) {
-    const value = Number(data.valueAt(options.x, row))
+    const value = Number(data.valueAt(x, row))
     if (!Number.isFinite(value) || value < edges[0] || value > edges.at(-1)!) continue
     // Right bisect puts an interior edge in the following bin; the final edge stays in the last.
     let low = 1
@@ -138,6 +129,22 @@ function computeBins(
     counts[low - 1] += 1
     total += 1
   }
+  return { counts, total }
+}
+
+function computeBins(
+  data: TableView,
+  options: Readonly<HistogramOptions>,
+): readonly HistogramBin[] {
+  validateBinning(data, options)
+  const edges = binEdges(data, options)
+  if (!edges.length) return Object.freeze([])
+  for (let index = 1; index < edges.length; index += 1) {
+    const width = edges[index] - edges[index - 1]
+    if (!Number.isFinite(edges[index - 1]) || !Number.isFinite(width) || width <= 0)
+      throw new RangeError('Histogram bin widths must be positive, finite and representable.')
+  }
+  const { counts, total } = binCounts(data, options.x, edges)
   return Object.freeze(
     Array.from(counts, (count, index) => {
       const start = edges[index]
