@@ -200,6 +200,11 @@ function installTooltip(handle: TooltipHandle, context: PlotContext) {
                   return []
                 }
                 if (isBarMark(mark) || isStackedAreaMark(mark)) {
+                  if (inspection?.options.snap?.mark === mark) {
+                    return inspection.hits.flatMap((hit) =>
+                      'layerId' in hit ? [{ mark, hit, index }] : [],
+                    )
+                  }
                   const canvasContext = isStackedAreaMark(mark)
                     ? (pathContext ??=
                         document.createElement('canvas').getContext('2d') ?? undefined)

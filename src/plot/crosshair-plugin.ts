@@ -67,8 +67,9 @@ function installCrosshair(handle: CrosshairHandle, context: PlotContext) {
     'vector-effect': 'non-scaling-stroke',
   })
   layer.append(vertical, horizontal)
+  const layerGuides = svgElement('g', { 'data-crosshair-layers': '' })
   const callouts = svgElement('g', { 'data-crosshair-labels': '' })
-  layer.append(callouts)
+  layer.append(layerGuides, callouts)
   context.element.append(layer)
 
   const validateOptions = (options: Readonly<CrosshairOptions>) => {
@@ -100,10 +101,36 @@ function installCrosshair(handle: CrosshairHandle, context: PlotContext) {
       horizontal.setAttribute('x2', String(region.width))
       horizontal.setAttribute('y1', String(y))
       horizontal.setAttribute('y2', String(y))
-      horizontal.setAttribute('display', visible && mode.includes('y') ? '' : 'none')
+      horizontal.setAttribute(
+        'display',
+        visible && mode.includes('y') && !inspection.layers.length ? '' : 'none',
+      )
+      layerGuides.replaceChildren()
+      if (visible) {
+        for (const guide of inspection.layers) {
+          const py = String(guide.py - region.y)
+          layerGuides.append(
+            svgElement('line', {
+              'data-crosshair-axis': 'y',
+              'data-crosshair-layer': guide.hit.layerId,
+              x1: 0,
+              x2: region.width,
+              y1: py,
+              y2: py,
+              stroke: 'currentColor',
+              'stroke-opacity': 0.65,
+              'stroke-dasharray': '3 3',
+              'vector-effect': 'non-scaling-stroke',
+            }),
+          )
+        }
+      }
       callouts.replaceChildren()
       for (const coordinate of inspection.coordinates) {
         const group = svgElement('g', { 'data-crosshair-label': coordinate.axis })
+        if (coordinate.layerId !== undefined) {
+          group.setAttribute('data-crosshair-layer', coordinate.layerId)
+        }
         const background = svgElement('rect', {
           height: 22,
           rx: 3,
@@ -129,7 +156,7 @@ function installCrosshair(handle: CrosshairHandle, context: PlotContext) {
         background.setAttribute('width', String(width))
         const size = context.size.get()
         const left = coordinate.axis === 'x' ? x - width / 2 : -width
-        const top = coordinate.axis === 'x' ? region.height : y - 11
+        const top = coordinate.axis === 'x' ? region.height : coordinate.position - region.y - 11
         const clampedX = Math.max(-region.x, Math.min(size.width - region.x - width, left))
         const clampedY = Math.max(-region.y, Math.min(size.height - region.y - 22, top))
         group.setAttribute('transform', `translate(${clampedX} ${clampedY})`)

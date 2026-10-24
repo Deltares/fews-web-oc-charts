@@ -299,6 +299,171 @@ describe('tooltip plugin', () => {
     expect(node.getAttribute('aria-label')).toBe('flow · Forecast · 3 · stack: total · bounds: 2–5')
   })
 
+  test('snaps linked crosshairs and tooltips to bar layers', async () => {
+    const host = document.createElement('div')
+    document.body.append(host)
+    hosts.push(host)
+    const mark = bar(createTable({ t: ['one'], observed: [3], forecast: [4] }), {
+      id: 'flow',
+      x: 't',
+      scales: { x: 't', y: 'q' },
+      layers: [
+        { id: 'observed', y: 'observed', label: 'Observed', stack: 'total' },
+        { id: 'forecast', y: 'forecast', label: 'Forecast', stack: 'total' },
+      ],
+      layout: 'stacked',
+    })
+    const guide = crosshair({ mode: 'xy', snap: { mark, axis: 'xy' }, labels: { x: 't', y: 'q' } })
+    const interaction = tooltip({ marks: [mark], crosshair: guide })
+    const plot = createPlot(host, {
+      width: 100,
+      height: 100,
+      margins: { top: 0, right: 0, bottom: 0, left: 0 },
+      scales: { t: bandScale({ domain: ['one'] }), q: linearScale({ domain: [0, 7] }) },
+      marks: [mark],
+      plugins: [interaction, guide],
+    })
+    plots.push(plot)
+    await frame()
+    vi.spyOn(plot.element, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 100, 100))
+    const rectangle = plot.element.querySelector<SVGRectElement>('[data-layer-id="forecast"]')!
+    const x = Number(rectangle.getAttribute('x')) + Number(rectangle.getAttribute('width')) / 2
+    const y = Number(rectangle.getAttribute('y')) + Number(rectangle.getAttribute('height')) / 2
+    plot.element.dispatchEvent(
+      new PointerEvent('pointermove', { clientX: x, clientY: y, isPrimary: true }),
+    )
+    await frame()
+
+    const region = plot.regions.get().plot
+    expect(plot.element.querySelector('[data-crosshair-axis="x"]')?.getAttribute('x1')).toBe(
+      String(x - region.x),
+    )
+    expect(plot.element.querySelector('[data-crosshair-axis="y"]')?.getAttribute('y1')).toBe(
+      String(y - region.y),
+    )
+    expect(plot.element.querySelector('[data-crosshair-label="x"]')?.textContent).toBe('one')
+    expect(plot.element.querySelector('[data-crosshair-label="y"]')?.textContent).toBe('4')
+    expect(document.querySelector('[data-tooltip-entry]')?.textContent).toContain('Forecast')
+  })
+
+  test('snaps linked crosshairs and tooltips to stacked-area layers', async () => {
+    const host = document.createElement('div')
+    document.body.append(host)
+    hosts.push(host)
+    const mark = stackedArea(createTable({ t: [0, 1], observed: [2, 2], forecast: [3, 3] }), {
+      id: 'flow',
+      x: 't',
+      scales: { x: 't', y: 'q' },
+      layers: [
+        { id: 'observed', y: 'observed', label: 'Observed', stack: 'total' },
+        { id: 'forecast', y: 'forecast', label: 'Forecast', stack: 'total' },
+      ],
+    })
+    const guide = crosshair({ mode: 'xy', snap: { mark, axis: 'xy' }, labels: { x: 't', y: 'q' } })
+    const interaction = tooltip({ marks: [mark], crosshair: guide })
+    const plot = createPlot(host, {
+      width: 100,
+      height: 100,
+      margins: { top: 0, right: 0, bottom: 0, left: 0 },
+      scales: { t: linearScale({ domain: [0, 1] }), q: linearScale({ domain: [0, 10] }) },
+      marks: [mark],
+      plugins: [interaction, guide],
+    })
+    plots.push(plot)
+    await frame()
+    vi.spyOn(plot.element, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 100, 100))
+    const x = plot.scales.t.project(0.5)
+    const y = plot.scales.q.project(4)
+    plot.element.dispatchEvent(
+      new PointerEvent('pointermove', { clientX: x, clientY: y, isPrimary: true }),
+    )
+    await frame()
+
+    const region = plot.regions.get().plot
+    expect(plot.element.querySelector('[data-crosshair-axis="x"]')?.getAttribute('x1')).toBe(
+      String(plot.scales.t.project(0) - region.x),
+    )
+    expect(plot.element.querySelector('[data-crosshair-axis="y"]')?.getAttribute('y1')).toBe(
+      String(plot.scales.q.project(3) - region.y),
+    )
+    expect(plot.element.querySelector('[data-crosshair-label="y"]')?.textContent).toBe('3')
+    expect(document.querySelector('[data-tooltip-entry]')?.textContent).toContain('Forecast')
+  })
+
+  test.each(['bar', 'area'] as const)(
+    'draws one y guide and cumulative callout per %s layer when snapping along x',
+    async (kind) => {
+      const host = document.createElement('div')
+      document.body.append(host)
+      hosts.push(host)
+      const layers = [
+        { id: 'observed', y: 'observed', label: 'Observed' },
+        { id: 'forecast', y: 'forecast', label: 'Forecast' },
+      ]
+      const mark =
+        kind === 'bar'
+          ? bar(createTable({ t: ['one'], observed: [3], forecast: [4] }), {
+              id: 'flow',
+              x: 't',
+              scales: { x: 't', y: 'q' },
+              layers,
+              layout: 'stacked',
+            })
+          : stackedArea(createTable({ t: [0, 1], observed: [3, 3], forecast: [4, 4] }), {
+              id: 'flow',
+              x: 't',
+              scales: { x: 't', y: 'q' },
+              layers,
+            })
+      const guide = crosshair({ mode: 'x', snap: { mark, axis: 'x' }, labels: { y: 'q' } })
+      const interaction = tooltip({ marks: [mark], crosshair: guide })
+      const plot = createPlot(host, {
+        width: 100,
+        height: 100,
+        margins: { top: 0, right: 0, bottom: 0, left: 0 },
+        scales: {
+          t: kind === 'bar' ? bandScale({ domain: ['one'] }) : linearScale({ domain: [0, 1] }),
+          q: linearScale({ domain: [0, 10] }),
+        },
+        marks: [mark],
+        plugins: [interaction, guide],
+      })
+      plots.push(plot)
+      await frame()
+      vi.spyOn(plot.element, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 100, 100))
+      plot.element.dispatchEvent(
+        new PointerEvent('pointermove', { clientX: 40, clientY: 90, isPrimary: true }),
+      )
+      await frame()
+
+      const region = plot.regions.get().plot
+      const guides = [...plot.element.querySelectorAll('line[data-crosshair-layer]')]
+      expect(guides.map((line) => line.getAttribute('data-crosshair-layer'))).toEqual([
+        'observed',
+        'forecast',
+      ])
+      expect(guides.map((line) => Number(line.getAttribute('y1')))).toEqual([
+        plot.scales.q.project(3) - region.y,
+        plot.scales.q.project(7) - region.y,
+      ])
+      expect(
+        plot.element
+          .querySelector('line[data-crosshair-axis="y"]:not([data-crosshair-layer])')
+          ?.getAttribute('display'),
+      ).toBe('none')
+      expect(
+        [...plot.element.querySelectorAll('[data-crosshair-label="y"]')].map(
+          (label) => label.textContent,
+        ),
+      ).toEqual(['3', '7'])
+      expect(document.querySelectorAll('[data-tooltip-entry]')).toHaveLength(2)
+
+      guide.update({ snap: { mark, axis: 'xy' } })
+      await frame()
+      expect(plot.element.querySelector('line[data-crosshair-layer]')).toBeNull()
+    },
+  )
+
   test('limits xy mode to the closest actual sample and hides outside the plot', async () => {
     const host = document.createElement('div')
     document.body.append(host)

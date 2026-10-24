@@ -2035,8 +2035,9 @@ displaying only leaf series/layers without changing their IDs or the headless mo
 `showGroups` defaults to true and is editable at runtime. It supports top,
 bottom, left and right docks plus four plot-overlay corners, and can be repositioned at
 runtime. Composite bar and stacked-area hit testing are implemented; remaining Phase 3
-examples and exit criteria, including crosshair snapping to composite layers and interaction
-coverage for the remaining mark kinds, remain.
+examples and exit criteria, including interaction coverage for the remaining mark kinds,
+remain. Crosshair snapping now supports composite bar and stacked-area layers; snapping vertical
+stacks along x draws one y guide and cumulative-upper callout per visible layer.
 
 Docked legends use a separate SVG outside the entire chart SVG, including its axes and
 title. A grid reserves space within the configured host size, and the chart observes its

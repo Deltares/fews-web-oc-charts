@@ -12,7 +12,7 @@
       <a href="../v5-cross-section-select/">Cross-section select</a>
     </nav>
     <h1>v5: crosshair</h1>
-    <p>Move the pointer over the plot to follow its position with one or both guide lines.</p>
+    <p>Move over any chart to inspect a line, stacked bars, or stacked areas.</p>
     <fieldset class="controls">
       <legend>Crosshair guides</legend>
       <label for="mode">
@@ -35,9 +35,20 @@
     </fieldset>
     <figure>
       <div id="chart" class="plot-host"></div>
+      <figcaption>Line samples. In xy mode both guides use the same sample.</figcaption>
+    </figure>
+    <figure>
+      <div id="bar-chart" class="plot-host"></div>
       <figcaption>
-        Snapping is limited to visible samples of the selected mark. In xy mode both guides use the
-        same sample.
+        Stacked bars. The crosshair snaps to the selected category and layer; snapping by X draws
+        one horizontal guide per layer at its cumulative top.
+      </figcaption>
+    </figure>
+    <figure>
+      <div id="area-chart" class="plot-host"></div>
+      <figcaption>
+        Stacked areas. The crosshair snaps to the selected sample and visible layer; snapping by X
+        draws one horizontal guide per visible layer at its cumulative top.
       </figcaption>
     </figure>
     <p id="status" class="status" role="status"></p>
@@ -45,7 +56,13 @@
     <pre><code>const interaction = crosshair({ mode: 'xy' })
 const plot = createPlot(host, { scales: { t, q }, axes, marks, plugins: [interaction] })
 interaction.update({ mode: 'x' })
-interaction.update({ snap: { mark: observations, axis: 'xy' } })</code></pre>
+interaction.update({ snap: { mark: observations, axis: 'xy' } })
+
+const barsGuide = crosshair({ mode: 'xy', labels: { x: 't', y: 'q' } })
+const barsTooltip = tooltip({ marks: [barMark], crosshair: barsGuide })
+createPlot(barHost, { scales: { t: categories, q }, marks: [barMark],
+  plugins: [barsGuide, barsTooltip] })
+barsGuide.update({ snap: { mark: barMark, axis: 'xy' } })</code></pre>
     <script type="module" src="./v5-crosshair.ts"></script>
   </body>
 </html>
