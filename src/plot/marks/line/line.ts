@@ -1,5 +1,6 @@
 import type { ScaleKind, ScaleValue } from '../../../scales/scale.js'
 import { validateKeys } from '../../../core/validation.js'
+import { validateCoordinateValues } from '../mark-values.js'
 
 export type LineValue = ScaleValue | null | undefined
 export type LineValues = ArrayLike<LineValue>
@@ -65,24 +66,6 @@ export function isLineMark(value: object): value is LineMark {
   return lineMarks.has(value)
 }
 
-function validateValues(values: LineValues, name: string) {
-  if (!values || !Number.isSafeInteger(values.length) || values.length < 0) {
-    throw new Error(`line.${name} must be an array-like value.`)
-  }
-  for (let index = 0; index < values.length; index += 1) {
-    const value = values[index]
-    if (
-      value !== null &&
-      value !== undefined &&
-      !(typeof value === 'number' && !Number.isFinite(value)) &&
-      typeof value !== 'number' &&
-      typeof value !== 'string'
-    ) {
-      throw new Error(`line.${name}[${index}] must be a finite number, string, or gap.`)
-    }
-  }
-}
-
 export function validateLineValuesForScale(
   mark: LineMark,
   coordinate: 'x' | 'y',
@@ -139,8 +122,8 @@ export function line(options: LineOptions): LineMark {
   if (typeof options.y !== 'string' || options.y.length === 0) {
     throw new Error('line.y must name a plot scale.')
   }
-  validateValues(options.xValues, 'xValues')
-  validateValues(options.yValues, 'yValues')
+  validateCoordinateValues(options.xValues, 'line', 'xValues')
+  validateCoordinateValues(options.yValues, 'line', 'yValues')
   if (options.xValues.length !== options.yValues.length) {
     throw new Error('line.xValues and line.yValues must have equal lengths.')
   }
