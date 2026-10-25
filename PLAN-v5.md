@@ -1965,7 +1965,7 @@ Additional acceptance checks for the ownership contract:
 | 1. Core                       | Reactive core hardened (scopes, diagnostics), runtime option update/unset/setConfig contract (3.1.1), `time/` module (luxon replacement), plot container, layout engine, named scales, axes (value/time/band/degrees), coordinate systems, theme tokens, destroy                            | Static basic-line/secondary-axis/time-axes examples pass deterministic per-engine visual regression at the §5 threshold, with no unexplained diffs; core option contract tests pass                                                               |
 | 2. Marks                      | `series` (line+markers+area), band, single/grouped/stacked `bar` with named side-by-side stacks, `stackedArea` with named independent stacks, shared columnar stack layout and stack-safe LOD (3.6.1), histogram, rule, text, heatmap, arrows/direction, progress; SVG first, canvas opt-in | All static examples ported; grouped-bar, stacked-bar, named-stack comparison and stacked-area fixtures pass on SVG/canvas, with exact per-stack layout/extent/gap tests                                                                           |
 | 3. Interaction                | Pointer hub, zoom, pan, brush, crosshair, tooltip, headless legend model and built-in legend renderer; composite-layer hit tests, tooltips and visibility                                                                                                                                   | mouseover/zoom/panning/brush examples ported; external legend commands work without legend DOM; composite toggles restack/autoscale correctly                                                                                                     |
-| 4. Sync & live                | Shared scale/pointer/selection/clock, follow mode, append/retention, IntersectionObserver pause; incremental aligned-table stack updates; typed domain events via `subscribe()` and `plot.on()` (implemented)                                                                               | Partial: all steps implemented; the production live-stream scenario passes in Chromium; local headless runner and browser suites pending (see checkpoints below) |
+| 4. Sync & live                | Shared scale/pointer/selection/clock, follow mode, append/retention, IntersectionObserver pause; incremental aligned-table stack updates; typed domain events via `subscribe()` and `plot.on()` (implemented)                                                                               | Complete: all steps implemented; production live-stream acceptance, Phase 4 browser suites and pan parity passed locally in Chromium (see checkpoints below) |
 | 5. Ensembles                  | Ensemble store, quantile cache, members/spread/median rendering, ensemble tooltip/legend                                                                                                                                                                                                    | 50×10k benchmark meets target                                                                                                                                                                                                                     |
 | 6. Domain plugins             | Warning levels, alert lines, current time, DST indicator (on new `time/`), level select, cross-section select, data field, Beaufort, colour bar, polar wind/current roses                                                                                                                   | Feature parity checklist complete                                                                                                                                                                                                                 |
 | 7. Web Component              | `<fews-chart>` with `el.config`, plot-level attributes, `sync-group` registry, events, Shadow DOM theming, typings, slotted/external legend facade and symbol helper                                                                                                                        | All examples also runnable via `<fews-chart>`; works in Vue app without adapter; config/attribute-removal and custom-legend parity tests pass                                                                                                     |
@@ -2329,7 +2329,7 @@ Playwright Chromium launch/cleanup before retrying browser validation.
    Test bidirectional selection, clear, unequal bindings, missing/incompatible scales,
    runtime membership changes and teardown. Test one shared clock update observed by
    multiple consumers and explicit clock cleanup, without wall-clock sleeps.
-3. **Follow state and gesture integration (implemented; browser acceptance pending).**
+3. **Follow state and gesture integration (complete; Chromium acceptance passed).**
    Implement window/lead validation and follow state on the shared time scale. Test
    exact domains after append, empty data, retention and reset; zoom/pan in either peer
    suspends follow for both, while data continues arriving. Policy: API domain writes
@@ -2349,7 +2349,7 @@ Playwright Chromium launch/cleanup before retrying browser validation.
    define whether non-render subscriptions continue while paused; keep data ownership
    independent of plot visibility. See §3.10 for the implemented contract and
    `test/Plot/visibility.test.ts` for deterministic and native-observer coverage.
-6. **Production live-stream acceptance (implemented; see checkpoint below).** Add the public-API example and a dedicated
+6. **Production live-stream acceptance (complete; see checkpoint below).** Add the public-API example and a dedicated
    deterministic sync/live runner. Exercise two differently sized data-backed plots,
    shared pointer/selection, follow suspension/reset, grouped/stacked updates, retention,
    off-screen pause and destroy/recreate. Assert exact retained rows/IDs/endpoints,
@@ -2776,8 +2776,8 @@ At the visibility checkpoint, the full production sync/live acceptance scenario
 
 #### Production live-stream acceptance checkpoint
 
-**Status: implemented; the scenario passes in a Chromium page against the examples dev
-server. The headless runner itself awaits a local run (sandbox blocks Chromium launch).**
+**Status: complete. The headless runner, the Phase 4 Vitest browser suites and pan
+parity passed locally in Chromium on 2026-10-25.**
 
 `examples/v5-live-stream/` uses only public `@lib` APIs: one `timeScale` with
 `follow: { window: '2h' }`, a shared linear value scale, a retained series (1440 points)
@@ -2840,16 +2840,21 @@ of 187,620 B growth / 194,352 B spread with a 1-node DOM spread. Accounting: ser
 empty. The series wrapped past retention during the plateau. The library build and
 DOM-independent core suites (44 tests) pass. Example, probe and runner have no
 type-check or ESLint diagnostics.
-The sandboxed `npm run test:live:stream` and Vitest browser suites could not launch
-headless Chromium (same launch failure as earlier checkpoints). Run locally:
+The sandboxed runs could not launch headless Chromium (same launch failure as earlier
+checkpoints), so the headless runs were repeated locally (2026-10-25, Chromium
+151.0.7922.34, macOS 27.0.0, Apple M2 Pro):
 
-```sh
-npm run test:live:stream
-npx vitest run test/Plot/visibility.test.ts test/Plot/plot.test.ts test/Plot/public-events.test.ts test/Plot/shared-pointer.test.ts test/Plot/shared-selection.test.ts test/Plot/follow.test.ts
-npm run test:interaction:pan
-```
+- `npm run test:live:stream` passed all seven phases (1280×1200 @ 1x, detail moved
+  off-screen by shrinking the height) within the budgets above.
+- `npx vitest run test/Plot/visibility.test.ts test/Plot/plot.test.ts
+  test/Plot/public-events.test.ts test/Plot/shared-pointer.test.ts
+  test/Plot/shared-selection.test.ts test/Plot/follow.test.ts`: 6 files, 82 tests
+  passed (follow 3, public events 4, visibility 7, shared selection 8, shared
+  pointer 12, plot 48).
+- `npm run test:interaction:pan`: direction, modifier, button, enable/disable and
+  shared-scale synchronization passed.
 
-Phase 4 can close once these local runs pass. No Phase 2 pixel baselines were changed.
+Phase 4 is complete. No Phase 2 pixel baselines were changed.
 
 ## 8. Additional improvements to consider
 
