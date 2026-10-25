@@ -13,11 +13,33 @@ import { isBarMark, type BarMark } from '../../marks/bar/bar.js'
 import { isStackedAreaMark, type StackedAreaMark } from '../../marks/stacked-area/stacked-area.js'
 import { isHistogramMark, type HistogramMark } from '../../marks/histogram/histogram.js'
 import { isHeatmapMark, type HeatmapMark } from '../../marks/heatmap/heatmap.js'
+import type { MarkHit } from '../../marks/mark-definition.js'
+import type { ScaleValue } from '../../../scales/scale.js'
 
 export type TooltipAxis = 'x' | 'y' | 'xy'
 export type TooltipPlacementPosition = 'bottom' | 'left' | 'right' | 'top'
 export type TooltipMark =
   LineMark | SeriesMark | BarMark | StackedAreaMark | HistogramMark | HeatmapMark
+
+export interface TooltipFormatContext {
+  readonly mark: TooltipMark
+  readonly hit: Readonly<MarkHit>
+  /** Heatmap cell values use 'value', independently of their x/y coordinates. */
+  readonly axis: 'x' | 'y' | 'value'
+  /** Undefined for heatmap cell values, which have no positional scale. */
+  readonly scale: string | undefined
+  readonly digits: number | undefined
+  /** Text before this hook; range defaults use formatted endpoints without units. */
+  readonly defaultText: string
+}
+
+export type TooltipValueFormatter = (value: ScaleValue, context: TooltipFormatContext) => string
+export type TooltipUnitFormatter = (context: TooltipFormatContext) => string
+export type TooltipRangeFormatter = (
+  lower: ScaleValue,
+  upper: ScaleValue,
+  context: TooltipFormatContext,
+) => string
 
 export interface TooltipOptions {
   axis: TooltipAxis
@@ -28,6 +50,12 @@ export interface TooltipOptions {
   showX: boolean
   /** Decimal places for values and composite bounds; defaults to the mark's precision. */
   digits?: number
+  /** Formats coordinates, values and range endpoints before units are appended. */
+  formatValue?: TooltipValueFormatter
+  /** Returns a unit suffix (or ''), appended once with a separating space. */
+  formatUnit?: TooltipUnitFormatter
+  /** Formats composite bounds and heatmap ranges before units are appended. */
+  formatRange?: TooltipRangeFormatter
   /** Follows this installed crosshair and omits coordinates already shown by its callouts. */
   crosshair?: CrosshairHandle
 }
@@ -39,7 +67,17 @@ export interface TooltipHandle {
 
 const handles = new WeakSet<object>()
 const validators = new WeakMap<TooltipHandle, Set<(options: Readonly<TooltipOptions>) => void>>()
-const optionKeys = ['axis', 'marks', 'position', 'crosshair', 'showX', 'digits']
+const optionKeys = [
+  'axis',
+  'marks',
+  'position',
+  'crosshair',
+  'showX',
+  'digits',
+  'formatValue',
+  'formatUnit',
+  'formatRange',
+]
 
 function validateMarks(marks: readonly TooltipMark[] | undefined) {
   if (marks === undefined) return
@@ -98,8 +136,16 @@ export function tooltip(initial: OptionPatch<TooltipOptions> = {}): TooltipHandl
       crosshair: undefined,
       showX: true,
       digits: undefined,
+      formatValue: undefined,
+      formatUnit: undefined,
+      formatRange: undefined,
     }),
     validate(options) {
+      for (const key of ['formatValue', 'formatUnit', 'formatRange'] as const) {
+        if (options[key] !== undefined && typeof options[key] !== 'function') {
+          throw new TypeError(`tooltip.${key} must be a function.`)
+        }
+      }
       if (typeof options.showX !== 'boolean') {
         throw new TypeError('tooltip.showX must be boolean.')
       }

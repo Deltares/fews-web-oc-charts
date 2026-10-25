@@ -1,5 +1,43 @@
 # FEWS Web OC Charts
 
+## Tooltip formatting
+
+Use optional formatter hooks to customize tooltip values, units and ranges:
+
+```ts
+import { tooltip } from '@deltares/fews-web-oc-charts'
+
+const inspection = tooltip({
+  digits: 2,
+  formatValue: (_value, context) => context.defaultText,
+  formatUnit: (context) => (context.scale === 'discharge' ? 'm3/s' : ''),
+  formatRange: (_lower, _upper, context) => `[${context.defaultText}]`,
+})
+```
+
+`formatValue(value, context)` receives the raw coordinate, sample value or range
+endpoint. `context.defaultText` preserves the built-in precision, category text,
+and time-scale locale/time-zone formatting. `formatRange(lower, upper, context)`
+receives raw endpoints for composite bounds (bars, histograms and stacked areas)
+and heatmap x/y ranges; its default text joins the `formatValue` results with an
+en dash. `formatUnit(context)` receives the formatted text as `defaultText` and
+returns a suffix, appended with a space once per value or complete range.
+Return an empty string for no unit. All hooks must return strings; errors propagate.
+
+The exported `TooltipFormatContext` includes the `mark`, raw `hit` (including
+layer/stack information where applicable), `axis`, named `scale`, `digits`, and
+`defaultText`. Axis is `x` or `y`, or `value` for a heatmap cell's independent value
+(which has no named positional scale). Horizontal composite values and bounds use
+their x axis. Units are supplied by the hook, not inferred from axis labels.
+
+Hooks affect both visible text and accessible labels, never source data or
+crosshair callouts. Linked crosshair coordinates are omitted only when their
+displayed text exactly matches the tooltip's text, including units. Formatter
+results are rendered as plain text, not HTML.
+
+Replace hooks using `inspection.update({ formatValue: ... })`, or pass `undefined`
+to restore the default. Without hooks, existing formatting is unchanged.
+
 ## Listening to changes
 
 Use `subscribe()` to observe any library signal, including a shared scale's domain.
