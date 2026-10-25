@@ -30,6 +30,7 @@ parityPolarPlot('chart-container', {
       strokeLinecap: 'butt',
       strokeLinejoin: 'miter',
       digits: 3,
+      vectorEffect: 'none',
     }),
     line({
       x: 'a',

@@ -1974,8 +1974,9 @@ Additional acceptance checks for the ownership contract:
 
 ### Phase 2 static visual parity checkpoint
 
-**Status: partial; the Phase 2 exit criterion is not complete.** Work is frozen at
-the current parity result at the user's request. Eleven native v5 parity routes
+**Status: partial; the Phase 2 exit criterion is not complete.** All 150 covered
+comparisons (25 hosts, two themes, three engines) are now exact; the remaining gap is
+static coverage of the uncovered examples listed below. Eleven native v5 parity routes
 have been added alongside, not in place of, the 22 existing v5 examples. They use
 v5 plot/mark APIs, not v4 chart instances or copied reference SVG DOM.
 
@@ -2035,23 +2036,25 @@ It covers 25 chart hosts in light and dark themes: 50 comparisons per engine.
 Mismatch images are written below the operating system's temporary directory at
 `fews-static-parity/<engine>/<example>/<host>/<theme>/`.
 
-| Engine   | Exact comparisons | Remaining changed pixels                                                                 |
-| -------- | ----------------- | ---------------------------------------------------------------------------------------- |
-| Chromium | 50 / 50           | None                                                                                     |
-| Firefox  | 50 / 50           | None                                                                                     |
-| WebKit   | 45 / 50           | chart-text dark: 3; polar-line-marker light: 64, dark: 137; simple bar light: 6, dark: 3 |
+| Engine   | Exact comparisons | Remaining changed pixels |
+| -------- | ----------------- | ------------------------ |
+| Chromium | 50 / 50           | None                     |
+| Firefox  | 50 / 50           | None                     |
+| WebKit   | 50 / 50           | None                     |
 
-Thus 145 of 150 comparisons are exact. **The strict parity command intentionally
-exits nonzero for the five remaining WebKit mismatches.** No tolerance was
-introduced, and the residual differences have not been accepted as 100% parity.
+All 150 comparisons are exact, with zero tolerance.
 
 - A run after `5e5fb1b` dropped to 119/150 (marker, step-area, and
   polar-line-marker in every engine); classic markers on those routes restored them.
 - The former Chromium polar-range residuals (78-94 px on arc edges) were a capture
   artefact: v4's animated `arcTween` left incremental-repaint anti-aliasing. Re-inserting
   v4's own final markup reproduced v5's pixels exactly, and after a forced full
-  repaint v4 and v5 match with 0 changed pixels. The repaint step does not change
-  WebKit's five residuals.
+  repaint v4 and v5 match with 0 changed pixels.
+- The former WebKit residuals (chart-text dark, simple bar, polar-line-marker; 1-level
+  edge differences) came from the v5 line default `vector-effect: non-scaling-stroke`,
+  which WebKit anti-aliases differently from v4's unset vector effect. The parity
+  routes now set `vectorEffect: 'none'` on their data lines, as reverse and
+  polar-axes-options already did; the library default is unchanged.
 The existing v5 visual regression suite also passes all 54 comparisons
 (18 fixtures in each of the three engines), with zero changed pixels.
 Library/type and example-gallery production builds pass, as do all 176 native
@@ -2077,8 +2080,8 @@ to contain a numeric range”; it has no parity route and is **not** counted as 
 passing reference. Other uncovered examples are not implicitly certified:
 secondary-axis includes ensemble/current-time features, time-axes and vertical
 include interaction visitors, and spectrum is random/interactive. Interaction and
-domain-plugin ports remain outside this static checkpoint. Further static coverage
-and the outstanding exact matches are still needed before closing Phase 2.
+domain-plugin ports remain outside this static checkpoint. All 25 covered hosts now
+match exactly; further static coverage is still needed before closing Phase 2.
 
 ### Phase 3 pointer hub foundation
 
@@ -2200,7 +2203,7 @@ modifiers, disabled wheel, runtime updates, resets and readouts.
 **Status: complete.** All six interaction suites (brush, legend, mark-hits,
 mouseover, pan and zoom) passed together in Chromium in the user's local
 `npm run test:interaction` run on 2026-10-25. This completes the behavioral parity
-follow-up; the frozen Phase 2 static pixel mismatches remain separate.
+follow-up; Phase 2 static parity (now 150/150 exact) is tracked separately.
 
 Run all six interaction suites sequentially with `npm run test:interaction`.
 The command stops on the first failing suite.
@@ -2313,8 +2316,8 @@ rendering and teardown to that layer.
 
 **Status: assessed on 2026-10-25; partial, not complete.** This inventory records the
 starting point; the shared-pointer implementation checkpoint below records subsequent work.
-The completed Phase 3 behavioral parity work is the starting point. The frozen
-Phase 2 static pixel mismatches and their exit criterion remain separate and unchanged;
+The completed Phase 3 behavioral parity work is the starting point. Phase 2 static
+parity and its exit criterion remain separate;
 no static baselines need updating for this assessment.
 
 #### Existing foundations and remaining gaps
