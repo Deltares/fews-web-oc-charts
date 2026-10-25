@@ -159,6 +159,7 @@ describe('highlight plugin', () => {
         width: 100,
         height: 100,
         margins: { top: 0, right: 0, bottom: 0, left: 0 },
+        directions: { t: 'x', q: 'y' },
         scales: { t: linearScale({ domain: [0, 2] }), q: linearScale({ domain: [0, 5] }) },
         marks: [mark],
         plugins: [guide, highlight({ crosshair: guide })],
