@@ -215,6 +215,15 @@ function equalLayout(left: PlotLayout, right: PlotLayout) {
   return equalRegion(left.plot, right.plot) && equalMargins(left.margins, right.margins)
 }
 
+function identicalLayout(left: PlotLayout, right: PlotLayout) {
+  return (
+    equalLayout(left, right) &&
+    equalRegion(left.title, right.title) &&
+    left.axes.length === right.axes.length &&
+    left.axes.every((region, index) => equalRegion(region, right.axes[index]))
+  )
+}
+
 function equalSize(left: Readonly<Size>, right: Readonly<Size>) {
   return left.width === right.width && left.height === right.height
 }
@@ -623,20 +632,33 @@ function createPlotInternal(
       width: viewportSize.get()?.width ?? current.width ?? measured.get().width,
       height: viewportSize.get()?.height ?? current.height ?? measured.get().height,
     })
-    size.set(actualSize)
+    // Equal geometry keeps the previous objects so overlays and plugins do not rerun.
+    if (
+      !equalSize(
+        reactive.untracked(() => size.get()),
+        actualSize,
+      )
+    )
+      size.set(actualSize)
     const cartesianAxes = current.axes.filter((axis) =>
       isCartesianSide(axis.options.get().resolved.position),
     )
     const measures = cartesianAxes.map((axis) => measureAxis(axis, tokens))
     const { margins, insetMargins } = layoutMargins(current, tokens, cartesianAxes)
-    regions.set(
-      layout(
-        actualSize,
-        current.axisLayout === 'inset' ? [] : measures,
-        current.axisLayout === 'inset' ? insetMargins : margins,
-        current.title ? tokens.fontSize * 2 : 0,
-      ),
+    const nextRegions = layout(
+      actualSize,
+      current.axisLayout === 'inset' ? [] : measures,
+      current.axisLayout === 'inset' ? insetMargins : margins,
+      current.title ? tokens.fontSize * 2 : 0,
     )
+    if (
+      !identicalLayout(
+        reactive.untracked(() => regions.get()),
+        nextRegions,
+      )
+    ) {
+      regions.set(nextRegions)
+    }
     element.setAttribute('width', String(actualSize.width))
     element.setAttribute('height', String(actualSize.height))
     element.setAttribute('viewBox', `0 0 ${actualSize.width} ${actualSize.height}`)

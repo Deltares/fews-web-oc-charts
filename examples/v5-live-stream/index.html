@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>v5: synchronized live stream</title>
+  </head>
+  <body>
+    <nav aria-label="Examples">
+      <a href="/">All examples</a>
+      <a href="../v5-shared-scales/">Shared domains, local ranges</a>
+      <a href="../v5-stacked-area/">Stacked areas</a>
+    </nav>
+    <h1>v5: synchronized live stream</h1>
+    <p>
+      Two differently sized plots share one following time scale, one value scale, a pointer and a
+      selection. Every batch appends four one-minute samples to a retained series (1,440 points) and
+      a retained aligned table (720 rows). The overview stacks the table; the detail groups it as
+      bars. Old rows are evicted without growing the canonical buffers.
+    </p>
+    <p class="note">
+      Drag to pan or scroll to zoom: either gesture suspends follow for both plots while data keeps
+      arriving. Double-click or press <em>Resume follow</em> to jump back to the latest two hours.
+      Move over either plot to share the crosshair; Shift-drag to share a time selection. Scroll the
+      detail out of view (or pause it) to suspend its rendering: it catches up with one render of
+      the latest state when visible again. Destroying the detail leaves the overview, the data and
+      the shared handles running.
+    </p>
+    <div class="controls">
+      <button id="append" type="button">Append batch</button>
+      <button id="stream" type="button" aria-pressed="false">Start stream</button>
+      <button id="follow" type="button">Pause follow</button>
+      <button id="pause-detail" type="button" aria-pressed="false">Pause detail</button>
+      <button id="toggle-detail" type="button">Destroy detail</button>
+      <button id="clear-selection" type="button">Clear selection</button>
+    </div>
+    <figure>
+      <div id="overview" class="plot-host"></div>
+      <figcaption>Overview: level line over stacked inflow, lateral and abstraction.</figcaption>
+    </figure>
+    <figure>
+      <div class="plot-width" style="width: 60%">
+        <div id="detail" class="plot-host"></div>
+      </div>
+      <figcaption>Detail: the same table as grouped bars, at 60% of the width.</figcaption>
+    </figure>
+    <h2>Live state</h2>
+    <pre id="snapshot" aria-label="Live stream state"></pre>
+    <h2>Public API</h2>
+    <pre><code>const t = timeScale({ timeZone: 'UTC', follow: { window: '2h' } })
+const q = linearScale({ domain: [-3, 10] })
+const level = createSeries(history, { maxPoints: 1440 })
+const flows = createTable(rows, { x: 't', maxPoints: 720 })
+const pointer = sharedPointer({ by: 'xy' })
+const selection = sharedSelection()
+const panning = pan({ mode: 'x' })
+const zooming = zoom({ mode: 'x', wheel: 'x' })
+const plugins = () => [
+  panning, zooming,
+  crosshair({ pointer, labels: { x: 't', y: 'q' } }),
+  brush({ mode: 'x', persistent: true, selection }),
+]
+const overview = createPlot(elA, {
+  scales: { t, q }, marks: [stackedArea(flows, ...), series(level, ...)], plugins: plugins(),
+})
+const detail = createPlot(elB, {
+  scales: { t, q }, marks: [bar(flows, { layout: 'grouped', ... }), series(level, ...)], plugins: plugins(),
+})
+
+batch(() => { level.append(next); flows.append(nextRows) }) // one follow update
+t.following.get()     // false after a pan/zoom in either plot
+t.resumeFollow()      // or double-click: back to the latest window
+detail.pause()        // manual pause; off-screen plots pause automatically
+detail.resume()       // one catch-up render of the latest state
+detail.destroy()      // overview, stores and shared handles keep running</code></pre>
+    <script type="module" src="./v5-live-stream.ts"></script>
+  </body>
+</html>

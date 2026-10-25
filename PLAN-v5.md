@@ -1246,6 +1246,10 @@ Run `npm run dev` and use the example index, or open these public-API demos:
 - [Shared domains and plot-local ranges](./examples/v5-shared-scales/index.html):
   shared time/discharge scales, independent resizing, domain updates and destroying/
   recreating one consumer while the other stays live.
+- [Synchronized live stream](./examples/v5-live-stream/index.html): Phase 4 production
+  acceptance example; a following shared time scale, retained series and aligned table
+  (stacked area and grouped bars), shared pointer/selection, follow suspension/resume,
+  manual/off-screen pause and detail destroy/recreate (`npm run test:live:stream`).
 - [Runtime options and themes](./examples/v5-runtime-options/index.html): band,
   linear and degree scales, stacked axes, handle updates, nested option unsetting,
   configuration replacement, scoped CSS tokens and explicit cleanup.
@@ -1961,7 +1965,7 @@ Additional acceptance checks for the ownership contract:
 | 1. Core                       | Reactive core hardened (scopes, diagnostics), runtime option update/unset/setConfig contract (3.1.1), `time/` module (luxon replacement), plot container, layout engine, named scales, axes (value/time/band/degrees), coordinate systems, theme tokens, destroy                            | Static basic-line/secondary-axis/time-axes examples pass deterministic per-engine visual regression at the §5 threshold, with no unexplained diffs; core option contract tests pass                                                               |
 | 2. Marks                      | `series` (line+markers+area), band, single/grouped/stacked `bar` with named side-by-side stacks, `stackedArea` with named independent stacks, shared columnar stack layout and stack-safe LOD (3.6.1), histogram, rule, text, heatmap, arrows/direction, progress; SVG first, canvas opt-in | All static examples ported; grouped-bar, stacked-bar, named-stack comparison and stacked-area fixtures pass on SVG/canvas, with exact per-stack layout/extent/gap tests                                                                           |
 | 3. Interaction                | Pointer hub, zoom, pan, brush, crosshair, tooltip, headless legend model and built-in legend renderer; composite-layer hit tests, tooltips and visibility                                                                                                                                   | mouseover/zoom/panning/brush examples ported; external legend commands work without legend DOM; composite toggles restack/autoscale correctly                                                                                                     |
-| 4. Sync & live                | Shared scale/pointer/selection/clock, follow mode, append/retention, IntersectionObserver pause; incremental aligned-table stack updates; typed domain events via `subscribe()` and `plot.on()` (implemented)                                                                               | Partial: shared domains/pointer/selection/clock are implemented and verified; follow, visibility pause, incremental live processing and production live-stream acceptance remain open (see checkpoints below) |
+| 4. Sync & live                | Shared scale/pointer/selection/clock, follow mode, append/retention, IntersectionObserver pause; incremental aligned-table stack updates; typed domain events via `subscribe()` and `plot.on()` (implemented)                                                                               | Partial: all steps implemented; the production live-stream scenario passes in Chromium; local headless runner and browser suites pending (see checkpoints below) |
 | 5. Ensembles                  | Ensemble store, quantile cache, members/spread/median rendering, ensemble tooltip/legend                                                                                                                                                                                                    | 50×10k benchmark meets target                                                                                                                                                                                                                     |
 | 6. Domain plugins             | Warning levels, alert lines, current time, DST indicator (on new `time/`), level select, cross-section select, data field, Beaufort, colour bar, polar wind/current roses                                                                                                                   | Feature parity checklist complete                                                                                                                                                                                                                 |
 | 7. Web Component              | `<fews-chart>` with `el.config`, plot-level attributes, `sync-group` registry, events, Shadow DOM theming, typings, slotted/external legend facade and symbol helper                                                                                                                        | All examples also runnable via `<fews-chart>`; works in Vue app without adapter; config/attribute-removal and custom-legend parity tests pass                                                                                                     |
@@ -2345,7 +2349,7 @@ Playwright Chromium launch/cleanup before retrying browser validation.
    define whether non-render subscriptions continue while paused; keep data ownership
    independent of plot visibility. See §3.10 for the implemented contract and
    `test/Plot/visibility.test.ts` for deterministic and native-observer coverage.
-6. **Production live-stream acceptance.** Add the public-API example and a dedicated
+6. **Production live-stream acceptance (implemented; see checkpoint below).** Add the public-API example and a dedicated
    deterministic sync/live runner. Exercise two differently sized data-backed plots,
    shared pointer/selection, follow suspension/reset, grouped/stacked updates, retention,
    off-screen pause and destroy/recreate. Assert exact retained rows/IDs/endpoints,
@@ -2767,8 +2771,85 @@ The library build and type-check pass. `test/Plot/visibility.test.ts` and the ex
 plot, polar, Skew-T, follow, legend, tooltip, brush, highlight and composite-canvas
 suites pass in the Vitest Chromium runner.
 
-The full production sync/live acceptance scenario (step 6) remains open, so Phase 4
-remains in progress.
+At the visibility checkpoint, the full production sync/live acceptance scenario
+(step 6) remained open; it is recorded below.
+
+#### Production live-stream acceptance checkpoint
+
+**Status: implemented; the scenario passes in a Chromium page against the examples dev
+server. The headless runner itself awaits a local run (sandbox blocks Chromium launch).**
+
+`examples/v5-live-stream/` uses only public `@lib` APIs: one `timeScale` with
+`follow: { window: '2h' }`, a shared linear value scale, a retained series (1440 points)
+and a retained aligned table (720 rows), a `stackedArea` overview (full width) and a
+grouped `bar` detail (60% width), each with a `series` level line, shared `pan`/`zoom`
+handles, per-plot crosshairs on one `sharedPointer({ by: 'xy' })` and persistent brushes
+on one `sharedSelection()`. Each batch appends four rows to both stores inside `batch()`.
+Controls cover append/stream, pause/resume follow, manual detail pause, detail
+destroy/recreate and clearing the selection. `window.liveStream` exposes the handles.
+
+`npm run test:live:stream` (`scripts/phase4-live-stream.mjs`) serves the examples with
+Vite, loads `scripts/phase4-live-stream-probe.ts` into the page (internal diagnostics
+only; the example stays public-API) and runs `scripts/phase4-live-stream-scenario.mjs`
+with real Playwright input. `--url` reuses a running dev server. It asserts:
+
+1. **Follow, retention and work.** The domain equals the exact latest two-hour window
+   after every append. Every retained series sample, table value and sample ID is
+   checked, and every stacked/grouped endpoint is compared with full recomputation.
+   There is no table survivor relocation, canonical bytes stay constant, and the
+   stack (≤ 8 entries/32 MiB) and LOD (≤ 16/2 MiB) caches stay bounded. Each append
+   processes at most `2 × layers × batch` stack rows and copies under 128.
+2. **Shared pointer.** Hovering either plot shares t/q values. Both guides match each
+   plot's own projection within 1 px (and differ from the source pixels). A follow
+   append reprojects a stationary guide without republishing pointer state; leaving
+   hides both.
+3. **Shared selection.** Shift-drag in either plot sets the same domain range (within
+   2 px of inversion), drawn through each plot's width; follow stays active. Appends
+   reproject without changing the range; clear removes both.
+4. **Follow suspension.** Wheel zoom in the detail or a pan in the overview suspends
+   follow for both plots. Data keeps arriving while the domain stays fixed.
+   Double-click and the *Resume follow* control return to the exact latest window.
+5. **Off-screen and manual pause.** Shrinking the viewport so the detail leaves it
+   (native IntersectionObserver) produces zero detail DOM writes over six appends. The
+   overview keeps rendering and the public domain subscription fires once per batch.
+   Re-entry catches up in exactly one frame, with the latest sample at its projected
+   pixel. The same holds for manual pause/resume.
+6. **Destroy/recreate.** Destroying the detail removes its DOM. The overview, data,
+   follow, pointer publishing and shared selection survive. The recreated detail
+   immediately shows the selection, the latest data and shared guides.
+7. **Resources.** Twenty further destroy/recreate cycles must leave DOM node counts
+   unchanged and retain at most 1 MiB post-GC (CDP heap + backing stores). After
+   128 warmup batches, six samples of 64 batches each must grow ≤ 1 MiB and spread
+   ≤ 2 MiB, with a DOM spread of ≤ 64 nodes. Computation (canonical/cache bytes) and
+   rendering (DOM nodes/paths/rectangles/path characters) accounting is reported
+   separately. Native SVG memory is not measured.
+
+**Fix found by the scenario.** On resume after a pause, overlay plugins (crosshair,
+brush) rendered in two frames. The catch-up layout render always set new `size`/
+`regions` objects, so the plugins' effects ran once on resume and again in the next
+frame with identical values. `renderLayout()` now keeps the previous objects when the
+geometry is identical (`identicalLayout()` also compares axis and title regions). This
+removes redundant overlay work on every layout render; resizes still update regions and
+emit `layoutchange`, which was verified in the browser.
+
+**Verification (2026-10-25).** The full scenario passed in about 25 s in a Chromium page
+via the browser tools against `vite-examples.config.ts`: zero suspended writes, one
+catch-up frame (off-screen and manual), 711,648 B over 20 recreate cycles, and a plateau
+of 187,620 B growth / 194,352 B spread with a 1-node DOM spread. Accounting: series
+23,040 B (1440 points), table 28,800 B, stack cache 2 entries / 125,372 B, LOD cache
+empty. The series wrapped past retention during the plateau. The library build and
+DOM-independent core suites (44 tests) pass. Example, probe and runner have no
+type-check or ESLint diagnostics.
+The sandboxed `npm run test:live:stream` and Vitest browser suites could not launch
+headless Chromium (same launch failure as earlier checkpoints). Run locally:
+
+```sh
+npm run test:live:stream
+npx vitest run test/Plot/visibility.test.ts test/Plot/plot.test.ts test/Plot/public-events.test.ts test/Plot/shared-pointer.test.ts test/Plot/shared-selection.test.ts test/Plot/follow.test.ts
+npm run test:interaction:pan
+```
+
+Phase 4 can close once these local runs pass. No Phase 2 pixel baselines were changed.
 
 ## 8. Additional improvements to consider
 
