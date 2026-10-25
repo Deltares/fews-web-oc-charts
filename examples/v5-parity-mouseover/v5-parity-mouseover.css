@@ -1,0 +1,29 @@
+.interaction-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr));
+  gap: 20px;
+}
+
+.interaction-grid section {
+  min-width: 0;
+}
+
+.interaction-grid h2 {
+  margin-bottom: 4px;
+}
+
+.interaction-grid p {
+  min-height: 2.8em;
+  margin-top: 0;
+}
+
+.plot-host {
+  height: 340px;
+}
+
+.compatibility-note {
+  margin-block: 20px;
+  padding: 12px 16px;
+  border-inline-start: 4px solid #1677a6;
+  background: light-dark(#eef6fa, #1c3440);
+}
