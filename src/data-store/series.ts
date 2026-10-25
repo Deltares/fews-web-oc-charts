@@ -68,6 +68,23 @@ export interface SeriesStore<Rows = SeriesInput> {
 const stores = new WeakSet<object>()
 export const isSeriesStore = (value: object): value is SeriesStore<unknown> => stores.has(value)
 
+const diagnostics = new WeakMap<
+  object,
+  () => {
+    canonicalBytes: number
+    summaryBlocks: number
+    summaryRows: number
+    lodRows: number
+    lodReusedRows: number
+  }
+>()
+
+export function seriesStorageDiagnostics(store: SeriesStore<unknown>) {
+  const read = diagnostics.get(store)
+  if (!read) throw new TypeError('Expected a series store.')
+  return Object.freeze(read())
+}
+
 function epoch(value: unknown, path: string): number {
   const numeric = value instanceof Date ? value.getTime() : value
   if (typeof numeric !== 'number' || !Number.isFinite(numeric) || Math.abs(numeric) > 8.64e15) {
@@ -132,9 +149,21 @@ function createStore<Rows>(
   let change: SeriesChange | undefined
   const extentBlockSize = 128
   let extentBlocks: Array<
-    Readonly<{ xMin: number; xMax: number; yMin: number; yMax: number }> | undefined
+    | Readonly<{
+        xMin: number
+        xMax: number
+        yMin: number
+        yMax: number
+        minimum: number
+        maximum: number
+        missing: boolean
+      }>
+    | undefined
   > = []
   let extentIndexDirty = true
+  let summaryRows = 0
+  let lodRows = 0
+  let lodReusedRows = 0
   const lodCacheLimitBytes = 2 * 1024 * 1024
   const lodCacheLimitEntries = 16
   const lodCache = new Map<string, CachedSeriesLod>()
@@ -224,17 +253,28 @@ function createStore<Rows>(
     let xMax = -Infinity
     let yMin = Infinity
     let yMax = -Infinity
+    let minimum = -1
+    let maximum = -1
+    let missing = false
     for (let physical = start; physical < end; physical += 1) {
       const logical = (physical - head + x.length) % x.length
       if (logical >= count) continue
+      summaryRows += 1
       const value = y[physical]
-      if (!Number.isFinite(value)) continue
+      if (!Number.isFinite(value)) {
+        missing = true
+        continue
+      }
       xMin = Math.min(xMin, x[physical])
       xMax = Math.max(xMax, x[physical])
+      if (value < yMin) minimum = physical
+      if (value > yMax) maximum = physical
       yMin = Math.min(yMin, value)
       yMax = Math.max(yMax, value)
     }
-    return xMin <= xMax ? Object.freeze({ xMin, xMax, yMin, yMax }) : undefined
+    return xMin <= xMax
+      ? Object.freeze({ xMin, xMax, yMin, yMax, minimum, maximum, missing })
+      : undefined
   }
 
   function extent(
@@ -379,21 +419,22 @@ function createStore<Rows>(
         last = -1
       }
 
-      for (let index = from; index < to; index += 1) {
+      const pixelAt = (index: number) =>
+        start === end
+          ? Math.floor(width / 2)
+          : Math.max(
+              0,
+              Math.min(width - 1, Math.floor(((xAt(index) - start) / (end - start)) * width)),
+            )
+      const add = (index: number) => {
         const value = yAt(index)
         if (!Number.isFinite(value)) {
           flush()
           if (!previousWasMissing && selected[selected.length - 1] !== index) selected.push(index)
           previousWasMissing = true
-          continue
+          return
         }
-        const pixel =
-          start === end
-            ? Math.floor(width / 2)
-            : Math.max(
-                0,
-                Math.min(width - 1, Math.floor(((xAt(index) - start) / (end - start)) * width)),
-              )
+        const pixel = pixelAt(index)
         if (first < 0 || pixel !== bucket) {
           flush()
           first = index
@@ -406,6 +447,36 @@ function createStore<Rows>(
         }
         last = index
         previousWasMissing = false
+      }
+      for (let index = from; index < to;) {
+        const physical = slot(index)
+        const length = Math.min(extentBlockSize, x.length - physical, to - index)
+        const block = extentBlocks[Math.floor(physical / extentBlockSize)]
+        if (
+          physical % extentBlockSize === 0 &&
+          length === Math.min(extentBlockSize, x.length - physical) &&
+          block &&
+          !block.missing &&
+          pixelAt(index) === pixelAt(index + length - 1)
+        ) {
+          const candidates = [
+            index,
+            index + block.minimum - physical,
+            index + block.maximum - physical,
+            index + length - 1,
+          ].sort((a, b) => a - b)
+          for (let candidate = 0; candidate < candidates.length; candidate += 1) {
+            if (candidate === 0 || candidates[candidate] !== candidates[candidate - 1]) {
+              add(candidates[candidate])
+            }
+          }
+          lodReusedRows += length
+          index += length
+        } else {
+          add(index)
+          lodRows += 1
+          index += 1
+        }
       }
       flush()
       const indices = Uint32Array.from(selected)
@@ -580,6 +651,7 @@ function createStore<Rows>(
       const previousLength = count
       head = 0
       count = 0
+      extentBlocks = []
       extentIndexDirty = true
       publish(from, to, {
         operation: 'clear',
@@ -594,6 +666,13 @@ function createStore<Rows>(
     },
   })
   stores.add(store)
+  diagnostics.set(store, () => ({
+    canonicalBytes: x.byteLength + y.byteLength,
+    summaryBlocks: extentBlocks.length,
+    summaryRows,
+    lodRows,
+    lodReusedRows,
+  }))
   return store
 }
 

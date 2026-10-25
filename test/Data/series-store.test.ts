@@ -1,11 +1,58 @@
 import { describe, expect, test } from 'vitest'
 import { createSeries, fromObjects, type SeriesStore } from '../../src/index.js'
+import { seriesStorageDiagnostics } from '../../src/data-store/series.js'
 
 function columns(store: SeriesStore<unknown>) {
   return {
     x: Array.from({ length: store.length }, (_, index) => store.xAt(index)),
     y: Array.from({ length: store.length }, (_, index) => store.yAt(index)),
   }
+}
+
+function referenceLod(
+  store: SeriesStore<unknown>,
+  window: readonly [number, number],
+  width: number,
+) {
+  const low = Math.min(...window)
+  const high = Math.max(...window)
+  const rows = Array.from({ length: store.length }, (_, index) => index)
+  const first = rows.findIndex((index) => store.xAt(index) >= low)
+  const after = rows.findIndex((index) => store.xAt(index) > high)
+  const from = Math.max(0, (first < 0 ? rows.length : first) - 1)
+  const to = Math.min(rows.length, (after < 0 ? rows.length : after) + 1)
+  const selected: number[] = []
+  let group: number[] = []
+  let bucket = -1
+  let missing = false
+  const flush = () => {
+    if (!group.length) return
+    const minimum = group.reduce((a, b) => (store.yAt(b) < store.yAt(a) ? b : a))
+    const maximum = group.reduce((a, b) => (store.yAt(b) > store.yAt(a) ? b : a))
+    selected.push(...new Set([group[0], minimum, maximum, group.at(-1)!].sort((a, b) => a - b)))
+    group = []
+  }
+  for (const index of rows.slice(from, to)) {
+    if (Number.isNaN(store.yAt(index))) {
+      flush()
+      if (!missing) selected.push(index)
+      missing = true
+      continue
+    }
+    const pixel =
+      low === high
+        ? Math.floor(width / 2)
+        : Math.max(
+            0,
+            Math.min(width - 1, Math.floor(((store.xAt(index) - low) / (high - low)) * width)),
+          )
+    if (pixel !== bucket) flush()
+    group.push(index)
+    bucket = pixel
+    missing = false
+  }
+  flush()
+  return selected
 }
 
 describe('columnar series stores', () => {
@@ -268,6 +315,101 @@ describe('columnar series stores', () => {
     expect(() => store.append({ x: [2], y: [Number.MAX_VALUE] })).toThrow(/precision/)
     expect(store.version).toBe(0)
     expect(createSeries({ x: [1], y: [1 / 3] }).yAt(0)).toBe(1 / 3)
+  })
+
+  test.each(['float64', 'float32'] as const)(
+    'block LOD matches full M4 after every mutation with %s storage',
+    (precision) => {
+      const x = Array.from({ length: 1800 }, (_, index) => Math.floor(index / 2))
+      const y = x.map((value, index) =>
+        index % 131 < 3 || (index >= 256 && index < 512) ? NaN : (value % 19) - 9,
+      )
+      const store = createSeries(
+        { x, y },
+        { capacity: 2048, maxPoints: 2048, maxAge: 1100, precision },
+      )
+      const verify = () => {
+        for (const window of [
+          [-1, 2000],
+          [850, 200],
+          [256, 256],
+          [-5, -2],
+          [5000, 5001],
+        ] as const) {
+          for (const width of [1, 2, 17, 256]) {
+            expect(Array.from(store.lod(window, width))).toEqual(referenceLod(store, window, width))
+          }
+        }
+      }
+      verify()
+      store.append({ x: [900, 900, 901], y: [NaN, -100, 100] })
+      verify()
+      store.prepend({ x: [-1, 0], y: [1000, NaN] })
+      verify()
+      store.upsert({ from: 200, to: 300, rows: { x: [200, 200, 300], y: [1000, -1000, NaN] } })
+      verify()
+      store.upsert({ from: 400, to: 500, rows: { x: [], y: [] } })
+      verify()
+      store.append({
+        x: Array.from({ length: 2500 }, (_, index) => index + 902),
+        y: Array.from({ length: 2500 }, (_, index) => (index % 127 === 0 ? NaN : index % 7)),
+      })
+      verify()
+      store.replace({ x: [1, 1, 2], y: [NaN, -1, 1] })
+      verify()
+      store.clear()
+      verify()
+      store.append({ x: [1, 2], y: [1, NaN] })
+      verify()
+    },
+  )
+
+  test('retained live appends refresh only touched summaries and reuse survivors without source rescans', () => {
+    const length = 16_384
+    const x = Float64Array.from({ length }, (_, index) => index)
+    const y = x.map((value) => Math.sin(value / 13))
+    const store = createSeries({ x, y }, { maxPoints: length })
+    const snapshot = store.lod([0, length + 512], 8)
+    const oldIndices = Array.from(snapshot)
+    const canonicalBytes = seriesStorageDiagnostics(store).canonicalBytes
+    for (let step = 0; step < 512; step += 1) {
+      const before = seriesStorageDiagnostics(store)
+      store.append({ x: [length + step], y: [Math.sin((length + step) / 13)] })
+      const window = [step + 1, length + step] as const
+      const current = store.lod(window, 8)
+      const after = seriesStorageDiagnostics(store)
+      expect(after.summaryRows - before.summaryRows).toBeLessThanOrEqual(256)
+      expect(after.lodRows - before.lodRows).toBeLessThanOrEqual(8 * 128 + 256)
+      expect(after.lodReusedRows - before.lodReusedRows).toBeGreaterThan(15_000)
+      expect(after.canonicalBytes).toBe(canonicalBytes)
+      expect(after.summaryBlocks).toBe(128)
+      expect(store.lodCacheEntries).toBe(1)
+      expect(store.lodCacheByteLength).toBeLessThanOrEqual(8 * 4 * 4)
+      if (step % 64 === 0 || step === 511) {
+        expect(Array.from(current)).toEqual(referenceLod(store, window, 8))
+      }
+    }
+    expect(Array.from(snapshot)).toEqual(oldIndices)
+  })
+
+  test('growth rebuilds summaries and cache hits or rejected mutations do no LOD work', () => {
+    const store = createSeries({ x: [], y: [] })
+    for (const length of [1, 127, 129, 1025]) {
+      const from = store.length
+      const x = Array.from({ length }, (_, index) => from + index)
+      store.append({ x, y: x.map((value) => (value % 31 === 0 ? NaN : value % 7)) })
+      const window = [0, store.length] as const
+      const selected = store.lod(window, 2)
+      expect(Array.from(selected)).toEqual(referenceLod(store, window, 2))
+      const before = seriesStorageDiagnostics(store)
+      expect(store.lod([window[1], window[0]], 2)).toBe(selected)
+      expect(() => store.append({ x: [-1], y: [0] })).toThrow(/last x/)
+      expect(store.lod(window, 2)).toBe(selected)
+      expect(seriesStorageDiagnostics(store)).toEqual(before)
+    }
+    store.clear()
+    expect(seriesStorageDiagnostics(store).summaryBlocks).toBe(0)
+    expect(Array.from(store.lod([0, 100], 2))).toEqual([])
   })
 
   test('copies retention options rather than retaining mutable caller state', () => {

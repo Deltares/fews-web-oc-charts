@@ -1,6 +1,11 @@
 import { describe, expect, test } from 'vitest'
 import { bar, createTable } from '../../src/index.js'
-import { computeStackLayout, stackLayout, validateStackUpdate } from '../../src/layout/stack.js'
+import {
+  computeStackLayout,
+  stackCacheDiagnostics,
+  stackLayout,
+  validateStackUpdate,
+} from '../../src/layout/stack.js'
 import { barEndpoints } from '../../src/plot/marks/bar/bar.js'
 import { barExtent } from '../../src/plot/marks/bar/bar-geometry.js'
 
@@ -275,12 +280,17 @@ describe('shared columnar stack layout', () => {
 
   test('cache shares equivalent consumers but invalidates mutations and bounds old entries', () => {
     const data = createTable({ t: [0], a: [1], b: [2], c: [3] })
+    expect(stackCacheDiagnostics(data)).toEqual({ entries: 0, bytes: 0 })
     const first = stackLayout(data, options)
+    expect(stackCacheDiagnostics(data)).toEqual({ entries: 1, bytes: first.bytes })
     expect(stackLayout(data, { ...options, layers: layers.map((layer) => ({ ...layer })) })).toBe(
       first,
     )
-    for (let index = 0; index < 9; index += 1)
+    for (let index = 0; index < 9; index += 1) {
       stackLayout(data, { ...options, layers: [{ id: String(index), y: 'a' }] })
+      expect(stackCacheDiagnostics(data).entries).toBeLessThanOrEqual(8)
+      expect(stackCacheDiagnostics(data).bytes).toBeLessThanOrEqual(32 * 1024 * 1024)
+    }
     expect(stackLayout(data, options)).not.toBe(first)
     const previous = stackLayout(data, options)
     data.append({ t: [1], a: [4], b: [5], c: [6] })
@@ -291,7 +301,35 @@ describe('shared columnar stack layout', () => {
       [9, 15],
     ])
     expect(() => previous.layers[0].lowerAt(1)).toThrow('outside')
+    data.clear()
+    const empty = stackLayout(data, options)
+    expect(stackCacheDiagnostics(data)).toEqual({ entries: 1, bytes: empty.bytes })
   })
+
+  const gc = (globalThis as { gc?: () => void }).gc
+  test.skipIf(!gc || typeof process === 'undefined')(
+    'retained appends do not keep superseded block endpoints reachable',
+    () => {
+      const t = Float64Array.from({ length: 2048 }, (_, row) => row)
+      const data = createTable({ t, a: t, b: t, c: t }, { maxPoints: 2048 })
+      let next = t.length
+      const advance = (appends: number) => {
+        for (let step = 0; step < appends; step += 1) {
+          const rows = Float64Array.from({ length: 32 }, (_, row) => next + row)
+          data.append({ t: rows, a: rows, b: rows, c: rows })
+          next += rows.length
+          stackLayout(data, options)
+          stackLayout(data, { ...options, layout: 'grouped' })
+        }
+        gc!()
+        return process.memoryUsage().arrayBuffers
+      }
+      advance(256)
+      const before = advance(512)
+      const after = advance(512)
+      expect(after - before).toBeLessThan(1024 * 1024)
+    },
+  )
 
   test('extends cached stack endpoints for append-only table mutations', () => {
     const data = createTable({ t: [0, 1, 2], a: [1, 2, 3], b: [4, 5, 6], c: [7, 8, 9] })
