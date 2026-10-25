@@ -109,6 +109,41 @@ describe('data-backed series marks', () => {
     expect(current.element.querySelectorAll('circle')).toHaveLength(0)
   })
 
+  test('renders unretained line-only appends from the tail and rebuilds after replacement', async () => {
+    const data = createSeries({ x: [0, 1], y: [1, 2] })
+    const mark = series(data, { id: 'tail', x: 'x', y: 'y' })
+    const current = plot(host(), {
+      width: 400,
+      height: 200,
+      directions: { x: 'x' },
+      scales: { x: linearScale({ domain: [0, 5] }), y: linearScale({ domain: [0, 5] }) },
+      marks: [mark],
+    })
+    await frame()
+    const line = path(current, 'tail')
+    const projectX = vi.spyOn(current.scales.x, 'project')
+    const projectY = vi.spyOn(current.scales.y, 'project')
+
+    data.append({ x: [2, 3, 4], y: [3, NaN, 4] })
+    await frame()
+
+    expect(projectX).toHaveBeenCalledTimes(2)
+    expect(projectY).toHaveBeenCalledTimes(2)
+    expect(line.getAttribute('d')).toBe(
+      `M${current.scales.x.project(0)},${current.scales.y.project(1)}` +
+        `L${current.scales.x.project(1)},${current.scales.y.project(2)}` +
+        `L${current.scales.x.project(2)},${current.scales.y.project(3)}` +
+        `M${current.scales.x.project(4)},${current.scales.y.project(4)}`,
+    )
+
+    projectX.mockClear()
+    projectY.mockClear()
+    data.replace({ x: [0, 1, 2, 3], y: [1, 2, 3, 4] })
+    await frame()
+    expect(projectX).toHaveBeenCalledTimes(4)
+    expect(projectY).toHaveBeenCalledTimes(4)
+  })
+
   test('only changed store consumers repaint, coalesces mutations, and releases removed/destroyed consumers', async () => {
     const baseline = reactive.getDiagnostics()
     const data = createSeries({ x: [0, 1], y: [1, 2] })

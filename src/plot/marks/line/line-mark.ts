@@ -118,6 +118,9 @@ function createLineRenderer(): MarkRenderer<LineLikeMark> {
   let markerGroup: SVGGElement | undefined
   const geometryKey = createKeyCache()
   const styleKey = createKeyCache()
+  let renderedVersion: number | undefined
+  let renderedLength = 0
+  let renderedLastPointValid = false
 
   function syncOptionalNodes(mark: LineLikeMark) {
     if (mark.area && !areaPath) {
@@ -149,10 +152,10 @@ function createLineRenderer(): MarkRenderer<LineLikeMark> {
       const visible = isSeriesMark(mark) ? mark.visible : isStaticMarkVisible(mark)
       const polar = context.coordinateSystem === 'polar'
       const skewT = context.coordinateSystem === 'skewT'
+      const storeVersion = store?.version
       const angular = xScale.scale.options.get().resolved
       const key = [
         mark,
-        store?.version,
         visible,
         mark.line,
         Boolean(mark.markers),
@@ -165,7 +168,44 @@ function createLineRenderer(): MarkRenderer<LineLikeMark> {
         ...scaleKey(yScale),
         ...(polar ? [context.plot.x, context.plot.y, context.plot.width, context.plot.height] : []),
       ]
-      if (!geometryKey.changed(key)) return
+      const changedKey = geometryKey.changed(key)
+      if (!changedKey && store && storeVersion !== renderedVersion) {
+        const change = store.change
+        if (
+          mark.line &&
+          visible &&
+          !mark.area &&
+          !markerGroup &&
+          mark.digits === undefined &&
+          !polar &&
+          !skewT &&
+          change?.operation === 'append' &&
+          change.evicted === undefined &&
+          change.previousLength === renderedLength &&
+          change.invalidatedFrom === renderedLength &&
+          change.length >= renderedLength
+        ) {
+          let tail = ''
+          let lastPointValid = renderedLastPointValid
+          for (let index = renderedLength; index < change.length; index += 1) {
+            const xValue = store.xAt(index)
+            const yValue = store.yAt(index)
+            if (!isScaleValue(xValue) || !isScaleValue(yValue)) {
+              lastPointValid = false
+              continue
+            }
+            const x = xScale.project(xValue)
+            const y = yScale.project(yValue)
+            tail += `${lastPointValid ? 'L' : 'M'}${x},${y}`
+            lastPointValid = true
+          }
+          if (tail) path.setAttribute('d', `${path.getAttribute('d') ?? ''}${tail}`)
+          renderedVersion = storeVersion
+          renderedLength = store.length
+          renderedLastPointValid = lastPointValid
+          return
+        }
+      } else if (!changedKey) return
       styleKey.clear()
       syncOptionalNodes(mark)
       for (const node of [path, markerGroup]) {
@@ -248,6 +288,9 @@ function createLineRenderer(): MarkRenderer<LineLikeMark> {
       path.setAttribute('d', data)
       path.setAttribute('display', mark.line ? '' : 'none')
       areaPath?.setAttribute('d', areaData)
+      renderedVersion = storeVersion
+      renderedLength = store?.length ?? 0
+      renderedLastPointValid = drawingSegment
       if (markerGroup) {
         while (markerGroup.children.length > markerIndex) markerGroup.lastElementChild?.remove()
       }
