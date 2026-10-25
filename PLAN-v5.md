@@ -2595,8 +2595,141 @@ Browser acceptance is confirmed by the user's local Chromium run: bar, stacked-a
 and histogram suites all pass (3 files, 28 tests).
 
 Non-append table merging/copying and store-level input checks still visit full columns.
-Categorical key scans, block descriptor rebuilding, mutation-aware series LOD reuse and
-measured live-memory acceptance remain open; this is not a fully incremental live path.
+Categorical key scans and block descriptor rebuilding remain open; the following
+checkpoint addresses series LOD reuse and adds the live-memory acceptance runner.
+
+#### Mutation-aware series LOD and live-memory acceptance checkpoint
+
+**Status: block-summary LOD reuse implemented and unit-verified; measured live-memory
+acceptance passed for the line and composite fixtures after fixing a stack retention
+leak. Phase 4 remains in progress (visibility suspension and full sync/live acceptance).**
+
+1. **Reuse mutation-maintained summaries.** The existing physical 128-sample extent
+   blocks now also record the first minimum/maximum positions and whether a block
+   contains missing values. LOD combines first/minimum/maximum/last from a complete,
+   gap-free block contained in one pixel bucket, rather than reading every source
+   row. Logical indexes are reprojected from physical positions after ring retention.
+   Pixel-boundary blocks, partial blocks and blocks with gaps use the original
+   row-level M4 reduction, preserving extrema tie order, duplicate x values, gap
+   boundaries and viewport neighbors. Append/age/count retention refresh only touched
+   summaries; growth, prepend, upsert and replace still rebuild the summary index.
+   Clear releases summaries. Selected viewport snapshots remain versioned, immutable
+   and bounded by the existing 16-entry/2 MiB LRU; this is summary reuse, not reuse of
+   stale logical-index snapshots across mutations.
+2. **Verify work, not just output.** Internal `seriesStorageDiagnostics()` reports
+   canonical typed-buffer bytes, summary block count and cumulative summary rows,
+   directly scanned LOD rows and rows represented by reused summaries. A 512-append
+   retained fixture with 16,384 samples checks at most 256 summary rows refreshed per
+   append, at most `8 * 128 + 256` directly scanned LOD rows for an eight-pixel window,
+   over 15,000 rows represented by summaries, constant canonical bytes and bounded
+   selected-index bytes. Full M4 reference comparisons cover both precisions, repeated
+   extrema, missing blocks, duplicates, reversed/degenerate/outside windows, append,
+   prepend, variable-length upsert/deletion, oversized retention, replace, clear and
+   reuse. Old selected-index snapshots stay unchanged. Query work still traverses
+   summary descriptors and pixel edges; gap-heavy or high-resolution views can still
+   scan every visible row. This is not a universal tail-only geometry path.
+3. **Run production memory acceptance.** `npm run test:live:memory` serves
+   `scripts/phase4-live-memory.html` and uses production `createPlot()`, series,
+   retained tables, grouped bars and stacked areas, not spike implementations.
+   The line fixture uses exactly 1M Float64 x/y samples and one 1000 CSS-pixel-wide
+   SVG plot, warmed with 100 distinct windows. The separate three-layer table
+   fixture retains 2048 rows across 1000/640-pixel plots. Each fixture warms module,
+   rendering and live-update paths before measuring an empty-plot baseline; after
+   population/window warmup and 128 live warmup batches, six measured rounds each
+   append 128 batches of 32 rows. Checks include all retained line/table values,
+   table IDs, every stack endpoint/total against full recomputation, per-append
+   summary/LOD work, no table survivor relocation, stack processing/copy counts and
+   bounded LOD/stack caches. `stackCacheDiagnostics()` reports the existing cache's
+   entry count and conservative typed-buffer byte charge.
+
+The runner measures post-GC CDP JS heap plus backing-store bytes separately, without
+adding canonical/derived diagnostics again. The single-line retained limit is
+20 MiB (matching the existing Phase 0 byte threshold); the separate composite fixture
+has a declared 32 MiB limit. Every measured live sample must remain below its retained
+limit. Post-warmup last-minus-first growth must be at most 1 MiB and the six-sample
+spread at most 2 MiB. Destroy must leave at most 1 MiB above the empty-plot baseline.
+JSON output records samples, budgets, browser/OS/CPU, canonical/cache accounting, SVG
+path characters and DOM counters. Native SVG bytes are not measured by CDP heap usage:
+DOM/path counts are proxies, not a native-memory budget pass. Pre-GC high-water samples
+are observations, not a true peak during canonical growth. Dedicated growth peaks,
+native allocation accounting, longer create/destroy stress, visibility suspension
+and the complete sync/live acceptance scenario remain separate work.
+
+Verification on 2026-10-25: the focused DOM-independent series/table/stack suite passes
+(3 files, 67 tests), the production memory fixture bundles successfully, and the
+library build passes. The broader workspace `tsc --noEmit` remains failing on existing
+example/test diagnostics; none are reported for the changed source/tests or the new
+memory fixture. The focused Chromium series-mark run was attempted but executed no
+tests: headless Chromium crashed with `SEGV_ACCERR`, and cleanup reported `kill EPERM`
+under the sandbox. The memory runner was therefore not launched again through the
+same blocked browser path. Update the sandbox policy to permit Playwright Chromium
+launch/cleanup, then run:
+
+```sh
+npx vitest run test/Plot/series-mark.test.ts
+npm run test:live:memory
+```
+
+At that point no measured memory plateau was claimed; the measured runs follow below.
+No Phase 2 pixel baselines were changed.
+Changed code passes Prettier. Targeted ESLint reports only the pre-existing unused
+`xValue` destructuring in `test/Data/series-store.test.ts`; it was left unchanged.
+
+**First measured run (user's local Chromium, 2026-10-25).** After adding explicit
+`directions` to the axis-less fixture plots:
+
+- **Line fixture: passed.** Retained 17,038,416 bytes (16.25 MiB, below 20 MiB) over a
+  16,400,741-byte empty-plot baseline; 16,000,000 bytes are canonical columns.
+  Six post-warmup samples grew/spread by 73,748 bytes; destroy left 20,948 bytes.
+  LOD cache: one entry, 9,136 bytes. Summary blocks represented about 87% of LOD
+  rows. Pre-GC observation: 43,953,040 bytes total (not a peak budget).
+- **Composite fixture: failed the plateau.** Retained 1,619,947 bytes after warmup,
+  but six samples grew linearly by 12,764,775 bytes (about 2.5 MiB per 128 appends),
+  in both heap and backing stores, while table bytes (81,920), survivor copies and
+  the stack cache (2 entries, 335,872 bytes) stayed constant. Destroy released it
+  (30,932 bytes left), so the growth was reachable from live plot/store state.
+
+**Cause and fix.** Closures sharing V8 function contexts formed an unbounded chain:
+each new stack block's offset view, created inside `computeStackLayout()`, retained
+that layout's `blocks` array, whose reused blocks retained their creating layouts'
+arrays, back through every append. Endpoint accessors in `computeStackBlock()` also
+retained the block's `data` and `previous` tail layout. Both are now built by
+top-level helpers (`offsetView()`, `blockEndpoints()`) that capture only what they
+use. A regression test in `test/Plot/stack-layout.test.ts` runs 512 retained appends
+twice for grouped and stacked layouts and bounds post-GC `arrayBuffers` growth to
+1 MiB. It failed on the previous code (6,680,320 bytes) and passes after the fix.
+It runs only with `--expose-gc`:
+
+```sh
+NODE_OPTIONS=--expose-gc npx vitest run --browser.enabled=false test/Plot/stack-layout.test.ts
+```
+
+Focused series/table/stack suites pass with GC exposed (3 files, 68 tests), and the
+library build passes. The user's local run of the stack suite with `--expose-gc`
+also passed all 32 tests, including the leak regression.
+
+**Measured rerun after the fix (user's local Chromium, 2026-10-25): both fixtures
+pass every runner check.** The runner exited with `"status": "passed"` for 2 fixtures
+on Chromium 151.0.7922.34, macOS (darwin 27.0.0), Apple M2 Pro, 1280x720 at 1x.
+
+| Fixture    | Retained (limit)        | Plateau growth/spread (≤ 1/2 MiB) | After destroy (≤ 1 MiB) |
+| ---------- | ----------------------- | --------------------------------- | ----------------------- |
+| Line       | 17,038,144 B (< 20 MiB) | 73,940 / 73,940 B                 | 20,780 B                |
+| Composites | 1,632,915 B (< 32 MiB)  | 76,791 / 76,791 B                 | 32,956 B                |
+
+The line results match the first run within a few hundred bytes. Composite backing
+stores now stay at 7,706,682-7,706,685 bytes across all six samples (previously
++1.67 MiB per sample), and heap grows by 76,791 bytes in total. Table bytes (81,920),
+survivor copies (only the initial 2048), stack cache (2 entries, 335,872 bytes) and
+DOM counts (6169 nodes, 6127 rectangles) are unchanged from the failing run, so only
+the retained chain changed. The composite pre-GC observation fell from 141,208,421
+to 87,895,443 bytes; it is an observation, not a peak budget.
+
+This closes the series LOD reuse and measured live-memory items for these two
+fixtures. It does not measure native SVG bytes, canonical-growth peaks or
+create/destroy stress. Visibility suspension (step 5) and the full sync/live
+acceptance scenario (step 6: shared pointer/selection, follow, off-screen pause,
+destroy/recreate) remain open, so Phase 4 remains in progress.
 
 ## 8. Additional improvements to consider
 

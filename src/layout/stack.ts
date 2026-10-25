@@ -95,6 +95,55 @@ export function validateStackUpdate(
   }
 }
 
+/** Top-level so accessors retain only their buffers, not the caller's data or previous layout. */
+function blockEndpoints(
+  layer: StackLayer,
+  slot: number,
+  length: number,
+  lower: Float64Array,
+  upper: Float64Array,
+  positive: Float64Array,
+  negative: Float64Array,
+  gap: Uint8Array,
+): StackEndpoints {
+  function check(row: number) {
+    if (!Number.isInteger(row) || row < 0 || row >= length)
+      throw new RangeError(`Stack row ${row} is outside the layout.`)
+  }
+  return Object.freeze({
+    id: layer.id,
+    stack: layer.stack,
+    slot,
+    lowerAt(row: number) {
+      check(row)
+      return lower[row]
+    },
+    upperAt(row: number) {
+      check(row)
+      return upper[row]
+    },
+    positiveAt(row: number) {
+      check(row)
+      return gap[row] ? NaN : positive[row]
+    },
+    negativeAt(row: number) {
+      check(row)
+      return gap[row] ? NaN : negative[row]
+    },
+  })
+}
+
+/** Top-level so block views do not retain the creating layout's block list. */
+function offsetView(data: TableView, from: number, length: number): TableView {
+  return {
+    columns: data.columns,
+    length,
+    kind: (name) => data.kind(name),
+    valueAt: (name, index) => data.valueAt(name, from + index),
+    sampleId: (index) => data.sampleId(from + index),
+  }
+}
+
 /** Data-space endpoints only: usable by both rectangles and shared area boundaries. */
 function computeStackBlock(
   data: TableView,
@@ -162,33 +211,9 @@ function computeStackBlock(
         }
         processedRows += data.length - startRow
       }
-      function check(row: number) {
-        if (!Number.isInteger(row) || row < 0 || row >= length)
-          throw new RangeError(`Stack row ${row} is outside the layout.`)
-      }
       endpoints.set(
         layer.id,
-        Object.freeze({
-          id: layer.id,
-          stack: layer.stack,
-          slot,
-          lowerAt(row: number) {
-            check(row)
-            return lower[row]
-          },
-          upperAt(row: number) {
-            check(row)
-            return upper[row]
-          },
-          positiveAt(row: number) {
-            check(row)
-            return gap[row] ? NaN : positive[row]
-          },
-          negativeAt(row: number) {
-            check(row)
-            return gap[row] ? NaN : negative[row]
-          },
-        }),
+        blockEndpoints(layer, slot, length, lower, upper, positive, negative, gap),
       )
     }
   })
@@ -278,14 +303,14 @@ export function computeStackLayout(
     }
     const from = row
     const length = Math.min(blockSize, (next?.start ?? data.length) - from)
-    const view: TableView = {
-      columns: data.columns,
-      length,
-      kind: (name) => data.kind(name),
-      valueAt: (name, index) => data.valueAt(name, from + index),
-      sampleId: (index) => data.sampleId(from + index),
-    }
-    const layout = computeStackBlock(view, options, tail?.layout, tail?.length, tail?.offset, from)
+    const layout = computeStackBlock(
+      offsetView(data, from, length),
+      options,
+      tail?.layout,
+      tail?.length,
+      tail?.offset,
+      from,
+    )
     copiedRows += layout.copiedRows
     processedRows += layout.processedRows
     blocks.push({ start: from, length, offset: 0, layout })
@@ -343,6 +368,11 @@ const cache = new WeakMap<
 >()
 const maxBytes = 32 * 1024 * 1024
 const maxEntries = 8
+
+export function stackCacheDiagnostics(data: TableStore) {
+  const current = cache.get(data)
+  return Object.freeze({ entries: current?.entries.size ?? 0, bytes: current?.bytes ?? 0 })
+}
 
 export function stackLayout(data: TableStore, options: StackLayoutOptions): StackLayout {
   const version = data.version
