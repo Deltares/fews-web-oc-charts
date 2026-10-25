@@ -182,6 +182,40 @@ describe('headless legend model', () => {
     await expect.poll(() => current.size.get()).toEqual({ width: 500, height: 300 })
   })
 
+  test('keeps keyboard focus on a built-in entry across layout passes and position changes', async () => {
+    const handle = legend()
+    const current = plot({
+      scales: { x: linearScale(), y: linearScale() },
+      directions: { x: 'x' },
+      marks: [
+        series(createSeries({ x: [0, 1], y: [2, 3] }), {
+          id: 'flow',
+          label: 'Flow',
+          x: 'x',
+          y: 'y',
+        }),
+      ],
+      plugins: [handle],
+    })
+    const entry = () =>
+      current.element
+        .closest('[data-legend-layout]')
+        ?.querySelector<SVGGElement>('[data-entry-id="flow"]') ??
+      current.element.querySelector<SVGGElement>('[data-entry-id="flow"]')!
+    entry().focus()
+    await frame()
+    expect(document.activeElement).toBe(entry())
+    for (const position of ['bottom', 'top-right', 'left', 'top'] as const) {
+      handle.update({ position })
+      await frame()
+      expect(document.activeElement).toBe(entry())
+    }
+    entry().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+    await frame()
+    expect(current.legend.entries.get()[0].visibility).toBe('hidden')
+    expect(document.activeElement).toBe(entry())
+  })
+
   test('can omit all parent headings while preserving leaf IDs, visibility and commands', async () => {
     const areas = stackedArea(createTable({ x: [0, 1], a: [2, 3], b: [3, 4] }), {
       id: 'areas',

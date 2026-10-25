@@ -342,11 +342,19 @@ function installLegend(handle: LegendHandle, context: PlotContext) {
   }
 
   function updateLayout() {
+    // Moving a node, even to its current position, blurs any focused descendant.
+    const active = document.activeElement
+    const focused = active instanceof SVGElement && layer.contains(active) ? active : undefined
+    applyLayout()
+    if (focused && document.activeElement !== focused) focused.focus()
+  }
+
+  function applyLayout() {
     const position = handle.options.get().resolved.position
     const overlay = position.includes('-')
     if (overlay) {
       restoreChart()
-      context.element.append(layer)
+      if (context.element.lastElementChild !== layer) context.element.append(layer)
       context.element.setAttribute('role', 'group')
       return
     }
@@ -367,13 +375,19 @@ function installLegend(handle: LegendHandle, context: PlotContext) {
       : first
         ? 'auto minmax(0, 1fr)'
         : 'minmax(0, 1fr) auto'
-    external.append(layer)
+    if (layer.parentNode !== external) external.append(layer)
     if (!releaseViewport) {
       context.element.before(wrapper)
       viewport.append(context.element)
     }
-    if (first) wrapper.replaceChildren(external, viewport)
-    else wrapper.replaceChildren(viewport, external)
+    const [leading, trailing] = first ? [external, viewport] : [viewport, external]
+    if (
+      wrapper.childElementCount !== 2 ||
+      wrapper.firstElementChild !== leading ||
+      wrapper.lastElementChild !== trailing
+    ) {
+      wrapper.replaceChildren(leading, trailing)
+    }
     if (!releaseViewport) releaseViewport = context.useViewport(viewport)
   }
   reactive.untracked(updateLayout)
