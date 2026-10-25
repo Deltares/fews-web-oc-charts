@@ -314,25 +314,28 @@ describe('shared pointer crosshairs', () => {
     },
   )
 
-  test('shares band values by identity and hides removed categories', async () => {
-    const x = bandScale({ domain: ['a', 'b', 'c'] })
-    const pointer = sharedPointer()
-    const config = {
-      scales: { x },
-      directions: { x: 'x' as const },
-      plugins: [crosshair({ pointer })],
-    }
-    const a = mount(config)
-    const b = mount(config, 800)
-    await frames()
-    move(a, a.scales.x.project('b'))
-    await frames()
-    expect(pointer.state.get().values[0].value).toBe('b')
-    expect(guidePosition(b, 'x')).toBeCloseTo(b.scales.x.project('b'))
-    x.domain.set(['a', 'c'])
-    await frames()
-    expect(layer(b).getAttribute('display')).toBe('none')
-  })
+  test.each([false, true])(
+    'shares band values by identity and hides removed categories (reverse: %s)',
+    async (reverse) => {
+      const x = bandScale({ domain: ['a', 'b', 'c'], reverse })
+      const pointer = sharedPointer()
+      const config = {
+        scales: { x },
+        directions: { x: 'x' as const },
+        plugins: [crosshair({ pointer })],
+      }
+      const a = mount(config)
+      const b = mount(config, 800)
+      await frames()
+      move(a, a.scales.x.project('b') + a.scales.x.bandwidth / 2)
+      await frames()
+      expect(pointer.state.get().values[0].value).toBe('b')
+      expect(guidePosition(b, 'x')).toBeCloseTo(b.scales.x.project('b'))
+      x.domain.set(['a', 'c'])
+      await frames()
+      expect(layer(b).getAttribute('display')).toBe('none')
+    },
+  )
 
   test('validates options atomically and preserves handle identity', () => {
     const pointer = sharedPointer({ by: 'xy' })

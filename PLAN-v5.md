@@ -2253,7 +2253,7 @@ Playwright Chromium launch/cleanup before retrying browser validation.
 
 #### Recommended implementation sequence and acceptance
 
-1. **Shared pointer first (implemented; browser acceptance pending).** Add the scale-identity domain-state primitive and
+1. **Shared pointer first (complete; Chromium acceptance passed).** Add the scale-identity domain-state primitive and
    crosshair integration using the existing pointer hub and reactive runtime.
    Test two unequal-width plots with different local scale names, x/y sharing,
    reversed ranges, destination clipping, leave/cancel, resize/domain changes while
@@ -2296,7 +2296,7 @@ working spike alone do not meet that exit criterion.
 
 #### Shared pointer and crosshair implementation checkpoint
 
-**Status: implemented; browser validation blocked.** `src/sync/shared-pointer.ts`
+**Status: complete; Chromium acceptance passed in the user's local run on 2026-10-25.** `src/sync/shared-pointer.ts`
 provides the shared domain-state primitive and destination projection. The local
 pointer hub notifies installed crosshairs only for actual input publications; projected
 shared state never feeds back into the hub. Crosshair inspection, labels and snapping
@@ -2311,7 +2311,8 @@ independent-axis clipping, identity matching, categories and option validation.
 notification/no echo, source leave/cancel, plugin replacement/removal, queued input,
 destroy/recreate, scope cleanup, destination snapping and unchanged local pointer state.
 
-The DOM-independent shared-pointer and runtime suites pass together (19 tests):
+The DOM-independent shared-pointer and runtime suites pass together (21 tests),
+including category inversion from band centers in normal and reversed ranges:
 
 ```sh
 npx vitest run --browser.enabled=false test/core/shared-pointer.test.ts test/core/runtime.test.ts
@@ -2319,17 +2320,18 @@ npx vitest run --browser.enabled=false test/core/shared-pointer.test.ts test/cor
 
 The library/declaration and example builds pass. The full workspace type-check still reports
 errors in unrelated legacy examples/tests; no diagnostics remain in touched files.
-The following browser suites were attempted, but no tests executed because the same
-Chromium launch/sandbox cleanup failure described above persists. The user will run
-browser validation locally:
+The sandboxed browser attempt was blocked by the Chromium launch/cleanup failure
+described above. The user's subsequent local run passed all five browser suites
+(95 tests), including all 12 shared-pointer tests, and the pan interaction runner:
 
 ```sh
 npx vitest run test/Plot/shared-pointer.test.ts test/Plot/plot.test.ts test/Plot/tooltip.test.ts test/Plot/tooltip-model.test.ts test/Plot/interaction-marks.test.ts
 npm run test:interaction:pan
 ```
 
-The pan runner is a follow-up regression command, not a fresh passing result. Shared
-selection/clock, follow mode, visibility pause and incremental live processing remain
+The pan runner confirmed direction, modifier, button and enable/disable behavior
+plus shared-scale synchronization. Shared selection/clock, follow mode, visibility
+pause and incremental live processing remain
 open. Frozen Phase 2 pixel mismatches and static baselines were not changed.
 
 ## 8. Additional improvements to consider
