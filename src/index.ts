@@ -211,5 +211,7 @@ export type {
 export { layout } from './layout/layout.js'
 export type { PlotLayout, Size, Margins, Region, AxisMeasure } from './layout/layout.js'
 export type { ThemeMode, ThemeTokens } from './theme/theme.js'
-export { batch, untracked } from './core/runtime.js'
+export { batch, effect, subscribe, untracked } from './core/runtime.js'
+export type { SubscribeOptions, Unsubscribe } from './core/runtime.js'
+export type { EffectHandle } from './core/reactive.js'
 export type { OptionPatch, OptionStateSnapshot } from './core/options.js'

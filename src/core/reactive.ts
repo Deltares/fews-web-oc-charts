@@ -56,6 +56,9 @@ export interface ReactiveCoreOptions {
 export interface ReactiveCore {
   signal<T>(value: T, equals?: (left: T, right: T) => boolean): Signal<T>
   computed<T>(calculate: () => T, equals?: (left: T, right: T) => boolean): ComputedSignal<T>
+  isSignal(value: unknown): value is ReadonlySignal<unknown>
+  equals<T>(source: ReadonlySignal<T>, left: T, right: T): boolean
+  onDispose(cleanup: () => void): () => void
   effect(run: () => void | (() => void)): EffectHandle
   createScope(): ReactiveScope
   getDiagnostics(): ReactiveDiagnostics
@@ -79,6 +82,8 @@ export function createReactiveCore(
   const pendingEffects = new Set<() => void>()
   const effectObservers = new Map<() => void, Observer>()
   const currentlyScheduledEffects = new Set<() => void>()
+  const signals = new WeakSet<object>()
+  const signalEqualities = new WeakMap<object, (left: unknown, right: unknown) => boolean>()
 
   function reportError(error: unknown) {
     if (!options.onError) {
@@ -200,7 +205,7 @@ export function createReactiveCore(
 
   function signal<T>(value: T, equals: (left: T, right: T) => boolean = Object.is): Signal<T> {
     const cell: Cell<T> = { value, version: 0, depth: 0, subscribers: new Set() }
-    return {
+    const signal: Signal<T> = {
       get() {
         track(cell)
         return cell.value
@@ -222,6 +227,9 @@ export function createReactiveCore(
         notify(cell)
       },
     }
+    signals.add(signal)
+    signalEqualities.set(signal, (left, right) => equals(left as T, right as T))
+    return signal
   }
 
   function computed<T>(
@@ -299,6 +307,8 @@ export function createReactiveCore(
         releaseOwnership()
       },
     }
+    signals.add(computedSignal)
+    signalEqualities.set(computedSignal, (left, right) => equals(left as T, right as T))
     activeComputeds += 1
     const releaseOwnership =
       currentScope?.own(computedSignal.dispose.bind(computedSignal)) ?? (() => {})
@@ -375,6 +385,17 @@ export function createReactiveCore(
   return {
     signal,
     computed,
+    isSignal(value): value is ReadonlySignal<unknown> {
+      return typeof value === 'object' && value !== null && signals.has(value)
+    },
+    equals(source, left, right) {
+      const equality = signalEqualities.get(source)
+      if (!equality) throw new TypeError('Expected a signal created by this reactive core.')
+      return equality(left, right)
+    },
+    onDispose(cleanup) {
+      return currentScope?.own(cleanup) ?? (() => {})
+    },
     effect,
     createScope() {
       return new Scope(currentScope)
