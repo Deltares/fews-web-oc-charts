@@ -39,10 +39,20 @@ try {
     )
   }
   async function snapshot(version) {
-    return JSON.parse(await page.locator(`#${version}-snapshot`).textContent())
+    const selector = version === 'native' ? '#snapshot' : `#${version}-snapshot`
+    return JSON.parse(await page.locator(selector).textContent())
+  }
+  function chart(version) {
+    return page.locator(
+      version === 'v4'
+        ? '#v4-chart .mouse rect'
+        : version === 'native'
+          ? '#chart svg'
+          : '#v5-chart svg',
+    )
   }
   async function wheel(version, key) {
-    const target = page.locator(version === 'v4' ? '#v4-chart .mouse rect' : '#v5-chart svg')
+    const target = chart(version)
     await target.scrollIntoViewIfNeeded()
     const box = await target.boundingBox()
     assert.ok(box)
@@ -58,7 +68,7 @@ try {
     }
   }
   async function doubleClick(version) {
-    const target = page.locator(version === 'v4' ? '#v4-chart .mouse rect' : '#v5-chart svg')
+    const target = chart(version)
     await target.dblclick()
     await settled()
   }
@@ -183,9 +193,79 @@ try {
     await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
     'Mobile layout must not overflow',
   )
+
+  await page.setViewportSize({ width: 1440, height: 1000 })
+  await page.goto(`http://127.0.0.1:${address.port}/examples/v5-zoom/`)
+  await chart('native').waitFor()
+  await settled()
+  await page.evaluate(() => {
+    window.zoomParityWheelCount = 0
+    document.addEventListener(
+      'wheel',
+      () => {
+        window.zoomParityWheelCount += 1
+      },
+      { capture: true, passive: true },
+    )
+  })
+  const nativeInitial = await snapshot('native')
+  const nativeSvg = await chart('native').elementHandle()
+  for (const mode of ['x', 'y', 'xy']) {
+    await restore()
+    await page.selectOption('#mode', mode)
+    await wheel('native')
+    const after = await snapshot('native')
+    if (mode.includes('x')) assert.ok(span(after.time) < span(nativeInitial.time))
+    else assert.deepEqual(after.time, nativeInitial.time)
+    assert.equal(after.valueDomain, mode.includes('y') ? 'manual' : 'visible autoscale')
+    assert.match(
+      await page.locator('#status').textContent(),
+      mode.includes('y') ? /manual domain/ : /following visible data/,
+    )
+    assert.match(await page.locator('#event-status').textContent(), /source: wheel/)
+    await doubleClick('native')
+    assert.deepEqual(await snapshot('native'), nativeInitial)
+  }
+  for (const [modifier, key] of [
+    ['ctrl', 'Control'],
+    ['shift', 'Shift'],
+  ]) {
+    await page.selectOption('#modifier', modifier)
+    await wheel('native')
+    assert.deepEqual(await snapshot('native'), nativeInitial)
+    await wheel('native', key)
+    assert.ok(span((await snapshot('native')).time) < span(nativeInitial.time))
+    // Double-click reset does not require the wheel modifier.
+    await doubleClick('native')
+    assert.deepEqual(await snapshot('native'), nativeInitial)
+  }
+  await page.selectOption('#modifier', 'none')
+  await wheel('native')
+  await page.locator('#wheel-enabled').uncheck()
+  const disabled = await snapshot('native')
+  await wheel('native')
+  assert.deepEqual(await snapshot('native'), disabled)
+  await doubleClick('native')
+  assert.deepEqual(await snapshot('native'), nativeInitial)
+  assert.match(await page.locator('#event-status').textContent(), /source: reset/)
+  await page.locator('#wheel-enabled').check()
+  await page.selectOption('#reset-mode', 'full')
+  await doubleClick('native')
+  assert.ok(span((await snapshot('native')).time) > span(nativeInitial.time))
+  await restore()
+  await wheel('native')
+  const nativeZoomed = await snapshot('native')
+  await page.selectOption('#reset-mode', 'toggle')
+  await doubleClick('native')
+  assert.ok(span((await snapshot('native')).time) > span(nativeInitial.time))
+  await doubleClick('native')
+  assert.deepEqual(await snapshot('native'), nativeZoomed)
+  await restore()
+  assert.deepEqual(await snapshot('native'), nativeInitial)
+  assert.ok(await nativeSvg.evaluate((element) => element.isConnected))
   assert.deepEqual(errors, [], 'The example must not emit browser errors')
   console.log(
-    'Zoom parity: modes, modifiers, disabled wheel, runtime updates, resets and readouts passed.',
+    'Native and parity zoom: modes, modifiers, disabled wheel, runtime updates, resets and readouts passed.',
   )
 } finally {
   await browser?.close()

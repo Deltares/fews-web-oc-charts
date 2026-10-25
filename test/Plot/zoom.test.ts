@@ -1,5 +1,13 @@
 import { afterEach, expect, test } from 'vitest'
-import { createPlot, linearScale, zoom, type Plot } from '../../src/index.js'
+import {
+  createPlot,
+  line,
+  linearScale,
+  ModifierKey,
+  zoom,
+  type DomainChangeDetail,
+  type Plot,
+} from '../../src/index.js'
 
 const plots: Plot[] = []
 const hosts: HTMLElement[] = []
@@ -31,7 +39,7 @@ test('wheel/reset events report changed scales and release listeners on removal 
   })
   plots.push(plot)
   await frame()
-  const details: { scale: string; source: string; domain: readonly unknown[] }[] = []
+  const details: DomainChangeDetail[] = []
   plot.on('domainchange', (detail) => details.push(detail))
   const bounds = plot.element.getBoundingClientRect()
   const position = { clientX: bounds.x + 200, clientY: bounds.y + 150 }
@@ -52,10 +60,26 @@ test('wheel/reset events report changed scales and release listeners on removal 
   ])
   expect(x.domain.get()[1]).toBeLessThan(100)
   expect(y.domain.get()[1]).toBeLessThan(100)
+  const zoomed = { x: [...x.domain.get()], y: [...y.domain.get()] }
+  for (const detail of details) {
+    expect(detail.handle).toBe(detail.scale === 'x' ? x : y)
+    expect(detail.previous).toEqual([0, 100])
+    expect(detail.domain).toEqual(detail.scale === 'x' ? zoomed.x : zoomed.y)
+    expect(detail.explicit).toBe(true)
+    expect(Object.isFrozen(detail)).toBe(true)
+    expect(Object.isFrozen(detail.domain)).toBe(true)
+  }
+  const wheelDetails = [...details]
   details.length = 0
   expect(reset()).toBe(false)
   await frame()
   expect(details.map(({ source }) => source)).toEqual(['reset', 'reset'])
+  for (const detail of details) {
+    expect(detail.previous).toEqual(detail.scale === 'x' ? zoomed.x : zoomed.y)
+    expect(detail.domain).toEqual([0, 100])
+    expect(detail.explicit).toBe(true)
+  }
+  expect(wheelDetails.map(({ domain }) => domain)).toEqual([zoomed.x, zoomed.y])
   expect(x.domain.get()).toEqual([0, 100])
   expect(y.domain.get()).toEqual([0, 100])
   details.length = 0
@@ -87,4 +111,64 @@ test('wheel/reset events report changed scales and release listeners on removal 
   await frame()
   expect(x.domain.get()).toEqual(beforeDestroy)
   expect(details).toEqual([])
+})
+
+test('runtime reset policies preserve inactive axes and restore initial autoscaling', async () => {
+  const host = document.createElement('div')
+  document.body.append(host)
+  hosts.push(host)
+  const x = linearScale({ domain: [0, 50] })
+  const y = linearScale({ autoscale: 'visible' })
+  const interaction = zoom({ mode: 'xy', wheel: 'xy' })
+  const plot = createPlot(host, {
+    width: 400,
+    height: 300,
+    margins: { top: 20, right: 20, bottom: 20, left: 20 },
+    directions: { x: 'x', y: 'y' },
+    scales: { x, y },
+    marks: [line({ x: 'x', y: 'y', xValues: [0, 50, 100], yValues: [10, 20, 200] })],
+    plugins: [interaction],
+  })
+  plots.push(plot)
+  await frame()
+  const initialY = [...y.domain.get()]
+  const bounds = plot.element.getBoundingClientRect()
+  const position = { clientX: bounds.x + 200, clientY: bounds.y + 150 }
+  const reset = async () => {
+    plot.element.dispatchEvent(
+      new MouseEvent('dblclick', { ...position, button: 0, cancelable: true }),
+    )
+    await frame()
+  }
+  x.domain.set([10, 40])
+  y.domain.set([12, 18])
+  await frame()
+
+  interaction.update({ mode: 'x', wheel: 'none', reset: 'full', modifier: ModifierKey.Ctrl })
+  await reset()
+  const fullX = [...x.domain.get()]
+  expect(Number(fullX[1]) - Number(fullX[0])).toBeGreaterThan(50)
+  expect(x.options.get().explicit.domain).toBeUndefined()
+  expect(y.domain.get()).toEqual([12, 18])
+
+  interaction.update({ reset: 'initial' })
+  await reset()
+  expect(x.domain.get()).toEqual([0, 50])
+  expect(y.domain.get()).toEqual([12, 18])
+
+  x.domain.set([10, 40])
+  await frame()
+  interaction.update({ mode: 'xy', reset: 'toggle' })
+  await reset()
+  expect(x.domain.get()).toEqual(fullX)
+  expect(Number(y.domain.get()[1])).toBeGreaterThan(Number(initialY[1]))
+  await reset()
+  expect(x.domain.get()).toEqual([10, 40])
+  expect(y.domain.get()).toEqual([12, 18])
+
+  interaction.update({ reset: 'initial' })
+  await reset()
+  expect(x.domain.get()).toEqual([0, 50])
+  expect(y.domain.get()).toEqual(initialY)
+  expect(y.options.get().explicit.domain).toBeUndefined()
 })
