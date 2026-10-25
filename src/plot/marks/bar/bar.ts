@@ -13,7 +13,12 @@ import {
   type TableStore,
   type TableView,
 } from '../../../data-store/table.js'
-import { computeStackLayout, stackLayout, type StackLayoutOptions } from '../../../layout/stack.js'
+import {
+  computeStackLayout,
+  stackLayout,
+  type StackLayout,
+  type StackLayoutOptions,
+} from '../../../layout/stack.js'
 import type { ScaleHandle } from '../../../scales/scale.js'
 import {
   retainLayerVisibility,
@@ -92,9 +97,20 @@ export function validateBarUpdates(
   return () => entries.delete(validate)
 }
 
-function validateData(data: TableView, options: Readonly<BarOptions>) {
+function validateData(
+  data: TableView,
+  options: Readonly<BarOptions>,
+  appendFrom?: number,
+  previous?: StackLayout,
+) {
   if (isTableStore(data)) stackLayout(data, barLayoutOptions(options))
-  else computeStackLayout(data, barLayoutOptions(options))
+  else
+    computeStackLayout(
+      data,
+      barLayoutOptions(options),
+      appendFrom === undefined ? undefined : previous,
+      appendFrom,
+    )
   if (options.interval) {
     if (
       data.kind(options.x) !== 'number' ||
@@ -103,8 +119,10 @@ function validateData(data: TableView, options: Readonly<BarOptions>) {
     ) {
       throw new Error('Bar intervals require numeric/time columns.')
     }
-    let previousEnd = -Infinity
-    for (let row = 0; row < data.length; row += 1) {
+    let previousEnd = appendFrom
+      ? Number(data.valueAt(options.interval.end, appendFrom - 1))
+      : -Infinity
+    for (let row = appendFrom ?? 0; row < data.length; row += 1) {
       const start = Number(data.valueAt(options.interval.start, row))
       const end = Number(data.valueAt(options.interval.end, row))
       if (!Number.isFinite(start) || !Number.isFinite(end) || start > end || start < previousEnd) {
@@ -274,7 +292,12 @@ export function bar(data: TableStore, initial: OptionPatch<BarOptions>): BarMark
       if (state.update(patch)) signals.publish()
     },
   })
-  const check = (candidate: TableView) => validateData(candidate, state.getSnapshot().resolved)
+  const check = (candidate: TableView, appendFrom?: number) => {
+    const resolved = state.getSnapshot().resolved
+    const previous =
+      appendFrom === undefined ? undefined : stackLayout(data, barLayoutOptions(resolved))
+    validateData(candidate, resolved, appendFrom, previous)
+  }
   tableChecks.set(mark, check)
   validateTableUpdates(data, check)
   handles.add(mark)

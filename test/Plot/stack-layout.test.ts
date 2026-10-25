@@ -244,4 +244,54 @@ describe('shared columnar stack layout', () => {
     ])
     expect(() => previous.layers[0].lowerAt(1)).toThrow('outside')
   })
+
+  test('extends cached stack endpoints for append-only table mutations', () => {
+    const data = createTable({ t: [0, 1, 2], a: [1, 2, 3], b: [4, 5, 6], c: [7, 8, 9] })
+    mark(data)
+    const previous = stackLayout(data, options)
+    expect(previous.processedRows).toBe(18)
+
+    data.append({ t: [3, 4], a: [-1, 10], b: [NaN, -3], c: [3, 4] })
+    const next = stackLayout(data, options)
+    expect(next.processedRows).toBe(12)
+    expect(endpoints(next, 0)).toEqual(endpoints(previous, 0))
+    expect(endpoints(next, 1)).toEqual(endpoints(previous, 1))
+    expect(endpoints(next, 2)).toEqual(endpoints(previous, 2))
+    expect(endpoints(next, 3)).toEqual([
+      [NaN, NaN],
+      [NaN, NaN],
+      [NaN, NaN],
+    ])
+    expect(endpoints(next, 4)).toEqual([
+      [0, 10],
+      [-3, 0],
+      [10, 14],
+    ])
+    const full = computeStackLayout(data, options)
+    expect(Array.from({ length: data.length }, (_, row) => endpoints(next, row))).toEqual(
+      Array.from({ length: data.length }, (_, row) => endpoints(full, row)),
+    )
+  })
+
+  test('reports duplicate append keys before ordering errors in incremental validation', () => {
+    const data = createTable({ t: [0, 1], a: [1, 2], b: [3, 4], c: [5, 6] })
+    mark(data)
+    stackLayout(data, options)
+
+    expect(() => data.append({ t: [1], a: [2], b: [3], c: [4] })).toThrow(
+      /Duplicate composite x key "1" at row 2/,
+    )
+    expect(data.version).toBe(0)
+    expect(data.length).toBe(2)
+  })
+
+  test('falls back to full stack processing when append retention evicts rows', () => {
+    const data = createTable({ t: [0, 1], a: [1, 2], b: [3, 4], c: [5, 6] }, { maxPoints: 3 })
+    mark(data)
+    stackLayout(data, options)
+    data.append({ t: [2, 3], a: [7, 8], b: [9, 10], c: [11, 12] })
+
+    expect(data.change).toMatchObject({ operation: 'append', evicted: 1 })
+    expect(stackLayout(data, options).processedRows).toBe(18)
+  })
 })

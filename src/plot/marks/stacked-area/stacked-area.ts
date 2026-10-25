@@ -13,7 +13,7 @@ import {
   type TableStore,
   type TableView,
 } from '../../../data-store/table.js'
-import { computeStackLayout, stackLayout } from '../../../layout/stack.js'
+import { computeStackLayout, stackLayout, type StackLayout } from '../../../layout/stack.js'
 import type { ScaleHandle } from '../../../scales/scale.js'
 import {
   retainLayerVisibility,
@@ -62,11 +62,22 @@ function layoutOptions(options: Readonly<StackedAreaOptions>) {
   return { x: options.x, layers: options.layers, layout: 'stacked' as const }
 }
 
-function validateData(data: TableView, options: Readonly<StackedAreaOptions>) {
+function validateData(
+  data: TableView,
+  options: Readonly<StackedAreaOptions>,
+  appendFrom?: number,
+  previous?: StackLayout,
+) {
   if (data.kind(options.x) !== 'number')
     throw new Error('stackedArea requires a numeric/time x column.')
   if (isTableStore(data)) stackLayout(data, layoutOptions(options))
-  else computeStackLayout(data, layoutOptions(options))
+  else
+    computeStackLayout(
+      data,
+      layoutOptions(options),
+      appendFrom === undefined ? undefined : previous,
+      appendFrom,
+    )
 }
 
 export function validateStackedAreaScales(
@@ -177,7 +188,12 @@ export function stackedArea(
       if (state.update(patch)) signals.publish()
     },
   })
-  const check = (candidate: TableView) => validateData(candidate, state.getSnapshot().resolved)
+  const check = (candidate: TableView, appendFrom?: number) => {
+    const resolved = state.getSnapshot().resolved
+    const previous =
+      appendFrom === undefined ? undefined : stackLayout(data, layoutOptions(resolved))
+    validateData(candidate, resolved, appendFrom, previous)
+  }
   tableChecks.set(mark, check)
   validateTableUpdates(data, check)
   handles.add(mark)

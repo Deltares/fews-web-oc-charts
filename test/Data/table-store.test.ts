@@ -54,6 +54,57 @@ describe('aligned tables', () => {
     expect(data.length).toBe(2)
   })
 
+  test('publishes immutable mutation metadata after append, upsert, replacement and clear', () => {
+    const data = createTable({ t: [1, 2], q: [10, 20] }, { maxPoints: 3 })
+    data.append({ t: [3], q: [30] })
+    expect(data.change).toEqual({
+      version: 1,
+      operation: 'append',
+      previousLength: 2,
+      length: 3,
+      inputLength: 1,
+      invalidatedFrom: 2,
+      invalidatedTo: 3,
+      replaced: 0,
+      evicted: 0,
+      from: 1,
+      to: 3,
+    })
+    expect(Object.isFrozen(data.change)).toBe(true)
+
+    data.append({ t: [4, 5], q: [40, 50] })
+    expect(data.change).toMatchObject({
+      operation: 'append',
+      previousLength: 3,
+      length: 3,
+      inputLength: 2,
+      invalidatedFrom: 0,
+      invalidatedTo: 3,
+      evicted: 2,
+      from: 1,
+      to: 5,
+    })
+
+    data.upsert({ from: 4, to: 4, rows: { t: [4], q: [400] } })
+    expect(data.change).toMatchObject({
+      operation: 'upsert',
+      inputLength: 1,
+      replaced: 1,
+      invalidatedFrom: 0,
+      invalidatedTo: 3,
+    })
+
+    data.replace({ t: [8], q: [80] })
+    expect(data.change).toMatchObject({
+      operation: 'replace',
+      previousLength: 3,
+      length: 1,
+      replaced: 3,
+    })
+    data.clear()
+    expect(data.change).toMatchObject({ operation: 'clear', previousLength: 1, length: 0 })
+  })
+
   test('composite constraints reject duplicate keys and bad intervals before committing a mutation', () => {
     const data = createTable({ t: [0], end: [2], a: [3] })
     const mark = bar(data, {
