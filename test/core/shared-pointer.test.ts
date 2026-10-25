@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest'
 import { reactive } from '../../src/core/runtime.js'
 import { bandScale, bindScale, linearScale } from '../../src/scales/scale.js'
 import { crosshair } from '../../src/plot/plugins/crosshair/crosshair.js'
+import { coordinateAdapter } from '../../src/plot/coordinates/coordinate-system.js'
 import {
   projectSharedPointer,
   publishSharedPointer,
@@ -139,6 +140,26 @@ describe('shared domain pointer state and projection', () => {
     expect(project().inside).toBe(true)
     scale.domain.set(['a', 'c'])
     expect(project().inside).toBe(false)
+    expect(pointer.state.get().values[0].value).toBe('b')
+  })
+
+  test.each([false, true])('publishes a category from its band center (reverse: %s)', (reverse) => {
+    const pointer = sharedPointer()
+    const scale = bandScale({ domain: ['a', 'b', 'c'], reverse })
+    const binding = bindScale(scale, reactive.signal([20, 480] as const))
+    const region = { x: 20, y: 20, width: 460, height: 260 }
+    const svgX = binding.project('b') + binding.bandwidth / 2
+    const values = coordinateAdapter('cartesian').invertPointer({
+      svgX,
+      svgY: 100,
+      plotX: svgX - region.x,
+      plotY: 80,
+      region,
+      scales: { x: binding },
+      direction: () => 'x',
+    })
+    expect(values.get('x')).toBe('b')
+    publishSharedPointer(pointer, Symbol(), [{ scale, value: values.get('x')! }])
     expect(pointer.state.get().values[0].value).toBe('b')
   })
 
