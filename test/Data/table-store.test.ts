@@ -61,6 +61,7 @@ describe('aligned tables', () => {
     expect(data.change).toEqual({
       version: 1,
       operation: 'append',
+      spliceFrom: 2,
       previousLength: 2,
       length: 3,
       inputLength: 1,
@@ -90,6 +91,7 @@ describe('aligned tables', () => {
     expect(data.change).toMatchObject({
       operation: 'upsert',
       inputLength: 1,
+      spliceFrom: 1,
       replaced: 1,
       invalidatedFrom: 0,
       invalidatedTo: 3,

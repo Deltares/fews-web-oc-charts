@@ -175,6 +175,12 @@ interface StackBlock {
 const blockSize = 128
 const layoutBlocks = new WeakMap<StackLayout, readonly StackBlock[]>()
 
+interface StackReuse {
+  readonly from: number
+  readonly to: number
+  readonly previousFrom: number
+}
+
 /** Immutable blocks share surviving endpoints without retaining chains of old layouts. */
 export function computeStackLayout(
   data: TableView,
@@ -182,16 +188,27 @@ export function computeStackLayout(
   previous?: StackLayout,
   startRow = 0,
   previousOffset = 0,
+  reuse?: readonly StackReuse[],
 ): StackLayout {
   const oldBlocks = previous && layoutBlocks.get(previous)
-  if (!oldBlocks || startRow < 1 || startRow > data.length) {
+  if (reuse) startRow = 0
+  if (!oldBlocks || (!reuse && (startRow < 1 || startRow > data.length))) {
     previous = undefined
     startRow = 0
     previousOffset = 0
   }
   validateStackInput(data, options, startRow)
   const blocks: StackBlock[] = []
-  if (previous && oldBlocks) {
+  if (reuse && oldBlocks) {
+    for (const range of reuse) {
+      for (const block of oldBlocks) {
+        const start = range.from + block.start - range.previousFrom
+        if (start >= range.from && start + block.length <= range.to) {
+          blocks.push({ ...block, start })
+        }
+      }
+    }
+  } else if (previous && oldBlocks) {
     for (const block of oldBlocks) {
       const from = Math.max(previousOffset, block.start)
       const to = Math.min(previousOffset + startRow, block.start + block.length)
@@ -207,16 +224,25 @@ export function computeStackLayout(
   }
   let copiedRows = 0
   let processedRows = 0
-  let row = startRow
+  let row = reuse ? 0 : startRow
   let tail: StackBlock | undefined
   const last = blocks.at(-1)
-  if (row < data.length && last && last.length < blockSize) {
+  if (!reuse && row < data.length && last && last.length < blockSize) {
     tail = blocks.pop()
     row -= last.length
   }
+  const shared = reuse ? blocks.splice(0) : []
+  let sharedIndex = 0
   while (row < data.length) {
+    const next = shared[sharedIndex]
+    if (next?.start === row) {
+      blocks.push(next)
+      row += next.length
+      sharedIndex += 1
+      continue
+    }
     const from = row
-    const length = Math.min(blockSize, data.length - from)
+    const length = Math.min(blockSize, (next?.start ?? data.length) - from)
     const view: TableView = {
       columns: data.columns,
       length,
@@ -288,10 +314,13 @@ export function stackLayout(data: TableStore, options: StackLayoutOptions): Stac
   let current = cache.get(data)
   if (!current || current.version !== version) {
     const change = data.change
-    const appendOnly =
-      current !== undefined && change?.operation === 'append' && change.version === version
+    const reusable =
+      current !== undefined &&
+      change !== undefined &&
+      ['append', 'prepend', 'upsert'].includes(change.operation) &&
+      change.version === version
     current =
-      appendOnly && current ? { ...current, version } : { version, entries: new Map(), bytes: 0 }
+      reusable && current ? { ...current, version } : { version, entries: new Map(), bytes: 0 }
     cache.set(data, current)
   }
   if (!current) throw new Error('Stack layout cache initialization failed.')
@@ -315,7 +344,8 @@ export function stackLayout(data: TableStore, options: StackLayoutOptions): Stac
   const canExtend =
     previous !== undefined &&
     previous.version === version - 1 &&
-    change?.operation === 'append' &&
+    change !== undefined &&
+    ['append', 'prepend', 'upsert'].includes(change.operation) &&
     change.version === version &&
     previous.layout.layers.length === options.layers.length
   const result = canExtend
@@ -325,6 +355,24 @@ export function stackLayout(data: TableStore, options: StackLayoutOptions): Stac
         previous.layout,
         Math.max(0, change.previousLength - change.evicted),
         Math.min(change.previousLength, change.evicted),
+        change.operation === 'append'
+          ? undefined
+          : [
+              {
+                from: 0,
+                to: Math.max(0, change.spliceFrom - change.evicted),
+                previousFrom: change.evicted,
+              },
+              {
+                from: Math.max(0, change.spliceFrom + change.inputLength - change.evicted),
+                to: data.length,
+                previousFrom:
+                  Math.max(0, change.spliceFrom + change.inputLength - change.evicted) +
+                  change.evicted +
+                  change.replaced -
+                  change.inputLength,
+              },
+            ],
       )
     : computeStackLayout(data, options)
   if (result.bytes <= maxBytes) {

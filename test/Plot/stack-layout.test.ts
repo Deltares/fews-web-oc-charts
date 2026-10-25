@@ -346,7 +346,7 @@ describe('shared columnar stack layout', () => {
     },
   )
 
-  test('reuses full blocks without prefix copies and recomputes after skipped or non-append updates', () => {
+  test('reuses full blocks and recomputes after skipped versions or replacement', () => {
     const values = Array.from({ length: 256 }, (_, row) => row)
     const data = createTable({ t: values, a: values, b: values, c: values })
     const first = stackLayout(data, options)
@@ -359,6 +359,8 @@ describe('shared columnar stack layout', () => {
     data.append({ t: [258], a: [1], b: [2], c: [3] })
     expect(stackLayout(data, options).processedRows).toBe(data.length * 6)
     data.upsert({ from: 0, to: 0, rows: { t: [0], a: [-1], b: [-2], c: [-3] } })
+    expect(stackLayout(data, options).processedRows).toBe(128 * 6)
+    data.replace({ t: values, a: values, b: values, c: values })
     expect(stackLayout(data, options).processedRows).toBe(data.length * 6)
     data.clear()
     const empty = stackLayout(data, options)
@@ -367,6 +369,125 @@ describe('shared columnar stack layout', () => {
     expect(() => empty.layers[0].positiveAt(0)).toThrow('outside')
     data.append({ t: [0], a: [1], b: [2], c: [3] })
     expect(stackLayout(data, options).processedRows).toBe(6)
+  })
+
+  test.each(['stacked', 'grouped', 'named'] as const)(
+    'reuses unaffected %s blocks across prepend, insertion, replacement and deletion',
+    (kind) => {
+      const currentOptions = {
+        ...options,
+        layout: kind === 'grouped' ? ('grouped' as const) : ('stacked' as const),
+        layers: layers.map((layer) => ({
+          ...layer,
+          visible: layer.id !== 'c',
+          ...(kind === 'named' ? { stack: layer.id === 'b' ? 'B' : 'A' } : {}),
+        })),
+      }
+      const rows = (times: number[]) => ({
+        t: times,
+        a: times.map((t) => (t % 9) - 4),
+        b: times.map((t) => (t % 13 === 0 ? NaN : t % 5)),
+        c: times.map(() => NaN),
+      })
+      const data = createTable(rows(Array.from({ length: 1024 }, (_, row) => row * 2)))
+      bar(data, { ...currentOptions, scales: { x: 't', y: 'q' }, width: 10 })
+      const first = stackLayout(data, currentOptions)
+      const snapshot = Array.from({ length: data.length }, (_, row) => endpoints(first, row))
+      const check = (maxRows: number) => {
+        const next = stackLayout(data, currentOptions)
+        const full = computeStackLayout(data, currentOptions)
+        expect(next.processedRows).toBeLessThanOrEqual(maxRows * 4)
+        expect(next.copiedRows).toBe(0)
+        expect(next.bytes).toBeLessThanOrEqual(full.bytes)
+        for (let row = 0; row < data.length; row += 1) {
+          expect(endpoints(next, row)).toEqual(endpoints(full, row))
+          expect(
+            next.layers.map((layer) => [layer.positiveAt(row), layer.negativeAt(row)]),
+          ).toEqual(full.layers.map((layer) => [layer.positiveAt(row), layer.negativeAt(row)]))
+        }
+      }
+      data.prepend(rows([-4, -2]))
+      expect(data.change?.spliceFrom).toBe(0)
+      check(2)
+      data.upsert({ from: 1025, to: 1025, rows: rows([1025]) })
+      expect(data.change?.spliceFrom).toBe(515)
+      check(129)
+      data.upsert({ from: 510, to: 518, rows: rows([511, 513]) })
+      check(256)
+      data.upsert({ from: 1500, to: 1510, rows: rows([]) })
+      check(254)
+      for (let index = 0; index < 32; index += 1) {
+        const t = 600 + index * 2
+        data.upsert({ from: t, to: t, rows: rows([t]) })
+        check(254)
+      }
+      expect(Array.from({ length: 1024 }, (_, row) => endpoints(first, row))).toEqual(snapshot)
+    },
+  )
+
+  test('maps surviving blocks correctly when non-append retention crosses inserted rows', () => {
+    const times = Array.from({ length: 512 }, (_, row) => row)
+    const rows = (t: number[]) => ({ t, a: t, b: t.map((value) => -value), c: t })
+    const data = createTable(rows(times), { maxPoints: 512, maxAge: 511 })
+    mark(data)
+    stackLayout(data, options)
+    for (const mutate of [
+      () => data.prepend(rows([-2, -1])),
+      () => data.upsert({ from: 100, to: 102, rows: rows([100, 100.5, 101, 101.5, 102]) }),
+      () => data.upsert({ from: 0, to: 10, rows: rows([-1, 0, 1, 2, 3].filter((t) => t >= 0)) }),
+      () =>
+        data.upsert({
+          from: 2000,
+          to: 2300,
+          rows: rows(Array.from({ length: 300 }, (_, i) => 2000 + i)),
+        }),
+    ]) {
+      mutate()
+      const next = stackLayout(data, options)
+      const full = computeStackLayout(data, options)
+      expect(next.processedRows).toBeLessThanOrEqual(full.processedRows)
+      for (let row = 0; row < data.length; row += 1)
+        expect(endpoints(next, row)).toEqual(endpoints(full, row))
+    }
+  })
+
+  test('validates non-append candidates fully before publishing reusable blocks', () => {
+    const times = Array.from({ length: 512 }, (_, row) => row)
+    const data = createTable({ t: times, a: times, b: times, c: times })
+    mark(data)
+    const previous = stackLayout(data, options)
+    expect(() => data.prepend({ t: [0], a: [1], b: [2], c: [3] })).toThrow(/Duplicate/)
+    expect(() =>
+      data.upsert({
+        from: 256,
+        to: 256,
+        rows: { t: [256], a: [Number.MAX_VALUE], b: [Number.MAX_VALUE], c: [0] },
+      }),
+    ).toThrow(/overflow.*row 256/)
+    expect(data.version).toBe(0)
+    expect(stackLayout(data, options)).toBe(previous)
+    data.upsert({ from: 0, to: 511, rows: { t: [], a: [], b: [], c: [] } })
+    expect(stackLayout(data, options).bytes).toBe(0)
+  })
+
+  test('reuses categorical prepend blocks without weakening duplicate validation', () => {
+    const t = Array.from({ length: 256 }, (_, row) => `key-${row}`)
+    const data = createTable({ t, a: t.map(() => 1), b: t.map(() => -2), c: t.map(() => 3) })
+    bar(data, { ...options, scales: { x: 't', y: 'q' } })
+    const previous = stackLayout(data, options)
+    data.prepend({ t: ['new'], a: [4], b: [NaN], c: [6] })
+    const next = stackLayout(data, options)
+    expect(next.processedRows).toBe(6)
+    expect(endpoints(next, 1)).toEqual(endpoints(previous, 0))
+    expect(endpoints(next, 256)).toEqual(endpoints(previous, 255))
+    expect(endpoints(next, 0)).toEqual([
+      [NaN, NaN],
+      [NaN, NaN],
+      [NaN, NaN],
+    ])
+    expect(() => data.prepend({ t: ['key-150'], a: [1], b: [2], c: [3] })).toThrow(/Duplicate/)
+    expect(data.version).toBe(1)
+    expect(stackLayout(data, options)).toBe(next)
   })
 
   test('does not read surviving value columns when extending a large layout', () => {
