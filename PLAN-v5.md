@@ -801,7 +801,8 @@ createPlot(elB, { scales: { t: time, h: linearScale() }, plugins: [crosshair({ p
 ```
 
 - Works for any scale (x **or** y), any number of plots, no feedback loops (single source
-  of truth), domain events via `time.domain.subscribe(…)`.
+  of truth), domain changes via `subscribe(time.domain, listener)` or typed plot events
+  via `plot.on('domainchange', listener)`.
 - Shared pointers publish domain values keyed by shared scale identity plus source/
   active state; each plot derives its own pixels and inside/clipping state. The pointer
   hub's `{ px, py, inside }` is local and is never copied into another plot as authority.
@@ -1192,7 +1193,8 @@ public v5 API.
 
 The package root now exports `createPlot`, `createPolarPlot`, `linearScale`, `timeScale`,
 `bandScale`, `degreesScale`, `angularScale`, `radialScale`, `sharedScale`, `axis`, `line`,
-`band` (also `range`), `layout`, `batch` and `untracked`, alongside the existing v4 exports.
+`band` (also `range`), `layout`, `batch`, `untracked`, `effect` and `subscribe`, alongside
+typed plot events and the existing v4 exports.
 The tested phase 0 reactive primitives
 have moved into `src/core`; the spike imports remain forwarding modules so the phase 0
 fixtures keep working.
@@ -1212,12 +1214,29 @@ const plot = createPlot(container, {
 })
 const detail = createPlot(otherContainer, { scales: { t, q } })
 t.domain.set([Date.UTC(2026, 0, 1, 6), Date.UTC(2026, 0, 1, 18)])
+const stop = subscribe(t.domain, (domain, previous) => {
+  console.log('Shared domain changed', previous, '→', domain)
+})
+plot.on('domainchange', ({ scale, domain, source }) => {
+  console.log(scale, source, domain)
+})
 plot.update({ margins: { left: 16 } })
 plot.update({ margins: { left: undefined } }) // current default, not constructor value
 plot.setConfig({ scales: { t, q } }) // removes axes/title; retains shared domains
+stop()
 plot.destroy()
 detail.destroy()
 ```
+
+- `subscribe(signal, listener, { immediate, signal, equals })` observes library signals
+  through the frame scheduler. It coalesces updates, supplies the previous delivered value,
+  and returns an idempotent unsubscribe function. An `AbortSignal` or active reactive scope
+  can own its lifetime. `effect(run)` exposes the existing auto-tracked effect primitive.
+- `plot.on('domainchange' | 'layoutchange' | 'legendchange', listener)` provides typed
+  plot-level notifications. Matching bubbling, composed `CustomEvent`s are dispatched on
+  `plot.element`; `HTMLElementEventMap` and `SVGElementEventMap` include typed detail.
+  `legendtoggle` and `brush` are also available through `plot.on` and retain their existing
+  DOM events. Pass `{ signal }` to dispose a plot listener when its consumer is aborted.
 
 - Scale handles are already shareable; `sharedScale(handle)` returns the same handle.
   Their `domain` signal contains an immutable numeric pair (epoch milliseconds for
@@ -1864,7 +1883,7 @@ Additional acceptance checks for the ownership contract:
 | 1. Core                       | Reactive core hardened (scopes, diagnostics), runtime option update/unset/setConfig contract (3.1.1), `time/` module (luxon replacement), plot container, layout engine, named scales, axes (value/time/band/degrees), coordinate systems, theme tokens, destroy                            | Static basic-line/secondary-axis/time-axes examples pass deterministic per-engine visual regression at the §5 threshold, with no unexplained diffs; core option contract tests pass                  |
 | 2. Marks                      | `series` (line+markers+area), band, single/grouped/stacked `bar` with named side-by-side stacks, `stackedArea` with named independent stacks, shared columnar stack layout and stack-safe LOD (3.6.1), histogram, rule, text, heatmap, arrows/direction, progress; SVG first, canvas opt-in | All static examples ported; grouped-bar, stacked-bar, named-stack comparison and stacked-area fixtures pass on SVG/canvas, with exact per-stack layout/extent/gap tests                              |
 | 3. Interaction                | Pointer hub, zoom, pan, brush, crosshair, tooltip, headless legend model and built-in legend renderer; composite-layer hit tests, tooltips and visibility                                                                                                                                   | mouseover/zoom/panning/brush examples ported; external legend commands work without legend DOM; composite toggles restack/autoscale correctly                                                        |
-| 4. Sync & live                | Shared scale/pointer/selection/clock, follow mode, append/retention, IntersectionObserver pause; incremental aligned-table stack updates                                                                                                                                                    | shared-zoom/shared-panning + new live-stream example; stacked/grouped updates and retention preserve alignment and bounded caches                                                                    |
+| 4. Sync & live                | Shared scale/pointer/selection/clock, follow mode, append/retention, IntersectionObserver pause; incremental aligned-table stack updates; typed domain events via `subscribe()` and `plot.on()` (implemented)                                                                                  | shared-zoom/shared-panning + new live-stream example; stacked/grouped updates and retention preserve alignment and bounded caches; domain-event implementation complete, remaining sync/live criteria open |
 | 5. Ensembles                  | Ensemble store, quantile cache, members/spread/median rendering, ensemble tooltip/legend                                                                                                                                                                                                    | 50×10k benchmark meets target                                                                                                                                                                        |
 | 6. Domain plugins             | Warning levels, alert lines, current time, DST indicator (on new `time/`), level select, cross-section select, data field, Beaufort, colour bar, polar wind/current roses                                                                                                                   | Feature parity checklist complete                                                                                                                                                                    |
 | 7. Web Component              | `<fews-chart>` with `el.config`, plot-level attributes, `sync-group` registry, events, Shadow DOM theming, typings, slotted/external legend facade and symbol helper                                                                                                                        | All examples also runnable via `<fews-chart>`; works in Vue app without adapter; config/attribute-removal and custom-legend parity tests pass                                                        |
