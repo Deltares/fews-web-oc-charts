@@ -51,7 +51,7 @@
         draws one horizontal guide per visible layer at its cumulative top.
       </figcaption>
     </figure>
-    <p id="status" class="status" role="status"></p>
+    <output id="status" class="status"></output>
     <h2>Public API</h2>
     <pre><code>const interaction = crosshair({ mode: 'xy' })
 const plot = createPlot(host, { scales: { t, q }, axes, marks, plugins: [interaction] })
