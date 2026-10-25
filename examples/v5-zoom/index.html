@@ -71,6 +71,11 @@ interaction.update({ wheel: 'none', reset: 'toggle' }) // double-click remains e
 plot.on('domainchange', ({ scale, domain, source, explicit }) => {
   console.log(scale, domain, source, explicit) // one event per changed scale
 })
+const readout = effect(() => {
+  snapshot.textContent = JSON.stringify({ time: t.domain.get(), value: q.domain.get() })
+})
+// Dispose the readout when the example is unmounted.
+readout.dispose()
 // Wheel over the plot to zoom; double-click inside the plot to reset.</code></pre>
     <script type="module" src="./v5-zoom.ts"></script>
   </body>

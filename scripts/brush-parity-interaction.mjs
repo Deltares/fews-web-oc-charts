@@ -20,6 +20,14 @@ try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } })
   const errors = []
   page.on('pageerror', (error) => errors.push(error.message))
+  await page.route(/\/examples\/v5-(?:parity-)?brush\/v5-(?:parity-)?brush\.ts$/, async (route) => {
+    const response = await route.fetch()
+    const time = route.request().url().includes('parity-brush') ? 'v5Time' : 't'
+    await route.fulfill({
+      response,
+      body: `${await response.text()}\nglobalThis.exampleTime = ${time};`,
+    })
+  })
 
   async function settled() {
     await page.evaluate(
@@ -98,6 +106,15 @@ try {
   assert.deepEqual(initialState.navigator, initialState.time, 'Initial navigator selection')
   const overview = await plotRegion('#v5-overview')
   await expectNavigatorAt('#v5-overview', overview, initial, full, 'Initial navigator')
+  await page.evaluate(() => {
+    globalThis.exampleTime.domain.set([Date.UTC(2025, 0, 2), Date.UTC(2025, 0, 3)])
+  })
+  await settled()
+  const apiState = await snapshot()
+  assert.deepEqual(ms(apiState.time), [Date.UTC(2025, 0, 2), Date.UTC(2025, 0, 3)])
+  assert.deepEqual(apiState.navigator, apiState.time, 'The navigator follows API domain writes')
+  await page.evaluate((domain) => globalThis.exampleTime.domain.set(domain), initial)
+  await settled()
 
   // Shift-drag selects an x range in auto mode and zooms the main chart on release.
   let main = await plotRegion('#v5-main')
@@ -152,10 +169,17 @@ try {
     { x: navigatorCenter.x + 0.1 * overview.width, y: navigatorCenter.y },
     {
       during: async () => {
+        const liveState = await snapshot()
         assert.notDeepEqual(
-          ms((await snapshot()).time),
+          ms(liveState.time),
           before,
           'The main domain updates while the navigator is dragged',
+        )
+        near(
+          ms(liveState.time)[0] - before[0],
+          0.1 * fullSpan,
+          overviewTolerance,
+          'The navigator remains active through every drag step',
         )
       },
     },
@@ -222,6 +246,16 @@ try {
   assert.deepEqual(ms(native.t), nativeInitial)
   assert.deepEqual(native.q, [0, 100])
   assert.deepEqual(native.navigator, native.t)
+  await page.evaluate(
+    (domain) => globalThis.exampleTime.domain.set(domain),
+    [start + 6 * hour, start + 18 * hour],
+  )
+  await settled()
+  native = await domains()
+  assert.deepEqual(ms(native.t), [start + 6 * hour, start + 18 * hour])
+  assert.deepEqual(native.navigator, native.t, 'Native navigator follows API domain writes')
+  await page.evaluate((domain) => globalThis.exampleTime.domain.set(domain), nativeInitial)
+  await settled()
 
   let chart = await plotRegion('#chart')
   const chartTolerance = (range, size) => (2 * range) / size
@@ -289,6 +323,15 @@ try {
   assert.equal(native.navigator, null, 'Reset clears the navigator')
   assert.equal(await page.locator('#snapshot').textContent(), 'No selection yet.')
   assert.equal(await brushRect('#overview').getAttribute('display'), 'none')
+  await page.evaluate((domain) => globalThis.exampleTime.domain.set(domain), nativeInitial)
+  await settled()
+  native = await domains()
+  assert.deepEqual(native.navigator, native.t, 'Domain subscriptions remain active after clearing')
+
+  await page.locator('#clear').click()
+  await settled()
+  assert.equal((await domains()).navigator, null, 'Start the new-selection test with no navigator')
+  assert.equal(await brushRect('#overview').getAttribute('display'), 'none')
 
   const nativeOverview = await plotRegion('#overview')
   await drag(at(nativeOverview, 0.25, 0.5), at(nativeOverview, 0.5, 0.5))
@@ -298,6 +341,23 @@ try {
   near(ms(native.t)[1], start + 24 * hour, nativeTolerance, 'Overview selection end')
   assert.deepEqual(native.navigator, native.t)
   assert.match(await page.locator('#status').textContent(), /Overview selection updated/)
+
+  const nativeBeforeMove = ms(native.t)
+  const nativeNavigator = await brushRect('#overview').boundingBox()
+  assert.ok(nativeNavigator)
+  const nativeCenter = {
+    x: nativeNavigator.x + nativeNavigator.width / 2,
+    y: nativeNavigator.y + nativeNavigator.height / 2,
+  }
+  await drag(nativeCenter, { x: nativeCenter.x + 0.1 * nativeOverview.width, y: nativeCenter.y })
+  native = await domains()
+  near(
+    ms(native.t)[0] - nativeBeforeMove[0],
+    0.1 * 48 * hour,
+    nativeTolerance,
+    'Native navigator remains active through every drag step',
+  )
+  assert.deepEqual(native.navigator, native.t, 'Native navigator stays synchronized after moving')
 
   assert.deepEqual(errors, [], 'The brush examples must not emit browser errors')
   console.log(
