@@ -149,10 +149,11 @@ describe('headless legend model', () => {
           const transform = layer!
             .querySelector<SVGGElement>('[data-entry-id="flow"]')!
             .transform.baseVal.consolidate()!.matrix
+          const background = layer!.querySelector<SVGRectElement>('.fews-chart-legend__background')!
           return Math.abs(
             position === 'top' || position === 'bottom'
               ? transform.e - current.regions.get().plot.x
-              : transform.f - current.regions.get().plot.y,
+              : transform.f - (background.y.baseVal.value + 6),
           )
         })
         .toBeLessThan(0.1)
