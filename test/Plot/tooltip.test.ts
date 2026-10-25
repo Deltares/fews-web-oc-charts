@@ -97,6 +97,48 @@ describe('tooltip plugin', () => {
     expect(handle.options.get().resolved.digits).toBeUndefined()
   })
 
+  test('validates formatter hooks atomically and restores their defaults', () => {
+    const formatValue = () => 'value'
+    const formatUnit = () => 'unit'
+    const formatRange = () => 'range'
+    const handle = tooltip({ formatValue, formatUnit, formatRange, digits: 2 })
+    for (const key of ['formatValue', 'formatUnit', 'formatRange'] as const) {
+      for (const value of [null, 'invalid', 42, {}, []]) {
+        expect(() => tooltip({ [key]: value })).toThrow(`tooltip.${key}`)
+        expect(() => handle.update({ digits: 3, [key]: value })).toThrow(`tooltip.${key}`)
+        expect(handle.options.get().resolved.digits).toBe(2)
+        expect(handle.options.get().resolved[key]).toBe(
+          { formatValue, formatUnit, formatRange }[key],
+        )
+      }
+    }
+    handle.update({ formatValue: undefined, formatUnit: undefined, formatRange: undefined })
+    expect(handle.options.get().resolved.formatValue).toBeUndefined()
+    expect(handle.options.get().resolved.formatUnit).toBeUndefined()
+    expect(handle.options.get().resolved.formatRange).toBeUndefined()
+  })
+
+  test('reactively updates formatter hooks as plain text in the DOM and accessible label', async () => {
+    const { interaction, guide, move, entries } = await linkedPlot()
+    await move(5, 20)
+    interaction.update({
+      formatValue: (_value, info) =>
+        info.axis === 'y' ? `<b>${info.defaultText}</b>` : info.defaultText,
+      formatUnit: (info) => (info.axis === 'y' ? 'm' : ''),
+    })
+    await frame()
+    expect(entries()).toEqual(['observed · <b>20</b> m', 'forecast · x: 4 · <b>30</b> m'])
+    const node = document.querySelector('[data-layer="tooltip"]')!
+    expect(node.querySelector('b')).toBeNull()
+    expect(node.getAttribute('aria-label')).toBe(
+      'observed · 5 · y: <b>20</b> m; forecast · 4 · y: <b>30</b> m',
+    )
+    expect(guide.options.get().resolved.labels).toEqual({ x: 't', y: 'q' })
+    interaction.update({ formatValue: undefined, formatUnit: undefined })
+    await frame()
+    expect(entries()).toEqual(['observed · 20', 'forecast · x: 4 · 30'])
+  })
+
   test('hides x coordinates and rounds values without changing source samples', async () => {
     const { plot, interaction, guide, move, entries } = await linkedPlot()
     guide.update({ snap: undefined, labels: undefined })

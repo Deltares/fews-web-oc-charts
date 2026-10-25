@@ -2,13 +2,18 @@ import { afterEach, describe, expect, test, vi } from 'vitest'
 import {
   bandScale,
   bar,
+  colorScale,
+  createGrid,
   createTable,
   createSeries,
   series,
   crosshair,
   line,
   linearScale,
+  heatmap,
+  timeScale,
   tooltip,
+  type TooltipFormatContext,
 } from '../../src/index.js'
 import { reactive } from '../../src/core/runtime.js'
 import { computeTooltipModel } from '../../src/plot/plugins/tooltip/tooltip-model.js'
@@ -104,6 +109,66 @@ describe('tooltip model', () => {
     expect(pathContext).not.toHaveBeenCalled()
   })
 
+  test('formats raw point values with mark context and appends units to visible and accessible text', () => {
+    const { first, handle, model } = setup()
+    const formatValue = vi.fn((value: string | number, info: TooltipFormatContext) =>
+      info.axis === 'y' ? `(${info.defaultText})` : String(value),
+    )
+    const formatUnit = vi.fn((info: TooltipFormatContext) => (info.axis === 'y' ? 'm' : ''))
+    handle.update({ marks: [first], formatValue, formatUnit })
+    const result = model()
+    expect(result.entries[0].details).toBe(' · x: 5 · y: (20.12) m')
+    expect(result.accessibleLabel).toBe('<First> · 5 · y: (20.12) m')
+    expect(formatValue).toHaveBeenCalledWith(
+      20.12345,
+      expect.objectContaining({
+        mark: first,
+        hit: expect.objectContaining({ index: 0, y: 20.12345 }),
+        axis: 'y',
+        scale: 'y',
+        digits: 2,
+        defaultText: '20.12',
+      }),
+    )
+    expect(formatUnit).toHaveBeenCalledWith(expect.objectContaining({ defaultText: '(20.12)' }))
+    expect(first.yValues[0]).toBe(20.12345)
+
+    handle.update({ formatValue: undefined, formatUnit: undefined })
+    expect(model().entries[0].details).toBe(' · x: 5 · y: 20.12')
+  })
+
+  test('keeps locale/time-zone defaults available to value formatters', () => {
+    const { context, handle, model } = setup()
+    context.scales.x = bindScale(
+      timeScale({ domain: [0, 10], locale: 'en-GB', timeZone: 'UTC' }),
+      reactive.signal([0, 100] as const),
+    )
+    handle.update({ formatValue: (_value, info) => `[${info.defaultText}]` })
+    const expected = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'UTC',
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(new Date(5))
+    expect(model().entries[0].details).toBe(` · [${expected}] · y: [20.12]`)
+  })
+
+  test('propagates formatter errors and rejects non-string results', () => {
+    const { handle, model } = setup()
+    const error = new Error('format failed')
+    handle.update({
+      formatValue: () => {
+        throw error
+      },
+    })
+    expect(model).toThrow(error)
+    // @ts-expect-error Runtime callers must also return strings.
+    handle.update({ formatValue: () => 42 })
+    expect(model).toThrow('tooltip.formatValue must return a string.')
+    // @ts-expect-error Runtime callers must also return strings.
+    handle.update({ formatValue: undefined, formatUnit: () => null })
+    expect(model).toThrow('tooltip.formatUnit must return a string.')
+  })
+
   test('preserves target order and chooses the first hit on an xy distance tie', () => {
     const { first, second, handle, model } = setup()
     handle.update({ marks: [second, first] })
@@ -148,6 +213,12 @@ describe('tooltip model', () => {
       type: 'composite',
       parts: [{ type: 'marker', shape: 'circle', fill: 'red' }],
     })
+    handle.update({
+      formatValue: (_value, info) => `[${info.defaultText}]`,
+      formatUnit: (info) => (info.axis === 'y' ? 'm' : ''),
+    })
+    expect(model().entries[0].details).toBe(' · x: [5] · y: [20] m')
+    expect(model().accessibleLabel).toBe('Series 1 · [5] · y: [20] m')
   })
 
   test('omits x only when requested and returns an empty model outside the plot', () => {
@@ -199,6 +270,13 @@ describe('tooltip model', () => {
     expect(model().point).toEqual(inspection.point)
     handle.update({ digits: 3 })
     expect(model().entries[0].details).toBe(' · 20.123')
+    handle.update({ digits: 2, formatValue: (_value, info) => info.defaultText })
+    expect(model().entries[0].details).toBe('')
+    handle.update({ formatUnit: (info) => (info.axis === 'y' ? 'm' : '') })
+    expect(model().entries[0].details).toBe(' · 20.12 m')
+    expect(model().entries[0].accessibleLabel).toBe('<First> · 5 · y: 20.12 m')
+    handle.update({ formatUnit: undefined, formatValue: (_value, info) => `[${info.defaultText}]` })
+    expect(model().entries[0].details).toBe(' · x: [5] · [20.12]')
     context.inspectCrosshair.mockReturnValue({ ...inspection, visible: false })
     expect(model().entries).toEqual([])
     expect(hits).not.toHaveBeenCalled()
@@ -234,26 +312,28 @@ describe('tooltip model', () => {
         ),
       }
       const rectangle = barRectangles(mark, scales).find((entry) => entry.layerId === 'forecast')!
-      const options = tooltip({ axis: 'xy', digits: 2 }).options.get().resolved
-      const result = computeTooltipModel(
-        options,
-        {
-          scales,
-          theme: reactive.signal(resolveTheme(document.documentElement, 'light', false)),
-          inspectCrosshair: vi.fn<PlotContext['inspectCrosshair']>(),
-        },
-        {
-          marks: [mark],
-          region: { x: 0, y: 0, width: 100, height: 100 },
-          pointer: {
-            inside: true,
-            px: rectangle.x + rectangle.width / 2,
-            py: rectangle.y + rectangle.height / 2,
-            x: new Map(),
+      const handle = tooltip({ axis: 'xy', digits: 2 })
+      const model = () =>
+        computeTooltipModel(
+          handle.options.get().resolved,
+          {
+            scales,
+            theme: reactive.signal(resolveTheme(document.documentElement, 'light', false)),
+            inspectCrosshair: vi.fn<PlotContext['inspectCrosshair']>(),
           },
-        },
-        () => undefined,
-      )
+          {
+            marks: [mark],
+            region: { x: 0, y: 0, width: 100, height: 100 },
+            pointer: {
+              inside: true,
+              px: rectangle.x + rectangle.width / 2,
+              py: rectangle.y + rectangle.height / 2,
+              x: new Map(),
+            },
+          },
+          () => undefined,
+        )
+      const result = model()
       const categoryLabel = orientation === 'vertical' ? 'x: one' : 'y: one'
       expect(result.entries).toHaveLength(1)
       expect(result.entries[0]).toMatchObject({
@@ -263,6 +343,97 @@ describe('tooltip model', () => {
         accessibleLabel: `flow · Forecast · ${orientation === 'vertical' ? 'one' : categoryLabel} · 4.23 · stack: total · bounds: 3.12–7.36`,
         symbol: { type: 'bar', fill: 'red' },
       })
+      const axis = orientation === 'vertical' ? 'y' : 'x'
+      const formatRange = vi.fn(
+        (lower: string | number, upper: string | number, info: TooltipFormatContext) =>
+          `[${info.defaultText}] (${lower}, ${upper})`,
+      )
+      handle.update({
+        formatValue: (_value, info) =>
+          info.axis === axis ? `<${info.defaultText}>` : info.defaultText,
+        formatUnit: (info) => (info.axis === axis ? 'm' : ''),
+      })
+      expect(model().entries[0].details).toBe(
+        ` · ${categoryLabel} · <4.23> m · stack: total · bounds: <3.12>–<7.36> m`,
+      )
+      handle.update({ formatRange })
+      const formatted = model().entries[0]
+      expect(formatted.details).toBe(
+        ` · ${categoryLabel} · <4.23> m · stack: total · bounds: [<3.12>–<7.36>] (3.12345, 7.35801) m`,
+      )
+      expect(formatted.accessibleLabel).toContain(formatted.details.slice(3 + categoryLabel.length))
+      expect(formatRange).toHaveBeenCalledWith(
+        3.12345,
+        7.35801,
+        expect.objectContaining({
+          mark,
+          axis,
+          scale: axis,
+          digits: 2,
+          defaultText: '<3.12>–<7.36>',
+          hit: expect.objectContaining({ layerId: 'forecast', stack: 'total' }),
+        }),
+      )
+      // @ts-expect-error Runtime callers must also return strings.
+      handle.update({ formatRange: () => false })
+      expect(model).toThrow('tooltip.formatRange must return a string.')
     },
   )
+
+  test('formats heatmap values and both coordinate ranges, with one unit per range', () => {
+    const { context, pointer, pathContext } = setup()
+    const mark = heatmap(createGrid({ xEdges: [0, 10], yEdges: [0, 40], values: [1.2345] }), {
+      id: 'grid',
+      scales: { x: 'x', y: 'y' },
+      color: colorScale({ colors: ['black', 'white'] }),
+    })
+    const handle = tooltip({ digits: 2 })
+    const model = () =>
+      computeTooltipModel(
+        handle.options.get().resolved,
+        context,
+        {
+          marks: [mark],
+          pointer: pointer.get(),
+          region: { x: 0, y: 0, width: 100, height: 100 },
+        },
+        pathContext,
+      )
+    expect(model().entries[0].details).toBe(' · x: 0–10 · y: 0–40 · value: 1.23')
+    const formatRange = vi.fn(
+      (_lower: string | number, _upper: string | number, info: TooltipFormatContext) =>
+        `[${info.defaultText}]`,
+    )
+    const formatValue = vi.fn(
+      (_value: string | number, info: TooltipFormatContext) => info.defaultText,
+    )
+    handle.update({
+      formatRange,
+      formatValue,
+      formatUnit: (info) => (info.axis === 'value' ? 'K' : 'm'),
+    })
+    expect(model().entries[0].details).toBe(' · x: [0–10] m · y: [0–40] m · value: 1.23 K')
+    expect(model().accessibleLabel).toBe('grid · x: [0–10] m · y: [0–40] m · value: 1.23 K')
+    expect(formatValue).toHaveBeenCalledWith(
+      1.2345,
+      expect.objectContaining({
+        mark,
+        axis: 'value',
+        scale: undefined,
+        digits: 2,
+        defaultText: '1.23',
+      }),
+    )
+    expect(formatRange).toHaveBeenCalledWith(
+      0,
+      10,
+      expect.objectContaining({ axis: 'x', scale: 'x' }),
+    )
+    formatRange.mockClear()
+    handle.update({ showX: false })
+    expect(model().entries[0].details).toBe(' · y: [0–40] m · value: 1.23 K')
+    expect(formatRange).toHaveBeenCalledTimes(1)
+    handle.update({ formatRange: undefined, formatUnit: undefined, formatValue: undefined })
+    expect(model().entries[0].details).toBe(' · y: 0–40 · value: 1.23')
+  })
 })

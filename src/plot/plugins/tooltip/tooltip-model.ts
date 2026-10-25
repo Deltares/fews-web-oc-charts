@@ -1,8 +1,12 @@
 import type { PlotContext } from '../plugin-definition.js'
-import type { TooltipMark, TooltipOptions, TooltipPlacementPosition } from './tooltip.js'
+import type {
+  TooltipFormatContext,
+  TooltipMark,
+  TooltipOptions,
+  TooltipPlacementPosition,
+} from './tooltip.js'
 import { isLineMark } from '../../marks/line/line.js'
 import { isSeriesMark } from '../../marks/line/series.js'
-import type { CompositeHit } from '../../interaction/composite-hit-testing.js'
 import { isBarMark } from '../../marks/bar/bar.js'
 import { isStackedAreaMark } from '../../marks/stacked-area/stacked-area.js'
 import {
@@ -18,6 +22,7 @@ import { markDefinition } from '../../marks/marks.js'
 import type { MarkHit } from '../../marks/mark-definition.js'
 import type { SymbolSpec } from '../legend/legend.js'
 import { lineLegendSymbol } from '../../marks/mark-styles.js'
+import type { ScaleValue } from '../../../scales/scale.js'
 
 type TooltipHit = MarkHit
 type TooltipContext = Pick<PlotContext, 'scales' | 'inspectCrosshair' | 'theme'>
@@ -59,30 +64,62 @@ function label(mark: TooltipMark, index: number) {
   return mark.id || mark.y
 }
 
-function compositeValueAxis(mark: TooltipMark, hit: TooltipHit) {
-  if (!('layerId' in hit)) return undefined
+function compositeValueAxis(mark: TooltipMark): 'x' | 'y' {
   return (isBarMark(mark) || isHistogramMark(mark)) &&
     mark.options.get().resolved.orientation === 'horizontal'
     ? 'x'
     : 'y'
 }
 
-function compositeDetails(
+function formatterText(value: string, hook: string): string {
+  if (typeof value !== 'string') throw new TypeError(`tooltip.${hook} must return a string.`)
+  return value
+}
+
+function tooltipFormatter(
   mark: TooltipMark,
-  hit: CompositeHit,
+  hit: TooltipHit,
   context: TooltipContext,
-  digits: number | undefined,
+  options: Readonly<TooltipOptions>,
 ) {
-  const valueScale =
-    (isBarMark(mark) || isHistogramMark(mark)) &&
-    mark.options.get().resolved.orientation === 'horizontal'
-      ? mark.x
-      : mark.y
-  const format = (value: number) => displayValue(value, context, valueScale, digits)
-  const parts = [format(hit.value)]
-  if (hit.stack !== undefined) parts.push(`stack: ${hit.stack}`)
-  parts.push(`bounds: ${format(hit.lower)}–${format(hit.upper)}`)
-  return parts
+  const formatContext = (
+    axis: TooltipFormatContext['axis'],
+    digits: number | undefined,
+    defaultText: string,
+  ): TooltipFormatContext => ({
+    mark,
+    hit,
+    axis,
+    scale: axis === 'value' ? undefined : mark[axis],
+    digits,
+    defaultText,
+  })
+  const valueText = (value: ScaleValue, info: TooltipFormatContext) => {
+    const defaultText = displayValue(value, context, info.scale ?? mark.y, info.digits)
+    return options.formatValue
+      ? formatterText(options.formatValue(value, { ...info, defaultText }), 'formatValue')
+      : defaultText
+  }
+  const withUnit = (text: string, info: TooltipFormatContext) => {
+    const unit = options.formatUnit
+      ? formatterText(options.formatUnit({ ...info, defaultText: text }), 'formatUnit')
+      : ''
+    return unit ? `${text} ${unit}` : text
+  }
+  return {
+    value(value: ScaleValue, axis: TooltipFormatContext['axis'], digits?: number) {
+      const info = formatContext(axis, digits, '')
+      return withUnit(valueText(value, info), info)
+    },
+    range(lower: ScaleValue, upper: ScaleValue, axis: 'x' | 'y', digits?: number) {
+      const info = formatContext(axis, digits, '')
+      const defaultText = `${valueText(lower, info)}–${valueText(upper, info)}`
+      const text = options.formatRange
+        ? formatterText(options.formatRange(lower, upper, { ...info, defaultText }), 'formatRange')
+        : defaultText
+      return withUnit(text, info)
+    },
+  }
 }
 
 function tooltipEntry(
@@ -91,17 +128,14 @@ function tooltipEntry(
   options: Readonly<TooltipOptions>,
   inspection: CrosshairInspection | undefined,
 ): TooltipEntry {
+  const format = tooltipFormatter(mark, hit, context, options)
   if (isHeatmapMark(mark) && isHeatmapHit(hit)) {
     const heatmapOptions = mark.options.get().resolved
     const name = label(mark, index)
-    const value = displayValue(hit.value, context, mark.y, options.digits ?? 2)
-    const xStart = displayValue(hit.xStart, context, mark.x)
-    const xEnd = displayValue(hit.xEnd, context, mark.x)
-    const yStart = displayValue(hit.yStart, context, mark.y)
-    const yEnd = displayValue(hit.yEnd, context, mark.y)
+    const value = format.value(hit.value, 'value', options.digits ?? 2)
     const details = [
-      ...(options.showX ? [`x: ${xStart}–${xEnd}`] : []),
-      `y: ${yStart}–${yEnd}`,
+      ...(options.showX ? [`x: ${format.range(hit.xStart, hit.xEnd, 'x')}`] : []),
+      `y: ${format.range(hit.yStart, hit.yEnd, 'y')}`,
       `value: ${value}`,
     ]
     return {
@@ -124,8 +158,9 @@ function tooltipEntry(
     'layerId' in hit ? legend?.layers?.find((candidate) => candidate.id === hit.layerId) : undefined
   const color = markColor(mark, hit)
   const digits = options.digits ?? (pointMark ? mark.digits : undefined)
-  const x = displayValue(hit.x, context, mark.x)
-  const y = displayValue(hit.y, context, mark.y, digits)
+  const valueAxis = 'layerId' in hit ? compositeValueAxis(mark) : undefined
+  const x = valueAxis !== 'x' && options.showX ? format.value(hit.x, 'x') : ''
+  const y = valueAxis !== 'y' ? format.value(hit.y, 'y', digits) : ''
   const redundant = (axis: 'x' | 'y') =>
     inspection?.coordinates.some(
       (coordinate) =>
@@ -139,7 +174,6 @@ function tooltipEntry(
     'layerLabel' in hit ? `${label(mark, index)} · ${hit.layerLabel}` : label(mark, index)
   const details: string[] = []
   const accessible = [name]
-  const valueAxis = compositeValueAxis(mark, hit)
   if (options.showX && valueAxis !== 'x') {
     accessible.push(x)
     if (!redundant('x')) {
@@ -151,7 +185,10 @@ function tooltipEntry(
     if (!redundant('y')) details.push(inspection ? y : `y: ${y}`)
   }
   if ('layerId' in hit) {
-    const composite = compositeDetails(mark, hit, context, digits)
+    const axis = compositeValueAxis(mark)
+    const composite = [format.value(hit.value, axis, digits)]
+    if (hit.stack !== undefined) composite.push(`stack: ${hit.stack}`)
+    composite.push(`bounds: ${format.range(hit.lower, hit.upper, axis, digits)}`)
     details.push(...composite)
     accessible.push(...composite)
   }

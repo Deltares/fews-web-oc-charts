@@ -66,6 +66,10 @@ export type {
   TooltipHandle,
   TooltipMark,
   TooltipOptions,
+  TooltipFormatContext,
+  TooltipValueFormatter,
+  TooltipUnitFormatter,
+  TooltipRangeFormatter,
   TooltipPlacementPosition,
 } from './plot/plugins/tooltip/tooltip.js'
 export { highlight } from './plot/plugins/highlight/highlight.js'
