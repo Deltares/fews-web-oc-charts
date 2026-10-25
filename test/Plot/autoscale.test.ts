@@ -156,9 +156,9 @@ describe('autoscale policies', () => {
     expect(Object.isFrozen(contexts.at(-1)?.visible)).toBe(true)
     x.domain.set([5, 6])
     expect(y.domain.get()).toEqual([-10, 10])
-    y.update({ autoscale: () => [2, 1] })
-    expect(() => y.domain.get()).toThrow(/ascending pair/)
+    expect(() => y.update({ autoscale: () => [2, 1] })).toThrow(/ascending pair/)
     y.update({ autoscale: 'data' })
+    expect(y.domain.get()).toEqual([10, 100])
   })
 
   test('band domains preserve first-seen order and visible-window membership', () => {
