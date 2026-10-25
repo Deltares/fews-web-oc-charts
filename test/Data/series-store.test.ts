@@ -231,6 +231,37 @@ describe('columnar series stores', () => {
     }
   })
 
+  test('bounds and reuses viewport LOD while preserving extrema and gaps', () => {
+    const x = Array.from({ length: 100_000 }, (_, index) => index)
+    const y = x.map((value) => {
+      if (value === 50_000 || value === 50_001) return NaN
+      if (value === 50_042) return 500
+      if (value === 50_073) return -500
+      return Math.sin(value / 100)
+    })
+    const store = createSeries({ x, y })
+    const first = store.lod([49_900, 50_100], 10)
+    const selected = Array.from(first)
+
+    expect(selected).toContain(50_042)
+    expect(selected).toContain(50_073)
+    expect(selected.filter((index) => Number.isNaN(store.yAt(index)))).toEqual([50_000])
+    expect(selected.length).toBeLessThanOrEqual(44)
+    expect(store.lod([49_900, 50_100], 10)).toBe(first)
+    expect(store.lodCacheEntries).toBe(1)
+    expect(store.lodCacheByteLength).toBe(first.length * Uint32Array.BYTES_PER_ELEMENT)
+
+    for (let index = 0; index < 40; index += 1) {
+      store.lod([index, index + 1_000], 10 + index)
+    }
+    expect(store.lodCacheEntries).toBeLessThanOrEqual(16)
+    expect(store.lodCacheByteLength).toBeLessThanOrEqual(2 * 1024 * 1024)
+
+    store.append({ x: [100_000], y: [1] })
+    expect(store.lodCacheEntries).toBe(0)
+    expect(store.lodCacheByteLength).toBe(0)
+  })
+
   test('float32 precision is opt-in and rejects overflow before mutation', () => {
     const store = createSeries({ x: [1], y: [1 / 3] }, { precision: 'float32' })
     expect(store.yAt(0)).toBe(Math.fround(1 / 3))
