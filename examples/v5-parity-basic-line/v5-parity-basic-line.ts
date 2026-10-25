@@ -3,7 +3,7 @@ import '@shared/shared.css'
 import '../basic-line/basic-line.css'
 import '@shared/v5-parity.css'
 import '@shared/theme-button'
-import { axis, line, linearScale, timeScale } from '@lib'
+import { axis, line, linearScale, timeScale, tooltip } from '@lib'
 import { parityPlot } from '@shared/v5-parity'
 
 parityPlot('chart-container', {
@@ -35,6 +35,7 @@ parityPlot('chart-container', {
       digits: 3,
     }),
   ],
+  plugins: [tooltip()],
 })
 
 parityPlot('chart-container-time', {
@@ -74,4 +75,5 @@ parityPlot('chart-container-time', {
       digits: 3,
     }),
   ],
+  plugins: [tooltip()],
 })
