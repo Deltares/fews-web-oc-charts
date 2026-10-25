@@ -98,7 +98,9 @@ In `auto` mode, horizontal and vertical drags zoom that axis, while diagonal dra
 zoom both axes. Since wheel zoom and double-click reset have no drag direction to
 infer, they apply to both axes allowed by `wheel`.
 The selection is shown while dragging and applied on release, with one
-`domainchange` event per changed scale and `source: 'zoom'`. Selected directions
+`domainchange` event per changed scale and `source: 'zoom'`. Horizontal and vertical
+selections show brush-style directional handle guides while dragging; the guides
+disappear on release or cancellation and are not persistent resize controls. Selected directions
 must span at least 3 SVG pixels; clicks and cancelled drags do not zoom.
 Selections are clamped to the plot, continuous scales use their local projections
 (including reversed, log and time scales), and band scales are left unchanged.

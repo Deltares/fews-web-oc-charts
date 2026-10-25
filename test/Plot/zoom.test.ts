@@ -139,6 +139,40 @@ test.each([
   },
 )
 
+test('automatic zoom shows directional guides and hides them when the gesture ends', async () => {
+  const { plot, x, y } = await dragSetup('auto')
+  const handles = [...plot.element.querySelectorAll('[data-zoom-handle]')]
+  const visibleHandles = () =>
+    handles
+      .filter((node) => node.getAttribute('display') !== 'none')
+      .map((node) => node.getAttribute('data-zoom-handle'))
+  pointer(plot, 'pointerdown', 100, 100)
+  pointer(plot, 'pointermove', 125, 125)
+  expect(visibleHandles()).toEqual([])
+  pointer(plot, 'pointermove', 300, 120)
+  expect(visibleHandles()).toEqual(['w', 'e'])
+  expect(
+    ['x', 'y', 'width', 'height'].map((name) => Number(handles[0].getAttribute(name))),
+  ).toEqual([97, 75, 6, 50])
+  pointer(plot, 'pointermove', 120, 200)
+  expect(visibleHandles()).toEqual(['n', 's'])
+  expect(
+    ['x', 'y', 'width', 'height'].map((name) => Number(handles[2].getAttribute(name))),
+  ).toEqual([75, 97, 50, 6])
+  pointer(plot, 'pointermove', 300, 200)
+  expect(visibleHandles()).toEqual([])
+  pointer(plot, 'pointermove', 300, 100)
+  expect(visibleHandles()).toEqual(['w', 'e'])
+  pointer(plot, 'pointercancel', 300, 100)
+  expect(visibleHandles()).toEqual([])
+  expect(x.domain.get()).toEqual([0, 360])
+  expect(y.domain.get()).toEqual([0, 260])
+  pointer(plot, 'pointerdown', 100, 100)
+  pointer(plot, 'pointermove', 300, 100)
+  pointer(plot, 'pointerup', 300, 100)
+  expect(visibleHandles()).toEqual([])
+})
+
 test('box zoom ignores invalid starts, tiny drags, cancellation and stale gestures', async () => {
   const { plot, x, interaction } = await dragSetup('x')
   interaction.update({ modifier: ModifierKey.Ctrl })
