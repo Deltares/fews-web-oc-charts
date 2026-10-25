@@ -24,6 +24,7 @@ export interface HistogramOptions extends Pick<
   | 'orientation'
   | 'visible'
   | 'label'
+  | 'legendGroup'
   | 'fill'
   | 'opacity'
   | 'stroke'
@@ -191,6 +192,7 @@ export function histogram(data: TableStore, initial: OptionPatch<HistogramOption
     'orientation',
     'visible',
     'label',
+    'legendGroup',
     'fill',
     'opacity',
     'stroke',

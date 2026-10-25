@@ -389,6 +389,53 @@ describe('headless legend model', () => {
     expectEqualBounds()
   })
 
+  test('lays out left and right legends like the overlay legend', async () => {
+    const marks = Array.from({ length: 6 }, (_, index) =>
+      series(createSeries({ x: [0, 1], y: [index, index + 1] }), {
+        id: `s${index}`,
+        label: `Series ${index}`,
+        x: 'x',
+        y: 'y',
+        legendGroup: index < 3 ? 'Observed' : 'Forecast',
+      }),
+    )
+    const handle = legend({ position: 'top-right' })
+    const current = plot({
+      height: 360,
+      scales: { x: linearScale(), y: linearScale() },
+      directions: { x: 'x' },
+      axes: [axis('x', { position: 'bottom', label: 'Time' })],
+      marks,
+      plugins: [handle],
+    })
+    const layout = () =>
+      current.element.closest('[data-legend-layout]') ?? current.element.parentElement!
+    const layer = () => layout().querySelector<SVGGElement>('[data-layer="legend"]')!
+    const geometry = () => {
+      const offsets = [...layer().querySelectorAll<SVGGElement>('[data-entry-id]')].map(
+        (entry) => entry.transform.baseVal.consolidate()!.matrix,
+      )
+      const box = layer().querySelector<SVGRectElement>('.fews-chart-legend__background')!
+      return {
+        columns: new Set(offsets.map(({ e }) => e - box.x.baseVal.value)).size,
+        relative: offsets.map(({ e, f }) => [e - box.x.baseVal.value, f - box.y.baseVal.value]),
+        box: { y: box.y.baseVal.value, height: box.height.baseVal.value },
+      }
+    }
+    await frame()
+    const overlay = geometry()
+    expect(overlay.columns).toBe(1)
+    for (const position of ['left', 'right'] as const) {
+      handle.update({ position })
+      await expect.poll(() => layer().dataset.position).toBe(position)
+      await frame()
+      const docked = geometry()
+      expect(docked.relative).toEqual(overlay.relative)
+      expect(docked.box.y).toBe(0)
+      expect(docked.box.height).toBe(current.size.get().height)
+    }
+  })
+
   test('keeps single-column bar commands in single-column mode', () => {
     const columns = bar(createTable({ x: [0, 1], y: [2, 3] }), {
       id: 'columns',
@@ -878,5 +925,83 @@ describe('v4 legend symbol parity', () => {
     expect(legendSymbolPrimitives(binsEntry.symbol)).toHaveLength(3)
     current.legend.toggle('grid')
     expect(grid.options.get().resolved.visible).toBe(false)
+  })
+})
+
+describe('legend groups', () => {
+  test('groups any marks under a toggleable heading with a layers icon', () => {
+    const data = createTable({ t: [0, 1], a: [1, 2], b: [3, 4] })
+    const flow = series(createSeries({ x: [0, 1], y: [2, 3] }), {
+      id: 'flow',
+      label: 'Flow',
+      x: 't',
+      y: 'q',
+      legendGroup: 'Observed',
+    })
+    const other = series(createSeries({ x: [0, 1], y: [1, 2] }), {
+      id: 'other',
+      label: 'Other',
+      x: 't',
+      y: 'q',
+    })
+    const threshold = rule({
+      id: 'threshold',
+      label: 'Threshold',
+      scale: 'q',
+      value: 2,
+      legendGroup: 'Observed',
+    })
+    const columns = bar(data, {
+      id: 'columns',
+      label: 'Columns',
+      x: 't',
+      scales: { x: 't', y: 'q' },
+      layout: 'grouped',
+      width: 20,
+      layers: [
+        { id: 'a', y: 'a', label: 'A' },
+        { id: 'b', y: 'b', label: 'B' },
+      ],
+      legendGroup: 'Observed',
+    })
+    const current = plot({
+      scales: { t: linearScale({ domain: [0, 1] }), q: linearScale({ domain: [0, 10] }) },
+      directions: { t: 'x' },
+      marks: [flow, other, threshold, columns],
+    })
+    const [group, ungrouped] = current.legend.entries.get()
+    expect(group).toMatchObject({
+      id: 'group:Observed',
+      label: 'Observed',
+      symbol: { type: 'group' },
+      visibility: 'visible',
+    })
+    expect(group.children.map(({ id }) => id)).toEqual(['flow', 'threshold', 'columns'])
+    expect(group.children[2].children.map(({ label }) => label)).toEqual(['A', 'B'])
+    expect(ungrouped.id).toBe('other')
+
+    current.legend.toggle(group.id)
+    expect(flow.visible).toBe(false)
+    expect(columns.options.get().resolved.visible).toBe(false)
+    expect(other.visible).toBe(true)
+    expect(current.legend.entries.get()[0].visibility).toBe('hidden')
+
+    current.legend.setVisible('threshold', true)
+    expect(current.legend.entries.get()[0].visibility).toBe('mixed')
+
+    current.legend.isolate('flow')
+    expect([flow.visible, columns.options.get().resolved.visible]).toEqual([true, false])
+    expect(current.legend.entries.get()[0].children[1].visibility).toBe('hidden')
+    expect(other.visible).toBe(true)
+
+    current.legend.isolate(group.id)
+    expect(other.visible).toBe(false)
+
+    current.legend.showAll()
+    expect(current.legend.entries.get().map(({ visibility }) => visibility)).toEqual([
+      'visible',
+      'visible',
+    ])
+    expect(() => rule({ scale: 'q', value: 1, legendGroup: '' })).toThrow(/legendGroup/)
   })
 })

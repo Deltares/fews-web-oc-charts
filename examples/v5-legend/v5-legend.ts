@@ -49,6 +49,9 @@ const hour = 3_600_000
 const times = Array.from({ length: 49 }, (_, index) => start + index * hour)
 const upstream = times.map((_, index) => 25 + 8 * Math.sin(index / 5))
 const lateral = times.map((_, index) => 12 + 5 * Math.cos(index / 7))
+const forecastUpstream = upstream.map((value) => value * 1.15)
+const forecastLateral = lateral.map((value) => value * 1.3)
+const flows = createTable({ t: times, upstream, lateral, forecastUpstream, forecastLateral })
 const observed = series(
   createSeries({ x: times, y: upstream.map((value, index) => value + lateral[index]) }),
   {
@@ -56,46 +59,52 @@ const observed = series(
     x: 't',
     y: 'q',
     label: 'Observed total',
+    legendGroup: 'Observed',
     line: { stroke: '#222222', width: 2, strokeDasharray: '6 3' },
     markers: { fill: 'white', stroke: '#222222', strokeWidth: 1, size: 3 },
   },
 )
-const areas = stackedArea(
-  createTable({
-    t: times,
-    upstream,
-    lateral,
-    forecastUpstream: upstream.map((value) => value * 1.15),
-    forecastLateral: lateral.map((value) => value * 1.3),
+const observedAreas = stackedArea(flows, {
+  id: 'observed-contributions',
+  label: 'Contributions',
+  legendGroup: 'Observed',
+  x: 't',
+  scales: { x: 't', y: 'q' },
+  opacity: 0.55,
+  layers: [
+    { id: 'upstream', y: 'upstream', label: 'Upstream', fill: '#4477aa' },
+    { id: 'lateral', y: 'lateral', label: 'Lateral', fill: '#228833' },
+  ],
+})
+const forecast = series(
+  createSeries({
+    x: times,
+    y: forecastUpstream.map((value, index) => value + forecastLateral[index]),
   }),
   {
-    id: 'contributions',
-    label: 'Flow contributions',
+    id: 'forecast',
     x: 't',
-    scales: { x: 't', y: 'q' },
-    opacity: 0.55,
-    layers: [
-      { id: 'upstream', y: 'upstream', stack: 'Observed', label: 'Upstream', fill: '#4477aa' },
-      { id: 'lateral', y: 'lateral', stack: 'Observed', label: 'Lateral', fill: '#228833' },
-      {
-        id: 'forecast-upstream',
-        y: 'forecastUpstream',
-        stack: 'Forecast',
-        label: 'Upstream',
-        fill: '#ee7733',
-      },
-      {
-        id: 'forecast-lateral',
-        y: 'forecastLateral',
-        stack: 'Forecast',
-        label: 'Lateral',
-        fill: '#aa3377',
-      },
-    ],
+    y: 'q',
+    label: 'Forecast total',
+    legendGroup: 'Forecast',
+    line: { stroke: '#cc3311', width: 2 },
   },
 )
+const forecastAreas = stackedArea(flows, {
+  id: 'forecast-contributions',
+  label: 'Contributions',
+  legendGroup: 'Forecast',
+  x: 't',
+  scales: { x: 't', y: 'q' },
+  opacity: 0.55,
+  layers: [
+    { id: 'upstream', y: 'forecastUpstream', label: 'Upstream', fill: '#ee7733' },
+    { id: 'lateral', y: 'forecastLateral', label: 'Lateral', fill: '#aa3377' },
+  ],
+})
+const areas = [observedAreas, forecastAreas]
 const plot = createPlot(required('#chart'), {
-  title: 'Flow contributions and observed total',
+  title: 'Observed and forecast flow',
   scales: {
     t: timeScale({ domain: [start, start + 48 * hour], timeZone: 'UTC' }),
     q: linearScale({ nice: true }),
@@ -104,7 +113,7 @@ const plot = createPlot(required('#chart'), {
     axis('t', { position: 'bottom', label: 'Time (UTC)', tickCount: 6 }),
     axis('q', { position: 'left', label: 'Flow', grid: true }),
   ],
-  marks: [areas, observed],
+  marks: [observedAreas, forecastAreas, observed, forecast],
 })
 
 function renderEntries(entries: readonly LegendEntry[]): HTMLUListElement {
@@ -207,7 +216,7 @@ renderer.addEventListener(
     if (renderer.value !== 'svg' && renderer.value !== 'canvas') {
       throw new Error(`Unknown area renderer "${renderer.value}".`)
     }
-    areas.update({ renderer: renderer.value })
+    for (const mark of areas) mark.update({ renderer: renderer.value })
   },
   events,
 )

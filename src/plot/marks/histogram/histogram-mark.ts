@@ -19,6 +19,7 @@ export const histogramDefinition: MarkDefinition<HistogramMark> = {
     const options = () => mark.options.get().resolved
     return {
       label: options().label,
+      group: options().legendGroup,
       symbol: { type: 'steps', fill: options().fill ?? tokens.accent, opacity: options().opacity },
       visible: () => options().visible,
       setVisible: (visible) => mark.update({ visible }),

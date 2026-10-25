@@ -1,3 +1,4 @@
+import { validateLegendGroup } from '../static-legend.js'
 import {
   createOptionState,
   type OptionPatch,
@@ -43,6 +44,8 @@ export interface BarOptions {
   layerPadding: number
   visible: boolean
   label: string
+  /** Legend group heading; marks sharing a group are toggled together. */
+  legendGroup?: string
   fill?: string
   opacity: number
   stroke?: string
@@ -153,6 +156,7 @@ export function bar(data: TableStore, initial: OptionPatch<BarOptions>): BarMark
     'layerPadding',
     'visible',
     'label',
+    'legendGroup',
     'fill',
     'opacity',
     'stroke',
@@ -207,6 +211,7 @@ export function bar(data: TableStore, initial: OptionPatch<BarOptions>): BarMark
       throw new Error('bar.orientation must be vertical or horizontal.')
     if (typeof options.visible !== 'boolean' || typeof options.label !== 'string')
       throw new Error('bar requires boolean visible and string label.')
+    validateLegendGroup(options.legendGroup, 'bar')
     for (const key of ['groupPadding', 'layerPadding'] as const) {
       if (!Number.isFinite(options[key]) || options[key] < 0 || options[key] >= 1)
         throw new RangeError(`bar.${key} must be in [0, 1).`)

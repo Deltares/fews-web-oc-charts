@@ -50,6 +50,7 @@ export type LegendSymbolPrimitive =
         readonly d: string
         readonly 'stroke-dasharray'?: string
         readonly 'stroke-linecap'?: 'butt' | 'round' | 'square'
+        readonly 'stroke-linejoin'?: 'miter' | 'round' | 'bevel'
       }
     }
   | {
@@ -85,6 +86,29 @@ function arrowHead(cx: number, cy: number, unit: number, horizontal: boolean) {
   return `M${points.map(([x, y]) => `${x},${y}`).join('L')}Z`
 }
 
+/** A "layers" icon in the text colour: a diamond above two chevrons. */
+function groupIcon(width: number, height: number): readonly LegendSymbolPrimitive[] {
+  const unit = Math.min(width, height) / 20
+  const cx = width / 2
+  const cy = height / 2
+  const x = (dx: number) => cx + dx * unit
+  const y = (dy: number) => cy + dy * unit
+  const chevron = (top: number) => `M${x(-7)},${y(top)}L${x(0)},${y(top + 4)}L${x(7)},${y(top)}`
+  return [
+    {
+      type: 'path',
+      attributes: {
+        d: `M${x(0)},${y(-7.5)}L${x(7)},${y(-3.5)}L${x(0)},${y(0.5)}L${x(-7)},${y(-3.5)}Z${chevron(0)}${chevron(3.5)}`,
+        fill: 'none',
+        stroke: 'currentColor',
+        'stroke-width': 1.5 * unit,
+        'stroke-linecap': 'round',
+        'stroke-linejoin': 'round',
+      },
+    },
+  ]
+}
+
 /**
  * Pure SVG geometry, usable by framework renderers without a document. Shapes follow the v4
  * `drawLegendSymbol` layout on a 20×20 canvas; vertical sizes scale with the swatch height.
@@ -95,7 +119,7 @@ export function legendSymbolPrimitives(
   options: LegendSwatchOptions = {},
 ): readonly LegendSymbolPrimitive[] {
   const { width, height } = dimensions(options)
-  if (symbol.type === 'group') return []
+  if (symbol.type === 'group') return groupIcon(width, height)
   const parts = symbol.type === 'composite' || symbol.type === 'stack' ? symbol.parts : [symbol]
   if (!parts.length) return []
   const unit = height / 20

@@ -153,7 +153,19 @@ describe('legend symbol geometry', () => {
     })
     expect(legendSymbolPrimitives({ type: 'stack', parts: [] })).toEqual([])
     expect(legendSymbolPrimitives({ type: 'composite', parts: [] })).toEqual([])
-    expect(legendSymbolPrimitives({ type: 'group' })).toEqual([])
+    expect(legendSymbolPrimitives({ type: 'group' })).toEqual([
+      {
+        type: 'path',
+        attributes: {
+          d: 'M10,2.5L17,6.5L10,10.5L3,6.5ZM3,10L10,14L17,10M3,13.5L10,17.5L17,13.5',
+          fill: 'none',
+          stroke: 'currentColor',
+          'stroke-width': 1.5,
+          'stroke-linecap': 'round',
+          'stroke-linejoin': 'round',
+        },
+      },
+    ])
   })
 
   test('draws the v4 step bars, rule, arrow, direction and text symbols', () => {

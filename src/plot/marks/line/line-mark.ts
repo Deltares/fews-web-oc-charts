@@ -343,6 +343,7 @@ export const seriesDefinition: MarkDefinition<SeriesMark> = {
     const options = mark.options.get().resolved
     return {
       label: options.label,
+      group: options.legendGroup,
       symbol: lineLegendSymbol(mark, tokens),
       visible: () => mark.visible,
       setVisible: (visible) => mark.update({ visible }),

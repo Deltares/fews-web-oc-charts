@@ -1,7 +1,7 @@
 import type { ReadonlySignal, ReactiveScope } from '../../../core/reactive.js'
 import { reactive } from '../../../core/runtime.js'
 import type { ThemeTokens } from '../../../theme/theme.js'
-import type { MarkLegendLayer } from '../../marks/mark-definition.js'
+import type { MarkLegend, MarkLegendLayer } from '../../marks/mark-definition.js'
 import type { PlotMark } from '../../marks/marks.js'
 import { markDefinition } from '../../marks/marks.js'
 
@@ -148,6 +148,12 @@ function freezeEntry(entry: LegendEntry): LegendEntry {
   return immutable(entry)
 }
 
+function combineVisibility(values: readonly LegendVisibility[]): LegendVisibility {
+  if (values.every((value) => value === 'visible')) return 'visible'
+  if (values.every((value) => value === 'hidden')) return 'hidden'
+  return 'mixed'
+}
+
 function visibilityOf(values: readonly boolean[]): LegendVisibility {
   if (values.every(Boolean)) return 'visible'
   if (values.every((value) => !value)) return 'hidden'
@@ -171,11 +177,8 @@ export function createLegendModel(
   function buildSnapshot(): readonly LegendEntry[] {
     nodeCommands.clear()
     const ids = new Set<string>()
-    const roots: LegendEntry[] = []
 
-    for (const mark of marks()) {
-      const legend = markDefinition(mark).legend?.(mark, theme())
-      if (!legend) continue
+    const addMark = (mark: PlotMark, legend: MarkLegend, roots: LegendEntry[]) => {
       const rootId = markId(mark)
       if (ids.has(rootId)) throw new Error(`Duplicate legend entry id "${rootId}".`)
       ids.add(rootId)
@@ -217,7 +220,7 @@ export function createLegendModel(
             children: Object.freeze([]),
           }),
         )
-        continue
+        return
       }
 
       if (legend.layers) {
@@ -293,7 +296,7 @@ export function createLegendModel(
 
         if (flat) {
           roots.push(...leafEntries)
-          continue
+          return
         }
         const rootVisibility = () =>
           legend.visible() ? visibilityOf(layers.map((layer) => layer.visible())) : 'hidden'
@@ -325,6 +328,56 @@ export function createLegendModel(
         }),
       )
     }
+
+    const groups = new Map<string, { readonly id: string; readonly members: LegendEntry[] }>()
+    const order: (LegendEntry | string)[] = []
+    for (const mark of marks()) {
+      const legend = markDefinition(mark).legend?.(mark, theme())
+      if (!legend) continue
+      const markRoots: LegendEntry[] = []
+      addMark(mark, legend, markRoots)
+      if (!legend.group) {
+        order.push(...markRoots)
+        continue
+      }
+      let group = groups.get(legend.group)
+      if (!group) {
+        const id = `group:${encodeURIComponent(legend.group)}`
+        if (ids.has(id)) throw new Error(`Duplicate legend entry id "${id}".`)
+        ids.add(id)
+        group = { id, members: [] }
+        groups.set(legend.group, group)
+        order.push(legend.group)
+      }
+      for (const entry of markRoots) {
+        const node = nodeCommands.get(entry.id)!
+        nodeCommands.set(entry.id, { ...node, parentId: group.id })
+        group.members.push(entry)
+      }
+    }
+
+    const roots = order.map((item) => {
+      if (typeof item !== 'string') return item
+      const { id, members } = groups.get(item)!
+      const memberNodes = members.map((entry) => nodeCommands.get(entry.id)!)
+      const visibility = () => combineVisibility(memberNodes.map((node) => node.visibility()))
+      nodeCommands.set(id, {
+        id,
+        visibility,
+        setVisible(visible) {
+          for (const node of memberNodes) node.setVisible(visible)
+        },
+      })
+      return freezeEntry({
+        id,
+        markId: id,
+        label: item,
+        symbol: { type: 'group' },
+        visibility: visibility(),
+        disabled: false,
+        children: Object.freeze(members),
+      })
+    })
     return Object.freeze(roots)
   }
 

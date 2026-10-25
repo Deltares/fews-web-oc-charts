@@ -59,6 +59,8 @@ export interface MarkLegendLayer {
 
 export interface MarkLegend {
   readonly label?: string
+  /** Legend group heading; marks sharing a group are toggled together. */
+  readonly group?: string
   readonly symbol: SymbolSpec
   readonly layers?: readonly MarkLegendLayer[]
   visible(): boolean

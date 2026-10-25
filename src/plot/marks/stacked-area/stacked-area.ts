@@ -1,3 +1,4 @@
+import { validateLegendGroup } from '../static-legend.js'
 import {
   createOptionState,
   type OptionPatch,
@@ -32,6 +33,8 @@ export interface StackedAreaOptions {
   curve: 'linear' | 'step'
   visible: boolean
   label: string
+  /** Legend group heading; marks sharing a group are toggled together. */
+  legendGroup?: string
   fill?: string
   opacity: number
   stroke?: string
@@ -102,6 +105,7 @@ export function stackedArea(
     'curve',
     'visible',
     'label',
+    'legendGroup',
     'fill',
     'opacity',
     'stroke',
@@ -143,6 +147,7 @@ export function stackedArea(
         throw new Error('stackedArea.curve supports linear or step only.')
       if (typeof options.visible !== 'boolean' || typeof options.label !== 'string')
         throw new Error('stackedArea requires boolean visible and string label.')
+      validateLegendGroup(options.legendGroup, 'stackedArea')
       validateCompositeStyle(options, 'stackedArea')
       validateCompositeLayers(options.layers, 'stackedArea')
       validateData(data, options)

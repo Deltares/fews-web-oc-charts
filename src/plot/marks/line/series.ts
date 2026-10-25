@@ -1,3 +1,4 @@
+import { validateLegendGroup } from '../static-legend.js'
 import {
   createOptionState,
   type OptionPatch,
@@ -32,6 +33,8 @@ export interface SeriesOptions {
   x: string
   y: string
   label: string
+  /** Legend group heading; marks sharing a group are toggled together. */
+  legendGroup?: string
   visible: boolean
   line: false | SeriesLineOptions
   markers: false | SeriesMarkerOptions
@@ -61,6 +64,7 @@ export function validateSeriesUpdates(mark: SeriesMark, validate: (candidate: Li
 function visual(options: Readonly<SeriesOptions>): LineMark {
   if (typeof options.visible !== 'boolean') throw new TypeError('series.visible must be boolean.')
   if (typeof options.label !== 'string') throw new TypeError('series.label must be a string.')
+  validateLegendGroup(options.legendGroup, 'series')
   if (options.line !== false) {
     if (!options.line || typeof options.line !== 'object' || Array.isArray(options.line))
       throw new TypeError('series.line must be false or options.')
@@ -126,7 +130,7 @@ export function series(
 ): SeriesMark {
   if (!data || !isSeriesStore(data))
     throw new TypeError('series requires a createSeries/fromObjects store.')
-  const keys = ['id', 'x', 'y', 'label', 'visible', 'line', 'markers', 'area']
+  const keys = ['id', 'x', 'y', 'label', 'legendGroup', 'visible', 'line', 'markers', 'area']
   validateKeys(initial, keys, 'series')
   const consumers = new Set<(candidate: LineMark) => void>()
   const state = createOptionState<SeriesOptions>(initial, {
