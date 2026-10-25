@@ -143,7 +143,6 @@ function createLineRenderer(): MarkRenderer<LineLikeMark> {
         visible,
         mark.line,
         Boolean(mark.markers),
-        mark.markers?.size,
         mark.markers?.symbol,
         mark.markers?.skip,
         mark.digits,
