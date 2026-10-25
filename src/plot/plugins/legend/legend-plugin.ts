@@ -342,6 +342,7 @@ function installLegend(handle: LegendHandle, context: PlotContext) {
   }
 
   function updateLayout() {
+    if (context.suspended.get()) return
     // Moving a node, even to its current position, blurs any focused descendant.
     const active = document.activeElement
     const focused = active instanceof SVGElement && layer.contains(active) ? active : undefined
@@ -397,6 +398,7 @@ function installLegend(handle: LegendHandle, context: PlotContext) {
   }
 
   const render = () => {
+    if (context.suspended.get()) return
     const active = context.element.ownerDocument.activeElement
     const focusedId =
       active instanceof SVGElement && layer.contains(active) ? active.dataset.entryId : undefined

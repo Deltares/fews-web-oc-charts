@@ -27,6 +27,7 @@ import {
 import { resolveTheme, watchTheme, type ThemeMode, type ThemeTokens } from '../theme/theme.js'
 import { isAxisHandle, validateAxisUpdates, type AxisHandle, type AxisSide } from './axes/axis.js'
 import { observeSize } from './resize.js'
+import { observeVisibility } from './visibility.js'
 import { svgElement, renderAxes, renderPolarAxes, axisTickLabels } from './axes/render-axes.js'
 import { arc } from 'd3'
 import { projectPolarPoint } from './coordinates/polar-geometry.js'
@@ -140,6 +141,8 @@ export interface Plot {
   readonly legend: LegendModel
   readonly scales: Readonly<Record<string, ScaleBinding>>
   readonly destroyed: boolean
+  /** Effective suspension: manual pause, off-screen, or awaiting the first visibility result. */
+  readonly paused: boolean
   on<K extends keyof PlotEventMap>(
     type: K,
     listener: (detail: PlotEventMap[K]) => void,
@@ -147,6 +150,8 @@ export interface Plot {
   ): Unsubscribe
   update(patch: PlotConfig): void
   setConfig(config: PlotConfig): void
+  pause(): void
+  resume(): void
   destroy(): void
 }
 
@@ -275,6 +280,24 @@ function createPlotInternal(
     options: () => options.get().resolved,
   })
   let destroyed = false
+  let manuallyPaused = false
+  let visible = false
+  const suspended = reactive.signal(true)
+  let deferredDirty: DirtyLayers = 0
+
+  function requestRender(dirty: DirtyLayers) {
+    if (destroyed) return
+    deferredDirty |= dirty
+    if (!reactive.untracked(() => suspended.get())) invalidate(render, deferredDirty)
+  }
+
+  function updateSuspension() {
+    const paused = manuallyPaused || !visible
+    if (paused === reactive.untracked(() => suspended.get())) return
+    suspended.set(paused)
+    if (paused) cancelRender(render)
+    else if (deferredDirty !== 0) invalidate(render, deferredDirty)
+  }
   let lastThemeMode: ThemeMode | undefined
   let lastThemeVersion = -1
   let dependencySnapshot: PlotDependencySnapshot | undefined
@@ -314,7 +337,7 @@ function createPlotInternal(
     regions,
     scales: () => scaleBindings.markScales,
     options: () => options.get().resolved,
-    requestRender: () => invalidate(render, DirtyLayer.marks),
+    requestRender: () => requestRender(DirtyLayer.marks),
   })
   const legend = createLegendModel(
     scope,
@@ -333,6 +356,7 @@ function createPlotInternal(
     onPointer: (listener) => pointerHub.onPointer(listener),
     legend,
     theme,
+    suspended,
     useViewport(viewport) {
       const update = (value: Size) => {
         axisWidths.clear()
@@ -488,7 +512,7 @@ function createPlotInternal(
     }
     scaleBindings.reconcile(current)
     reconcileDomainEffects()
-    pluginHost.reconcile(current.plugins)
+    if (!suspended.get()) pluginHost.reconcile(current.plugins)
   }
 
   function measureAxis(axis: AxisHandle, tokens: ThemeTokens) {
@@ -698,6 +722,10 @@ function createPlotInternal(
 
   function render(dirty: DirtyLayers) {
     if (destroyed) return
+    deferredDirty |= dirty
+    if (suspended.get()) return
+    dirty = deferredDirty
+    deferredDirty = 0
     const current = options.get().resolved
     const tokens = theme.get()
     if (dirty & DirtyLayer.layout) renderLayout(current, tokens)
@@ -719,6 +747,11 @@ function createPlotInternal(
   }
 
   host.append(element)
+  const stopVisibility = observeVisibility(host, (next) => {
+    if (destroyed) return
+    visible = next
+    updateSuspension()
+  })
   reconcile()
   const stopPixelRatio = watchCanvasPixelRatio(() => markLayer.invalidateAll())
   const stopSize = observeSize(host, (value) => {
@@ -759,7 +792,7 @@ function createPlotInternal(
       dependencySnapshot = nextDependencies
       if (layoutChanged) {
         insetWidths.clear()
-        invalidate(render, DirtyLayer.layout | DirtyLayer.axes)
+        requestRender(DirtyLayer.layout | DirtyLayer.axes)
       } else if (marksChanged) {
         markLayer.invalidateAll()
       }
@@ -783,7 +816,7 @@ function createPlotInternal(
         insetWidths.clear()
         measurer.clear()
       }
-      invalidate(render, DirtyLayer.style | (fontChanged ? DirtyLayer.layout : 0))
+      requestRender(DirtyLayer.style | (fontChanged ? DirtyLayer.layout : 0))
     })
     reactive.effect(() => {
       const current = currentLayoutSnapshot()
@@ -850,6 +883,9 @@ function createPlotInternal(
     get destroyed() {
       return destroyed
     },
+    get paused() {
+      return suspended.get()
+    },
     on,
     update(patch) {
       apply(patch, false)
@@ -857,9 +893,20 @@ function createPlotInternal(
     setConfig(next) {
       apply(next, true)
     },
+    pause() {
+      if (destroyed) throw new Error('Cannot pause a destroyed plot.')
+      manuallyPaused = true
+      updateSuspension()
+    },
+    resume() {
+      if (destroyed) throw new Error('Cannot resume a destroyed plot.')
+      manuallyPaused = false
+      updateSuspension()
+    },
     destroy() {
       if (destroyed) return
       destroyed = true
+      stopVisibility()
       pluginHost.dispose()
       legend.dispose()
       pointerHub.dispose()
@@ -876,6 +923,7 @@ function createPlotInternal(
       for (const dispose of axisValidators.values()) dispose()
       axisValidators.clear()
       cancelRender(render)
+      deferredDirty = 0
       axisWidths.clear()
       insetWidths.clear()
       measurer.clear()

@@ -70,6 +70,7 @@ function installHighlight(handle: HighlightHandle, context: PlotContext) {
   try {
     context.scope.run(() =>
       reactive.effect(() => {
+        if (context.suspended.get()) return
         const region = context.regions.get().plot
         clipRect.setAttribute('x', String(region.x))
         clipRect.setAttribute('y', String(region.y))

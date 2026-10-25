@@ -107,6 +107,7 @@ export function createPluginHost(
       },
       legend: shared.legend,
       theme: shared.theme,
+      suspended: shared.suspended,
       useViewport: (element) => shared.useViewport(element),
       get scales() {
         return shared.scales

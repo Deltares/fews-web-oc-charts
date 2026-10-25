@@ -878,6 +878,24 @@ createPlot(elB, { scales: { t: time, h: linearScale() }, plugins: [crosshair({ p
   sliding with new data; automatically suspended when user zooms/pans, resumed on reset.
 - Back-pressure: updates coalesced per frame; `plot.pause()`/`resume()` when not visible
   (IntersectionObserver) – no rendering for off-screen plots.
+- Visibility suspension is render-only. `plot.pause()` and `plot.resume()` set/clear an
+  idempotent manual pause; `plot.paused` reports effective suspension. A shared
+  `IntersectionObserver` observes plot hosts. Manual pause and viewport visibility are
+  independent: visibility cannot undo a manual pause, and `resume()` cannot force an
+  off-screen plot to render. Until the first observer result arrives, a synchronous
+  viewport estimate of the host's bounding rect decides the initial state, so on-screen
+  plots paint on their first frame and initially off-screen plots never paint.
+- While suspended, dirty layers and mark updates are retained without scheduling plot
+  draws; resuming coalesces them into a latest-state frame. Plugin visual effects,
+  including external legend layout and HTML tooltips, are gated too. Plugin membership
+  changes mount/unmount on resume. Initial DOM scaffolding and explicit destruction are
+  lifecycle operations, not paints; destroying a suspended plot releases its resources
+  and drops pending work. Calling `pause()`/`resume()` after destruction throws.
+- Data ingestion/retention, shared scales and follow, signal subscriptions and
+  non-render plot events (`domainchange`, `legendchange`) continue while suspended.
+  Other plots using those handles remain active. Layout/projection and visual plugin
+  outputs reflect the last rendered layout until catch-up; `layoutchange` follows that
+  catch-up. Visibility never transfers or disposes application-owned data or handles.
 - Optional streaming helper: `connect(series, asyncIterable | WebSocket | EventSource)`.
 
 ### 3.11 Styling & theming
@@ -2320,12 +2338,13 @@ Playwright Chromium launch/cleanup before retrying browser validation.
    including missing/negative values, named stacks, reorders and visibility changes.
    Instrument processed rows/cache bytes so a tail append proves tail work rather
    than merely producing correct output after a full rescan.
-5. **Visibility suspension.** Add manual pause/resume and a shared IntersectionObserver
+5. **Visibility suspension (implemented).** Add manual pause/resume and a shared IntersectionObserver
    with separate manual/visibility state. Test zero render writes while suspended,
    one latest-state catch-up on resume, shared consumers remaining active, repeated
    pause/resume, initially off-screen plots, and destroy while dirty/paused. Explicitly
    define whether non-render subscriptions continue while paused; keep data ownership
-   independent of plot visibility.
+   independent of plot visibility. See §3.10 for the implemented contract and
+   `test/Plot/visibility.test.ts` for deterministic and native-observer coverage.
 6. **Production live-stream acceptance.** Add the public-API example and a dedicated
    deterministic sync/live runner. Exercise two differently sized data-backed plots,
    shared pointer/selection, follow suspension/reset, grouped/stacked updates, retention,
@@ -2727,9 +2746,29 @@ to 87,895,443 bytes; it is an observation, not a peak budget.
 
 This closes the series LOD reuse and measured live-memory items for these two
 fixtures. It does not measure native SVG bytes, canonical-growth peaks or
-create/destroy stress. Visibility suspension (step 5) and the full sync/live
-acceptance scenario (step 6: shared pointer/selection, follow, off-screen pause,
-destroy/recreate) remain open, so Phase 4 remains in progress.
+create/destroy stress. At that checkpoint, visibility suspension (step 5) and the full
+sync/live acceptance scenario (step 6: shared pointer/selection, follow, off-screen
+pause, destroy/recreate) remained open.
+
+#### Visibility suspension checkpoint
+
+Step 5 is implemented for Cartesian, polar and Skew-T plots. A shared host
+IntersectionObserver and independent manual pause state gate main rendering and plugin
+visual effects; data ownership and non-render subscriptions remain active. Deterministic
+tests cover dirty-layer coalescing, shared consumers, membership changes and teardown;
+a native viewport-intersection test covers initially off-screen plots and re-entry.
+
+Browser-tool acceptance verified native intersection transitions, no DOM writes from
+suspended plots/plugins, a single latest-state geometry catch-up, continued shared-peer
+rendering and domain subscriptions, repeated pause/resume, dirty/paused destruction,
+polar/Skew-T suspension and deferred plugin membership changes. Canvas acceptance
+verified zero suspended paints and exactly one catch-up paint.
+The library build and type-check pass. `test/Plot/visibility.test.ts` and the existing
+plot, polar, Skew-T, follow, legend, tooltip, brush, highlight and composite-canvas
+suites pass in the Vitest Chromium runner.
+
+The full production sync/live acceptance scenario (step 6) remains open, so Phase 4
+remains in progress.
 
 ## 8. Additional improvements to consider
 

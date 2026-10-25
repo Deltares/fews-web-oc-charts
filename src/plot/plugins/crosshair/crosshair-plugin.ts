@@ -206,6 +206,7 @@ function installCrosshair(handle: CrosshairHandle, context: PlotContext) {
 
   context.scope.run(() =>
     reactive.effect(() => {
+      if (context.suspended.get()) return
       const inspection = context.inspectCrosshair(handle)
       const mode = inspection.axes
       const region = context.regions.get().plot
