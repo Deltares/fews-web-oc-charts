@@ -42,6 +42,16 @@ export interface TableStore extends TableView {
 
 type Column = { values: Float64Array; dictionary?: readonly string[] }
 const stores = new WeakSet<object>()
+const diagnostics = new WeakMap<
+  TableStore,
+  () => Readonly<{ capacity: number; byteLength: number; copiedRows: number; appendedRows: number }>
+>()
+/** Canonical buffer bytes and cumulative rows relocated/written; excludes validation and dictionaries. */
+export function tableStorageDiagnostics(store: TableStore) {
+  const read = diagnostics.get(store)
+  if (!read) throw new TypeError('Expected a table store.')
+  return read()
+}
 const validators = new WeakMap<
   TableStore,
   Set<WeakRef<(view: TableView, appendFrom?: number) => void>>
@@ -75,8 +85,14 @@ export function createTable(initial: TableInput, options: TableOptions = {}): Ta
     throw new RangeError('table.maxAge must be finite and nonnegative.')
   }
   let nextId = 0
+  const maxPoints = options.maxPoints ?? Infinity
+  const maxAge = options.maxAge
   let columns = new Map<string, Column>()
-  let ids: readonly number[] = []
+  let ids = new Float64Array(1)
+  let head = 0
+  let length = 0
+  let copiedRows = 0
+  let appendedRows = 0
   let currentView: TableView
   const version = reactive.signal(0)
   let change: TableChange | undefined
@@ -137,7 +153,7 @@ export function createTable(initial: TableInput, options: TableOptions = {}): Ta
       result.set(name, { values, dictionary: dictionary && Object.freeze(dictionary) })
     }
     const key = result.get(x)!
-    if (key.dictionary && options.maxAge !== undefined)
+    if (key.dictionary && maxAge !== undefined)
       throw new Error('table.maxAge requires a numeric/time key.')
     for (let row = 0; row < key.values.length; row += 1) {
       if (
@@ -154,50 +170,51 @@ export function createTable(initial: TableInput, options: TableOptions = {}): Ta
     return result
   }
 
-  function view(source: Map<string, Column>, sampleIds: readonly number[]): TableView {
+  function view(
+    source: Map<string, Column>,
+    sampleIds: ArrayLike<number>,
+    offset = 0,
+    size = sampleIds.length,
+  ): TableView {
     function column(name: string) {
       const result = source.get(name)
       if (!result) throw new Error(`Unknown table column "${name}".`)
       return result
     }
     function check(row: number) {
-      if (!Number.isInteger(row) || row < 0 || row >= sampleIds.length)
+      if (!Number.isInteger(row) || row < 0 || row >= size)
         throw new RangeError(`table row ${row} is outside the store.`)
     }
     return Object.freeze({
       columns: names,
-      length: sampleIds.length,
+      length: size,
       kind(name: string) {
         return column(name).dictionary ? 'string' : 'number'
       },
       valueAt(name: string, row: number) {
         check(row)
         const data = column(name)
-        return data.dictionary ? data.dictionary[data.values[row]] : data.values[row]
+        const physical = (offset + row) % sampleIds.length
+        return data.dictionary ? data.dictionary[data.values[physical]] : data.values[physical]
       },
       sampleId(row: number) {
         check(row)
-        return sampleIds[row]
+        return sampleIds[(offset + row) % sampleIds.length]
       },
     })
   }
 
-  function commit(
-    candidate: Map<string, Column>,
-    sampleIds: readonly number[],
-    publish: boolean,
-    appendFrom?: number,
-  ) {
-    let start = Math.max(0, sampleIds.length - (options.maxPoints ?? Infinity))
+  function commit(candidate: Map<string, Column>, sampleIds: readonly number[]) {
+    let start = Math.max(0, sampleIds.length - maxPoints)
     const key = candidate.get(x)!
-    if (options.maxAge !== undefined && sampleIds.length) {
-      const cutoff = key.values[sampleIds.length - 1] - options.maxAge
+    if (maxAge !== undefined && sampleIds.length) {
+      const cutoff = key.values[sampleIds.length - 1] - maxAge
       while (start < sampleIds.length && key.values[start] < cutoff) start += 1
     }
     const candidateView = view(candidate, sampleIds)
     for (const entry of checks) {
       const validate = entry.deref()
-      if (validate) validate(candidateView, start === 0 ? appendFrom : undefined)
+      if (validate) validate(candidateView)
       else checks.delete(entry)
     }
     if (start) {
@@ -210,27 +227,135 @@ export function createTable(initial: TableInput, options: TableOptions = {}): Ta
       sampleIds = sampleIds.slice(start)
     }
     columns = candidate
-    ids = sampleIds
-    currentView = view(columns, ids)
-    if (publish) version.update((value) => value + 1)
+    length = sampleIds.length
+    if (!length) {
+      columns = new Map(
+        [...columns].map(([name, column]) => [name, { ...column, values: new Float64Array(1) }]),
+      )
+    }
+    ids = Float64Array.from(sampleIds.length ? sampleIds : [0])
+    head = 0
+    copiedRows += length
+    currentView = view(columns, ids, head, length)
     return start
   }
   const first = copy(initial)
   commit(
     first,
     Array.from({ length: first.get(x)!.values.length }, () => nextId++),
-    false,
   )
+
+  function append(incoming: Map<string, Column>) {
+    const count = incoming.get(x)!.values.length
+    if (!count) return
+    const previousLength = length
+    const old = currentView
+    const addedIds = Array.from({ length: count }, (_, row) => nextId + row)
+    const added = view(incoming, addedIds)
+    const firstCurrent = length ? old.valueAt(x, 0) : undefined
+    const lastCurrent = length ? old.valueAt(x, length - 1) : undefined
+    const firstAdded = added.valueAt(x, 0)
+    const lastAdded = added.valueAt(x, count - 1)
+    if (
+      typeof lastCurrent === 'number' &&
+      typeof firstAdded === 'number' &&
+      firstAdded < lastCurrent
+    ) {
+      throw new RangeError(`table.${x} appended keys must be ordered after the current last key.`)
+    }
+    const total = length + count
+    const candidate: TableView = Object.freeze({
+      columns: names,
+      length: total,
+      kind: (name: string) => added.kind(name),
+      valueAt: (name: string, row: number) =>
+        row < previousLength ? old.valueAt(name, row) : added.valueAt(name, row - previousLength),
+      sampleId: (row: number) =>
+        row < previousLength ? old.sampleId(row) : added.sampleId(row - previousLength),
+    })
+    let start = Math.max(0, total - maxPoints)
+    if (maxAge !== undefined) {
+      const cutoff = Number(lastAdded) - maxAge
+      let low = start
+      let high = total
+      while (low < high) {
+        const middle = Math.floor((low + high) / 2)
+        if (Number(candidate.valueAt(x, middle)) < cutoff) low = middle + 1
+        else high = middle
+      }
+      start = low
+    }
+    for (const entry of checks) {
+      const validate = entry.deref()
+      if (validate) validate(candidate, previousLength)
+      else checks.delete(entry)
+    }
+    const retainedOldStart = Math.min(start, previousLength)
+    const retainedOld = previousLength - retainedOldStart
+    const incomingStart = Math.max(0, start - previousLength)
+    const required = total - start
+    if (required > ids.length) {
+      const capacity = Math.min(maxPoints, Math.max(required, ids.length * 2))
+      const nextIds = new Float64Array(capacity)
+      const nextColumns = new Map<string, Column>()
+      for (const name of names) {
+        const source = columns.get(name)!
+        const values = new Float64Array(capacity)
+        for (let row = 0; row < retainedOld; row += 1) {
+          values[row] = source.values[(head + retainedOldStart + row) % ids.length]
+        }
+        nextColumns.set(name, { values, dictionary: incoming.get(name)!.dictionary })
+      }
+      for (let row = 0; row < retainedOld; row += 1) {
+        nextIds[row] = old.sampleId(retainedOldStart + row)
+      }
+      copiedRows += retainedOld
+      columns = nextColumns
+      ids = nextIds
+      head = 0
+    } else {
+      head = (head + retainedOldStart) % ids.length
+      for (const name of names) {
+        const column = columns.get(name)!
+        column.dictionary = incoming.get(name)!.dictionary
+      }
+    }
+    for (let row = incomingStart; row < count; row += 1) {
+      const physical = (head + retainedOld + row - incomingStart) % ids.length
+      for (const name of names) {
+        columns.get(name)!.values[physical] = incoming.get(name)!.values[row]
+      }
+      ids[physical] = addedIds[row]
+    }
+    appendedRows += count - incomingStart
+    length = required
+    currentView = view(columns, ids, head, length)
+    change = Object.freeze({
+      version: version.get() + 1,
+      operation: 'append',
+      previousLength,
+      length,
+      inputLength: count,
+      invalidatedFrom: start === 0 ? previousLength : 0,
+      invalidatedTo: length,
+      replaced: 0,
+      evicted: start,
+      from: firstCurrent ?? firstAdded,
+      to: lastAdded,
+    })
+    nextId += count
+    version.update((value) => value + 1)
+  }
 
   function mutate(
     input: TableInput,
-    mode: 'append' | 'prepend' | 'replace',
+    mode: 'prepend' | 'replace',
     bounds?: { from: number; to: number },
     operationOverride?: TableChange['operation'],
   ) {
     const incoming = copy(input)
     const count = incoming.get(x)!.values.length
-    const previousLength = ids.length
+    const previousLength = length
     if (bounds) {
       if (
         columns.get(x)!.dictionary ||
@@ -246,36 +371,32 @@ export function createTable(initial: TableInput, options: TableOptions = {}): Ta
       }
     }
     if (!count && mode !== 'replace' && !bounds) return
-    const current = view(columns, ids)
+    const current = currentView
     const added = view(
       incoming,
       Array.from({ length: count }, (_, row) => nextId + row),
     )
     let before = 0
-    let after = ids.length
+    let after = length
     if (bounds) {
-      while (before < ids.length && Number(current.valueAt(x, before)) < bounds.from) before += 1
+      while (before < length && Number(current.valueAt(x, before)) < bounds.from) before += 1
       after = before
-      while (after < ids.length && Number(current.valueAt(x, after)) <= bounds.to) after += 1
-    } else if (mode === 'append') before = ids.length
-    else if (mode === 'prepend') after = 0
+      while (after < length && Number(current.valueAt(x, after)) <= bounds.to) after += 1
+    } else if (mode === 'prepend') after = 0
     const merged: Record<string, TableValue[]> = Object.create(null)
     for (const name of names) {
       merged[name] = [
         ...Array.from({ length: before }, (_, row) => current.valueAt(name, row)),
         ...Array.from({ length: count }, (_, row) => added.valueAt(name, row)),
-        ...Array.from({ length: ids.length - after }, (_, row) =>
-          current.valueAt(name, after + row),
-        ),
+        ...Array.from({ length: length - after }, (_, row) => current.valueAt(name, after + row)),
       ]
     }
     const sampleIds = [
-      ...ids.slice(0, before),
+      ...Array.from({ length: before }, (_, row) => current.sampleId(row)),
       ...Array.from({ length: count }, (_, row) => nextId + row),
-      ...ids.slice(after),
+      ...Array.from({ length: length - after }, (_, row) => current.sampleId(after + row)),
     ]
-    const appendFrom = mode === 'append' && !bounds ? previousLength : undefined
-    const start = commit(copy(merged), sampleIds, false, appendFrom)
+    const start = commit(copy(merged), sampleIds)
     const operation = bounds ? 'upsert' : (operationOverride ?? mode)
     const replaced = bounds ? after - before : mode === 'replace' ? previousLength : 0
     const evicted = start
@@ -287,28 +408,26 @@ export function createTable(initial: TableInput, options: TableOptions = {}): Ta
       version: version.get() + 1,
       operation,
       previousLength,
-      length: ids.length,
+      length,
       inputLength: count,
-      invalidatedFrom: operation === 'append' && evicted === 0 ? previousLength : 0,
-      invalidatedTo: ids.length,
+      invalidatedFrom: 0,
+      invalidatedTo: length,
       replaced,
       evicted,
-      from:
-        bounds?.from ??
-        (mode === 'append' ? (firstCurrent ?? firstAdded) : (firstAdded ?? firstCurrent)),
+      from: bounds?.from ?? firstAdded ?? firstCurrent,
       to:
         bounds?.to ??
         (mode === 'prepend' ? (lastCurrent ?? lastAdded) : (lastAdded ?? lastCurrent)),
     })
-    version.update((value) => value + 1)
     nextId += count
+    version.update((value) => value + 1)
   }
 
   const store: TableStore = Object.freeze({
     x,
     columns: names,
     get length() {
-      return ids.length
+      return length
     },
     get version() {
       return version.get()
@@ -320,18 +439,28 @@ export function createTable(initial: TableInput, options: TableOptions = {}): Ta
     kind: (name: string) => currentView.kind(name),
     valueAt: (name: string, row: number) => currentView.valueAt(name, row),
     sampleId: (row: number) => currentView.sampleId(row),
-    append: (rows: TableInput) => mutate(rows, 'append'),
+    append: (rows: TableInput) => append(copy(rows)),
     prepend: (rows: TableInput) => mutate(rows, 'prepend'),
     replace: (rows: TableInput) => mutate(rows, 'replace'),
     upsert: (input: { from: number; to: number; rows: TableInput }) =>
       mutate(input.rows, 'replace', input),
     clear() {
-      if (ids.length) {
+      if (length) {
         mutate(Object.fromEntries(names.map((name) => [name, []])), 'replace', undefined, 'clear')
       }
     },
   })
   stores.add(store)
   validators.set(store, checks)
+  diagnostics.set(store, () =>
+    Object.freeze({
+      capacity: ids.length,
+      byteLength:
+        ids.byteLength +
+        [...columns.values()].reduce((sum, column) => sum + column.values.byteLength, 0),
+      copiedRows,
+      appendedRows,
+    }),
+  )
   return store
 }

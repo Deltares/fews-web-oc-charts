@@ -23,12 +23,16 @@ export interface StackEndpoints {
 export interface StackLayout {
   readonly layers: readonly StackEndpoints[]
   readonly slots: number
+  /** Typed buffers reachable from this snapshot, including partially retained blocks. */
   readonly bytes: number
   readonly processedRows: number
+  /** Surviving rows copied into a replacement tail block, independent of layer count. */
+  readonly copiedRows: number
 }
 
 export function validateStackInput(data: TableView, options: StackLayoutOptions, startRow = 0) {
   if (!data.columns.includes(options.x)) throw new Error(`Unknown x column "${options.x}".`)
+  if (data.kind(options.x) === 'string') startRow = 0
   const keys = new Set<string | number>()
   let previous = startRow ? Number(data.valueAt(options.x, startRow - 1)) : -Infinity
   if (startRow) keys.add(data.valueAt(options.x, startRow - 1))
@@ -57,17 +61,18 @@ export function validateStackInput(data: TableView, options: StackLayoutOptions,
 }
 
 /** Data-space endpoints only: usable by both rectangles and shared area boundaries. */
-export function computeStackLayout(
+function computeStackBlock(
   data: TableView,
   options: StackLayoutOptions,
   previous?: StackLayout,
   startRow = 0,
+  previousOffset = 0,
+  rowOffset = 0,
 ): StackLayout {
   if (!previous || startRow < 1 || startRow > data.length) {
     previous = undefined
     startRow = 0
   }
-  validateStackInput(data, options, startRow)
   const length = data.length
   const stacks = [...new Set(options.layers.map((layer) => layer.stack))]
   const groups =
@@ -84,8 +89,8 @@ export function computeStackLayout(
     bytes += positive.byteLength + negative.byteLength + gap.byteLength
     const previousLayer = previous?.layers.find((item) => item.id === layers[0]?.id)
     for (let row = 0; row < startRow; row += 1) {
-      positive[row] = previousLayer?.positiveAt(row) ?? 0
-      negative[row] = previousLayer?.negativeAt(row) ?? 0
+      positive[row] = previousLayer?.positiveAt(previousOffset + row) ?? 0
+      negative[row] = previousLayer?.negativeAt(previousOffset + row) ?? 0
       gap[row] = Number.isNaN(positive[row]) || Number.isNaN(negative[row]) ? 1 : 0
     }
     for (const layer of layers) {
@@ -102,8 +107,8 @@ export function computeStackLayout(
       const oldLayer = previous?.layers.find((item) => item.id === layer.id)
       if (oldLayer) {
         for (let row = 0; row < startRow; row += 1) {
-          lower[row] = oldLayer.lowerAt(row)
-          upper[row] = oldLayer.upperAt(row)
+          lower[row] = oldLayer.lowerAt(previousOffset + row)
+          upper[row] = oldLayer.upperAt(previousOffset + row)
         }
       }
       if (layer.visible !== false) {
@@ -118,7 +123,7 @@ export function computeStackLayout(
             upper[row] = positive[row] += value
           }
           if (!Number.isFinite(lower[row]) || !Number.isFinite(upper[row]))
-            throw new RangeError(`Stack overflow at layer "${layer.id}", row ${row}.`)
+            throw new RangeError(`Stack overflow at layer "${layer.id}", row ${rowOffset + row}.`)
         }
         processedRows += data.length - startRow
       }
@@ -157,7 +162,114 @@ export function computeStackLayout(
     slots: groups.length,
     bytes,
     processedRows,
+    copiedRows: startRow,
   })
+}
+
+interface StackBlock {
+  readonly start: number
+  readonly length: number
+  readonly offset: number
+  readonly layout: StackLayout
+}
+const blockSize = 128
+const layoutBlocks = new WeakMap<StackLayout, readonly StackBlock[]>()
+
+/** Immutable blocks share surviving endpoints without retaining chains of old layouts. */
+export function computeStackLayout(
+  data: TableView,
+  options: StackLayoutOptions,
+  previous?: StackLayout,
+  startRow = 0,
+  previousOffset = 0,
+): StackLayout {
+  const oldBlocks = previous && layoutBlocks.get(previous)
+  if (!oldBlocks || startRow < 1 || startRow > data.length) {
+    previous = undefined
+    startRow = 0
+    previousOffset = 0
+  }
+  validateStackInput(data, options, startRow)
+  const blocks: StackBlock[] = []
+  if (previous && oldBlocks) {
+    for (const block of oldBlocks) {
+      const from = Math.max(previousOffset, block.start)
+      const to = Math.min(previousOffset + startRow, block.start + block.length)
+      if (from < to) {
+        blocks.push({
+          start: from - previousOffset,
+          length: to - from,
+          offset: block.offset + from - block.start,
+          layout: block.layout,
+        })
+      }
+    }
+  }
+  let copiedRows = 0
+  let processedRows = 0
+  let row = startRow
+  let tail: StackBlock | undefined
+  const last = blocks.at(-1)
+  if (row < data.length && last && last.length < blockSize) {
+    tail = blocks.pop()
+    row -= last.length
+  }
+  while (row < data.length) {
+    const from = row
+    const length = Math.min(blockSize, data.length - from)
+    const view: TableView = {
+      columns: data.columns,
+      length,
+      kind: (name) => data.kind(name),
+      valueAt: (name, index) => data.valueAt(name, from + index),
+      sampleId: (index) => data.sampleId(from + index),
+    }
+    const layout = computeStackBlock(view, options, tail?.layout, tail?.length, tail?.offset, from)
+    copiedRows += layout.copiedRows
+    processedRows += layout.processedRows
+    blocks.push({ start: from, length, offset: 0, layout })
+    row += length
+    tail = undefined
+  }
+  const template = blocks[0]?.layout ?? computeStackBlock(data, options)
+  const length = data.length
+  function find(row: number) {
+    if (!Number.isInteger(row) || row < 0 || row >= length)
+      throw new RangeError(`Stack row ${row} is outside the layout.`)
+    let low = 0
+    let high = blocks.length - 1
+    while (low < high) {
+      const middle = Math.ceil((low + high) / 2)
+      if (blocks[middle].start <= row) low = middle
+      else high = middle - 1
+    }
+    return blocks[low]
+  }
+  const result: StackLayout = Object.freeze({
+    layers: Object.freeze(
+      template.layers.map((layer, index) => {
+        function value(method: 'lowerAt' | 'upperAt' | 'positiveAt' | 'negativeAt', row: number) {
+          const block = find(row)
+          return block.layout.layers[index][method](block.offset + row - block.start)
+        }
+        return Object.freeze({
+          id: layer.id,
+          stack: layer.stack,
+          slot: layer.slot,
+          lowerAt: (row: number) => value('lowerAt', row),
+          upperAt: (row: number) => value('upperAt', row),
+          positiveAt: (row: number) => value('positiveAt', row),
+          negativeAt: (row: number) => value('negativeAt', row),
+        })
+      }),
+    ),
+    slots: template.slots,
+    bytes: blocks.reduce((sum, block) => sum + block.layout.bytes, 0),
+    processedRows,
+    copiedRows,
+  })
+  layoutBlocks.set(result, blocks)
+  return result
 }
 
 const cache = new WeakMap<
@@ -177,11 +289,7 @@ export function stackLayout(data: TableStore, options: StackLayoutOptions): Stac
   if (!current || current.version !== version) {
     const change = data.change
     const appendOnly =
-      current !== undefined &&
-      change?.operation === 'append' &&
-      change.evicted === 0 &&
-      change.invalidatedFrom === change.previousLength &&
-      change.version === version
+      current !== undefined && change?.operation === 'append' && change.version === version
     current =
       appendOnly && current ? { ...current, version } : { version, entries: new Map(), bytes: 0 }
     cache.set(data, current)
@@ -208,12 +316,16 @@ export function stackLayout(data: TableStore, options: StackLayoutOptions): Stac
     previous !== undefined &&
     previous.version === version - 1 &&
     change?.operation === 'append' &&
-    change.evicted === 0 &&
-    change.invalidatedFrom === change.previousLength &&
     change.version === version &&
     previous.layout.layers.length === options.layers.length
   const result = canExtend
-    ? computeStackLayout(data, options, previous.layout, change.previousLength)
+    ? computeStackLayout(
+        data,
+        options,
+        previous.layout,
+        Math.max(0, change.previousLength - change.evicted),
+        Math.min(change.previousLength, change.evicted),
+      )
     : computeStackLayout(data, options)
   if (result.bytes <= maxBytes) {
     if (previous) {
