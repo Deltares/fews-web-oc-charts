@@ -12,13 +12,9 @@ import {
   validateTableUpdates,
   type TableStore,
   type TableView,
+  type TableSplice,
 } from '../../../data-store/table.js'
-import {
-  computeStackLayout,
-  stackLayout,
-  type StackLayout,
-  type StackLayoutOptions,
-} from '../../../layout/stack.js'
+import { validateStackUpdate, stackLayout, type StackLayoutOptions } from '../../../layout/stack.js'
 import type { ScaleHandle } from '../../../scales/scale.js'
 import {
   retainLayerVisibility,
@@ -101,16 +97,12 @@ function validateData(
   data: TableView,
   options: Readonly<BarOptions>,
   appendFrom?: number,
-  previous?: StackLayout,
+  splice?: TableSplice,
 ) {
+  const from = splice?.from ?? appendFrom ?? 0
+  const to = splice?.to ?? data.length
   if (isTableStore(data)) stackLayout(data, barLayoutOptions(options))
-  else
-    computeStackLayout(
-      data,
-      barLayoutOptions(options),
-      appendFrom === undefined ? undefined : previous,
-      appendFrom,
-    )
+  else validateStackUpdate(data, barLayoutOptions(options), from, to)
   if (options.interval) {
     if (
       data.kind(options.x) !== 'number' ||
@@ -119,10 +111,8 @@ function validateData(
     ) {
       throw new Error('Bar intervals require numeric/time columns.')
     }
-    let previousEnd = appendFrom
-      ? Number(data.valueAt(options.interval.end, appendFrom - 1))
-      : -Infinity
-    for (let row = appendFrom ?? 0; row < data.length; row += 1) {
+    let previousEnd = from ? Number(data.valueAt(options.interval.end, from - 1)) : -Infinity
+    for (let row = from; row < Math.min(data.length, to + 1); row += 1) {
       const start = Number(data.valueAt(options.interval.start, row))
       const end = Number(data.valueAt(options.interval.end, row))
       if (!Number.isFinite(start) || !Number.isFinite(end) || start > end || start < previousEnd) {
@@ -292,11 +282,9 @@ export function bar(data: TableStore, initial: OptionPatch<BarOptions>): BarMark
       if (state.update(patch)) signals.publish()
     },
   })
-  const check = (candidate: TableView, appendFrom?: number) => {
+  const check = (candidate: TableView, appendFrom?: number, splice?: TableSplice) => {
     const resolved = state.getSnapshot().resolved
-    const previous =
-      appendFrom === undefined ? undefined : stackLayout(data, barLayoutOptions(resolved))
-    validateData(candidate, resolved, appendFrom, previous)
+    validateData(candidate, resolved, appendFrom, splice)
   }
   tableChecks.set(mark, check)
   validateTableUpdates(data, check)

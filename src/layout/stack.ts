@@ -30,13 +30,21 @@ export interface StackLayout {
   readonly copiedRows: number
 }
 
-export function validateStackInput(data: TableView, options: StackLayoutOptions, startRow = 0) {
+export function validateStackInput(
+  data: TableView,
+  options: StackLayoutOptions,
+  startRow = 0,
+  endRow = data.length,
+) {
   if (!data.columns.includes(options.x)) throw new Error(`Unknown x column "${options.x}".`)
-  if (data.kind(options.x) === 'string') startRow = 0
+  if (data.kind(options.x) === 'string') {
+    startRow = 0
+    endRow = data.length
+  }
   const keys = new Set<string | number>()
   let previous = startRow ? Number(data.valueAt(options.x, startRow - 1)) : -Infinity
   if (startRow) keys.add(data.valueAt(options.x, startRow - 1))
-  for (let row = startRow; row < data.length; row += 1) {
+  for (let row = startRow; row < endRow; row += 1) {
     const key = data.valueAt(options.x, row)
     if (keys.has(key)) throw new Error(`Duplicate composite x key "${key}" at row ${row}.`)
     if (typeof key === 'number' && (!Number.isFinite(key) || key <= previous)) {
@@ -57,6 +65,33 @@ export function validateStackInput(data: TableView, options: StackLayoutOptions,
       throw new Error('Grouped bars do not accept stack IDs.')
     if (named && (typeof layer.stack !== 'string' || !layer.stack.trim()))
       throw new Error('All layers must supply a non-empty stack ID when any stack is named.')
+  }
+}
+
+/** Unchanged rows were validated before the splice; include the successor key boundary. */
+export function validateStackUpdate(
+  data: TableView,
+  options: StackLayoutOptions,
+  from: number,
+  to: number,
+) {
+  validateStackInput(data, options, from, Math.min(data.length, to + 1))
+  for (let start = from; start < to; start += blockSize) {
+    const offset = start
+    computeStackBlock(
+      {
+        columns: data.columns,
+        length: Math.min(blockSize, to - offset),
+        kind: (name) => data.kind(name),
+        valueAt: (name, row) => data.valueAt(name, offset + row),
+        sampleId: (row) => data.sampleId(offset + row),
+      },
+      options,
+      undefined,
+      0,
+      0,
+      offset,
+    )
   }
 }
 

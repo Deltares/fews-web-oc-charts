@@ -2275,7 +2275,7 @@ no static baselines need updating for this assessment.
 | Shared clock                            | No v5 shared clock API or clock consumer is present in the production core.                                                                                                                                                                                                           | Add a shared current-time signal with explicit ownership/cleanup and deterministic test control. Keep current-time mark/plugin rendering in Phase 6; do not port domain plugins as part of this assessment.                                                                                                                                     |
 | Follow mode                             | `timeScale()` has no `follow` option or follow-state controls. Zoom/pan/reset operate on ordinary domains. The spike demo follows by manually setting its own domain.                                                                                                                 | Implement the window/lead contract, new-data advancement, suspension on user zoom/pan and resumption on reset. Shared consumers must observe one follow state/domain; distinguish user gestures from API/autoscale writes using existing attribution.                                                                                           |
 | Series append/retention                 | `createSeries()`/`fromObjects()` support append, prepend, upsert, replace, clear, `maxPoints` and `maxAge`; appends use circular storage. `SeriesChange` reports operation, resulting invalidation indexes, replacement count and retention exclusions. A 128-sample-block x/y extent index serves unwindowed and viewport-filtered x/y extents. Simple line-only data-backed series append to the existing SVG path without reprojecting retained samples. Dense cartesian line-only series use a bounded, versioned viewport LOD cache preserving per-pixel extrema and gaps. | Complex line geometry (areas/markers) and geometry for retained/replaced data still rebuild. Add incremental processing for aligned tables and stacks before claiming general live append performance.                                                                                                                                                                                                                                                                                                                                 |
-| Aligned tables and stacks               | Table mutations validate and publish all columns atomically, preserve surviving sample IDs and apply retention. Aligned circular buffers avoid survivor relocation except at capacity growth. Stack layouts share immutable 128-row endpoint blocks across append, prepend and upsert, including count/age retention. Appends copy at most 127 tail rows; prepend/upsert recompute inserted rows and intersected boundary blocks. Cache remains limited to 8 entries/32 MiB. | Non-append table ingestion and candidate validation still do full work. Replace/clear and missed layout versions fully recompute endpoints. Block descriptors are rebuilt per snapshot; categorical key validation scans all keys. Add incremental candidate validation and measured live cache/memory bounds; bounded typed-buffer bytes alone are not a measured browser-memory plateau. |
+| Aligned tables and stacks               | Table mutations validate and publish all columns atomically, preserve surviving sample IDs and apply retention. Aligned circular buffers avoid survivor relocation except at capacity growth. Stack layouts share immutable 128-row endpoint blocks across append, prepend and upsert, including retention. Candidate validation reads only inserted/replaced stack values, plus numeric key and interval boundaries. Cache remains limited to 8 entries/32 MiB. | Non-append table ingestion still materializes full columns. Replace/clear and missed layout versions fully recompute endpoints. Block descriptors are rebuilt per snapshot; categorical key validation scans all keys. Add measured live cache/memory bounds; bounded typed-buffer bytes alone are not a measured browser-memory plateau. |
 | Back-pressure and visibility            | The shared frame scheduler merges invalidations, and series-mark tests assert one geometry write for coalesced mutations with unrelated marks unchanged. A module-level ResizeObserver exists.                                                                                        | No `plot.pause()`/`resume()` or production IntersectionObserver exists. Add a shared visibility observer and per-plot render suspension; retain pending dirty work, draw the latest state on resume and release registrations on destroy. Frame coalescing is not producer throttling and does not make synchronous store mutation incremental. |
 | Live example and end-to-end acceptance  | `examples/v5-spike-live/` uses `src/spike/` stores, scheduler and SVG renderer, with manual follow and a timer. It is useful spike evidence, not acceptance of `createPlot()` or production stores.                                                                                   | Add a production live-stream example using public v5 APIs, shared scales and bounded series/table retention, plus deterministic behavioral and resource checks. `connect()` and transformed `linkScales()` remain optional helpers from §3.9/§3.10, not prerequisites for the core work.                                                        |
 
@@ -2567,9 +2567,36 @@ eviction, atomic overflow rejection and replacement/clear fallbacks. Focused
 table/stack/series suites pass (55 tests), and the library build passes. Browser acceptance
 for this checkpoint is confirmed by the user's local Chromium run: bar, stacked-area
 and histogram suites all pass (3 files, 28 tests).
-Non-append table ingestion, complete candidate validation (including intervals), and key
-validation still do full work. Incremental candidate validation and measured live-memory
-acceptance remain open; endpoint reuse alone is not a fully incremental mutation path.
+At that checkpoint, non-append ingestion and candidate validation still performed full
+work; the following checkpoint addresses mark-level candidate validation.
+
+#### Incremental candidate validation checkpoint
+
+Table validators now receive an immutable half-open candidate splice range for prepend
+and upsert, before retention. Append keeps its existing tail hint. Bar and stacked-area
+validation share `validateStackUpdate()`: only inserted/replaced value rows are read
+and their gaps/totals calculated, in chunks of at most 128 rows. Validation does not
+allocate or copy old endpoint prefixes and does not require constructing the previous
+cached layout. Numeric keys check the inserted range and both neighbors; deletion
+checks the newly adjacent boundary. Categorical keys still scan the whole candidate to
+reject duplicates against any surviving key.
+
+Bar intervals similarly check the inserted range, preceding end and first succeeding
+interval. All incoming rows are validated before retention, including rows that will be
+discarded. Replace and option changes retain complete validation. No version, sample ID
+or canonical buffer is published until all consumers accept the candidate.
+
+Guarded-view tests measure exactly six value reads per changed row for a three-layer
+stack and bound numeric key reads by changed length plus three, including empty deletion
+and end-of-table ranges. Integration tests exercise both interval boundaries, invalid
+intervals, bar/area overflow before retention, categorical duplicates and atomic rejection.
+Focused table/stack/series suites pass (63 tests), and the library build passes.
+Browser acceptance is confirmed by the user's local Chromium run: bar, stacked-area
+and histogram suites all pass (3 files, 28 tests).
+
+Non-append table merging/copying and store-level input checks still visit full columns.
+Categorical key scans, block descriptor rebuilding, mutation-aware series LOD reuse and
+measured live-memory acceptance remain open; this is not a fully incremental live path.
 
 ## 8. Additional improvements to consider
 

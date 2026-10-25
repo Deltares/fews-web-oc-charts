@@ -43,6 +43,12 @@ export interface TableStore extends TableView {
 }
 
 type Column = { values: Float64Array; dictionary?: readonly string[] }
+/** Half-open inserted range in the candidate, before retention; empty for deletion. */
+export interface TableSplice {
+  readonly from: number
+  readonly to: number
+}
+type TableValidator = (view: TableView, appendFrom?: number, splice?: TableSplice) => void
 const stores = new WeakSet<object>()
 const diagnostics = new WeakMap<
   TableStore,
@@ -54,16 +60,10 @@ export function tableStorageDiagnostics(store: TableStore) {
   if (!read) throw new TypeError('Expected a table store.')
   return read()
 }
-const validators = new WeakMap<
-  TableStore,
-  Set<WeakRef<(view: TableView, appendFrom?: number) => void>>
->()
+const validators = new WeakMap<TableStore, Set<WeakRef<TableValidator>>>()
 export const isTableStore = (value: object): value is TableStore => stores.has(value)
 
-export function validateTableUpdates(
-  store: TableStore,
-  validate: (view: TableView, appendFrom?: number) => void,
-) {
+export function validateTableUpdates(store: TableStore, validate: TableValidator) {
   const entries = validators.get(store)
   if (!entries) throw new TypeError('Expected a table store.')
   const entry = new WeakRef(validate)
@@ -98,7 +98,7 @@ export function createTable(initial: TableInput, options: TableOptions = {}): Ta
   let currentView: TableView
   const version = reactive.signal(0)
   let change: TableChange | undefined
-  const checks = new Set<WeakRef<(view: TableView, appendFrom?: number) => void>>()
+  const checks = new Set<WeakRef<TableValidator>>()
 
   function copy(input: TableInput): Map<string, Column> {
     if (
@@ -206,7 +206,11 @@ export function createTable(initial: TableInput, options: TableOptions = {}): Ta
     })
   }
 
-  function commit(candidate: Map<string, Column>, sampleIds: readonly number[]) {
+  function commit(
+    candidate: Map<string, Column>,
+    sampleIds: readonly number[],
+    splice?: TableSplice,
+  ) {
     let start = Math.max(0, sampleIds.length - maxPoints)
     const key = candidate.get(x)!
     if (maxAge !== undefined && sampleIds.length) {
@@ -216,7 +220,7 @@ export function createTable(initial: TableInput, options: TableOptions = {}): Ta
     const candidateView = view(candidate, sampleIds)
     for (const entry of checks) {
       const validate = entry.deref()
-      if (validate) validate(candidateView)
+      if (validate) validate(candidateView, undefined, splice)
       else checks.delete(entry)
     }
     if (start) {
@@ -399,7 +403,13 @@ export function createTable(initial: TableInput, options: TableOptions = {}): Ta
       ...Array.from({ length: count }, (_, row) => nextId + row),
       ...Array.from({ length: length - after }, (_, row) => current.sampleId(after + row)),
     ]
-    const start = commit(copy(merged), sampleIds)
+    const start = commit(
+      copy(merged),
+      sampleIds,
+      bounds || mode === 'prepend'
+        ? Object.freeze({ from: before, to: before + count })
+        : undefined,
+    )
     const operation = bounds ? 'upsert' : (operationOverride ?? mode)
     const replaced = bounds ? after - before : mode === 'replace' ? previousLength : 0
     const evicted = start

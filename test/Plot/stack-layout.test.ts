@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import { bar, createTable } from '../../src/index.js'
-import { computeStackLayout, stackLayout } from '../../src/layout/stack.js'
+import { computeStackLayout, stackLayout, validateStackUpdate } from '../../src/layout/stack.js'
 import { barEndpoints } from '../../src/plot/marks/bar/bar.js'
 import { barExtent } from '../../src/plot/marks/bar/bar-geometry.js'
 
@@ -15,6 +15,54 @@ describe('shared columnar stack layout', () => {
     layout.layers.map((layer) => [layer.lowerAt(row), layer.upperAt(row)])
   const mark = (data: ReturnType<typeof createTable>, layout: 'grouped' | 'stacked' = 'stacked') =>
     bar(data, { ...options, layout, scales: { x: 't', y: 'q' }, width: 10 })
+
+  test.each([
+    [0, 1],
+    [1024, 1027],
+    [2048, 2048],
+    [2050, 2050],
+  ])(
+    'candidate validation reads only changed values and numeric boundaries (%i, %i)',
+    (from, to) => {
+      const values = Array.from({ length: 2050 }, (_, row) => row)
+      const data = createTable({ t: values, a: values, b: values, c: values })
+      let keyReads = 0
+      let valueReads = 0
+      validateStackUpdate(
+        {
+          columns: data.columns,
+          length: data.length,
+          kind: (name) => data.kind(name),
+          sampleId: (row) => data.sampleId(row),
+          valueAt(name, row) {
+            if (name === 't') {
+              expect(row).toBeGreaterThanOrEqual(Math.max(0, from - 1))
+              expect(row).toBeLessThanOrEqual(to)
+              keyReads += 1
+            } else {
+              if (row < from || row >= to) throw new Error('Read unchanged value.')
+              valueReads += 1
+            }
+            return data.valueAt(name, row)
+          },
+        },
+        options,
+        from,
+        to,
+      )
+      expect(valueReads).toBe((to - from) * 6)
+      expect(keyReads).toBeLessThanOrEqual(to - from + 3)
+    },
+  )
+
+  test('candidate key validation checks successor boundaries and all categorical keys', () => {
+    const numeric = createTable({ t: [0, 1, 1, 3], a: [1, 1, 1, 1] })
+    const single = { ...options, layers: [layers[0]] }
+    expect(() => validateStackUpdate(numeric, single, 1, 2)).toThrow(/Duplicate.*row 2/)
+    expect(() => validateStackUpdate(numeric, single, 2, 2)).toThrow(/Duplicate.*row 2/)
+    const categorical = createTable({ t: ['a', 'b', 'c', 'a'], a: [1, 1, 1, 1] })
+    expect(() => validateStackUpdate(categorical, single, 0, 1)).toThrow(/Duplicate.*row 3/)
+  })
 
   test.each([
     {
