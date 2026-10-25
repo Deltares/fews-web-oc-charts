@@ -15,8 +15,22 @@ export interface SeriesStoreOptions {
 
 export interface SeriesChange {
   readonly version: number
+  /** Inclusive data-domain range affected by the mutation. */
   readonly from: number
   readonly to: number
+  /** The mutation that produced this snapshot. */
+  readonly operation: 'append' | 'prepend' | 'upsert' | 'replace' | 'clear'
+  readonly previousLength: number
+  readonly length: number
+  /** Number of rows supplied by the caller, before retention. */
+  readonly inputLength: number
+  /** Half-open logical index range invalidated in the resulting store. */
+  readonly invalidatedFrom: number
+  readonly invalidatedTo: number
+  /** Previous rows explicitly replaced or cleared, excluding retention. */
+  readonly replaced: number
+  /** Rows excluded by capacity or age retention, with their inclusive x extent. */
+  readonly evicted: Readonly<{ count: number; from: number; to: number }> | undefined
 }
 
 export interface SeriesStore<Rows = SeriesInput> {
@@ -24,6 +38,10 @@ export interface SeriesStore<Rows = SeriesInput> {
   readonly capacity: number
   readonly version: number
   readonly change: SeriesChange | undefined
+  extent(
+    axis: 'x' | 'y',
+    xWindow?: readonly [number, number],
+  ): readonly [number, number] | undefined
   xAt(index: number): number
   yAt(index: number): number
   append(rows: Rows): void
@@ -98,6 +116,11 @@ function createStore<Rows>(
   let count = 0
   const version = reactive.signal(0)
   let change: SeriesChange | undefined
+  const extentBlockSize = 128
+  let extentBlocks: Array<
+    Readonly<{ xMin: number; xMax: number; yMin: number; yMax: number }> | undefined
+  > = []
+  let extentIndexDirty = true
 
   function slot(index: number) {
     if (!Number.isInteger(index) || index < 0 || index >= count) {
@@ -120,32 +143,151 @@ function createStore<Rows>(
     x = nextX
     y = nextY
     head = 0
-  }
-
-  function retain() {
-    if (!count || maxAge === undefined) return
-    const cutoff = xAt(count - 1) - maxAge
-    while (count && xAt(0) < cutoff) {
-      head = (head + 1) % x.length
-      count -= 1
-    }
+    extentIndexDirty = true
   }
 
   function push(columns: SeriesInput) {
+    let evictedCount = 0
+    let evictedFrom = Infinity
+    let evictedTo = -Infinity
+    const touchedBlocks = new Set<number>()
+    const evict = (value: number) => {
+      evictedCount += 1
+      evictedFrom = Math.min(evictedFrom, value)
+      evictedTo = Math.max(evictedTo, value)
+    }
     const start = Math.max(0, columns.x.length - maxPoints)
+    for (let index = 0; index < start; index += 1) evict(Number(columns.x[index]))
     reserve(Math.min(maxPoints, count + columns.x.length - start))
     for (let index = start; index < columns.x.length; index += 1) {
+      if (count === x.length) {
+        evict(xAt(0))
+        touchedBlocks.add(Math.floor(head / extentBlockSize))
+        head = (head + 1) % x.length
+        count -= 1
+      }
       const physical = (head + count) % x.length
       x[physical] = Number(columns.x[index])
       y[physical] = columns.y[index]
-      if (count === x.length) head = (head + 1) % x.length
-      else count += 1
+      count += 1
+      touchedBlocks.add(Math.floor(physical / extentBlockSize))
     }
-    retain()
+    if (count && maxAge !== undefined) {
+      const cutoff = xAt(count - 1) - maxAge
+      while (count && xAt(0) < cutoff) {
+        evict(xAt(0))
+        touchedBlocks.add(Math.floor(head / extentBlockSize))
+        head = (head + 1) % x.length
+        count -= 1
+      }
+    }
+    if (extentIndexDirty) {
+      extentBlocks = Array.from({ length: Math.ceil(x.length / extentBlockSize) }, (_, index) =>
+        refreshExtentBlock(index),
+      )
+      extentIndexDirty = false
+    } else {
+      for (const block of touchedBlocks) extentBlocks[block] = refreshExtentBlock(block)
+    }
+    return evictedCount
+      ? Object.freeze({ count: evictedCount, from: evictedFrom, to: evictedTo })
+      : undefined
   }
 
-  function publish(from: number, to: number) {
-    change = Object.freeze({ version: version.get() + 1, from, to })
+  function refreshExtentBlock(block: number) {
+    const start = block * extentBlockSize
+    const end = Math.min(x.length, start + extentBlockSize)
+    let xMin = Infinity
+    let xMax = -Infinity
+    let yMin = Infinity
+    let yMax = -Infinity
+    for (let physical = start; physical < end; physical += 1) {
+      const logical = (physical - head + x.length) % x.length
+      if (logical >= count) continue
+      const value = y[physical]
+      if (!Number.isFinite(value)) continue
+      xMin = Math.min(xMin, x[physical])
+      xMax = Math.max(xMax, x[physical])
+      yMin = Math.min(yMin, value)
+      yMax = Math.max(yMax, value)
+    }
+    return xMin <= xMax ? Object.freeze({ xMin, xMax, yMin, yMax }) : undefined
+  }
+
+  function extent(
+    axis: 'x' | 'y',
+    xWindow?: readonly [number, number],
+  ): readonly [number, number] | undefined {
+    if (extentIndexDirty) {
+      extentBlocks = Array.from({ length: Math.ceil(x.length / extentBlockSize) }, (_, index) =>
+        refreshExtentBlock(index),
+      )
+      extentIndexDirty = false
+    }
+    let first = 0
+    let end = count
+    if (xWindow) {
+      const low = Math.min(xWindow[0], xWindow[1])
+      const high = Math.max(xWindow[0], xWindow[1])
+      let left = 0
+      let right = count
+      while (left < right) {
+        const middle = Math.floor((left + right) / 2)
+        if (xAt(middle) < low) left = middle + 1
+        else right = middle
+      }
+      first = left
+      left = first
+      right = count
+      while (left < right) {
+        const middle = Math.floor((left + right) / 2)
+        if (xAt(middle) <= high) left = middle + 1
+        else right = middle
+      }
+      end = left
+    }
+    let low = Infinity
+    let high = -Infinity
+    const addBlock = (physicalBlock: number) => {
+      const block = extentBlocks[physicalBlock]
+      if (!block) return
+      low = Math.min(low, axis === 'x' ? block.xMin : block.yMin)
+      high = Math.max(high, axis === 'x' ? block.xMax : block.yMax)
+    }
+    const addValue = (logical: number) => {
+      const physical = slot(logical)
+      if (!Number.isFinite(y[physical])) return
+      const value = axis === 'x' ? x[physical] : y[physical]
+      low = Math.min(low, value)
+      high = Math.max(high, value)
+    }
+    while (first < end) {
+      const physical = slot(first)
+      const available = Math.min(end - first, x.length - physical)
+      let offset = 0
+      while (offset < available && (physical + offset) % extentBlockSize !== 0) {
+        addValue(first + offset)
+        offset += 1
+      }
+      while (offset + extentBlockSize <= available) {
+        addBlock(Math.floor((physical + offset) / extentBlockSize))
+        offset += extentBlockSize
+      }
+      while (offset < available) {
+        addValue(first + offset)
+        offset += 1
+      }
+      first += available
+    }
+    return low <= high ? Object.freeze([low, high]) : undefined
+  }
+
+  function publish(
+    from: number,
+    to: number,
+    details: Omit<SeriesChange, 'version' | 'from' | 'to'>,
+  ) {
+    change = Object.freeze({ version: version.get() + 1, from, to, ...details })
     version.update((value) => value + 1)
   }
 
@@ -156,6 +298,7 @@ function createStore<Rows>(
   ) {
     const columns = convert(rows)
     validateColumns(columns, precision)
+    const previousLength = count
     if (mode === 'append' && count && columns.x.length && Number(columns.x[0]) < xAt(count - 1)) {
       throw new RangeError('Appended x values must not precede the current last x.')
     }
@@ -193,8 +336,10 @@ function createStore<Rows>(
       columns.x.length ? Number(columns.x[columns.x.length - 1]) : -Infinity,
       bounds?.to ?? -Infinity,
     )
+    let evicted: SeriesChange['evicted']
+    let replaced = 0
     if (mode === 'append' && !bounds) {
-      push(columns)
+      evicted = push(columns)
     } else {
       let before = 0
       let after = count
@@ -202,8 +347,11 @@ function createStore<Rows>(
         while (before < count && xAt(before) < bounds.from) before += 1
         after = before
         while (after < count && xAt(after) <= bounds.to) after += 1
+        replaced = after - before
       } else if (mode === 'prepend') {
         after = 0
+      } else {
+        replaced = count
       }
       const length = before + columns.x.length + count - after
       const nextX = new Float64Array(length)
@@ -224,9 +372,21 @@ function createStore<Rows>(
       reserve(Math.min(maxPoints, length))
       head = 0
       count = 0
-      push({ x: nextX, y: nextY })
+      extentIndexDirty = true
+      evicted = push({ x: nextX, y: nextY })
     }
-    publish(from, to)
+    const operation = bounds ? 'upsert' : mode
+    const invalidatedFrom = operation === 'append' && evicted === undefined ? previousLength : 0
+    publish(from, to, {
+      operation,
+      previousLength,
+      length: count,
+      inputLength: columns.x.length,
+      invalidatedFrom,
+      invalidatedTo: count,
+      replaced,
+      evicted,
+    })
   }
 
   push(input)
@@ -244,6 +404,7 @@ function createStore<Rows>(
       version.get()
       return change
     },
+    extent,
     xAt,
     yAt,
     append: (rows: Rows) => mutate(rows, 'append'),
@@ -255,9 +416,20 @@ function createStore<Rows>(
       if (!count) return
       const from = xAt(0)
       const to = xAt(count - 1)
+      const previousLength = count
       head = 0
       count = 0
-      publish(from, to)
+      extentIndexDirty = true
+      publish(from, to, {
+        operation: 'clear',
+        previousLength,
+        length: 0,
+        inputLength: 0,
+        invalidatedFrom: 0,
+        invalidatedTo: 0,
+        replaced: previousLength,
+        evicted: undefined,
+      })
     },
   })
   stores.add(store)

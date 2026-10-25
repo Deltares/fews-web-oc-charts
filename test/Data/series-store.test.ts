@@ -49,6 +49,16 @@ describe('columnar series stores', () => {
     expect(() => store.append({ x: [2], y: [1] })).toThrow(/last x/)
     expect(() => store.prepend({ x: [2], y: [1] })).toThrow(/first x/)
     expect(store.version).toBe(2)
+    expect(store.change).toMatchObject({
+      operation: 'prepend',
+      previousLength: 4,
+      length: 6,
+      inputLength: 2,
+      invalidatedFrom: 0,
+      invalidatedTo: 6,
+      replaced: 0,
+      evicted: undefined,
+    })
   })
 
   test('upsert replaces closed ranges, including every duplicate, and rolls back invalid rows', () => {
@@ -68,13 +78,35 @@ describe('columnar series stores', () => {
     }
     store.upsert({ from: 2, to: 3, rows: { x: [], y: [] } })
     expect(columns(store)).toEqual({ x: [1, 4], y: [1, 6] })
-    expect(store.change).toEqual({ version: 2, from: 1, to: 4 })
+    expect(store.change).toMatchObject({
+      version: 2,
+      from: 1,
+      to: 4,
+      operation: 'upsert',
+      previousLength: 5,
+      length: 2,
+      inputLength: 0,
+      invalidatedFrom: 0,
+      invalidatedTo: 2,
+      replaced: 3,
+      evicted: undefined,
+    })
   })
 
   test('retains newest points across wrapped appends, prepends, replacements and upserts', () => {
     const store = createSeries({ x: [0, 1, 2], y: [0, 1, 2] }, { capacity: 2, maxPoints: 3 })
     for (let index = 3; index < 10; index += 1) store.append({ x: [index], y: [index] })
     expect(columns(store).x).toEqual([7, 8, 9])
+    expect(store.change).toMatchObject({
+      operation: 'append',
+      previousLength: 3,
+      length: 3,
+      inputLength: 1,
+      invalidatedFrom: 0,
+      invalidatedTo: 3,
+      replaced: 0,
+      evicted: { count: 1, from: 6, to: 6 },
+    })
     expect(store.capacity).toBe(3)
     store.prepend({ x: [6], y: [6] })
     expect(columns(store).x).toEqual([7, 8, 9])
@@ -82,8 +114,22 @@ describe('columnar series stores', () => {
     expect(columns(store)).toEqual({ x: [8, 8, 9], y: [80, 81, 90] })
     store.replace({ x: [1, 2, 3, 4], y: [1, 2, 3, 4] })
     expect(columns(store).x).toEqual([2, 3, 4])
+    expect(store.change).toMatchObject({
+      operation: 'replace',
+      inputLength: 4,
+      length: 3,
+      evicted: { count: 1, from: 1, to: 1 },
+    })
     store.clear()
     expect(store.length).toBe(0)
+    expect(store.change).toMatchObject({
+      operation: 'clear',
+      previousLength: 3,
+      length: 0,
+      invalidatedFrom: 0,
+      invalidatedTo: 0,
+      replaced: 3,
+    })
     const version = store.version
     store.clear()
     store.append({ x: [], y: [] })
@@ -103,6 +149,56 @@ describe('columnar series stores', () => {
     expect(columns(store).x).toEqual([4, 4, 5])
     const exact = createSeries({ x: [1, 2, 2], y: [1, 2, 3] }, { maxAge: 0 })
     expect(columns(exact).x).toEqual([2, 2])
+  })
+
+  test('keeps indexed extents correct across missing values, append retention, upsert, replace and clear', () => {
+    const store = createSeries({ x: [0, 1, 2], y: [4, NaN, -2] }, { maxPoints: 3 })
+    expect(store.extent('x')).toEqual([0, 2])
+    expect(store.extent('y')).toEqual([-2, 4])
+
+    store.append({ x: [3], y: [6] })
+    expect(store.extent('x')).toEqual([2, 3])
+    expect(store.extent('y')).toEqual([-2, 6])
+
+    store.upsert({ from: 2, to: 3, rows: { x: [2, 3], y: [8, NaN] } })
+    expect(store.extent('x')).toEqual([2, 2])
+    expect(store.extent('y')).toEqual([8, 8])
+
+    store.replace({ x: [5], y: [NaN] })
+    expect(store.extent('x')).toBeUndefined()
+    expect(store.extent('y')).toBeUndefined()
+    store.clear()
+    expect(store.extent('x')).toBeUndefined()
+  })
+
+  test('queries indexed y extents within ascending, reversed and wrapped x windows', () => {
+    const x = Array.from({ length: 400 }, (_, index) => index)
+    const y = x.map((value) => (value % 17 === 0 ? NaN : (value % 31) - 15))
+    const store = createSeries({ x, y }, { maxPoints: 300 })
+    store.append({
+      x: Array.from({ length: 200 }, (_, index) => index + 400),
+      y: Array.from({ length: 200 }, (_, index) => (index % 19 === 0 ? NaN : 100 - index)),
+    })
+
+    for (const window of [
+      [350, 430],
+      [430, 350],
+      [590, 599],
+      [0, 2],
+    ] as const) {
+      const low = Math.min(...window)
+      const high = Math.max(...window)
+      const values = Array.from({ length: store.length }, (_, index) => ({
+        x: store.xAt(index),
+        y: store.yAt(index),
+      }))
+        .filter(
+          ({ x: value, y: result }) => value >= low && value <= high && Number.isFinite(result),
+        )
+        .map(({ y: value }) => value)
+      const expected = values.length ? [Math.min(...values), Math.max(...values)] : undefined
+      expect(store.extent('y', window)).toEqual(expected)
+    }
   })
 
   test('float32 precision is opt-in and rejects overflow before mutation', () => {
