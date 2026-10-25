@@ -3,7 +3,7 @@ import '@shared/shared.css'
 import '../marker/marker.css'
 import '@shared/v5-parity.css'
 import '@shared/theme-button'
-import { axis, line, linearScale, timeScale } from '@lib'
+import { axis, line, linearScale, timeScale, tooltip } from '@lib'
 import { generateExampleTimeSeriesData } from '@shared/data'
 import { parityPlot } from '@shared/v5-parity'
 
@@ -43,5 +43,6 @@ for (const skip of [1, 5]) {
         },
       }),
     ],
+    plugins: [tooltip()],
   })
 }

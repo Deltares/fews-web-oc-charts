@@ -2096,10 +2096,12 @@ interaction coverage.
 
 Add focused browser interaction cases for these behaviors, asserting resulting scale
 domains, selections, hit/tooltip content, visibility and lifecycle cleanup rather than
-relying only on screenshots. Also exercise the supported mark hits on the existing
-`basic-line`, `marker`, `bar` and `matrix` parity routes: line/series samples, bar
+relying only on screenshots. `npm run test:interaction:mark-hits` exercises supported mark hits across the
+`basic-line`, `marker`, `bar` and `matrix` parity routes: line/marker samples, bar
 rectangles/layers and finite heatmap cells (missing heatmap cells must not hit).
-Keep those checks separate from the strict static v4/v5 pixel comparisons.
+The browser checks are separate from strict static v4/v5 pixel comparisons; the
+matrix route's categorical band rendering remains unchanged.
+The mark-hit suite passed in Chromium in the user's local run on 2026-10-25.
 
 Parity is behavioral, not an instruction to reproduce every v4 implementation detail.
 The v5 tooltip remains text-only, so v4 arbitrary HTML formatter output is not a

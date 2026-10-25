@@ -12,6 +12,7 @@ import {
   bandScale,
   linearScale,
   timeScale,
+  tooltip,
   type PlotMark,
 } from '@lib'
 import { generateExampleTimeSeriesData } from '@shared/data'
@@ -78,6 +79,7 @@ for (const mapped of [false, true]) {
       axis('y', { style: 'classic', position: 'left', tickCount: 5 }),
     ],
     marks,
+    plugins: [tooltip()],
   })
 }
 const dates = ['2025-01-01', '2025-01-02']
@@ -114,4 +116,5 @@ parityPlot('chart-container-grouped', {
       text: { format: (value, id) => `${id}: ${value}`, dy: -5, fill: 'black' },
     }),
   ],
+  plugins: [tooltip()],
 })
