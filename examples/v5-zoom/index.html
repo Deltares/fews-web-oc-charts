@@ -9,12 +9,13 @@
     <nav aria-label="Examples">
       <a href="/">All examples</a>
       <a href="../v5-basic-line/">Basic line</a>
+      <a href="../v5-parity-zoom/">v4/v5 zoom parity</a>
     </nav>
     <h1>v5: interactive zoom</h1>
     <p>
       Zoom the chart with the mouse wheel. Choose which scale directions respond and whether Ctrl or
-      Shift is required. Double-click inside the plot to restore the initial domains; the y scale
-      resumes visible-data autoscaling.
+      Shift is required. Double-click inside the plot to reset the selected directions using the
+      chosen policy. Options apply immediately without recreating the plot.
     </p>
     <fieldset class="controls">
       <legend>Zoom interaction</legend>
@@ -38,24 +39,37 @@
           <option value="shift">Shift</option>
         </select>
       </label>
-      <button id="reset" type="button">Reset domains</button>
+      <label for="reset-mode">
+        Double-click reset
+        <select id="reset-mode">
+          <option value="initial">Initial</option>
+          <option value="full">Full data</option>
+          <option value="toggle">Toggle</option>
+        </select>
+      </label>
+      <button id="reset" type="button">Restore initial view and autoscaling</button>
     </fieldset>
     <figure>
       <div id="chart" class="plot-host"></div>
       <figcaption>
         Wheel zoom is anchored at the cursor. The y domain follows visible samples until you zoom
-        that axis; reset to restore autoscaling.
+        that axis. Initial reset restores the selected scales' original configuration; full reset
+        autoscales all their data. Toggle alternates full extent and the previous zoomed domains.
+        The button always restores both initial scales, including visible-data y autoscaling.
       </figcaption>
     </figure>
     <p id="status" class="status" role="status"></p>
+    <h2>Latest events per scale</h2>
+    <p id="event-status" class="status" role="status"></p>
     <h2>Current domains</h2>
     <pre id="snapshot" aria-label="Current scale domains"></pre>
     <h2>Public API</h2>
     <pre><code>const interaction = zoom({ mode: 'x', wheel: 'x' })
 const plot = createPlot(host, { scales: { t, q }, axes, marks, plugins: [interaction] })
 interaction.update({ mode: 'xy', wheel: 'xy' }) // both axes respond to the wheel
-plot.on('domainchange', ({ scale, domain, source }) => {
-  console.log(scale, domain, source) // wheel zoom and resets update the snapshot reactively
+interaction.update({ wheel: 'none', reset: 'toggle' }) // double-click remains enabled
+plot.on('domainchange', ({ scale, domain, source, explicit }) => {
+  console.log(scale, domain, source, explicit) // one event per changed scale
 })
 // Wheel over the plot to zoom; double-click inside the plot to reset.</code></pre>
     <script type="module" src="./v5-zoom.ts"></script>

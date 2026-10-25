@@ -1,24 +1,29 @@
 import '../shared/v5.css'
 import { axis, createPlot, line, linearScale, ModifierKey, timeScale, zoom } from '@lib'
 
-const host = document.querySelector<HTMLElement>('#chart')
-const mode = document.querySelector<HTMLSelectElement>('#mode')
-const wheelEnabled = document.querySelector<HTMLInputElement>('#wheel-enabled')
-const modifier = document.querySelector<HTMLSelectElement>('#modifier')
-const reset = document.querySelector<HTMLButtonElement>('#reset')
-const status = document.querySelector<HTMLElement>('#status')
-const snapshot = document.querySelector<HTMLElement>('#snapshot')
-if (!host || !mode || !wheelEnabled || !modifier || !reset || !status || !snapshot) {
-  throw new Error('The zoom example is missing required elements.')
+function required<T extends HTMLElement>(selector: string): T {
+  const element = document.querySelector<T>(selector)
+  if (!element) throw new Error(`The zoom example is missing "${selector}".`)
+  return element
 }
+
+const host = required('#chart')
+const mode = required<HTMLSelectElement>('#mode')
+const wheelEnabled = required<HTMLInputElement>('#wheel-enabled')
+const modifier = required<HTMLSelectElement>('#modifier')
+const resetMode = required<HTMLSelectElement>('#reset-mode')
+const reset = required<HTMLButtonElement>('#reset')
+const status = required('#status')
+const eventStatus = required('#event-status')
+const snapshot = required('#snapshot')
 
 const hour = 3_600_000
 const start = Date.UTC(2026, 0, 1)
 const end = start + 48 * hour
-const times = Float64Array.from({ length: 49 }, (_, index) => start + index * hour)
+const times = Float64Array.from({ length: 97 }, (_, index) => start + index * hour)
 const values = Float64Array.from(
-  { length: 49 },
-  (_, index) => 44 + 22 * Math.sin(index / 3) + 13 * Math.cos(index / 7),
+  { length: 97 },
+  (_, index) => 44 + 22 * Math.sin(index / 3) + 13 * Math.cos(index / 7) + (index > 48 ? 100 : 0),
 )
 const t = timeScale({ domain: [start, end], timeZone: 'UTC' })
 const q = linearScale({ autoscale: 'visible', defaultDomain: [0, 100] })
@@ -49,19 +54,29 @@ const plot = createPlot(host, {
   plugins: [interaction],
 })
 const events = new AbortController()
+const latestChanges = new Map<string, string>()
 
 function updateStatus() {
   const xDomain = t.domain.get().map((value) => new Date(Number(value)).toISOString())
   const yDomain = q.domain.get()
-  snapshot.textContent = JSON.stringify({ time: xDomain, value: yDomain }, null, 2)
+  snapshot.textContent = JSON.stringify(
+    {
+      time: xDomain,
+      value: yDomain,
+      valueDomain: q.options.get().explicit.domain ? 'manual' : 'visible autoscale',
+    },
+    null,
+    2,
+  )
   const modifierDescription =
     modifier.value === 'none' ? 'No modifier' : `${modifier.value} required`
   const scaleDescription = q.options.get().explicit.domain
     ? 'has a manual domain'
     : 'autoscale is following visible data'
-  status.textContent = !wheelEnabled.checked
-    ? 'Wheel zoom is disabled.'
-    : `${modifierDescription}; wheel zoom affects ${mode.value}. The y scale ${scaleDescription}.`
+  const wheelDescription = wheelEnabled.checked
+    ? `${modifierDescription}; wheel zoom affects ${mode.value}.`
+    : 'Wheel zoom is disabled.'
+  status.textContent = `${wheelDescription} Double-click reset: ${resetMode.value}, affecting ${mode.value}. The y scale ${scaleDescription}.`
 }
 
 function selectedMode(value: string, name: string): 'x' | 'y' | 'xy' {
@@ -84,35 +99,47 @@ function selectedModifier(value: string): ModifierKey {
 
 function updateOptions() {
   const selected = selectedMode(mode.value, 'zoom mode')
+  const policy = resetMode.value
+  if (policy !== 'initial' && policy !== 'full' && policy !== 'toggle') {
+    throw new Error(`Unknown reset policy "${policy}".`)
+  }
   interaction.update({
     mode: selected,
     wheel: wheelEnabled.checked ? selected : 'none',
     modifier: selectedModifier(modifier.value),
+    reset: policy,
   })
   updateStatus()
 }
 
 plot.on(
   'domainchange',
-  () => {
-    const xDomain = t.domain.get().map((value) => new Date(Number(value)).toISOString())
-    snapshot.textContent = JSON.stringify({ time: xDomain, value: q.domain.get() }, null, 2)
+  ({ scale, source, explicit }) => {
+    latestChanges.set(
+      scale,
+      `domainchange: ${scale}; source: ${source}; ${explicit ? 'manual domain' : 'autoscale'}.`,
+    )
+    eventStatus.textContent = [...latestChanges.values()].join(' ')
+    updateStatus()
   },
   { signal: events.signal },
 )
 
-for (const control of [mode, wheelEnabled, modifier]) {
+for (const control of [mode, wheelEnabled, modifier, resetMode]) {
   control.addEventListener('change', updateOptions, events)
 }
 reset.addEventListener(
   'click',
   () => {
+    latestChanges.clear()
     t.domain.set([start, end])
     q.update({ domain: undefined })
+    eventStatus.textContent = 'Initial view restored by the application (API).'
     updateStatus()
   },
   events,
 )
+eventStatus.textContent = 'Waiting for a domainchange event.'
 updateStatus()
 
 function dispose() {
