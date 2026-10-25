@@ -95,6 +95,30 @@ describe('public reactive runtime', () => {
     expect(() => subscribe({ get: () => 1, version: 0 }, () => {})).toThrow(TypeError)
   })
 
+  test('subscribes to a scale domain shared by several consumers', () => {
+    const scale = linearScale({ domain: [0, 100] })
+    const deliveries: [readonly unknown[], readonly unknown[] | undefined][] = []
+
+    expect(reactive.isSignal(scale.domain)).toBe(true)
+    subscribe(scale.domain, (next, previous) => deliveries.push([next, previous]), {
+      immediate: true,
+    })
+    expect(deliveries).toEqual([[[0, 100], undefined]])
+
+    scale.domain.set([10, 110])
+    scale.domain.set([20, 120])
+    flushFrame()
+    scale.update({ domain: [20, 120] })
+    flushFrame()
+    expect(deliveries).toEqual([
+      [[0, 100], undefined],
+      [
+        [20, 120],
+        [0, 100],
+      ],
+    ])
+  })
+
   test('stops subscription if its abort signal fires during immediate delivery', () => {
     const value = reactive.signal(1)
     const controller = new AbortController()

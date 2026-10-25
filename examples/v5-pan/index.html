@@ -33,12 +33,17 @@
           <option value="shift">Shift</option>
         </select>
       </label>
+      <label for="enabled">
+        <input id="enabled" type="checkbox" checked />
+        Pan enabled
+      </label>
       <button id="reset" type="button">Reset domains</button>
     </fieldset>
     <figure>
       <div id="chart" class="plot-host"></div>
       <figcaption>
-        Band scales are not panned. Pan works with continuous Cartesian scales.
+        Band scales are not panned. Pan works with continuous Cartesian scales and the primary mouse
+        button; disabling removes the plugin from the plot.
       </figcaption>
     </figure>
     <p id="status" class="status" role="status"></p>
@@ -47,7 +52,8 @@
     <h2>Public API</h2>
     <pre><code>const interaction = pan({ mode: 'x' })
 const plot = createPlot(host, { scales: { t, q }, axes, marks, plugins: [interaction] })
-interaction.update({ mode: 'xy', modifier: ModifierKey.Ctrl })</code></pre>
+interaction.update({ mode: 'xy', modifier: ModifierKey.Ctrl })
+plot.update({ plugins: [] }) // disable; plugins: [interaction] enables again</code></pre>
     <script type="module" src="./v5-pan.ts"></script>
   </body>
 </html>
