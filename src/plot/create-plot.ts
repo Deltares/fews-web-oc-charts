@@ -417,7 +417,9 @@ function createPlotInternal(
             domain,
             previous,
             explicit,
-            source: sourceOf(binding.scale) ?? (explicit ? 'api' : 'autoscale'),
+            source:
+              sourceOf(binding.scale) ??
+              (binding.scale.following.get() ? 'autoscale' : explicit ? 'api' : 'autoscale'),
           })
           previous = domain
           dispatchPlotEvent('domainchange', detail)

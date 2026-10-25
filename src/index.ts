@@ -207,6 +207,7 @@ export type {
   ScaleBinding,
   ScaleOptions,
   CartesianScaleOptions,
+  TimeScaleOptions,
   AngularScaleOptions,
   RadialScaleOptions,
   ScaleValue,
@@ -214,6 +215,8 @@ export type {
   PixelRange,
   ScaleKind,
   PolarDirection,
+  FollowDuration,
+  TimeFollowOptions,
   AutoscalePolicy,
   AutoscaleContext,
 } from './scales/scale.js'
