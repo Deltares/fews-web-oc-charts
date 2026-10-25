@@ -96,6 +96,14 @@ export function createPluginHost(
       size: shared.size,
       regions: shared.regions,
       pointer: shared.pointer,
+      onPointer(listener) {
+        const stop = shared.onPointer(listener)
+        const release = () => {
+          if (releases.delete(release)) stop()
+        }
+        releases.add(release)
+        return release
+      },
       legend: shared.legend,
       theme: shared.theme,
       useViewport: (element) => shared.useViewport(element),

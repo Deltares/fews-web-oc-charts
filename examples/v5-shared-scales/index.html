@@ -18,7 +18,9 @@
     </p>
     <p class="note">
       Drag either plot to pan, scroll to zoom and double-click to reset. One pan and one zoom handle
-      are installed on both plots; the shared scale handles keep them synchronized.
+      are installed on both plots; the shared scale handles keep them synchronized. Move over either
+      plot to share the crosshair's time and discharge values. Each plot projects those values
+      through its own pixel ranges; leaving hides both guides.
     </p>
     <div class="controls">
       <label for="start-hour">
@@ -71,8 +73,10 @@
 const q = linear({ domain: [0, 100] })
 const panning = pan({ mode: 'x' })
 const zooming = zoom({ mode: 'x', wheel: 'x' })
-const overview = createPlot(elA, { scales: { t, q }, axes: [...], plugins: [panning, zooming] })
-const detail = createPlot(elB, { scales: { t, q }, axes: [...], plugins: [panning, zooming] })
+const pointer = sharedPointer({ by: 'xy' })
+const guides = crosshair({ pointer, labels: { x: 't', y: 'q' } })
+const overview = createPlot(elA, { scales: { t, q }, axes: [...], plugins: [panning, zooming, guides] })
+const detail = createPlot(elB, { scales: { t, q }, axes: [...], plugins: [panning, zooming, guides] })
 
 subscribe(t.domain, domain => console.log('One notification for both plots', domain))
 t.domain.set([nextStart, nextEnd]) // both plots, independent ranges

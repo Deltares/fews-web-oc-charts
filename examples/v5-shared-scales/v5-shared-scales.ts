@@ -3,10 +3,12 @@ import {
   axis,
   batch,
   createPlot,
+  crosshair,
   effect,
   linearScale,
   pan,
   subscribe,
+  sharedPointer,
   timeScale,
   zoom,
   type Plot,
@@ -51,6 +53,8 @@ const t = timeScale({ domain: [start, start + 6 * hour], timeZone: 'UTC' })
 const q = linearScale({ domain: [0, 100] })
 const panning = pan({ mode: 'x' })
 const zooming = zoom({ mode: 'x', wheel: 'x' })
+const pointer = sharedPointer({ by: 'xy' })
+const guides = crosshair({ pointer, labels: { x: 't', y: 'q' } })
 const events = new AbortController()
 const timeLabel = new Intl.DateTimeFormat('en-GB', {
   timeZone: 'UTC',
@@ -73,7 +77,7 @@ function mount(element: HTMLElement, title: string): Plot {
       }),
       axis('q', { position: 'left', label: 'Discharge', unit: 'm3/s', grid: true }),
     ],
-    plugins: [panning, zooming],
+    plugins: [panning, zooming, guides],
   })
 }
 

@@ -328,6 +328,7 @@ function createPlotInternal(
     size,
     regions,
     pointer: pointerHub.pointer,
+    onPointer: (listener) => pointerHub.onPointer(listener),
     legend,
     theme,
     useViewport(viewport) {

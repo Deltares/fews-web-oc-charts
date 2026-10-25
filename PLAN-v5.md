@@ -806,6 +806,25 @@ createPlot(elB, { scales: { t: time, h: linearScale() }, plugins: [crosshair({ p
 - Shared pointers publish domain values keyed by shared scale identity plus source/
   active state; each plot derives its own pixels and inside/clipping state. The pointer
   hub's `{ px, py, inside }` is local and is never copied into another plot as authority.
+- `sharedPointer({ by: 'x' | 'y' | 'xy' })` defaults to x. Install it through
+  `crosshair({ pointer })` on each Cartesian plot; plots may use different local names
+  for the same scale handles. `subscribe(pointer.state, listener)` observes immutable
+  `{ source, active, values }` snapshots, where `source` is an opaque per-installation
+  symbol and `values` is an array of `{ scale, value }` entries. Equal domains on
+  different handles are not a link.
+- The latest local primary-pointer publication owns shared state. Leaving, cancelling,
+  removing the owner's crosshair or destroying its plot clears that state; an older
+  source cannot clear a newer one. Replacing the pointer handle or scale membership
+  releases ownership and waits for new local input instead of republishing stale values.
+  Changing domains, ranges or size reprojects the stored domain values without echoing
+  them. `plot.pointer` and ordinary tooltips remain local.
+- Only matching, in-bounds destination axes render; an x-only shared pointer does not
+  invent a y guide. For multiple matching scales in one direction, the label's scale
+  name (or the snap target if no label is configured) is preferred, falling back to
+  binding order. Destination
+  snapping uses its own mark data and may derive the other guide locally; it never
+  republishes snapped coordinates. xy snapping requires both shared axes. Without a
+  `pointer` option, existing local crosshair behavior is unchanged.
 - Optional `linkScales(a, b, { transform })` for linked but different scales
   (e.g. UTC vs. local, m vs. ft, offset by forecast lead time).
 - Shared `clock` signal for current time across all plots.
@@ -1877,18 +1896,18 @@ Additional acceptance checks for the ownership contract:
 
 ## 7. Phased roadmap
 
-| Phase                         | Content                                                                                                                                                                                                                                                           | Exit criterion                                                                                                                                                                                       |
-| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0. Spike (1–2 wk)             | Own reactive core prototype + scheduler, columnar series, M4 decimation, SVG line renderer; ownership/D3 boundary contract (3.2.1), wrapped-ring and shared-binding probes; `Intl` zone-offset prototype; deterministic visual/performance harness; benchmark vs. v4 | ≥5× gain on pan with 1M points on the same pinned runner/browser and equivalent output; core ownership/memory checks in §6 pass; offsets and documented DST tick semantics pass the time-zone matrix |
-| 1. Core                       | Reactive core hardened (scopes, diagnostics), runtime option update/unset/setConfig contract (3.1.1), `time/` module (luxon replacement), plot container, layout engine, named scales, axes (value/time/band/degrees), coordinate systems, theme tokens, destroy   | Static basic-line/secondary-axis/time-axes examples pass deterministic per-engine visual regression at the §5 threshold, with no unexplained diffs; core option contract tests pass                  |
-| 2. Marks                      | `series` (line+markers+area), band, single/grouped/stacked `bar` with named side-by-side stacks, `stackedArea` with named independent stacks, shared columnar stack layout and stack-safe LOD (3.6.1), histogram, rule, text, heatmap, arrows/direction, progress; SVG first, canvas opt-in | All static examples ported; grouped-bar, stacked-bar, named-stack comparison and stacked-area fixtures pass on SVG/canvas, with exact per-stack layout/extent/gap tests                              |
-| 3. Interaction                | Pointer hub, zoom, pan, brush, crosshair, tooltip, headless legend model and built-in legend renderer; composite-layer hit tests, tooltips and visibility                                                                                                           | mouseover/zoom/panning/brush examples ported; external legend commands work without legend DOM; composite toggles restack/autoscale correctly                                                        |
-| 4. Sync & live                | Shared scale/pointer/selection/clock, follow mode, append/retention, IntersectionObserver pause; incremental aligned-table stack updates; typed domain events via `subscribe()` and `plot.on()` (implemented)                                                    | shared-zoom/shared-panning + new live-stream example; stacked/grouped updates and retention preserve alignment and bounded caches; domain-event implementation complete, remaining sync/live criteria open |
-| 5. Ensembles                  | Ensemble store, quantile cache, members/spread/median rendering, ensemble tooltip/legend                                                                                                                                                                            | 50×10k benchmark meets target                                                                                                                                                                        |
-| 6. Domain plugins             | Warning levels, alert lines, current time, DST indicator (on new `time/`), level select, cross-section select, data field, Beaufort, colour bar, polar wind/current roses                                                                                            | Feature parity checklist complete                                                                                                                                                                     |
-| 7. Web Component              | `<fews-chart>` with `el.config`, plot-level attributes, `sync-group` registry, events, Shadow DOM theming, typings, slotted/external legend facade and symbol helper                                                                                                 | All examples also runnable via `<fews-chart>`; works in Vue app without adapter; config/attribute-removal and custom-legend parity tests pass                                                       |
-| 8. Adoption                   | Vue component/composables and scoped/custom legends (3.15), docs site from examples, migration guide, FEWS Web OC integration behind a flag; `5.0.0-beta`                                                                                                          | FEWS Web OC runs on v5 behind a flag; Vue custom-legend and lifecycle acceptance tests pass                                                                                                           |
-| 9. Compatibility layer (last) | Full v4 public API in `./compat` (see 3.14); deprecation warnings; migration guide per class                                                                                                                                                                      | Complete v4 example + test suite runs unchanged against `compat` (import path swap only); `5.0.0` release                                                                                             |
+| Phase                         | Content                                                                                                                                                                                                                                                                                     | Exit criterion                                                                                                                                                                                                                     |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0. Spike (1–2 wk)             | Own reactive core prototype + scheduler, columnar series, M4 decimation, SVG line renderer; ownership/D3 boundary contract (3.2.1), wrapped-ring and shared-binding probes; `Intl` zone-offset prototype; deterministic visual/performance harness; benchmark vs. v4                        | ≥5× gain on pan with 1M points on the same pinned runner/browser and equivalent output; core ownership/memory checks in §6 pass; offsets and documented DST tick semantics pass the time-zone matrix                               |
+| 1. Core                       | Reactive core hardened (scopes, diagnostics), runtime option update/unset/setConfig contract (3.1.1), `time/` module (luxon replacement), plot container, layout engine, named scales, axes (value/time/band/degrees), coordinate systems, theme tokens, destroy                            | Static basic-line/secondary-axis/time-axes examples pass deterministic per-engine visual regression at the §5 threshold, with no unexplained diffs; core option contract tests pass                                                |
+| 2. Marks                      | `series` (line+markers+area), band, single/grouped/stacked `bar` with named side-by-side stacks, `stackedArea` with named independent stacks, shared columnar stack layout and stack-safe LOD (3.6.1), histogram, rule, text, heatmap, arrows/direction, progress; SVG first, canvas opt-in | All static examples ported; grouped-bar, stacked-bar, named-stack comparison and stacked-area fixtures pass on SVG/canvas, with exact per-stack layout/extent/gap tests                                                            |
+| 3. Interaction                | Pointer hub, zoom, pan, brush, crosshair, tooltip, headless legend model and built-in legend renderer; composite-layer hit tests, tooltips and visibility                                                                                                                                   | mouseover/zoom/panning/brush examples ported; external legend commands work without legend DOM; composite toggles restack/autoscale correctly                                                                                      |
+| 4. Sync & live                | Shared scale/pointer/selection/clock, follow mode, append/retention, IntersectionObserver pause; incremental aligned-table stack updates; typed domain events via `subscribe()` and `plot.on()` (implemented)                                                                               | Partial: shared-domain zoom/pan and mutation foundations exist; shared pointer/selection/clock, follow, visibility pause, incremental live processing and production live-stream acceptance remain open (see gap assessment below) |
+| 5. Ensembles                  | Ensemble store, quantile cache, members/spread/median rendering, ensemble tooltip/legend                                                                                                                                                                                                    | 50×10k benchmark meets target                                                                                                                                                                                                      |
+| 6. Domain plugins             | Warning levels, alert lines, current time, DST indicator (on new `time/`), level select, cross-section select, data field, Beaufort, colour bar, polar wind/current roses                                                                                                                   | Feature parity checklist complete                                                                                                                                                                                                  |
+| 7. Web Component              | `<fews-chart>` with `el.config`, plot-level attributes, `sync-group` registry, events, Shadow DOM theming, typings, slotted/external legend facade and symbol helper                                                                                                                        | All examples also runnable via `<fews-chart>`; works in Vue app without adapter; config/attribute-removal and custom-legend parity tests pass                                                                                      |
+| 8. Adoption                   | Vue component/composables and scoped/custom legends (3.15), docs site from examples, migration guide, FEWS Web OC integration behind a flag; `5.0.0-beta`                                                                                                                                   | FEWS Web OC runs on v5 behind a flag; Vue custom-legend and lifecycle acceptance tests pass                                                                                                                                        |
+| 9. Compatibility layer (last) | Full v4 public API in `./compat` (see 3.14); deprecation warnings; migration guide per class                                                                                                                                                                                                | Complete v4 example + test suite runs unchanged against `compat` (import path swap only); `5.0.0` release                                                                                                                          |
 
 ### Phase 2 static visual parity checkpoint
 
@@ -2094,13 +2113,13 @@ checkpoint. Reuse the native v5 APIs and examples below as the starting point fo
 behavioral parity fixtures; do not treat the static screenshot comparisons above as
 interaction coverage.
 
-| v4 example(s)                              | Native v5 starting point                         | Parity work to cover                                                                                         |
-| ------------------------------------------ | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `mouseover`                                | `examples/v5-parity-mouseover/`, `examples/v5-tooltip/`, `examples/v5-crosshair/` | `npm run test:interaction:mouseover` asserts all-series and selected-mark inspection, numeric/time formatting, extent-aware value formatting, snapped x/y samples, and vertical/horizontal guides. |
-| `brush`                                    | `examples/v5-brush/`, `examples/v5-parity-brush/` | `npm run test:interaction:brush` asserts Shift-drag auto/x/y/xy selection, brush-to-domain updates, selection-only and modifier-free modes, overview move/resize/reselect navigation and two-way domain synchronization with pan, wheel zoom and reset. v4 has no main-chart brush (Shift-drag pans), so only v5 is asserted. |
-| `wheel-zoom`, `zoom-options`, `zoom-events` | `examples/v5-zoom/`, `examples/v5-parity-zoom/` | Native and side-by-side X/Y/XY wheel modes, Ctrl/Shift modifiers, disabled wheel, runtime options, initial/full/toggle resets and live domain/event readouts. `npm run test:interaction:zoom` covers both routes, including status updates and option changes without plot recreation. `test/Plot/zoom.test.ts` asserts event handles, previous/current domains, explicit state, immutable payload snapshots, lifecycle cleanup, reset direction and restored autoscaling. Library and example builds pass, and both browser suites pass in Chromium. Differences in wheel increments, reset scope, toggle semantics (including v4 Date identity comparison) and event granularity are documented on the parity page. |
-| `panning`, `shared-panning`, `shared-zoom`  | `examples/v5-pan/`, `examples/v5-shared-scales/`  | `npm run test:interaction:pan` asserts x/y/xy direction (including touch-action), none/Shift/Ctrl modifiers, primary-button-only dragging, enable/disable by removing and reinstalling the plugin, live domain updates, and shared pan/zoom handles on two plots synchronizing through shared scales with independent pixel ranges, one `subscribe(t.domain)` notification per wheel step, double-click reset, and overview destroy/recreate. v4's `mouseButton` option and `enable()`/`disable()` methods map to v5's primary button and plugin removal. |
-| `legend`                                   | `examples/v5-legend/`                             | Visibility changes for line/marker/area entries and grouped entries, including keyboard activation where supported. Focused browser assertions are in `npm run test:interaction:legend` (external checkbox and built-in SVG keyboard toggles, mixed group state, line/marker/stacked-area path removal and built-in legend cleanup); the sequence passes in Chromium. It found and fixed a focus loss: built-in legend layout passes re-inserted the legend layer and blurred the focused entry (regression test in `test/Plot/legend.test.ts`). |
+| v4 example(s)                               | Native v5 starting point                                                          | Parity work to cover                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ------------------------------------------- | --------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `mouseover`                                 | `examples/v5-parity-mouseover/`, `examples/v5-tooltip/`, `examples/v5-crosshair/` | `npm run test:interaction:mouseover` asserts all-series and selected-mark inspection, numeric/time formatting, extent-aware value formatting, snapped x/y samples, and vertical/horizontal guides.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `brush`                                     | `examples/v5-brush/`, `examples/v5-parity-brush/`                                 | `npm run test:interaction:brush` asserts Shift-drag auto/x/y/xy selection, brush-to-domain updates, selection-only and modifier-free modes, overview move/resize/reselect navigation and two-way domain synchronization with pan, wheel zoom and reset. v4 has no main-chart brush (Shift-drag pans), so only v5 is asserted.                                                                                                                                                                                                                                                                                                                                                                                         |
+| `wheel-zoom`, `zoom-options`, `zoom-events` | `examples/v5-zoom/`, `examples/v5-parity-zoom/`                                   | Native and side-by-side X/Y/XY wheel modes, Ctrl/Shift modifiers, disabled wheel, runtime options, initial/full/toggle resets and live domain/event readouts. `npm run test:interaction:zoom` covers both routes, including status updates and option changes without plot recreation. `test/Plot/zoom.test.ts` asserts event handles, previous/current domains, explicit state, immutable payload snapshots, lifecycle cleanup, reset direction and restored autoscaling. Library and example builds pass, and both browser suites pass in Chromium. Differences in wheel increments, reset scope, toggle semantics (including v4 Date identity comparison) and event granularity are documented on the parity page. |
+| `panning`, `shared-panning`, `shared-zoom`  | `examples/v5-pan/`, `examples/v5-shared-scales/`                                  | `npm run test:interaction:pan` asserts x/y/xy direction (including touch-action), none/Shift/Ctrl modifiers, primary-button-only dragging, enable/disable by removing and reinstalling the plugin, live domain updates, and shared pan/zoom handles on two plots synchronizing through shared scales with independent pixel ranges, one `subscribe(t.domain)` notification per wheel step, double-click reset, and overview destroy/recreate. v4's `mouseButton` option and `enable()`/`disable()` methods map to v5's primary button and plugin removal.                                                                                                                                                             |
+| `legend`                                    | `examples/v5-legend/`                                                             | Visibility changes for line/marker/area entries and grouped entries, including keyboard activation where supported. Focused browser assertions are in `npm run test:interaction:legend` (external checkbox and built-in SVG keyboard toggles, mixed group state, line/marker/stacked-area path removal and built-in legend cleanup); the sequence passes in Chromium. It found and fixed a focus loss: built-in legend layout passes re-inserted the legend layer and blurred the focused entry (regression test in `test/Plot/legend.test.ts`).                                                                                                                                                                      |
 
 Add focused browser interaction cases for these behaviors, asserting resulting scale
 domains, selections, hit/tooltip content, visibility and lifecycle cleanup rather than
@@ -2192,6 +2211,126 @@ Mark membership reconciliation, per-mark tracking and update validation, rendere
 mounting, geometry and style passes are owned by `src/plot/marks/mark-layer.ts`. The plot
 coordinator supplies current options, scales and regions, then delegates dirty mark
 rendering and teardown to that layer.
+
+### Phase 4 Sync & live gap assessment
+
+**Status: assessed on 2026-10-25; partial, not complete.** This inventory records the
+starting point; the shared-pointer implementation checkpoint below records subsequent work.
+The completed Phase 3 behavioral parity work is the starting point. The frozen
+Phase 2 static pixel mismatches and their exit criterion remain separate and unchanged;
+no static baselines need updating for this assessment.
+
+#### Existing foundations and remaining gaps
+
+| Surface                                 | Current evidence                                                                                                                                                                                                                                                                      | Remaining Phase 4 work                                                                                                                                                                                                                                                                                                                          |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Shared scale domains and local bindings | `sharedScale()` returns the same scale handle; each plot owns its binding/range. `test/Plot/plot.test.ts` covers unequal widths, external domain updates and destroying one consumer without breaking its peer.                                                                       | Retain this architecture; no new domain relay or shared pixel range is needed. Extend acceptance to data-backed plots and the new sync/live consumers.                                                                                                                                                                                          |
+| Shared zoom and pan                     | `examples/v5-shared-scales/` installs shared time/value scales and pan/zoom handles. `scripts/pan-parity-interaction.mjs` already checks x/y/xy gestures, local pixel-to-domain deltas, matching ticks, one shared-domain notification per wheel step, reset, destroy and recreation. | Do not treat shared zoom/pan as unimplemented or duplicate the Phase 3 port. Preserve these assertions while adding live data and pointer synchronization. The existing example has axes but no marks.                                                                                                                                          |
+| Public notifications                    | `subscribe()`, `effect()`, source attribution, typed `plot.on()` events and matching DOM events exist. `test/core/runtime.test.ts` and `test/Plot/public-events.test.ts` cover subscriptions and event lifetime.                                                                      | Reuse these surfaces for new state; do not add a second event bus. Preserve coalescing, no-op suppression, attribution and shared-handle lifetime.                                                                                                                                                                                              |
+| Shared pointer/crosshair                | `plot.pointer` and the pointer hub are plot-local. `crosshair()` has mode, snap and label options but no shared pointer input. Sharing a crosshair options handle does not share pointer state.                                                                                       | Implement the §3.9 domain-valued shared pointer, keyed by scale identity with source/active state, plus crosshair consumption. Reproject through each destination binding; never copy source pixels or source `inside` as destination authority.                                                                                                |
+| Shared selection                        | Persistent `brush.selection`, `setSelection()` and brush-to-main navigation exist. Programmatic selection updates do not emit user brush events. Selection snapshots use plot-local scale names; there is no independent `sharedSelection()` API.                                     | Build on the existing validated immutable brush contract, not a second brush implementation. Define scale-identity/local-name mapping and integrate shared selection ownership, clear/update propagation and consumer teardown. Verify two-way synchronization without feedback.                                                                |
+| Shared clock                            | No v5 shared clock API or clock consumer is present in the production core.                                                                                                                                                                                                           | Add a shared current-time signal with explicit ownership/cleanup and deterministic test control. Keep current-time mark/plugin rendering in Phase 6; do not port domain plugins as part of this assessment.                                                                                                                                     |
+| Follow mode                             | `timeScale()` has no `follow` option or follow-state controls. Zoom/pan/reset operate on ordinary domains. The spike demo follows by manually setting its own domain.                                                                                                                 | Implement the window/lead contract, new-data advancement, suspension on user zoom/pan and resumption on reset. Shared consumers must observe one follow state/domain; distinguish user gestures from API/autoscale writes using existing attribution.                                                                                           |
+| Series append/retention                 | `createSeries()`/`fromObjects()` support append, prepend, upsert, replace, clear, `maxPoints` and `maxAge`; appends use circular storage. Store and series-mark tests cover ordering, missing values, mutations, frame coalescing, isolated consumers and teardown.                   | Production line extents and geometry still scan retained samples. There is no production block extent index or range-aware LOD cache; `SeriesChange` currently spans the old and new full range, not just an appended tail. Add mutation/eviction-aware indexing and bounded LOD reuse before claiming incremental append performance.          |
+| Aligned tables and stacks               | Table mutations validate and publish all columns atomically, preserve surviving sample IDs and apply retention. Stack endpoints are shared per table/version/options, with an 8-entry/32 MiB cache limit. Tests cover correctness, mutation invalidation and entry eviction.          | Table mutations materialize/copy merged columns; every version change discards the stack cache and recomputes endpoints across all rows. Add incremental aligned append/retention and affected-row stack updates, preserving named-stack gaps, diverging totals and stable IDs. Cache limits alone are not a measured live-memory plateau.      |
+| Back-pressure and visibility            | The shared frame scheduler merges invalidations, and series-mark tests assert one geometry write for coalesced mutations with unrelated marks unchanged. A module-level ResizeObserver exists.                                                                                        | No `plot.pause()`/`resume()` or production IntersectionObserver exists. Add a shared visibility observer and per-plot render suspension; retain pending dirty work, draw the latest state on resume and release registrations on destroy. Frame coalescing is not producer throttling and does not make synchronous store mutation incremental. |
+| Live example and end-to-end acceptance  | `examples/v5-spike-live/` uses `src/spike/` stores, scheduler and SVG renderer, with manual follow and a timer. It is useful spike evidence, not acceptance of `createPlot()` or production stores.                                                                                   | Add a production live-stream example using public v5 APIs, shared scales and bounded series/table retention, plus deterministic behavioral and resource checks. `connect()` and transformed `linkScales()` remain optional helpers from §3.9/§3.10, not prerequisites for the core work.                                                        |
+
+The test files and interaction script above are existing coverage, not fresh results.
+The Phase 3 checkpoint records the user's successful six-suite interaction run earlier
+on 2026-10-25, including shared-scale gestures. During this assessment the following
+focused production-foundation run was attempted:
+
+```sh
+npx vitest run test/Data/series-store.test.ts test/Data/table-store.test.ts test/Plot/plot.test.ts test/Plot/public-events.test.ts test/Plot/brush.test.ts test/Plot/series-mark.test.ts test/Plot/bar-mark.test.ts test/Plot/stacked-area-mark.test.ts test/Plot/stack-layout.test.ts
+```
+
+**Verification blocked:** Chromium headless shell crashed during launch
+(`SEGV_ACCERR`); cleanup also reported `kill EPERM` under the active sandbox.
+Vitest reported nine selected files and no executed tests. This is not a test pass
+or evidence of a product regression. Review/update the sandbox policy for the
+Playwright Chromium launch/cleanup before retrying browser validation.
+
+#### Recommended implementation sequence and acceptance
+
+1. **Shared pointer first (implemented; browser acceptance pending).** Add the scale-identity domain-state primitive and
+   crosshair integration using the existing pointer hub and reactive runtime.
+   Test two unequal-width plots with different local scale names, x/y sharing,
+   reversed ranges, destination clipping, leave/cancel, resize/domain changes while
+   stationary, competing sources, plugin removal and source/peer destruction.
+   Assert destination pixels from destination projections, not equality with source
+   pixels; assert no echo publications.
+2. **Shared selection and clock.** Reuse persistent brush validation and projection.
+   Test bidirectional selection, clear, unequal bindings, missing/incompatible scales,
+   runtime membership changes and teardown. Test one shared clock update observed by
+   multiple consumers and explicit clock cleanup, without wall-clock sleeps.
+3. **Follow state and gesture integration.** Implement window/lead validation and
+   follow state on the shared time scale. Test exact domains after append, empty data,
+   retention and reset; zoom/pan in either peer suspends follow for both, while data
+   continues arriving. Make API-write and reset-policy semantics explicit before
+   implementing them; do not silently change existing zoom reset behavior.
+4. **Incremental live data path.** Add precise mutation/eviction metadata and production
+   extent/LOD reuse, then incremental aligned-table and stack processing. Verify
+   append, wrap, age/count retention, upsert and replace against full recomputation,
+   including missing/negative values, named stacks, reorders and visibility changes.
+   Instrument processed rows/cache bytes so a tail append proves tail work rather
+   than merely producing correct output after a full rescan.
+5. **Visibility suspension.** Add manual pause/resume and a shared IntersectionObserver
+   with separate manual/visibility state. Test zero render writes while suspended,
+   one latest-state catch-up on resume, shared consumers remaining active, repeated
+   pause/resume, initially off-screen plots, and destroy while dirty/paused. Explicitly
+   define whether non-render subscriptions continue while paused; keep data ownership
+   independent of plot visibility.
+6. **Production live-stream acceptance.** Add the public-API example and a dedicated
+   deterministic sync/live runner. Exercise two differently sized data-backed plots,
+   shared pointer/selection, follow suspension/reset, grouped/stacked updates, retention,
+   off-screen pause and destroy/recreate. Assert exact retained rows/IDs/endpoints,
+   bounded cache entries/bytes and a post-warmup memory plateau using the §6 accounting
+   contract. Keep computation, rendering and native browser allocations separate.
+   Rerun the existing shared-scale interaction coverage; do not use Phase 2 pixel
+   parity as a substitute for these behavioral/resource assertions.
+
+Phase 4 can close only after the missing production surfaces and the live acceptance
+checks pass. Existing domain events, shared gestures, bounded cache constants and a
+working spike alone do not meet that exit criterion.
+
+#### Shared pointer and crosshair implementation checkpoint
+
+**Status: implemented; browser validation blocked.** `src/sync/shared-pointer.ts`
+provides the shared domain-state primitive and destination projection. The local
+pointer hub notifies installed crosshairs only for actual input publications; projected
+shared state never feeds back into the hub. Crosshair inspection, labels and snapping
+use the destination bindings. Plugin scopes disconnect publishers and release ownership
+on removal/destroy, without retaining plots in shared state.
+
+`examples/v5-shared-scales/` now installs xy shared crosshairs on both plots.
+`test/core/shared-pointer.test.ts` covers immutable snapshots, no-op suppression,
+source handoff/release, unequal/reversed local bindings, stationary reprojection,
+independent-axis clipping, identity matching, categories and option validation.
+`test/Plot/shared-pointer.test.ts` adds browser coverage for local names, one shared
+notification/no echo, source leave/cancel, plugin replacement/removal, queued input,
+destroy/recreate, scope cleanup, destination snapping and unchanged local pointer state.
+
+The DOM-independent shared-pointer and runtime suites pass together (19 tests):
+
+```sh
+npx vitest run --browser.enabled=false test/core/shared-pointer.test.ts test/core/runtime.test.ts
+```
+
+The library/declaration and example builds pass. The full workspace type-check still reports
+errors in unrelated legacy examples/tests; no diagnostics remain in touched files.
+The following browser suites were attempted, but no tests executed because the same
+Chromium launch/sandbox cleanup failure described above persists. The user will run
+browser validation locally:
+
+```sh
+npx vitest run test/Plot/shared-pointer.test.ts test/Plot/plot.test.ts test/Plot/tooltip.test.ts test/Plot/tooltip-model.test.ts test/Plot/interaction-marks.test.ts
+npm run test:interaction:pan
+```
+
+The pan runner is a follow-up regression command, not a fresh passing result. Shared
+selection/clock, follow mode, visibility pause and incremental live processing remain
+open. Frozen Phase 2 pixel mismatches and static baselines were not changed.
 
 ## 8. Additional improvements to consider
 

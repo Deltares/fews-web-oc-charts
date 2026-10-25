@@ -14,6 +14,7 @@ import type { Region } from '../../layout/layout.js'
 import { isHistogramMark } from '../marks/histogram/histogram.js'
 import { markDefinition } from '../marks/marks.js'
 import type { MarkHit } from '../marks/mark-definition.js'
+import { projectSharedPointer } from '../../sync/shared-pointer.js'
 
 let areaPathContext: CanvasRenderingContext2D | undefined
 
@@ -84,13 +85,14 @@ function coordinatesForAxis(
   context: Omit<PlotContext, 'scope' | 'inspectCrosshair'>,
   hit: MarkHit | undefined,
   resolved: { readonly x: number; readonly y: number },
+  axes: string,
 ) {
   if (!visible) return []
   const scaleName = options.labels?.[axis]
   if (!scaleName) return []
   const layerValues = layerCoordinates(axis, scaleName, options.snap, layers)
   if (layerValues) return layerValues
-  if (!options.mode.includes(axis)) return []
+  if (!axes.includes(axis)) return []
   const binding = context.scales[scaleName]
   if (!binding) return []
   const domain = binding.scale.domain.get()
@@ -188,16 +190,38 @@ export function inspectCrosshair(
   const pointer = context.pointer.get()
   const regions = context.regions.get()
   const region = regions.plot
-  const point = { x: pointer.px + region.x, y: pointer.py + region.y }
-  const hits = pointer.inside && options.snap ? snapHits(options.snap, context, point, regions) : []
+  let point = { x: pointer.px + region.x, y: pointer.py + region.y }
+  let axes: string = options.mode
+  let inside = pointer.inside
+  if (options.pointer) {
+    const projected = projectSharedPointer(
+      options.pointer,
+      options.snap ? 'xy' : options.mode,
+      {
+        x: options.labels?.x ?? options.snap?.mark.x,
+        y: options.labels?.y ?? options.snap?.mark.y,
+      },
+      context.scales,
+      context.direction,
+      region,
+    )
+    point = projected.point
+    axes = projected.axes
+    inside = projected.inside
+  }
+  const canSnap =
+    !options.pointer || !options.snap || [...options.snap.axis].every((axis) => axes.includes(axis))
+  const hits =
+    inside && options.snap && canSnap ? snapHits(options.snap, context, point, regions) : []
   const hit = nearestHit(hits, point)
   const layers = layerGuides(options.snap, hits, context)
-  const visible = pointer.inside && (!options.snap || !!hit)
+  const visible = inside && (!options.snap || !!hit)
   const resolved = hit ? { x: hit.px, y: hit.py } : point
+  if (hit && options.pointer) axes = options.mode
   const coordinates = (['x', 'y'] as const).flatMap((axis) =>
-    coordinatesForAxis(axis, options, visible, layers, context, hit, resolved),
+    coordinatesForAxis(axis, options, visible, layers, context, hit, resolved, axes),
   )
-  return { point: resolved, visible, hit, hits, layers, options, coordinates }
+  return { point: resolved, visible, hit, hits, layers, options, coordinates, axes }
 }
 
 export type CrosshairInspection = ReturnType<typeof inspectCrosshair>

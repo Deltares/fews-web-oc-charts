@@ -12,6 +12,7 @@ import { isBarMark, type BarMark } from '../../marks/bar/bar.js'
 import { isStackedAreaMark, type StackedAreaMark } from '../../marks/stacked-area/stacked-area.js'
 import { isHistogramMark, type HistogramMark } from '../../marks/histogram/histogram.js'
 import { isHeatmapMark, type HeatmapMark } from '../../marks/heatmap/heatmap.js'
+import { isSharedPointer, type SharedPointer } from '../../../sync/shared-pointer.js'
 
 export type CrosshairMode = 'x' | 'y' | 'xy'
 export type CrosshairSnapAxis = 'x' | 'y' | 'xy'
@@ -25,6 +26,7 @@ export interface CrosshairSnapOptions {
 
 export interface CrosshairOptions {
   mode: CrosshairMode
+  pointer?: SharedPointer
   snap?: CrosshairSnapOptions
   /** Named scales whose coordinates are shown next to the corresponding guides. */
   labels?: { x?: string; y?: string }
@@ -40,7 +42,7 @@ const validators = new WeakMap<
   CrosshairHandle,
   Set<(options: Readonly<CrosshairOptions>) => void>
 >()
-const optionKeys = ['mode', 'snap', 'labels']
+const optionKeys = ['mode', 'pointer', 'snap', 'labels']
 
 function validateSnap(snap: CrosshairSnapOptions | undefined) {
   if (snap === undefined) return
@@ -91,11 +93,20 @@ export function crosshair(initial: OptionPatch<CrosshairOptions> = {}): Crosshai
       isBarMark(value) ||
       isStackedAreaMark(value) ||
       isHistogramMark(value) ||
-      isHeatmapMark(value),
-    defaults: () => ({ mode: 'xy', snap: undefined, labels: undefined }),
+      isHeatmapMark(value) ||
+      isSharedPointer(value),
+    defaults: () => ({ mode: 'xy', pointer: undefined, snap: undefined, labels: undefined }),
     validate(options) {
       if (!['x', 'y', 'xy'].includes(options.mode)) {
         throw new Error('crosshair.mode must be x, y or xy.')
+      }
+      if (
+        options.pointer !== undefined &&
+        (!options.pointer ||
+          typeof options.pointer !== 'object' ||
+          !isSharedPointer(options.pointer))
+      ) {
+        throw new TypeError('crosshair.pointer must be a sharedPointer() handle.')
       }
       validateSnap(options.snap)
       if (options.labels !== undefined) {
