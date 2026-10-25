@@ -36,6 +36,7 @@
     "test:visual": "node scripts/phase1-visual-regression.mjs",
     "test:visual:update": "node scripts/phase1-visual-regression.mjs --update",
     "test:visual:parity": "node scripts/static-visual-parity.mjs",
+    "test:interaction:brush": "node scripts/brush-parity-interaction.mjs",
     "test:interaction:legend": "node scripts/legend-interaction.mjs",
     "test:interaction:mouseover": "node scripts/mouseover-parity-interaction.mjs",
     "test:interaction:zoom": "node scripts/zoom-parity-interaction.mjs",

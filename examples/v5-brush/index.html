@@ -67,6 +67,8 @@
     <p id="status" class="status" role="status"></p>
     <h2>Last selection</h2>
     <pre id="snapshot" aria-label="Last selected scale ranges"></pre>
+    <h2>Current domains</h2>
+    <pre id="domains" aria-label="Main chart domains and navigator selection"></pre>
     <h2>Public API</h2>
     <pre><code>const navigator = brush({ mode: 'x', persistent: true, modifier: ModifierKey.None })
 navigator.setSelection({ mode: 'x', scales: { t: [visibleStart, visibleEnd] } })

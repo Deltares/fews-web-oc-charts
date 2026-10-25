@@ -20,6 +20,7 @@ import {
   brush,
   brushEvent,
   createPlot,
+  effect,
   line,
   linearScale,
   ModifierKey,
@@ -53,7 +54,8 @@ function requiredHost(id: string): HTMLElement {
 
 const v4Status = document.querySelector<HTMLElement>('#v4-status')
 const v5Status = document.querySelector<HTMLElement>('#v5-status')
-if (!v4Status || !v5Status) {
+const v5Snapshot = document.querySelector<HTMLElement>('#v5-snapshot')
+if (!v4Status || !v5Status || !v5Snapshot) {
   throw new Error('The brush parity example is missing its status elements.')
 }
 
@@ -224,8 +226,23 @@ v4Status.textContent =
   'Drag the overview brush to update the main chart; main-domain changes sync back.'
 v5Status.textContent = 'Brush either chart to update and synchronize its time domain.'
 
+const toIso = (range: readonly (number | string)[] | undefined) =>
+  range?.map((value) => new Date(Number(value)).toISOString()) ?? null
+const snapshotEffect = effect(() => {
+  v5Snapshot.textContent = JSON.stringify(
+    {
+      time: toIso(v5Time.domain.get()),
+      value: v5Value.domain.get(),
+      navigator: toIso(v5Navigator.selection.get()?.scales.t),
+    },
+    null,
+    2,
+  )
+})
+
 function dispose() {
   events.abort()
+  snapshotEffect.dispose()
   v5Overview.destroy()
 }
 window.addEventListener(
