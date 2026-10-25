@@ -24,6 +24,7 @@ function installZoom(handle: ZoomHandle, context: PlotContext) {
   )
   const toggledDomains = new Map<string, readonly ScaleValue[]>()
   let toggled = false
+  const layer = svgElement('g', { 'data-layer': 'zoom', 'pointer-events': 'none' })
   const selection = svgElement('rect', {
     'data-zoom-selection': '',
     'pointer-events': 'none',
@@ -33,7 +34,18 @@ function installZoom(handle: ZoomHandle, context: PlotContext) {
     'stroke-dasharray': '4 2',
     display: 'none',
   })
-  context.element.append(selection)
+  const handles = new Map(
+    (['w', 'e', 'n', 's'] as const).map((name) => [
+      name,
+      svgElement('rect', {
+        'data-zoom-handle': name,
+        fill: 'currentColor',
+        display: 'none',
+      }),
+    ]),
+  )
+  layer.append(selection, ...handles.values())
+  context.element.append(layer)
   let active:
     | {
         pointerId: number
@@ -48,11 +60,16 @@ function installZoom(handle: ZoomHandle, context: PlotContext) {
   const originalTouchPriority = context.element.style.getPropertyPriority('touch-action')
   let appliedTouchAction: string | undefined
 
+  function hideSelection() {
+    selection.setAttribute('display', 'none')
+    for (const node of handles.values()) node.setAttribute('display', 'none')
+  }
+
   function finish(event?: PointerEvent) {
     if (!active || (event && event.pointerId !== active.pointerId)) return
     const gesture = active
     active = undefined
-    selection.setAttribute('display', 'none')
+    hideSelection()
     if (captured && context.element.hasPointerCapture(gesture.pointerId)) {
       context.element.releasePointerCapture(gesture.pointerId)
     }
@@ -87,6 +104,7 @@ function installZoom(handle: ZoomHandle, context: PlotContext) {
   }
 
   function dragBounds(event: PointerEvent) {
+    hideSelection()
     if (!active) return
     const config = handle.options.get().resolved
     if (config.mode !== active.config.mode || config.modifier !== active.config.modifier) {
@@ -135,6 +153,25 @@ function installZoom(handle: ZoomHandle, context: PlotContext) {
       selection.setAttribute(name, String(value))
     }
     selection.setAttribute('display', '')
+    for (const [name, node] of handles) {
+      const horizontal = name === 'w' || name === 'e'
+      if ((mode === 'x' && !horizontal) || (mode === 'y' && horizontal) || mode === 'xy') continue
+      const guideStart = horizontal
+        ? clamp(active.y - autoModeThreshold, y, y + height)
+        : clamp(active.x - autoModeThreshold, x, x + width)
+      const guideEnd = horizontal
+        ? clamp(active.y + autoModeThreshold, y, y + height)
+        : clamp(active.x + autoModeThreshold, x, x + width)
+      for (const [attribute, value] of Object.entries({
+        x: horizontal ? (name === 'w' ? x : x + width) - 3 : guideStart,
+        y: horizontal ? guideStart : (name === 'n' ? y : y + height) - 3,
+        width: horizontal ? 6 : guideEnd - guideStart,
+        height: horizontal ? guideEnd - guideStart : 6,
+      })) {
+        node.setAttribute(attribute, String(value))
+      }
+      node.setAttribute('display', '')
+    }
     return bounds
   }
 
@@ -267,7 +304,7 @@ function installZoom(handle: ZoomHandle, context: PlotContext) {
   return {
     destroy() {
       finish()
-      selection.remove()
+      layer.remove()
       if (
         appliedTouchAction === undefined ||
         context.element.style.getPropertyValue('touch-action') !== appliedTouchAction
