@@ -74,7 +74,16 @@ describe('public plot events', () => {
     const plot = createTestPlot({
       scales: { x: linearScale(), y: linearScale() },
       directions: { x: 'x', y: 'y' },
-      marks: [line({ x: 'x', y: 'y', xValues: [0, 1], yValues: [2, 3], id: 'series' })],
+      marks: [
+        line({
+          x: 'x',
+          y: 'y',
+          xValues: [0, 1],
+          yValues: [2, 3],
+          id: 'series',
+          label: 'Series',
+        }),
+      ],
     })
     await frame()
     const entries: unknown[] = []
