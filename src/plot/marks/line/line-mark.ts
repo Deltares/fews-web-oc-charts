@@ -24,6 +24,7 @@ import { isStaticMarkVisible, staticLegend } from '../static-legend.js'
 import { markerSymbolPath, markerSymbolRotation } from './marker-symbol.js'
 
 type LineLikeMark = LineMark | SeriesMark
+let nextSymbolId = 0
 
 function validateLineLike(mark: LineLikeMark, context: MarkValidationContext, dataBacked: boolean) {
   const polar = context.coordinateSystem === 'polar'
@@ -119,6 +120,9 @@ function createLineRenderer(): MarkRenderer<LineLikeMark> {
   })
   let areaPath: SVGPathElement | undefined
   let markerGroup: SVGGElement | undefined
+  const symbolId = `fews-line-symbol-${nextSymbolId++}`
+  let symbolDefinition: SVGMarkerElement | undefined
+  let symbolPath: SVGPathElement | undefined
   const geometryKey = createKeyCache()
   const styleKey = createKeyCache()
   let renderedVersion: number | undefined
@@ -140,7 +144,36 @@ function createLineRenderer(): MarkRenderer<LineLikeMark> {
       markerGroup.remove()
       markerGroup = undefined
     }
+    syncClassicMarkers(mark.markers?.render === 'classic')
     for (const node of [path, areaPath, markerGroup]) setMarkId(node, mark.id)
+  }
+
+  function syncClassicMarkers(classic: boolean) {
+    if (!markerGroup || !classic) {
+      if (symbolPath) markerGroup?.replaceChildren()
+      symbolPath = undefined
+      symbolDefinition = undefined
+      return
+    }
+    if (symbolPath) return
+    markerGroup.replaceChildren()
+    const definitions = svgElement('defs')
+    symbolDefinition = svgElement('marker', {
+      id: symbolId,
+      fill: 'context-fill',
+      stroke: 'context-stroke',
+    })
+    symbolDefinition.append(svgElement('path'))
+    definitions.append(symbolDefinition)
+    symbolPath = svgElement('path', {
+      'data-mark': 'marker',
+      'fill-opacity': 0,
+      'stroke-opacity': 0,
+      'marker-start': `url(#${symbolId})`,
+      'marker-mid': `url(#${symbolId})`,
+      'marker-end': `url(#${symbolId})`,
+    })
+    markerGroup.append(definitions, symbolPath)
   }
 
   return {
@@ -178,6 +211,7 @@ function createLineRenderer(): MarkRenderer<LineLikeMark> {
         mark.line,
         Boolean(mark.markers),
         mark.markers?.symbol,
+        mark.markers?.render,
         mark.markers?.skip,
         mark.digits,
         mark.area?.to,
@@ -243,6 +277,7 @@ function createLineRenderer(): MarkRenderer<LineLikeMark> {
       let lastX = 0
       const baseline = mark.area ? yScale.project(mark.area.to) : 0
       let markerIndex = 0
+      let symbolData = ''
       const sampleCount = lod?.length ?? length
       for (let sample = 0; sample < sampleCount; sample += 1) {
         const index = lod?.at(sample) ?? sample
@@ -281,7 +316,9 @@ function createLineRenderer(): MarkRenderer<LineLikeMark> {
         if (markerGroup && index % (mark.markers?.skip ?? 1) === 0) {
           const shape = mark.markers?.symbol ?? 'circle'
           let marker = markerGroup.children[markerIndex] as SVGElement | undefined
-          if (shape === 'circle') {
+          if (symbolPath) {
+            symbolData += `${markerIndex ? 'L' : 'M'}${x},${y}`
+          } else if (shape === 'circle') {
             if (marker?.tagName !== 'circle') {
               marker?.remove()
               marker = svgElement('circle', { 'data-mark': 'marker' })
@@ -311,7 +348,10 @@ function createLineRenderer(): MarkRenderer<LineLikeMark> {
       renderedVersion = storeVersion
       renderedLength = store?.length ?? 0
       renderedLastPointValid = drawingSegment
-      if (markerGroup) {
+      if (symbolPath) {
+        // A single-vertex path needs a closing segment for marker-start to paint.
+        symbolPath.setAttribute('d', symbolData + (markerIndex === 1 ? 'Z' : ''))
+      } else if (markerGroup) {
         while (markerGroup.children.length > markerIndex) markerGroup.lastElementChild?.remove()
       }
     },
@@ -346,7 +386,29 @@ function createLineRenderer(): MarkRenderer<LineLikeMark> {
         areaPath.setAttribute('fill-opacity', String(styles.area.opacity))
         areaPath.setAttribute('stroke', 'none')
       }
-      if (markerGroup) {
+      if (symbolPath && symbolDefinition) {
+        const size = styles.marker.size
+        const shape = mark.markers?.symbol ?? 'circle'
+        const rotation = markerSymbolRotation(shape)
+        for (const [name, value] of [
+          ['markerWidth', size],
+          ['markerHeight', size],
+          ['refX', size / 2],
+          ['refY', size / 2],
+        ] as const) {
+          symbolDefinition.setAttribute(name, String(value))
+        }
+        const symbolShape = symbolDefinition.firstElementChild!
+        symbolShape.setAttribute('d', markerSymbolPath(shape, size))
+        symbolShape.setAttribute(
+          'transform',
+          `translate(${size / 2},${size / 2})${rotation ? ` rotate(${rotation})` : ''}`,
+        )
+        const openShape = shape === 'x' || shape === 'plus'
+        symbolPath.setAttribute('fill', openShape ? 'none' : styles.marker.fill)
+        symbolPath.setAttribute('stroke', styles.marker.stroke)
+        symbolPath.setAttribute('stroke-width', String(styles.marker.strokeWidth))
+      } else if (markerGroup) {
         for (const marker of markerGroup.children) {
           if (marker.tagName === 'circle') {
             marker.setAttribute('r', String(Math.sqrt(styles.marker.size / Math.PI)))

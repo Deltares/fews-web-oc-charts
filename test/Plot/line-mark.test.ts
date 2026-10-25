@@ -351,6 +351,84 @@ describe('static line marks', () => {
     }
   })
 
+  test('renders opt-in classic markers as one v4-compatible SVG marker path', async () => {
+    const current = plot(host(), {
+      scales: { x: linearScale({ domain: [0, 4] }), y: linearScale({ domain: [0, 10] }) },
+      directions: { x: 'x' },
+      marks: [
+        line({
+          id: 'classic',
+          x: 'x',
+          y: 'y',
+          xValues: [0, 1, 2, 3, 4],
+          yValues: [1, 2, Number.NaN, 4, 5],
+          line: false,
+          markers: {
+            render: 'classic',
+            symbol: 'triangle-down',
+            size: 40,
+            skip: 2,
+            fill: 'blue',
+            stroke: 'red',
+            strokeWidth: 2,
+          },
+        }),
+      ],
+    })
+    await frame()
+
+    const group = current.element.querySelector<SVGGElement>('[data-mark="markers"]')!
+    const definition = group.querySelector<SVGMarkerElement>('defs > marker')!
+    const markerPath = group.querySelector<SVGPathElement>(':scope > [data-mark="marker"]')!
+    expect(group.querySelectorAll('circle')).toHaveLength(0)
+    expect(definition.getAttribute('fill')).toBe('context-fill')
+    expect(definition.getAttribute('stroke')).toBe('context-stroke')
+    expect(definition.getAttribute('markerWidth')).toBe('40')
+    expect(definition.getAttribute('refX')).toBe('20')
+    expect(definition.firstElementChild?.getAttribute('transform')).toBe(
+      'translate(20,20) rotate(180)',
+    )
+    const reference = `url(#${definition.id})`
+    for (const name of ['marker-start', 'marker-mid', 'marker-end']) {
+      expect(markerPath.getAttribute(name)).toBe(reference)
+    }
+    expect(markerPath.getAttribute('fill')).toBe('blue')
+    expect(markerPath.getAttribute('stroke')).toBe('red')
+    expect(markerPath.getAttribute('stroke-width')).toBe('2')
+    expect(markerPath.getAttribute('fill-opacity')).toBe('0')
+    const { x, y } = current.scales
+    // Index 2 is missing, so only indices 0 and 4 pass the skip filter.
+    expect(markerPath.getAttribute('d')).toBe(
+      `M${x.project(0)},${y.project(1)}L${x.project(4)},${y.project(5)}`,
+    )
+
+    current.update({
+      marks: [
+        line({
+          id: 'classic',
+          x: 'x',
+          y: 'y',
+          xValues: [2],
+          yValues: [3],
+          markers: { render: 'classic' },
+        }),
+      ],
+    })
+    await frame()
+    const single = current.element.querySelector<SVGPathElement>(
+      '[data-mark="markers"] > [data-mark="marker"]',
+    )!
+    expect(single.getAttribute('d')).toBe(`M${x.project(2)},${y.project(3)}Z`)
+
+    current.update({
+      marks: [line({ id: 'classic', x: 'x', y: 'y', xValues: [2], yValues: [3], markers: true })],
+    })
+    await frame()
+    const restored = current.element.querySelector<SVGGElement>('[data-mark="markers"]')!
+    expect(restored.querySelector('defs')).toBeNull()
+    expect(restored.querySelectorAll('circle')).toHaveLength(1)
+  })
+
   test('removes optional series layers when replacing a marked line', async () => {
     const current = plot(host(), {
       scales: { x: linearScale({ domain: [0, 1] }), y: linearScale({ domain: [0, 1] }) },
@@ -489,6 +567,18 @@ describe('static line marks', () => {
     expect(() =>
       line({ x: 'x', y: 'y', xValues: [0], yValues: [1], markers: { size: -1 } }),
     ).toThrow(/nonnegative finite/)
+    expect(
+      line({ x: 'x', y: 'y', xValues: [0], yValues: [1], markers: true }).markers?.render,
+    ).toBe('default')
+    expect(() =>
+      line({
+        x: 'x',
+        y: 'y',
+        xValues: [0],
+        yValues: [1],
+        markers: { render: 'auto' as 'classic' },
+      }),
+    ).toThrow(/markers.render must be default or classic/)
     expect(() =>
       line({ x: 'x', y: 'y', xValues: [0], yValues: [1], area: { to: 0, opacity: 2 } }),
     ).toThrow(/area.opacity/)
