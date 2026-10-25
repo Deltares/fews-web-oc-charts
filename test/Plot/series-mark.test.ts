@@ -152,49 +152,59 @@ describe('data-backed series marks', () => {
     expect(reactive.getDiagnostics().activeScopes).toBe(baseline.activeScopes)
   })
 
-  test('option updates reset nested overrides without ingesting data or recomputing style-only geometry', async () => {
-    const data = createSeries({ x: [0, 1], y: [1, 2] })
-    const mark = series(data, {
-      id: 'obs',
-      x: 'x',
-      y: 'y',
-      line: { stroke: 'red', width: 3 },
-      markers: {},
-    })
-    const current = plot(host(), {
-      width: 400,
-      height: 200,
-      directions: { x: 'x' },
-      scales: { x: linearScale(), y: linearScale() },
-      marks: [mark],
-    })
-    await frame()
-    const line = path(current, 'obs')
-    const writes = vi.spyOn(line, 'setAttribute')
-    const read = vi.spyOn(current.scales.x, 'project')
-    mark.update({ line: { stroke: undefined }, markers: { size: 7 } })
-    await frame()
-    expect(line.getAttribute('stroke')).not.toBe('red')
-    expect(line.getAttribute('stroke-width')).toBe('3')
-    expect(Number(current.element.querySelector('circle')?.getAttribute('r'))).toBeCloseTo(
-      Math.sqrt(7 / Math.PI),
-    )
-    expect(writes.mock.calls.some(([key]) => key === 'd')).toBe(false)
-    expect(read).not.toHaveBeenCalled()
-    expect(data.version).toBe(0)
-    mark.update({ visible: false })
-    await frame()
-    expect(line.getAttribute('d')).toBe('')
-    mark.update({ visible: undefined, line: false, markers: false, area: { to: 0 } })
-    await frame()
-    expect(line.getAttribute('display')).toBe('none')
-    expect(current.element.querySelectorAll('circle')).toHaveLength(0)
-    mark.update({ line: undefined, area: undefined })
-    await frame()
-    expect(line.getAttribute('display')).toBe('')
-    expect(line.getAttribute('stroke-width')).toBe('1.5')
-    expect(current.element.querySelector('[data-mark="area"]')).toBeNull()
-  })
+  test.each(['circle', 'square'] as const)(
+    'option updates reset nested overrides without ingesting data or recomputing style-only geometry (%s markers)',
+    async (symbol) => {
+      const data = createSeries({ x: [0, 1], y: [1, 2] })
+      const mark = series(data, {
+        id: 'obs',
+        x: 'x',
+        y: 'y',
+        line: { stroke: 'red', width: 3 },
+        markers: { symbol },
+      })
+      const current = plot(host(), {
+        width: 400,
+        height: 200,
+        directions: { x: 'x' },
+        scales: { x: linearScale(), y: linearScale() },
+        marks: [mark],
+      })
+      await frame()
+      const line = path(current, 'obs')
+      const marker = current.element.querySelector<SVGGraphicsElement>('[data-mark="marker"]')!
+      const markerPath = marker.getAttribute('d')
+      const writes = vi.spyOn(line, 'setAttribute')
+      const read = vi.spyOn(current.scales.x, 'project')
+      mark.update({ line: { stroke: undefined }, markers: { size: 7 } })
+      await frame()
+      expect(line.getAttribute('stroke')).not.toBe('red')
+      expect(line.getAttribute('stroke-width')).toBe('3')
+      expect(current.element.querySelector('[data-mark="marker"]')).toBe(marker)
+      if (symbol === 'circle') {
+        expect(Number(marker.getAttribute('r'))).toBeCloseTo(Math.sqrt(7 / Math.PI))
+      } else {
+        expect(marker.getBBox().width).toBeCloseTo(Math.sqrt(7))
+        expect(marker.getBBox().height).toBeCloseTo(Math.sqrt(7))
+        expect(marker.getAttribute('d')).not.toBe(markerPath)
+      }
+      expect(writes.mock.calls.some(([key]) => key === 'd')).toBe(false)
+      expect(read).not.toHaveBeenCalled()
+      expect(data.version).toBe(0)
+      mark.update({ visible: false })
+      await frame()
+      expect(line.getAttribute('d')).toBe('')
+      mark.update({ visible: undefined, line: false, markers: false, area: { to: 0 } })
+      await frame()
+      expect(line.getAttribute('display')).toBe('none')
+      expect(current.element.querySelectorAll('[data-mark="marker"]')).toHaveLength(0)
+      mark.update({ line: undefined, area: undefined })
+      await frame()
+      expect(line.getAttribute('display')).toBe('')
+      expect(line.getAttribute('stroke-width')).toBe('1.5')
+      expect(current.element.querySelector('[data-mark="area"]')).toBeNull()
+    },
+  )
 
   test('updates the marker symbol on a series without retaining the previous SVG element type', async () => {
     const mark = series(createSeries({ x: [0, 1], y: [1, 2] }), {
