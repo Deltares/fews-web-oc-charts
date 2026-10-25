@@ -22,6 +22,7 @@ function installPan(handle: PanHandle, context: PlotContext) {
   let captured = false
 
   function updateTouchAction(mode: PanMode) {
+    if (context.suspended.get()) return
     appliedTouchAction = mode === 'x' ? 'pan-y' : mode === 'y' ? 'pan-x' : 'none'
     context.element.style.setProperty('touch-action', appliedTouchAction)
   }

@@ -204,6 +204,7 @@ function installCrossSectionSelect(handle: CrossSectionSelectHandle, context: Pl
   }
 
   function render() {
+    if (context.suspended.get()) return
     const options = handle.options.get().resolved
     const value = handle.value.get()
     const xBinding = binding()

@@ -28,6 +28,7 @@ export interface PlotContext {
   onPointer(listener: (pointer: PlotPointer) => void): () => void
   readonly legend: LegendModel
   readonly theme: ReadonlySignal<ThemeTokens>
+  readonly suspended: ReadonlySignal<boolean>
   /** Measures an application-layout viewport instead of the original plot host. */
   useViewport(element: HTMLElement): () => void
   /** Plot-local scale bindings with ranges in SVG coordinates. */

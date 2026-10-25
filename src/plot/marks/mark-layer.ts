@@ -126,6 +126,7 @@ export function createMarkLayer(context: MarkLayerContext): MarkLayer {
         if (!current.marks.includes(mark)) {
           stop()
           watchers.delete(mark)
+          dirtyMarks.delete(mark)
         }
       }
       for (const mark of current.marks) {

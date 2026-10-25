@@ -131,6 +131,7 @@ function installTooltip(handle: TooltipHandle, context: PlotContext) {
   try {
     context.scope.run(() =>
       reactive.effect(() => {
+        if (context.suspended.get()) return
         const model = computeTooltipModel(
           handle.options.get().resolved,
           context,

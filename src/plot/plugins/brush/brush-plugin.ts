@@ -89,12 +89,14 @@ function installBrush(handle: BrushHandle, context: PlotContext) {
   }
 
   function hide() {
+    if (context.suspended.get()) return
     selection.setAttribute('display', 'none')
     for (const node of handles.values()) node.setAttribute('display', 'none')
     layer.removeAttribute('data-mode')
   }
 
   function render(bounds: Bounds, mode: BrushSelectionMode, persistent: boolean) {
+    if (context.suspended.get()) return
     hide()
     layer.setAttribute('data-mode', mode)
     const region = regionBounds()
@@ -233,6 +235,7 @@ function installBrush(handle: BrushHandle, context: PlotContext) {
 
   context.scope.run(() =>
     reactive.effect(() => {
+      if (context.suspended.get()) return
       const config = handle.options.get().resolved
       const stored = handle.selection.get()
       context.options.get()
