@@ -2042,9 +2042,8 @@ Thus 141 of 150 comparisons are exact. **The strict parity command intentionally
 exits nonzero for the nine remaining mismatches.** No tolerance was introduced,
 and the residual differences have not been accepted as 100% parity.
 A later run after `5e5fb1b` dropped to 119/150 (marker, step-area, and
-polar-line-marker in every engine). Classic markers restore the v4 marker DOM,
-geometry, and computed styles for those routes; this table must be refreshed with
-a full rerun before it is relied on again.
+polar-line-marker in every engine). With classic markers on those routes, the
+full rerun is back to the 141/150 results above, with the same nine residuals.
 The existing v5 visual regression suite also passes all 54 comparisons
 (18 fixtures in each of the three engines), with zero changed pixels.
 Library/type and example-gallery production builds pass, as do all 176 native
