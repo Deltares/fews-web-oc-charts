@@ -449,15 +449,17 @@ describe('headless legend model', () => {
       directions: { x: 'x' },
       marks: [columns],
     })
-    const childId = current.legend.entries.get()[0].children[0].id
-    current.legend.toggle('columns')
+    const entry = current.legend.entries.get()[0]
+    expect(entry).toMatchObject({ id: 'columns', children: [], symbol: { type: 'bar' } })
+    current.legend.toggle(entry.id)
     expect(current.legend.entries.get()[0].visibility).toBe('hidden')
     expect(columns.options.get().resolved.layers).toBeUndefined()
     current.legend.showAll()
     expect(current.legend.entries.get()[0].visibility).toBe('visible')
-    current.legend.setVisible(childId, false)
-    expect(current.legend.entries.get()[0].children[0].visibility).toBe('hidden')
-    current.legend.setVisible(childId, true)
+    current.legend.setVisible(entry.id, false)
+    expect(current.legend.entries.get()[0].visibility).toBe('hidden')
+    expect(columns.options.get().resolved.layers).toBeUndefined()
+    current.legend.setVisible(entry.id, true)
     expect(current.legend.entries.get()[0].visibility).toBe('visible')
     expect(columns.options.get().resolved.y).toBe('y')
     expect(columns.options.get().resolved.layers).toBeUndefined()
