@@ -38,6 +38,17 @@ results are rendered as plain text, not HTML.
 Replace hooks using `inspection.update({ formatValue: ... })`, or pass `undefined`
 to restore the default. Without hooks, existing formatting is unchanged.
 
+Single-valued bars omit the implicit layer name. Explicit bar and stacked-area
+layers show their label, falling back to their declared id.
+
+Composite bounds (bars, histograms and stacked areas) default to `bounds: 'stacked'`:
+only hits with a stack id append `bounds: lower–upper`. Use `bounds: 'always'`
+to include unstacked bounds, or `bounds: 'never'` to omit bounds even for stacks.
+Stack names remain visible independently of this setting. Visible text and
+accessible labels follow the same policy; heatmap coordinate ranges are unaffected.
+Change it with `inspection.update({ bounds: 'always' })`, or pass `undefined` to
+restore `'stacked'`.
+
 ## Listening to changes
 
 Use `subscribe()` to observe any library signal, including a shared scale's domain.

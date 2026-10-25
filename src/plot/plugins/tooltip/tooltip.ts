@@ -50,6 +50,8 @@ export interface TooltipOptions {
   showX: boolean
   /** Decimal places for values and composite bounds; defaults to the mark's precision. */
   digits?: number
+  /** When to append composite bounds to visible and accessible text. Default: 'stacked'. */
+  bounds?: 'always' | 'stacked' | 'never'
   /** Formats coordinates, values and range endpoints before units are appended. */
   formatValue?: TooltipValueFormatter
   /** Returns a unit suffix (or ''), appended once with a separating space. */
@@ -74,6 +76,7 @@ const optionKeys = [
   'crosshair',
   'showX',
   'digits',
+  'bounds',
   'formatValue',
   'formatUnit',
   'formatRange',
@@ -136,6 +139,7 @@ export function tooltip(initial: OptionPatch<TooltipOptions> = {}): TooltipHandl
       crosshair: undefined,
       showX: true,
       digits: undefined,
+      bounds: 'stacked',
       formatValue: undefined,
       formatUnit: undefined,
       formatRange: undefined,
@@ -148,6 +152,12 @@ export function tooltip(initial: OptionPatch<TooltipOptions> = {}): TooltipHandl
       }
       if (typeof options.showX !== 'boolean') {
         throw new TypeError('tooltip.showX must be boolean.')
+      }
+      if (
+        options.bounds !== undefined &&
+        !['always', 'stacked', 'never'].includes(options.bounds)
+      ) {
+        throw new Error('tooltip.bounds must be always, stacked or never.')
       }
       if (
         options.digits !== undefined &&

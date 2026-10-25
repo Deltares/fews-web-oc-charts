@@ -83,7 +83,9 @@ describe('interaction coverage for histogram and heatmap marks', () => {
     expect(tooltipEntries()).toEqual(
       expect.arrayContaining([expect.stringContaining('Distribution')]),
     )
-    expect(tooltipEntries()[0]).toContain('bounds: 0–2')
+    expect(tooltipEntries()[0]).toContain(' · 2')
+    expect(tooltipEntries()[0]).not.toContain('bounds:')
+    expect(tooltipEntries()[0]).not.toContain('single')
     expect(plot.element.querySelector('[data-layer="crosshair"]')?.getAttribute('display')).toBe('')
 
     plot.legend.setVisible('distribution', false)

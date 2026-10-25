@@ -118,6 +118,71 @@ describe('tooltip plugin', () => {
     expect(handle.options.get().resolved.formatRange).toBeUndefined()
   })
 
+  test('validates bounds atomically and restores the stacked default', () => {
+    expect(tooltip().options.get().resolved.bounds).toBe('stacked')
+    const handle = tooltip({ bounds: 'always', digits: 2 })
+    for (const bounds of [null, 'invalid', 42, {}, []]) {
+      // @ts-expect-error Validate invalid runtime options.
+      expect(() => tooltip({ bounds })).toThrow('tooltip.bounds')
+      // @ts-expect-error Validate invalid runtime updates.
+      expect(() => handle.update({ bounds, digits: 3 })).toThrow('tooltip.bounds')
+      expect(handle.options.get().resolved.bounds).toBe('always')
+      expect(handle.options.get().resolved.digits).toBe(2)
+    }
+    handle.update({ bounds: 'never' })
+    expect(handle.options.get().resolved.bounds).toBe('never')
+    handle.update({ bounds: undefined })
+    expect(handle.options.get().resolved.bounds).toBe('stacked')
+  })
+
+  test('shows an implicit bar as name and value with matching accessible text', async () => {
+    const host = document.createElement('div')
+    document.body.append(host)
+    hosts.push(host)
+    const mark = bar(createTable({ t: ['one'], value: [0.4] }), {
+      id: 'rain',
+      x: 't',
+      y: 'value',
+      scales: { x: 't', y: 'q' },
+    })
+    const interaction = tooltip({
+      axis: 'xy',
+      showX: false,
+      formatUnit: (info) => (info.axis === 'y' ? 'mm' : ''),
+    })
+    const plot = createPlot(host, {
+      width: 100,
+      height: 100,
+      margins: { top: 0, right: 0, bottom: 0, left: 0 },
+      scales: { t: bandScale({ domain: ['one'] }), q: linearScale({ domain: [0, 1] }) },
+      marks: [mark],
+      plugins: [interaction],
+    })
+    plots.push(plot)
+    await frame()
+    vi.spyOn(plot.element, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 100, 100))
+    const rectangle = plot.element.querySelector<SVGRectElement>('[data-layer-id="single"]')!
+    plot.element.dispatchEvent(
+      new PointerEvent('pointermove', {
+        clientX: Number(rectangle.getAttribute('x')) + Number(rectangle.getAttribute('width')) / 2,
+        clientY: Number(rectangle.getAttribute('y')) + Number(rectangle.getAttribute('height')) / 2,
+        isPrimary: true,
+      }),
+    )
+    await frame()
+    const node = document.querySelector<HTMLDivElement>('[data-layer="tooltip"]')!
+    expect(node.textContent).toBe('rain · 0.4 mm')
+    expect(node.getAttribute('aria-label')).toBe('rain · 0.4 mm')
+    interaction.update({ bounds: 'always' })
+    await frame()
+    expect(node.textContent).toBe('rain · 0.4 mm · bounds: 0–0.4 mm')
+    expect(node.getAttribute('aria-label')).toBe(node.textContent)
+    interaction.update({ bounds: undefined })
+    await frame()
+    expect(node.textContent).toBe('rain · 0.4 mm')
+    expect(node.getAttribute('aria-label')).toBe(node.textContent)
+  })
+
   test('reactively updates formatter hooks as plain text in the DOM and accessible label', async () => {
     const { interaction, guide, move, entries } = await linkedPlot()
     await move(5, 20)
@@ -346,6 +411,10 @@ describe('tooltip plugin', () => {
     await frame()
     expect(node.textContent).toBe('flow · Forecast · 3 · stack: total · bounds: 2–5')
     expect(node.getAttribute('aria-label')).toBe('flow · Forecast · 3 · stack: total · bounds: 2–5')
+    interaction.update({ bounds: 'never' })
+    await frame()
+    expect(node.textContent).toBe('flow · Forecast · 3 · stack: total')
+    expect(node.getAttribute('aria-label')).toBe(node.textContent)
   })
 
   test('snaps linked crosshairs and tooltips to bar layers', async () => {
