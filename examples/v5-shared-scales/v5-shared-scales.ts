@@ -1,5 +1,5 @@
 import '../shared/v5.css'
-import { axis, batch, createPlot, linearScale, timeScale, type Plot } from '@lib'
+import { axis, batch, createPlot, linearScale, subscribe, timeScale, type Plot } from '@lib'
 
 const overviewHost = document.querySelector<HTMLElement>('#overview')
 const detailHost = document.querySelector<HTMLElement>('#detail')
@@ -12,6 +12,7 @@ const widthValue = document.querySelector<HTMLOutputElement>('#width-value')
 const toggle = document.querySelector<HTMLButtonElement>('#toggle-overview')
 const reset = document.querySelector<HTMLButtonElement>('#reset')
 const status = document.querySelector<HTMLElement>('#status')
+const subscriptionStatus = document.querySelector<HTMLElement>('#subscription-status')
 if (
   !overviewHost ||
   !detailHost ||
@@ -23,7 +24,8 @@ if (
   !widthValue ||
   !toggle ||
   !reset ||
-  !status
+  !status ||
+  !subscriptionStatus
 ) {
   throw new Error('The shared-scale example is missing required elements.')
 }
@@ -59,6 +61,20 @@ function mount(element: HTMLElement, title: string): Plot {
 
 let overview = mount(overviewHost, 'Overview')
 const detail = mount(detailHost, 'Detail')
+let subscriptionNotifications = 0
+
+subscribe(
+  t.domain,
+  (domain) => {
+    subscriptionNotifications += 1
+    const [from, to] = domain.map(Number)
+    subscriptionStatus.textContent =
+      `Shared time subscription notified ${subscriptionNotifications} time(s): ` +
+      `${new Date(from).toISOString()} to ${new Date(to).toISOString()}. ` +
+      'One subscription observes the scale shared by both plots.'
+  },
+  { signal: events.signal },
+)
 
 const describe = () => {
   const [from, to] = t.domain.get().map(Number)

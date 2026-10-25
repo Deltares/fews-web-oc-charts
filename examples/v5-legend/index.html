@@ -73,6 +73,7 @@ const plot = createPlot(host, { scales, axes, marks, plugins: [builtIn] })
 builtIn.update({ showGroups: true })
 // Built-in entries toggle on click or Enter/Space; opacity shows visibility.
 
+plot.on('legendchange', ({ entries }) => renderExternalLegend(entries))
 const entries = plot.legend.entries.get()
 const swatch = createLegendSwatch(entries[0].symbol, { width: 36, height: 20 })
 label.append(swatch) // Application-owned label and layout.

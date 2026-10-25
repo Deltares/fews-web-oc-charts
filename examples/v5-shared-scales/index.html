@@ -53,12 +53,16 @@
       <figcaption>Detail: independently sized, with the same domain state.</figcaption>
     </figure>
     <p id="status" class="status" role="status"></p>
+    <p id="subscription-status" class="status" role="status">
+      Waiting for the shared time scale subscription.
+    </p>
     <h2>Public API</h2>
     <pre><code>const t = time({ domain: [start, end] })
 const q = linear({ domain: [0, 100] })
 const overview = createPlot(elA, { scales: { t, q }, axes: [...] })
 const detail = createPlot(elB, { scales: { t, q }, axes: [...] })
 
+subscribe(t.domain, domain => console.log('One notification for both plots', domain))
 t.domain.set([nextStart, nextEnd]) // both plots, independent ranges
 overview.destroy()              // detail and shared handles survive</code></pre>
     <script type="module" src="./v5-shared-scales.ts"></script>
