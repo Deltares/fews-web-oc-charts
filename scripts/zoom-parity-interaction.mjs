@@ -217,6 +217,37 @@ try {
   })
   const nativeInitial = await snapshot('native')
   const nativeSvg = await chart('native').elementHandle()
+  for (const mode of ['x', 'y', 'xy']) {
+    await restore()
+    await page.selectOption('#mode', mode)
+    await page.locator('#wheel-enabled').uncheck()
+    await chart('native').scrollIntoViewIfNeeded()
+    const box = await chart('native').boundingBox()
+    assert.ok(box)
+    const from = { x: box.x + box.width * 0.4, y: box.y + box.height * 0.4 }
+    const to = { x: box.x + box.width * 0.7, y: box.y + box.height * 0.7 }
+    await page.mouse.move(from.x, from.y)
+    await page.mouse.down()
+    await page.mouse.move(to.x, to.y, { steps: 5 })
+    assert.equal(
+      await page.locator('[data-zoom-selection]').getAttribute('display'),
+      '',
+      `${mode}: selection is visible during drag`,
+    )
+    assert.deepEqual(await snapshot('native'), nativeInitial, 'Box zoom commits only on release')
+    await page.mouse.up()
+    await settled()
+    const after = await snapshot('native')
+    if (mode.includes('x')) assert.ok(span(after.time) < span(nativeInitial.time))
+    else assert.deepEqual(after.time, nativeInitial.time)
+    assert.equal(after.valueDomain, mode.includes('y') ? 'manual' : 'visible autoscale')
+    assert.match(await page.locator('#event-status').textContent(), /source: zoom/)
+    assert.equal(await page.locator('[data-zoom-selection]').getAttribute('display'), 'none')
+    await doubleClick('native')
+    assert.deepEqual(await snapshot('native'), nativeInitial)
+  }
+  await page.selectOption('#mode', 'x')
+  await page.locator('#wheel-enabled').check()
   await page.evaluate(() => {
     globalThis.exampleScales.t.domain.set([Date.UTC(2026, 0, 2), Date.UTC(2026, 0, 3)])
     globalThis.exampleScales.q.update({ domain: [10, 90] })
@@ -283,7 +314,7 @@ try {
   assert.ok(await nativeSvg.evaluate((element) => element.isConnected))
   assert.deepEqual(errors, [], 'The example must not emit browser errors')
   console.log(
-    'Native and parity zoom: modes, modifiers, disabled wheel, runtime updates, resets and readouts passed.',
+    'Native and parity zoom: box/wheel modes, modifiers, disabled wheel, runtime updates, resets and readouts passed.',
   )
 } finally {
   await browser?.close()

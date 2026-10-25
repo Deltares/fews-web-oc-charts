@@ -79,3 +79,34 @@ whether the domain is explicit, and its source (`zoom`, `wheel`, `pan`, `brush`,
 Matching bubbling, composed DOM `CustomEvent`s are dispatched on `plot.element`, with
 typed `detail` available to `HTMLElement` and `SVGElement` event listeners. Existing
 `legendtoggle` and `brush` events are also available through `plot.on()`.
+
+## Box zoom and brush-driven domains
+
+`zoom({ mode: 'x' | 'y' | 'xy' })` supports primary-button drag-to-zoom.
+The selection is shown while dragging and applied on release, with one
+`domainchange` event per changed scale and `source: 'zoom'`. Selected directions
+must span at least 3 SVG pixels; clicks and cancelled drags do not zoom.
+Selections are clamped to the plot, continuous scales use their local projections
+(including reversed, log and time scales), and band scales are left unchanged.
+`wheel: 'none'` disables only wheel zoom. `modifier` applies to both box and wheel
+zoom; double-click reset remains modifier-independent.
+
+Matching brush and pan gestures take precedence over box zoom, independent of plugin
+order. To combine interactions, use distinct modifiers, for example default box zoom,
+`pan({ modifier: ModifierKey.Ctrl })` and the default Shift brush. A pan with
+`modifier: ModifierKey.None` owns all drags, so remove it to enable box zoom.
+
+Brush remains selection-only: it does not change domains automatically. Domain
+updates made synchronously in a `plot.on('brush', ...)` or DOM `brush` listener
+are attributed to `source: 'brush'`:
+
+```ts
+plot.on('brush', ({ scales }) => {
+  time.domain.set(scales.t)
+})
+```
+
+Deferred updates (after an `await`, timer or scheduled subscription) are independent
+API changes and retain `source: 'api'`.
+Box zoom and brush-driven domain updates pause a time scale's live follow window,
+just like wheel zoom and pan; reset resumes following.

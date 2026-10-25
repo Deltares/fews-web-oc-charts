@@ -76,7 +76,7 @@ function updateStatus() {
   const wheelDescription = wheelEnabled.checked
     ? `${modifierDescription}; wheel zoom affects ${mode.value}.`
     : 'Wheel zoom is disabled.'
-  status.textContent = `${wheelDescription} Double-click reset: ${resetMode.value}, affecting ${mode.value}. The y scale ${scaleDescription}.`
+  status.textContent = `${modifierDescription}; drag to box zoom ${mode.value}. ${wheelDescription} Double-click reset: ${resetMode.value}, affecting ${mode.value}. The y scale ${scaleDescription}.`
 }
 
 function selectedMode(value: string, name: string): 'x' | 'y' | 'xy' {

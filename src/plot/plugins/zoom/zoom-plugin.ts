@@ -1,9 +1,13 @@
 import type { ScaleHandle, ScaleValue } from '../../../scales/scale.js'
-import { withSource } from '../../../core/runtime.js'
+import { reactive, withSource } from '../../../core/runtime.js'
 import { matchesModifierKey } from '../../../Utils/modifierKey.js'
 import type { PlotContext, PluginDefinition } from '../plugin-definition.js'
-import { isZoomHandle, type ZoomHandle } from './zoom.js'
+import { isZoomHandle, type ZoomHandle, type ZoomOptions } from './zoom.js'
 import { isValidScaleDomain } from '../../scales/scale-domain.js'
+import { svgElement } from '../../rendering/svg.js'
+import { isBrushHandle } from '../brush/brush.js'
+import { clamp, orderedBounds } from '../brush/brush-selection.js'
+import { isPanHandle } from '../pan/pan.js'
 
 function installZoom(handle: ZoomHandle, context: PlotContext) {
   const initialDomains = new Map<
@@ -17,6 +21,45 @@ function installZoom(handle: ZoomHandle, context: PlotContext) {
   )
   const toggledDomains = new Map<string, readonly ScaleValue[]>()
   let toggled = false
+  const selection = svgElement('rect', {
+    'data-zoom-selection': '',
+    'pointer-events': 'none',
+    fill: 'currentColor',
+    'fill-opacity': 0.16,
+    stroke: 'currentColor',
+    'stroke-dasharray': '4 2',
+    display: 'none',
+  })
+  context.element.append(selection)
+  let active: { pointerId: number; x: number; y: number; config: Readonly<ZoomOptions> } | undefined
+  let captured = false
+  const originalTouchAction = context.element.style.getPropertyValue('touch-action')
+  const originalTouchPriority = context.element.style.getPropertyPriority('touch-action')
+  let appliedTouchAction: string | undefined
+
+  function finish(event?: PointerEvent) {
+    if (!active || (event && event.pointerId !== active.pointerId)) return
+    const gesture = active
+    active = undefined
+    selection.setAttribute('display', 'none')
+    if (captured && context.element.hasPointerCapture(gesture.pointerId)) {
+      context.element.releasePointerCapture(gesture.pointerId)
+    }
+    captured = false
+  }
+
+  context.scope.run(() =>
+    reactive.effect(() => {
+      const config = handle.options.get().resolved
+      const suspended = context.suspended.get()
+      context.regions.get()
+      const plugins = context.options.get().resolved.plugins
+      if (active) finish()
+      if (suspended || plugins.some(isPanHandle)) return
+      appliedTouchAction = config.mode === 'x' ? 'pan-y' : config.mode === 'y' ? 'pan-x' : 'none'
+      context.element.style.setProperty('touch-action', appliedTouchAction)
+    }),
+  )
 
   function zoomableScales(axes: ReadonlySet<'x' | 'y'>) {
     return Object.entries(context.scales).flatMap(([name, binding]) => {
@@ -32,6 +75,102 @@ function installZoom(handle: ZoomHandle, context: PlotContext) {
     })
   }
 
+  function dragBounds(event: PointerEvent) {
+    if (!active) return
+    const config = handle.options.get().resolved
+    if (config.mode !== active.config.mode || config.modifier !== active.config.modifier) {
+      finish()
+      return
+    }
+    const position = context.locate(event)
+    if (!position) return
+    const region = context.regions.get().plot
+    const bounds = orderedBounds(
+      active.x,
+      active.y,
+      clamp(position.svgX, region.x, region.x + region.width),
+      clamp(position.svgY, region.y, region.y + region.height),
+    )
+    const mode = active.config.mode
+    // Ignore click jitter in each selected direction.
+    if (
+      (mode.includes('x') && bounds.x1 - bounds.x0 < 3) ||
+      (mode.includes('y') && bounds.y1 - bounds.y0 < 3)
+    ) {
+      selection.setAttribute('display', 'none')
+      return
+    }
+    const x = mode === 'y' ? region.x : bounds.x0
+    const y = mode === 'x' ? region.y : bounds.y0
+    const width = mode === 'y' ? region.width : bounds.x1 - bounds.x0
+    const height = mode === 'x' ? region.height : bounds.y1 - bounds.y0
+    for (const [name, value] of Object.entries({ x, y, width, height })) {
+      selection.setAttribute(name, String(value))
+    }
+    selection.setAttribute('display', '')
+    return bounds
+  }
+
+  context.on('pointerdown', (event) => {
+    const config = handle.options.get().resolved
+    const otherGesture = context.options
+      .get()
+      .resolved.plugins.some(
+        (plugin) =>
+          (isBrushHandle(plugin) || isPanHandle(plugin)) &&
+          matchesModifierKey(event, plugin.options.get().resolved.modifier),
+      )
+    if (
+      active ||
+      event.defaultPrevented ||
+      otherGesture ||
+      !event.isPrimary ||
+      event.button !== 0 ||
+      !matchesModifierKey(event, config.modifier) ||
+      (event.target instanceof Element && !!event.target.closest('[data-cross-section-handle]'))
+    )
+      return
+    const position = context.locate(event)
+    const axes = new Set<'x' | 'y'>()
+    if (config.mode.includes('x')) axes.add('x')
+    if (config.mode.includes('y')) axes.add('y')
+    if (!position?.inside || !zoomableScales(axes).length) return
+    active = { pointerId: event.pointerId, x: position.svgX, y: position.svgY, config }
+    if (event.isTrusted) {
+      context.element.setPointerCapture(event.pointerId)
+      captured = true
+    }
+    event.preventDefault()
+  })
+  context.on('pointermove', (event) => {
+    if (!active || event.pointerId !== active.pointerId) return
+    dragBounds(event)
+    event.preventDefault()
+  })
+  context.on('pointerup', (event) => {
+    if (!active || event.pointerId !== active.pointerId) return
+    const mode = active.config.mode
+    const bounds = dragBounds(event)
+    finish(event)
+    if (!bounds) return
+    const axes = new Set<'x' | 'y'>()
+    if (mode.includes('x')) axes.add('x')
+    if (mode.includes('y')) axes.add('y')
+    const changes = zoomableScales(axes).flatMap(({ binding, orientation }) => {
+      const first = binding.invert(orientation === 'x' ? bounds.x0 : bounds.y0)
+      const second = binding.invert(orientation === 'x' ? bounds.x1 : bounds.y1)
+      const domain = [Math.min(first, second), Math.max(first, second)]
+      return isValidScaleDomain(binding.scale.kind, domain) ? [{ binding, domain }] : []
+    })
+    withSource('zoom', () => {
+      for (const { binding, domain } of changes) binding.scale.update({ domain })
+    })
+    if (changes.length) toggled = false
+    event.preventDefault()
+  })
+  context.on('pointercancel', finish)
+  context.on('lostpointercapture', finish)
+
   context.on('wheel', (event) => {
     const config = handle.options.get().resolved
     if (config.wheel === 'none' || !matchesModifierKey(event, config.modifier)) return
@@ -41,6 +180,7 @@ function installZoom(handle: ZoomHandle, context: PlotContext) {
     if (config.mode.includes('x') && config.wheel.includes('x')) activeAxes.add('x')
     if (config.mode.includes('y') && config.wheel.includes('y')) activeAxes.add('y')
     if (activeAxes.size === 0) return
+    finish()
     const factor = Math.exp(Math.max(-1, Math.min(1, event.deltaY * 0.002)))
     let changed = false
     for (const { binding, orientation } of zoomableScales(activeAxes)) {
@@ -66,6 +206,7 @@ function installZoom(handle: ZoomHandle, context: PlotContext) {
     if (event.button !== 0) return
     const config = handle.options.get().resolved
     if (!context.locate(event)?.inside) return
+    finish()
     const axes = new Set<'x' | 'y'>()
     if (config.mode.includes('x')) axes.add('x')
     if (config.mode.includes('y')) axes.add('y')
@@ -88,7 +229,26 @@ function installZoom(handle: ZoomHandle, context: PlotContext) {
     event.preventDefault()
   })
 
-  return {}
+  return {
+    destroy() {
+      finish()
+      selection.remove()
+      if (
+        appliedTouchAction === undefined ||
+        context.element.style.getPropertyValue('touch-action') !== appliedTouchAction
+      )
+        return
+      if (originalTouchAction) {
+        context.element.style.setProperty(
+          'touch-action',
+          originalTouchAction,
+          originalTouchPriority,
+        )
+      } else {
+        context.element.style.removeProperty('touch-action')
+      }
+    },
+  }
 }
 
 export const zoomDefinition: PluginDefinition<ZoomHandle> = {

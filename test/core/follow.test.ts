@@ -71,6 +71,25 @@ test('API domain writes remain until data changes; gestures suspend both peers t
   expect(peer.domain.get()).toEqual([1_180, 1_280])
 })
 
+test.each(['zoom', 'brush'] as const)(
+  '%s domain writes pause follow and clear a previous API override',
+  (source) => {
+    const store = createSeries({ x: [1_000, 1_100], y: [1, 2] })
+    const scale = timeScale({ follow: { window: 100 } })
+    connectData(scale, store)
+    scale.domain.set([500, 600])
+    expect(scale.following.get()).toBe(true)
+    withSource(source, () => scale.domain.set([1_020, 1_060]))
+    expect(scale.following.get()).toBe(false)
+    expect(scale.domain.get()).toEqual([1_020, 1_060])
+    store.append({ x: [1_200], y: [3] })
+    expect(scale.domain.get()).toEqual([1_020, 1_060])
+    withSource('reset', () => scale.update({ domain: undefined }))
+    expect(scale.following.get()).toBe(true)
+    expect(scale.domain.get()).toEqual([1_100, 1_200])
+  },
+)
+
 test('calendar-day windows use local civil time across daylight-saving gaps', () => {
   const store = createSeries({ x: [Date.UTC(2025, 2, 31, 0, 30)], y: [1] })
   const scale = timeScale({
