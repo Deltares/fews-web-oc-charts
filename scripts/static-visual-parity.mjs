@@ -110,6 +110,19 @@ try {
               })
             }, dark)
             if (errors.length) throw new Error(errors.join('\n'))
+            // Force a full repaint: incremental repaints during animated v4 draws can
+            // leave Chromium anti-aliasing that differs from a one-pass paint.
+            await page.evaluate(async (hosts) => {
+              const frames = () =>
+                new Promise((resolve) =>
+                  window.requestAnimationFrame(() => window.requestAnimationFrame(resolve)),
+                )
+              const svgs = hosts.map((id) => document.querySelector(`#${id} svg`))
+              for (const svg of svgs) svg.style.visibility = 'hidden'
+              await frames()
+              for (const svg of svgs) svg.style.visibility = ''
+              await frames()
+            }, fixture.hosts)
             const shots = []
             for (const id of fixture.hosts) {
               shots.push(await page.locator(`#${id} svg`).screenshot({ animations: 'disabled' }))
