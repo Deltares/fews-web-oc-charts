@@ -22,6 +22,8 @@ export interface TableChange {
   readonly previousLength: number
   readonly length: number
   readonly inputLength: number
+  /** Insertion/replacement start in the previous snapshot, before retention. */
+  readonly spliceFrom: number
   readonly invalidatedFrom: number
   readonly invalidatedTo: number
   readonly replaced: number
@@ -336,6 +338,7 @@ export function createTable(initial: TableInput, options: TableOptions = {}): Ta
       previousLength,
       length,
       inputLength: count,
+      spliceFrom: previousLength,
       invalidatedFrom: start === 0 ? previousLength : 0,
       invalidatedTo: length,
       replaced: 0,
@@ -410,6 +413,7 @@ export function createTable(initial: TableInput, options: TableOptions = {}): Ta
       previousLength,
       length,
       inputLength: count,
+      spliceFrom: before,
       invalidatedFrom: 0,
       invalidatedTo: length,
       replaced,
