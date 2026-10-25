@@ -2275,7 +2275,7 @@ no static baselines need updating for this assessment.
 | Shared clock                            | No v5 shared clock API or clock consumer is present in the production core.                                                                                                                                                                                                           | Add a shared current-time signal with explicit ownership/cleanup and deterministic test control. Keep current-time mark/plugin rendering in Phase 6; do not port domain plugins as part of this assessment.                                                                                                                                     |
 | Follow mode                             | `timeScale()` has no `follow` option or follow-state controls. Zoom/pan/reset operate on ordinary domains. The spike demo follows by manually setting its own domain.                                                                                                                 | Implement the window/lead contract, new-data advancement, suspension on user zoom/pan and resumption on reset. Shared consumers must observe one follow state/domain; distinguish user gestures from API/autoscale writes using existing attribution.                                                                                           |
 | Series append/retention                 | `createSeries()`/`fromObjects()` support append, prepend, upsert, replace, clear, `maxPoints` and `maxAge`; appends use circular storage. `SeriesChange` reports operation, resulting invalidation indexes, replacement count and retention exclusions. A 128-sample-block x/y extent index serves unwindowed and viewport-filtered x/y extents. Simple line-only data-backed series append to the existing SVG path without reprojecting retained samples. Dense cartesian line-only series use a bounded, versioned viewport LOD cache preserving per-pixel extrema and gaps. | Complex line geometry (areas/markers) and geometry for retained/replaced data still rebuild. Add incremental processing for aligned tables and stacks before claiming general live append performance.                                                                                                                                                                                                                                                                                                                                 |
-| Aligned tables and stacks               | Table mutations validate and publish all columns atomically, preserve surviving sample IDs and apply retention. `TableChange` reports append ranges, replacements and retention. Stack cache preserves prior layouts across non-evicting appends and incrementally computes appended rows; bar/stacked-area table validation uses the same append path. Cache remains limited to 8 entries/32 MiB. | Table mutations still materialize/copy merged columns and stack endpoint arrays still copy prefix values. Retention and non-append mutations trigger full stack computation. Add chunked aligned storage, affected-row stack reuse for other mutations, and measured cache/memory bounds; constants alone are not a measured live-memory plateau. |
+| Aligned tables and stacks               | Table mutations validate and publish all columns atomically, preserve surviving sample IDs and apply retention. Aligned circular buffers avoid survivor relocation except at capacity growth. Stack layouts share immutable 128-row endpoint blocks across appends, including count/age retention; only a partial tail block copies survivors (at most 127 rows). Bar/stacked-area candidate validation computes appended rows even with retention. Cache remains limited to 8 entries/32 MiB. | Non-append mutations materialize columns and fully recompute stacks. Block descriptors are rebuilt per snapshot; categorical key validation still scans all keys. Add affected-row reuse for other mutations and measured live cache/memory bounds; bounded typed-buffer bytes alone are not a measured browser-memory plateau. |
 | Back-pressure and visibility            | The shared frame scheduler merges invalidations, and series-mark tests assert one geometry write for coalesced mutations with unrelated marks unchanged. A module-level ResizeObserver exists.                                                                                        | No `plot.pause()`/`resume()` or production IntersectionObserver exists. Add a shared visibility observer and per-plot render suspension; retain pending dirty work, draw the latest state on resume and release registrations on destroy. Frame coalescing is not producer throttling and does not make synchronous store mutation incremental. |
 | Live example and end-to-end acceptance  | `examples/v5-spike-live/` uses `src/spike/` stores, scheduler and SVG renderer, with manual follow and a timer. It is useful spike evidence, not acceptance of `createPlot()` or production stores.                                                                                   | Add a production live-stream example using public v5 APIs, shared scales and bounded series/table retention, plus deterministic behavioral and resource checks. `connect()` and transformed `linkScales()` remain optional helpers from §3.9/§3.10, not prerequisites for the core work.                                                        |
 
@@ -2507,18 +2507,51 @@ row range, replaced rows, retention exclusions and affected key bounds. Metadata
 published before the table version signal so subscribers see a consistent mutation
 snapshot.
 
-For append-only table updates without retention, `stackLayout()` extends a matching
-cached layout: it copies existing endpoint values into the new immutable arrays and
-computes gap detection and stack totals only for appended rows. The bar and stacked-area
-table validators use this same append-only path, including validation of new stack
-overflow and interval rows. Any retention, prepend, upsert, replace or clear uses full
-stack computation. Tests assert processed-row counts and compare incremental results
-with full recomputation.
+For append-only table updates, `stackLayout()` extends a matching cached layout using
+immutable blocks of up to 128 rows. Complete blocks share existing endpoint buffers;
+a partial tail block copies at most 127 surviving rows. Count/age retention slices
+surviving block ranges and releases evicted block references, without changing older
+snapshots or retaining chains of previous layouts. Gaps and diverging totals are computed
+only for new rows. The bar and stacked-area table validators use the same append path,
+including with retention: all incoming rows are validated before eviction, preserving
+atomic overflow, duplicate-key and interval rejection. Prepend, upsert, replace, clear
+and missed layout versions use full computation.
 
-Focused table/stack tests and the library build pass. This is not yet a fully incremental
-aligned storage path: table mutations still merge/copy every retained column, and stack
-endpoint arrays copy their old prefix. Chunked storage and measured live-memory plateau
-remain open.
+Aligned tables now keep every column and sample ID in aligned circular buffers.
+Append validates a combined old/incoming view before writing, applies count/age retention
+by advancing the logical head, and copies survivors only during geometric capacity growth.
+Only surviving incoming rows are written. Age retention uses binary search and preserves
+all duplicate keys at the cutoff. Prepend/upsert/replace/clear still use the full-copy
+path, including after wraparound. Retention options are copied at construction.
+Categorical composite append validation checks all prior keys, not only the last key.
+
+`tableStorageDiagnostics()` in the internal table module reports canonical capacity/bytes
+and cumulative relocated/appended rows. Tests compare all values and sample IDs against
+a reference across 512 wrapped appends, assert zero survivor relocation and constant
+canonical bytes at fixed capacity, and cover growth, oversized input, combined retention,
+clear/reuse, non-append mutations after wrap and atomic rejection. These counters exclude
+validation work, transient ingestion buffers, dictionaries and native browser allocations.
+The circular-table checkpoint passed 42 focused tests and the library build. Browser
+acceptance for that checkpoint is confirmed by the user's local Chromium run: bar,
+stacked-area and histogram suites all pass (3 files, 28 tests).
+
+The immutable-block checkpoint adds `StackLayout.copiedRows` and accounts for all typed
+buffers reachable from each snapshot, including partially evicted blocks. Tests run
+512 retained appends each for stacked, grouped and named layouts, comparing every
+endpoint and total with full recomputation, including hidden layers and gaps. They
+assert tail-only processing, fewer than 128 copied prefix rows, bounded reachable
+buffer bytes and unchanged old snapshots. A guarded table view verifies that an append
+reads no surviving value columns. Age eviction, oversized batches, complete eviction,
+missed versions, clear/reuse and absolute overflow row indexes are also covered.
+Focused table/stack/series suites pass (49 tests), and the library build passes.
+Browser acceptance for this checkpoint is confirmed by the user's local Chromium run:
+bar, stacked-area and histogram suites all pass (3 files, 28 tests).
+
+Endpoint lookup now binary-searches block descriptors; constructing a snapshot still
+walks those descriptors. Categorical duplicate validation scans the complete candidate.
+Typed-buffer accounting excludes descriptor objects, transient validation allocations,
+externally retained snapshots and native browser allocations. Incremental processing for
+non-append mutations and the measured live-memory plateau remain open.
 
 ## 8. Additional improvements to consider
 
