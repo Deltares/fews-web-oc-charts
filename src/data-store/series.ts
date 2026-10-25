@@ -33,6 +33,16 @@ export interface SeriesChange {
   readonly evicted: Readonly<{ count: number; from: number; to: number }> | undefined
 }
 
+export interface SeriesLod extends Iterable<number> {
+  readonly length: number
+  at(index: number): number
+}
+
+interface CachedSeriesLod {
+  readonly indices: Uint32Array
+  readonly view: SeriesLod
+}
+
 export interface SeriesStore<Rows = SeriesInput> {
   readonly length: number
   readonly capacity: number
@@ -43,6 +53,9 @@ export interface SeriesStore<Rows = SeriesInput> {
     window?: readonly [number, number],
     windowAxis?: 'x' | 'y',
   ): readonly [number, number] | undefined
+  lod(window: readonly [number, number], width: number): SeriesLod
+  readonly lodCacheEntries: number
+  readonly lodCacheByteLength: number
   xAt(index: number): number
   yAt(index: number): number
   append(rows: Rows): void
@@ -122,6 +135,15 @@ function createStore<Rows>(
     Readonly<{ xMin: number; xMax: number; yMin: number; yMax: number }> | undefined
   > = []
   let extentIndexDirty = true
+  const lodCacheLimitBytes = 2 * 1024 * 1024
+  const lodCacheLimitEntries = 16
+  const lodCache = new Map<string, CachedSeriesLod>()
+  let lodCacheByteLength = 0
+
+  function clearLodCache() {
+    lodCache.clear()
+    lodCacheByteLength = 0
+  }
 
   function slot(index: number) {
     if (!Number.isInteger(index) || index < 0 || index >= count) {
@@ -307,11 +329,118 @@ function createStore<Rows>(
     return low <= high ? Object.freeze([low, high]) : undefined
   }
 
+  function lod(window: readonly [number, number], width: number): SeriesLod {
+    const start = Math.min(window[0], window[1])
+    const end = Math.max(window[0], window[1])
+    if (!Number.isFinite(start) || !Number.isFinite(end)) {
+      throw new RangeError('series.lod window must have finite bounds.')
+    }
+    if (!Number.isSafeInteger(width) || width < 1) {
+      throw new RangeError('series.lod width must be a positive safe integer.')
+    }
+    const key = `${version.get()}:${start}:${end}:${width}`
+    let cached = lodCache.get(key)
+    if (cached) {
+      lodCache.delete(key)
+      lodCache.set(key, cached)
+    } else {
+      let low = 0
+      let high = count
+      while (low < high) {
+        const middle = Math.floor((low + high) / 2)
+        if (xAt(middle) < start) low = middle + 1
+        else high = middle
+      }
+      const from = Math.max(0, low - 1)
+      low = from
+      high = count
+      while (low < high) {
+        const middle = Math.floor((low + high) / 2)
+        if (xAt(middle) <= end) low = middle + 1
+        else high = middle
+      }
+      const to = Math.min(count, low + 1)
+      const selected: number[] = []
+      let bucket = -1
+      let first = -1
+      let minimum = -1
+      let maximum = -1
+      let last = -1
+      let previousWasMissing = false
+
+      const flush = () => {
+        if (first < 0) return
+        for (const index of [first, minimum, maximum, last].sort((a, b) => a - b)) {
+          if (selected[selected.length - 1] !== index) selected.push(index)
+        }
+        first = -1
+        minimum = -1
+        maximum = -1
+        last = -1
+      }
+
+      for (let index = from; index < to; index += 1) {
+        const value = yAt(index)
+        if (!Number.isFinite(value)) {
+          flush()
+          if (!previousWasMissing && selected[selected.length - 1] !== index) selected.push(index)
+          previousWasMissing = true
+          continue
+        }
+        const pixel =
+          start === end
+            ? Math.floor(width / 2)
+            : Math.max(
+                0,
+                Math.min(width - 1, Math.floor(((xAt(index) - start) / (end - start)) * width)),
+              )
+        if (first < 0 || pixel !== bucket) {
+          flush()
+          first = index
+          minimum = index
+          maximum = index
+          bucket = pixel
+        } else {
+          if (value < yAt(minimum)) minimum = index
+          if (value > yAt(maximum)) maximum = index
+        }
+        last = index
+        previousWasMissing = false
+      }
+      flush()
+      const indices = Uint32Array.from(selected)
+      const view: SeriesLod = {
+        length: indices.length,
+        at(index: number) {
+          if (!Number.isInteger(index) || index < 0 || index >= indices.length) {
+            throw new RangeError(`series LOD index ${index} is outside the result.`)
+          }
+          return indices[index]
+        },
+        *[Symbol.iterator]() {
+          yield* indices
+        },
+      }
+      cached = { indices, view }
+      lodCache.set(key, cached)
+      lodCacheByteLength += indices.byteLength
+      while (lodCacheByteLength > lodCacheLimitBytes || lodCache.size > lodCacheLimitEntries) {
+        const oldestKey = lodCache.keys().next().value
+        if (oldestKey === undefined) break
+        const oldest = lodCache.get(oldestKey)
+        if (oldest) lodCacheByteLength -= oldest.indices.byteLength
+        lodCache.delete(oldestKey)
+      }
+    }
+    return cached.view
+  }
+
   function publish(
     from: number,
     to: number,
     details: Omit<SeriesChange, 'version' | 'from' | 'to'>,
   ) {
+    clearLodCache()
     change = Object.freeze({ version: version.get() + 1, from, to, ...details })
     version.update((value) => value + 1)
   }
@@ -429,7 +558,14 @@ function createStore<Rows>(
       version.get()
       return change
     },
+    get lodCacheEntries() {
+      return lodCache.size
+    },
+    get lodCacheByteLength() {
+      return lodCacheByteLength
+    },
     extent,
+    lod,
     xAt,
     yAt,
     append: (rows: Rows) => mutate(rows, 'append'),

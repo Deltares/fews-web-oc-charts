@@ -141,6 +141,7 @@ export type {
   SeriesStoreOptions,
   SeriesStore,
   SeriesChange,
+  SeriesLod,
 } from './data-store/series.js'
 export { series } from './plot/marks/line/series.js'
 export { createLegendSwatch, legendSymbolPrimitives } from './plot/plugins/legend/legend-swatch.js'

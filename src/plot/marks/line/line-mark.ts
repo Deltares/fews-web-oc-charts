@@ -156,6 +156,21 @@ function createLineRenderer(): MarkRenderer<LineLikeMark> {
       const polar = context.coordinateSystem === 'polar'
       const skewT = context.coordinateSystem === 'skewT'
       const storeVersion = store?.version
+      const length = visible ? (store?.length ?? staticMark?.xValues.length ?? 0) : 0
+      const xDomain = xScale.scale.domain.get()
+      const xRange = xScale.range.get()
+      const lodWidth = Math.max(1, Math.floor(Math.abs(xRange[1] - xRange[0])))
+      const lod =
+        store &&
+        visible &&
+        mark.line &&
+        !mark.area &&
+        !mark.markers &&
+        !polar &&
+        !skewT &&
+        length > lodWidth * 4
+          ? store.lod([Number(xDomain[0]), Number(xDomain[1])], lodWidth)
+          : undefined
       const angular = xScale.scale.options.get().resolved
       const key = [
         mark,
@@ -182,6 +197,7 @@ function createLineRenderer(): MarkRenderer<LineLikeMark> {
           mark.digits === undefined &&
           !polar &&
           !skewT &&
+          !lod &&
           change?.operation === 'append' &&
           change.evicted === undefined &&
           change.previousLength === renderedLength &&
@@ -227,8 +243,9 @@ function createLineRenderer(): MarkRenderer<LineLikeMark> {
       let lastX = 0
       const baseline = mark.area ? yScale.project(mark.area.to) : 0
       let markerIndex = 0
-      const length = visible ? (store?.length ?? staticMark?.xValues.length ?? 0) : 0
-      for (let index = 0; index < length; index += 1) {
+      const sampleCount = lod?.length ?? length
+      for (let sample = 0; sample < sampleCount; sample += 1) {
+        const index = lod?.at(sample) ?? sample
         const xValue = store ? store.xAt(index) : staticMark?.xValues[index]
         const yValue = store ? store.yAt(index) : staticMark?.yValues[index]
         if (!isScaleValue(xValue) || !isScaleValue(yValue)) {

@@ -144,6 +144,37 @@ describe('data-backed series marks', () => {
     expect(projectY).toHaveBeenCalledTimes(4)
   })
 
+  test('uses bounded cached LOD for dense line-only series without losing extrema or gaps', async () => {
+    const x = Array.from({ length: 10_000 }, (_, index) => index)
+    const y = x.map((value) => {
+      if (value === 5_000 || value === 5_001) return NaN
+      if (value === 5_042) return 100
+      if (value === 5_073) return -100
+      return Math.sin(value / 100)
+    })
+    const data = createSeries({ x, y })
+    const current = plot(host(), {
+      width: 200,
+      height: 160,
+      directions: { x: 'x' },
+      scales: {
+        x: linearScale({ domain: [4_900, 5_100] }),
+        y: linearScale({ domain: [-110, 110] }),
+      },
+      marks: [series(data, { id: 'lod', x: 'x', y: 'y' })],
+    })
+    await frame()
+
+    const line = path(current, 'lod')
+    const pathData = line.getAttribute('d') ?? ''
+    expect(pathData.match(/[ML]/g)?.length).toBeLessThan(200)
+    expect(pathData).toContain(`,${current.scales.y.project(100)}`)
+    expect(pathData).toContain(`,${current.scales.y.project(-100)}`)
+    expect(pathData.match(/M/g)?.length).toBeGreaterThan(1)
+    expect(data.lodCacheEntries).toBe(1)
+    expect(data.lodCacheByteLength).toBeLessThanOrEqual(2 * 1024 * 1024)
+  })
+
   test('only changed store consumers repaint, coalesces mutations, and releases removed/destroyed consumers', async () => {
     const baseline = reactive.getDiagnostics()
     const data = createSeries({ x: [0, 1], y: [1, 2] })
