@@ -13,9 +13,9 @@
     </nav>
     <h1>v5: interactive zoom</h1>
     <p>
-      Zoom the chart with the mouse wheel. Choose which scale directions respond and whether Ctrl or
-      Shift is required. Double-click inside the plot to reset the selected directions using the
-      chosen policy. Options apply immediately without recreating the plot.
+      Drag a box or use the mouse wheel to zoom. Choose which scale directions respond and whether
+      Ctrl or Shift is required. Double-click inside the plot to reset the selected directions using
+      the chosen policy. Options apply immediately without recreating the plot.
     </p>
     <fieldset class="controls">
       <legend>Zoom interaction</legend>
@@ -52,10 +52,11 @@
     <figure>
       <div id="chart" class="plot-host"></div>
       <figcaption>
-        Wheel zoom is anchored at the cursor. The y domain follows visible samples until you zoom
-        that axis. Initial reset restores the selected scales' original configuration; full reset
-        autoscales all their data. Toggle alternates full extent and the previous zoomed domains.
-        The button always restores both initial scales, including visible-data y autoscaling.
+        Box zoom applies the selection on release; wheel zoom is anchored at the cursor. The y
+        domain follows visible samples until you zoom that axis. Initial reset restores the selected
+        scales' original configuration; full reset autoscales all their data. Toggle alternates full
+        extent and the previous zoomed domains. The button always restores both initial scales,
+        including visible-data y autoscaling.
       </figcaption>
     </figure>
     <output id="status" class="status"></output>
@@ -76,7 +77,7 @@ const readout = effect(() => {
 })
 // Dispose the readout when the example is unmounted.
 readout.dispose()
-// Wheel over the plot to zoom; double-click inside the plot to reset.</code></pre>
+// Drag a box or wheel over the plot to zoom; double-click inside the plot to reset.</code></pre>
     <script type="module" src="./v5-zoom.ts"></script>
   </body>
 </html>

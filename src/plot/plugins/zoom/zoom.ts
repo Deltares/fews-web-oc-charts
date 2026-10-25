@@ -14,8 +14,10 @@ export type ZoomResetMode = 'initial' | 'full' | 'toggle'
 
 export interface ZoomOptions {
   id?: string
+  /** Directions affected by box zoom and reset; also limits wheel directions. */
   mode: ZoomMode
   wheel: ZoomWheelMode
+  /** Required modifier for box and wheel zoom. */
   modifier: ModifierKey
   reset: ZoomResetMode
 }

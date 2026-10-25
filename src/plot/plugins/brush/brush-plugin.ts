@@ -1,4 +1,4 @@
-import { reactive } from '../../../core/runtime.js'
+import { reactive, withSource } from '../../../core/runtime.js'
 import { matchesModifierKey } from '../../../Utils/modifierKey.js'
 import type { PlotContext, PluginDefinition } from '../plugin-definition.js'
 import {
@@ -166,8 +166,10 @@ function installBrush(handle: BrushHandle, context: PlotContext) {
       handle.setSelection(detail)
       lastPublished = handle.selection.get()
     }
-    context.element.dispatchEvent(
-      new CustomEvent<BrushSelection>(brushEvent, { detail, bubbles: true, composed: true }),
+    withSource('brush', () =>
+      context.element.dispatchEvent(
+        new CustomEvent<BrushSelection>(brushEvent, { detail, bubbles: true, composed: true }),
+      ),
     )
   }
 

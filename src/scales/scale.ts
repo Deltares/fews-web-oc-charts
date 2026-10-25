@@ -445,7 +445,12 @@ function createScale(kind: ScaleKind, initial: OptionPatch<ScaleOptions>): Scale
         (previousFollow === undefined && configuredFollow !== undefined)
       ) {
         setFollowing(true)
-      } else if (source === 'zoom' || source === 'wheel' || source === 'pan') {
+      } else if (
+        source === 'zoom' ||
+        source === 'wheel' ||
+        source === 'pan' ||
+        source === 'brush'
+      ) {
         setFollowing(false)
       }
       if (
@@ -458,7 +463,8 @@ function createScale(kind: ScaleKind, initial: OptionPatch<ScaleOptions>): Scale
         source === 'reset' ||
         source === 'zoom' ||
         source === 'wheel' ||
-        source === 'pan'
+        source === 'pan' ||
+        source === 'brush'
       ) {
         followOverride.set(
           source === 'api' &&

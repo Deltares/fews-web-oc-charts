@@ -2165,6 +2165,20 @@ after the parity follow-up below.
 
 #### Phase 3 v4 interaction parity follow-up
 
+**Box zoom follow-up:** `zoom()` now previews primary-button x/y/xy drag
+selections and commits continuous-scale domains on release with source `zoom`.
+Selections clamp to the plot, ignore click jitter below 3 SVG pixels and cancel
+on pointer cancellation, lost capture, option/layout changes or plugin removal.
+Matching brush/pan modifiers take precedence independent of plugin order.
+Synchronous domain updates in brush event listeners carry source `brush`;
+brush itself remains selection-only. Regression coverage is in
+`test/Plot/zoom.test.ts` and the native zoom interaction script. Library and
+example builds and eight browser-free core follow tests pass. Box/brush domain writes
+pause live follow, and reset resumes it. Browser validation passed in the user's
+local Chromium run on 2026-10-25: follow (3 tests), brush (15 tests), zoom (10 tests)
+and the native/parity zoom interaction script, including box/wheel modes,
+modifiers, disabled wheel, runtime updates, resets and readouts.
+
 **Status: complete.** All six interaction suites (brush, legend, mark-hits,
 mouseover, pan and zoom) passed together in Chromium in the user's local
 `npm run test:interaction` run on 2026-10-25. This completes the behavioral parity
