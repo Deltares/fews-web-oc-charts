@@ -133,7 +133,7 @@ function flattenEntries(
 }
 
 /**
- * Column-major flow used for vertical and overlay legends. Root groups are separated by a
+ * Column-major flow used for left/right and overlay legends. Root groups are separated by a
  * gap with a divider, except at the top of a column. When the entries need more than one
  * column, the column height is reduced as far as possible to balance the columns.
  */
@@ -407,9 +407,14 @@ function installLegend(handle: LegendHandle, context: PlotContext) {
       1,
       Math.min(items.length, Math.floor(plot.width / Math.max(1, itemWidth))),
     )
+    // Left/right docks use the overlay layout inside a box spanning the full chart height,
+    // margins included, wrapping into columns only when one column does not fit.
     const placements = horizontal
       ? sectionPlacements(items, horizontalColumns)
-      : columnPlacements(items, overlay ? Infinity : Math.max(itemHeight, plot.height))
+      : columnPlacements(
+          items,
+          overlay ? Infinity : Math.max(itemHeight, height - verticalPadding * 2),
+        )
     const columns = horizontal
       ? horizontalColumns
       : Math.max(1, ...placements.map((placement) => placement.column + 1))
@@ -417,7 +422,8 @@ function installLegend(handle: LegendHandle, context: PlotContext) {
     const contentWidth = columns * itemWidth
     const contentHeight = Math.max(0, ...placements.map((placement) => placement.y + itemHeight))
     const boxWidth = !overlay && horizontal ? width : contentWidth + horizontalPadding * 2
-    const boxHeight = !overlay && !horizontal ? height : contentHeight + verticalPadding * 2
+    const docked = !overlay && !horizontal
+    const boxHeight = docked ? height : contentHeight + verticalPadding * 2
     const corners = position.split('-')
     const rightAligned = position === 'right' || corners[1] === 'right'
     const bottomAligned = position === 'bottom' || corners[0] === 'bottom'
@@ -427,9 +433,10 @@ function installLegend(handle: LegendHandle, context: PlotContext) {
       x = rightAligned ? plot.x + plot.width - boxWidth - 8 : plot.x + 8
       y = bottomAligned ? plot.y + plot.height - boxHeight - 8 : plot.y + 8
     } else {
+      const svgHeight = horizontal ? boxHeight : height
       external.setAttribute('width', String(boxWidth))
-      external.setAttribute('height', String(boxHeight))
-      external.setAttribute('viewBox', `0 0 ${boxWidth} ${boxHeight}`)
+      external.setAttribute('height', String(svgHeight))
+      external.setAttribute('viewBox', `0 0 ${boxWidth} ${svgHeight}`)
       external.style.width = horizontal ? '100%' : `${boxWidth}px`
       external.style.height = horizontal ? `${boxHeight}px` : '100%'
     }
@@ -450,7 +457,7 @@ function installLegend(handle: LegendHandle, context: PlotContext) {
     })
     layer.append(background)
     const left = x + (horizontal ? plot.x : horizontalPadding)
-    const top = y + (!overlay && !horizontal ? plot.y : verticalPadding)
+    const top = y + verticalPadding
     for (const { item, column, y: offset, divider } of placements) {
       const positionedY = top + offset
       const positionedX = left + column * cellWidth

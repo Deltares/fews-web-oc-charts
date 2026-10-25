@@ -1,3 +1,4 @@
+import { validateLegendGroup } from '../static-legend.js'
 import {
   createOptionState,
   type OptionPatch,
@@ -13,6 +14,8 @@ export interface HeatmapOptions {
   id?: string
   /** Legend label; the heatmap only appears in the legend when labelled. */
   label?: string
+  /** Legend group heading; marks sharing a group are toggled together. */
+  legendGroup?: string
   scales: { x: string; y: string }
   color: ColorScale
   renderer: 'svg' | 'canvas'
@@ -37,7 +40,7 @@ export function heatmap(
   initial: Pick<HeatmapOptions, 'scales' | 'color'> & OptionPatch<HeatmapOptions>,
 ): HeatmapMark {
   if (!data || !isGridStore(data)) throw new TypeError('heatmap requires a createGrid store.')
-  const keys = ['id', 'label', 'scales', 'color', 'renderer', 'visible', 'opacity']
+  const keys = ['id', 'label', 'legendGroup', 'scales', 'color', 'renderer', 'visible', 'opacity']
   validateKeys(initial, keys, 'heatmap')
   const defaultScales = { ...initial.scales }
   const defaultColor = initial.color
@@ -55,6 +58,7 @@ export function heatmap(
         throw new Error('heatmap.id must be a non-empty string.')
       if (options.label !== undefined && (typeof options.label !== 'string' || !options.label))
         throw new Error('heatmap.label must be a non-empty string.')
+      validateLegendGroup(options.legendGroup, 'heatmap')
       validateKeys(options.scales, ['x', 'y'], 'heatmap.scales')
       const { x, y } = options.scales
       if (typeof x !== 'string' || !x || typeof y !== 'string' || !y || x === y)

@@ -741,8 +741,15 @@ children }`. `visibility` is `'visible' | 'hidden' | 'mixed'`; `children` is an 
   coloured bands. Composite marks (`bar`, `stackedArea`) follow v4: a single unstacked
   layer collapses into one leaf entry; an unlabelled multi-layer mark has no heading and
   its layers (and named-stack groups) become top-level entries; a labelled multi-layer
-  mark is a heading showing its first layer's symbol. Named-stack headings use a `group`
-  symbol (no swatch); each layer entry carries its own symbol. Static marks (`line`, `rule`, `band`,
+  mark is a heading showing its first layer's symbol. Every mark accepts a
+  `legendGroup: string` option: marks sharing it are nested, in mark order, under one
+  heading placed at the first member's position (ID `group:<name>`). The heading's
+  visibility is the combined (`mixed`) state of its members; toggling it toggles all
+  members, and isolation works among groups/ungrouped entries and among members.
+  Members keep their own hierarchy and inclusion rules (static marks still need a
+  `label`). Legend-group and named-stack headings use the `group` symbol, a "layers"
+  icon (diamond above two chevrons) stroked in `currentColor`, since their members may
+  be of any kind; each layer entry carries its own symbol. Static marks (`line`, `rule`, `band`,
   `progress`, `text`, `arrows`, `direction`) and `heatmap` join the legend only when they
   have a `label`; their `visible` option is toggled by the legend.
   Marker `size` is a radius; `opacity` on area/bar symbols is fill opacity, matching
@@ -752,8 +759,7 @@ children }`. `visibility` is `'visible' | 'hidden' | 'mixed'`; `children` is an 
   the model owns IDs, hierarchy and commands without mark-kind checks. Series, bars and
   stacked areas use shared `resolveLineStyles`/`resolveCompositeStyle` helpers with the
   SVG/canvas mark renderers. These helpers are also exported for tooltip/highlight consumers.
-  Currently `series()`, `bar()` and `stackedArea()` opt in; low-level static marks
-  remain excluded from the legend model.
+  All marks opt in; static marks and `heatmap` only when labelled.
 - Commands change authoritative mark/ensemble/composite-layer visibility via the runtime option/state
   path (3.1.1), not a Vue-local mirror. Parent toggle hides all children when fully
   visible, otherwise shows all; child changes recompute the parent's mixed state.
@@ -2035,7 +2041,7 @@ events. Unlabelled entries use their mark ID, or a stable generated label when n
 exists. Initial entries and visibility commands are available synchronously when plot
 creation returns; subsequent handle changes are tracked reactively.
 The [v5 legend example](./examples/v5-legend/index.html) demonstrates an application-owned
-HTML legend with nested stacks, mixed visibility, sibling isolation, direct mark updates,
+HTML legend with `Observed`/`Forecast` legend groups, mixed visibility, sibling isolation, direct mark updates,
 and SVG/canvas area rendering without a legend plugin.
 The optional built-in SVG `legend()` plugin renders the same reactive model as clickable
 swatches and labels, without checkboxes, isolate actions or a show-all control. Entries
@@ -2078,8 +2084,9 @@ title. A grid reserves space within the configured host size, and the chart obse
 remaining viewport. Corner overlays stay inside the plot and reserve no outside space;
 removing the plugin restores the original chart host and size.
 Top/bottom legend SVGs match the chart width and align their entry columns with the
-plot's left/right margins. Left/right legend SVGs match the chart height and lay out
-entries within the plot's top/bottom margins. Text is measured using the chart theme.
+plot's left/right margins. Left/right legend SVGs match the chart height and use the
+overlay layout: a single indented column inside a box spanning the full chart height,
+including its top/bottom margins. Text is measured using the chart theme.
 All built-in legend entries share the same cell width and height, including their
 clickable bounds; the common width accommodates the widest displayed label and hierarchy
 indentation and updates when labels, grouping, size or placement change.
@@ -2089,7 +2096,8 @@ swatch in the first column and its entries alongside it. Nested groups such as n
 stacks start a new line in the next column. Thin dividers separate sections, and
 consecutive ungrouped series share a section. Left/right docks and corner overlays use the
 same root-group sections: a small gap with a divider spanning the column separates groups
-(omitted at the top of a column), and multi-column docks balance their column heights.
+(omitted at the top of a column). Left/right docks only wrap into balanced columns when
+a single column is taller than the chart.
 
 Plugins are installed by a plugin host that reconciles `plot.plugins` by handle
 identity. Each built-in plugin registers a `PluginDefinition` (`is`, `validate`,

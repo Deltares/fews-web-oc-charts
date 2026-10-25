@@ -7,12 +7,21 @@ export interface StaticLegendOptions {
   /** Legend label; static marks only appear in the legend when labelled. */
   label?: string
   visible?: boolean
+  /** Legend group heading; marks sharing a group are toggled together. */
+  legendGroup?: string
 }
 
-export const staticLegendKeys = ['label', 'visible'] as const
+export const staticLegendKeys = ['label', 'visible', 'legendGroup'] as const
+
+export function validateLegendGroup(value: unknown, path: string) {
+  if (value !== undefined && (typeof value !== 'string' || !value)) {
+    throw new Error(`${path}.legendGroup must be a non-empty string.`)
+  }
+}
 
 interface StaticLegendState {
   readonly label: string | undefined
+  readonly group: string | undefined
   readonly visible: Signal<boolean>
 }
 
@@ -26,7 +35,12 @@ export function registerStaticLegend(mark: object, options: StaticLegendOptions,
   if (options.visible !== undefined && typeof options.visible !== 'boolean') {
     throw new Error(`${path}.visible must be boolean.`)
   }
-  states.set(mark, { label: options.label, visible: reactive.signal(options.visible ?? true) })
+  validateLegendGroup(options.legendGroup, path)
+  states.set(mark, {
+    label: options.label,
+    group: options.legendGroup,
+    visible: reactive.signal(options.visible ?? true),
+  })
 }
 
 /** Reactive visibility of a static mark; marks without legend state are always visible. */
@@ -39,6 +53,7 @@ export function staticLegend(mark: object, symbol: SymbolSpec): MarkLegend | und
   if (state?.label === undefined) return undefined
   return {
     label: state.label,
+    group: state.group,
     symbol,
     visible: () => state.visible.get(),
     setVisible: (visible) => state.visible.set(visible),

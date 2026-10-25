@@ -150,11 +150,12 @@ export const heatmapDefinition: MarkDefinition<HeatmapMark> = {
   highlight: (mark, hit, { scales }) => heatmapHighlight(mark, hit, scales),
   legend(mark) {
     const options = () => mark.options.get().resolved
-    const { label, color, opacity } = options()
+    const { label, legendGroup, color, opacity } = options()
     if (label === undefined) return undefined
     const [low, high] = color.options.get().resolved.domain
     return {
       label,
+      group: legendGroup,
       symbol: { type: 'steps', fill: color.map((low + high) / 2), opacity },
       visible: () => options().visible,
       setVisible: (visible) => mark.update({ visible }),

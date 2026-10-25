@@ -13,13 +13,14 @@
     <h1>v5: headless legend</h1>
     <p>
       The application-owned HTML legend uses the core model directly; the button can also install
-      the optional built-in SVG renderer. Toggle a layer to restack the areas and autoscale the
-      value axis. Parent checkboxes show partial visibility. Isolation affects siblings at the
-      selected hierarchy level. When enabled, choose a docked or corner-overlay position for the
-      built-in SVG legend. Library-rendered SVG swatches show each mark's styles, including the
-      dashed line with markers and multicolour stack groups. Click a built-in swatch or label to
-      toggle visibility; dimmed entries are hidden. Turn off group headings to show only individual
-      series and layers.
+      the optional built-in SVG renderer. The <code>Observed</code> and <code>Forecast</code> root
+      entries are legend groups (<code>legendGroup</code> option) that toggle all their marks
+      together. Toggle a layer to restack the areas and autoscale the value axis. Parent checkboxes
+      show partial visibility. Isolation affects siblings at the selected hierarchy level. When
+      enabled, choose a docked or corner-overlay position for the built-in SVG legend.
+      Library-rendered SVG swatches show each mark's styles, including the dashed line with markers;
+      group headings show a layers icon. Click a built-in swatch or label to toggle visibility;
+      dimmed entries are hidden. Turn off group headings to show only individual series and layers.
     </p>
     <fieldset class="controls">
       <legend>Legend actions</legend>
@@ -56,8 +57,9 @@
     <figure>
       <div id="chart" class="plot-host"></div>
       <figcaption>
-        Named observed and forecast stacks share the value scale. The observed line is a separate
-        series. Legend commands and direct mark updates use the same visibility state.
+        Observed and forecast stacked areas and totals share the value scale. Each group combines a
+        stacked area and a series. Legend commands and direct mark updates use the same visibility
+        state.
       </figcaption>
     </figure>
     <section aria-labelledby="legend-heading">
@@ -80,6 +82,10 @@ const primitives = legendSymbolPrimitives(entries[0].symbol, { width: 36, height
 plot.legend.toggle(entries[0].id, 'external')
 plot.legend.isolate(entries[0].id, 'external')
 plot.legend.showAll('external')
+
+// Marks sharing a legendGroup are nested under one toggleable root entry.
+series(store, { label: 'Observed total', legendGroup: 'Observed', ... })
+stackedArea(table, { label: 'Contributions', legendGroup: 'Observed', ... })
 
 // Direct handle updates also refresh the legend.
 observed.update({ visible: false })

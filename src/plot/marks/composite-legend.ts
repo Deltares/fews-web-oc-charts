@@ -4,6 +4,7 @@ import { resolveCompositeStyle } from './mark-styles.js'
 
 interface LegendOptions extends CompositeStyle {
   readonly label: string
+  readonly legendGroup?: string
   readonly visible: boolean
 }
 
@@ -21,6 +22,7 @@ export function compositeLegend<L extends CompositeLayer>(
   const current = layers()
   return {
     label: options().label,
+    group: options().legendGroup,
     symbol: current.length ? symbol(current[0]) : { type: 'group' },
     visible: () => options().visible,
     setVisible: (visible) =>
