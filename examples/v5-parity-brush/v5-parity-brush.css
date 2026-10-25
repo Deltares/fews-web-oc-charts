@@ -1,0 +1,29 @@
+.parity-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.parity-grid section {
+  min-width: 0;
+}
+
+.parity-chart {
+  width: 100%;
+  height: 320px;
+}
+
+.parity-overview {
+  width: 100%;
+  height: 160px;
+}
+
+.parity-status {
+  min-height: 1.5em;
+}
+
+@media (max-width: 900px) {
+  .parity-grid {
+    grid-template-columns: 1fr;
+  }
+}
