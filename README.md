@@ -93,7 +93,10 @@ typed `detail` available to `HTMLElement` and `SVGElement` event listeners. Exis
 
 ## Box zoom and brush-driven domains
 
-`zoom({ mode: 'x' | 'y' | 'xy' })` supports primary-button drag-to-zoom.
+`zoom({ mode: 'x' | 'y' | 'xy' | 'auto' })` supports primary-button drag-to-zoom.
+In `auto` mode, horizontal and vertical drags zoom that axis, while diagonal drags
+zoom both axes. Since wheel zoom and double-click reset have no drag direction to
+infer, they apply to both axes allowed by `wheel`.
 The selection is shown while dragging and applied on release, with one
 `domainchange` event per changed scale and `source: 'zoom'`. Selected directions
 must span at least 3 SVG pixels; clicks and cancelled drags do not zoom.

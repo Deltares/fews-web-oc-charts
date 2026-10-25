@@ -8,8 +8,8 @@ import type { ReadonlySignal } from '../../../core/reactive.js'
 import { validateKeys } from '../../../core/validation.js'
 import { ModifierKey } from '../../../Utils/modifierKey.js'
 
-export type ZoomMode = 'x' | 'y' | 'xy'
-export type ZoomWheelMode = ZoomMode | 'none'
+export type ZoomMode = 'x' | 'y' | 'xy' | 'auto'
+export type ZoomWheelMode = Exclude<ZoomMode, 'auto'> | 'none'
 export type ZoomResetMode = 'initial' | 'full' | 'toggle'
 
 export interface ZoomOptions {
@@ -47,8 +47,8 @@ export function zoom(initial: OptionPatch<ZoomOptions> = {}): ZoomHandle {
       if (options.id !== undefined && (typeof options.id !== 'string' || !options.id)) {
         throw new Error('zoom.id must be a non-empty string.')
       }
-      if (!['x', 'y', 'xy'].includes(options.mode)) {
-        throw new Error('zoom.mode must be x, y or xy.')
+      if (!['x', 'y', 'xy', 'auto'].includes(options.mode)) {
+        throw new Error('zoom.mode must be x, y, xy or auto.')
       }
       if (!['none', 'x', 'y', 'xy'].includes(options.wheel)) {
         throw new Error('zoom.wheel must be none, x, y or xy.')
