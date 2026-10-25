@@ -403,6 +403,11 @@ series(data, {
 ```
 
 Line + markers + area in **one** mark (one data reference, one legend entry, one hit-test).
+Marker `size` is D3 symbol area in square CSS pixels (default `10`), matching v4; it is
+not a radius.
+Markers support the v4 filled D3 symbols (circle, cross, diamond, square, star, triangle
+and wye), plus directional triangles, x, plus and rectangle. SVG rendering and legend
+swatches use the same shape.
 Other marks: `band` (range / min-max), `bar` (single/grouped/stacked, step bars),
 `stackedArea` (multi-series filled areas; see 3.6.1),
 `histogram`, `arrows`/`direction` (wind/current), `heatmap` (matrix, time×level),
@@ -752,8 +757,9 @@ children }`. `visibility` is `'visible' | 'hidden' | 'mixed'`; `children` is an 
   be of any kind; each layer entry carries its own symbol. Static marks (`line`, `rule`, `band`,
   `progress`, `text`, `arrows`, `direction`) and `heatmap` join the legend only when they
   have a `label`; their `visible` option is toggled by the legend.
-  Marker `size` is a radius; `opacity` on area/bar symbols is fill opacity, matching
-  chart rendering without dimming their outlines. Hidden entries keep their symbols:
+  Marker `size` is D3's symbol area (matching v4, default 10); `opacity` on area/bar
+  symbols is fill opacity, matching chart rendering without dimming their outlines.
+  Hidden entries keep their symbols:
   the application dims the swatch and uses a checkbox for hidden/mixed state.
   Optional `MarkDefinition.legend` capabilities supply symbols and visibility operations;
   the model owns IDs, hierarchy and commands without mark-kind checks. Series, bars and
@@ -1424,7 +1430,7 @@ observed.update({ line: { stroke: undefined }, markers: false })
   child nodes (including text labels). Removed/destroyed plots release their effects and
   validators without disposing shared stores or mark handles.
 - Scale domains support shared autoscaling as described below. Block indexes, LOD,
-  shared time columns across stores, ensembles, borrowed buffers, non-circle markers,
+  shared time columns across stores, ensembles, borrowed buffers,
   curves/dashes, canvas, hit testing and legend rendering remain roadmap work.
   The new store temporarily lives in `src/data-store/` to coexist with legacy
   `src/Data/` on case-insensitive filesystems.

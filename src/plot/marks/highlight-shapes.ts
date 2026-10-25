@@ -20,7 +20,7 @@ export function pointHighlight(
 ): readonly HighlightShape[] {
   const { px, py } = hit
   if (!finite(px, py)) return []
-  const r = Math.max(3, (mark.markers?.size ?? 0) + 1)
+  const r = Math.max(3, Math.sqrt((mark.markers?.size ?? 0) / Math.PI) + 1)
   return [{ type: 'circle', cx: px, cy: py, r, fill: color }]
 }
 

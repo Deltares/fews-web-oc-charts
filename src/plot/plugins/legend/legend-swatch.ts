@@ -1,5 +1,6 @@
 import type { SymbolPrimitiveSpec, SymbolSpec } from './legend.js'
 import { svgElement } from '../../rendering/svg.js'
+import { markerSymbolPath, markerSymbolRotation } from '../../marks/line/marker-symbol.js'
 
 export interface LegendSwatchOptions {
   readonly width?: number
@@ -48,6 +49,7 @@ export type LegendSymbolPrimitive =
       readonly type: 'path'
       readonly attributes: PaintAttributes & {
         readonly d: string
+        readonly transform?: string
         readonly 'stroke-dasharray'?: string
         readonly 'stroke-linecap'?: 'butt' | 'round' | 'square'
         readonly 'stroke-linejoin'?: 'miter' | 'round' | 'bevel'
@@ -112,7 +114,7 @@ function groupIcon(width: number, height: number): readonly LegendSymbolPrimitiv
 /**
  * Pure SVG geometry, usable by framework renderers without a document. Shapes follow the v4
  * `drawLegendSymbol` layout on a 20×20 canvas; vertical sizes scale with the swatch height.
- * Marker size is a radius.
+ * Marker size is a D3 symbol area.
  */
 export function legendSymbolPrimitives(
   symbol: SymbolSpec,
@@ -176,22 +178,43 @@ export function legendSymbolPrimitives(
         })
         return
       case 'marker':
-        result.push({
-          type: 'circle',
-          attributes: {
-            cx,
-            cy: middle,
-            r: Math.min(
-              part.size ?? 4,
-              Math.max(0, (width - (part.strokeWidth ?? 0)) / 2),
-              Math.max(0, ((stacked ? h : height) - (part.strokeWidth ?? 0)) / 2),
-            ),
-            fill: part.fill ?? 'currentColor',
-            stroke: part.stroke ?? 'none',
-            'stroke-width': part.strokeWidth ?? 0,
-            opacity: part.opacity,
-          },
-        })
+        {
+          const radius = Math.min(
+            Math.sqrt((part.size ?? 10) / Math.PI),
+            Math.max(0, (width - (part.strokeWidth ?? 0)) / 2),
+            Math.max(0, ((stacked ? h : height) - (part.strokeWidth ?? 0)) / 2),
+          )
+          const area = Math.PI * radius * radius
+          if (part.shape === 'circle') {
+            result.push({
+              type: 'circle',
+              attributes: {
+                cx,
+                cy: middle,
+                r: radius,
+                fill: part.fill ?? 'currentColor',
+                stroke: part.stroke ?? 'none',
+                'stroke-width': part.strokeWidth ?? 0,
+                opacity: part.opacity,
+              },
+            })
+          } else {
+            const openShape = part.shape === 'x' || part.shape === 'plus'
+            result.push({
+              type: 'path',
+              attributes: {
+                d: markerSymbolPath(part.shape, area),
+                transform: `translate(${cx},${middle}) rotate(${markerSymbolRotation(part.shape)})`,
+                fill: openShape ? 'none' : (part.fill ?? 'currentColor'),
+                stroke: openShape
+                  ? (part.stroke ?? part.fill ?? 'currentColor')
+                  : (part.stroke ?? 'none'),
+                'stroke-width': part.strokeWidth ?? (openShape ? 1.5 : 0),
+                opacity: part.opacity,
+              },
+            })
+          }
+        }
         return
       case 'area':
       case 'bar':

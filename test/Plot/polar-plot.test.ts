@@ -55,7 +55,7 @@ describe('createPolarPlot', () => {
           xValues: [0, 90, 180],
           yValues: [1, 5, 10],
           digits: 3,
-          markers: { symbolSize: 16, skip: 2 },
+          markers: { size: 16, skip: 2 },
         }),
       ],
     })
@@ -63,7 +63,7 @@ describe('createPolarPlot', () => {
     expect(current.element.querySelector('[data-mark="line"]')?.getAttribute('d')).toMatch(
       /^M.+L.+L/,
     )
-    expect(current.element.querySelector('marker')).not.toBeNull()
+    expect(current.element.querySelector('[data-mark="marker"]')).not.toBeNull()
     expect(() => angular.update({ style: 'default' })).toThrow(/both angular and radial/)
     expect(angular.options.get().resolved.style).toBe('classic')
   })

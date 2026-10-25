@@ -4,6 +4,7 @@ import type { ThemeTokens } from '../../../theme/theme.js'
 import type { MarkLegend, MarkLegendLayer } from '../../marks/mark-definition.js'
 import type { PlotMark } from '../../marks/marks.js'
 import { markDefinition } from '../../marks/marks.js'
+import type { MarkerSymbol } from '../../marks/line/marker-symbol.js'
 
 export type LegendVisibility = 'visible' | 'hidden' | 'mixed'
 export type LegendActionSource = 'api' | 'built-in' | 'external' | 'programmatic'
@@ -21,10 +22,11 @@ export type SymbolPrimitiveSpec =
     }
   | {
       readonly type: 'marker'
-      readonly shape: 'circle'
+      readonly shape: MarkerSymbol
       readonly fill?: string
       readonly stroke?: string
       readonly strokeWidth?: number
+      /** D3 symbol area in square CSS pixels. */
       readonly size?: number
       readonly opacity?: number
     }

@@ -2,6 +2,59 @@ import { describe, expect, test } from 'vitest'
 import { createLegendSwatch, legendSymbolPrimitives, type SymbolSpec } from '../../src/index.js'
 
 describe('legend symbol geometry', () => {
+  test('renders each marker shape in the legend with the same orientation and open-line styling', () => {
+    const shapes = [
+      'circle',
+      'cross',
+      'square',
+      'diamond',
+      'star',
+      'wye',
+      'triangle',
+      'triangle-up',
+      'triangle-down',
+      'triangle-left',
+      'triangle-right',
+      'x',
+      'plus',
+      'rectangle',
+    ] as const
+    for (const shape of shapes) {
+      const [primitive] = legendSymbolPrimitives({
+        type: 'marker',
+        shape,
+        fill: 'navy',
+        stroke: 'black',
+        size: 4,
+      })
+      expect(primitive.type).toBe(shape === 'circle' ? 'circle' : 'path')
+      if (primitive.type === 'path') {
+        expect(primitive.attributes.d).not.toBe('')
+        expect(primitive.attributes.transform).toContain(
+          shape === 'triangle-down'
+            ? '180'
+            : shape === 'triangle-left'
+              ? '-90'
+              : shape === 'triangle-right'
+                ? '90'
+                : '0',
+        )
+        if (shape === 'x' || shape === 'plus') {
+          expect(primitive.attributes.fill).toBe('none')
+          expect(primitive.attributes.stroke).toBe('black')
+        }
+      }
+    }
+    for (const shape of ['x', 'plus'] as const) {
+      const [primitive] = legendSymbolPrimitives({ type: 'marker', shape })
+      expect(primitive.type).toBe('path')
+      if (primitive.type === 'path') {
+        expect(primitive.attributes.stroke).toBe('currentColor')
+        expect(primitive.attributes['stroke-width']).toBeGreaterThan(0)
+      }
+    }
+  })
+
   test('overlays a v4 area band, dashed stroke and outlined marker on a 20×20 swatch', () => {
     const primitives = legendSymbolPrimitives({
       type: 'composite',
@@ -53,7 +106,7 @@ describe('legend symbol geometry', () => {
         attributes: {
           cx: 10,
           cy: 10,
-          r: 4,
+          r: Math.sqrt(4 / Math.PI),
           fill: 'white',
           stroke: 'navy',
           'stroke-width': 2,

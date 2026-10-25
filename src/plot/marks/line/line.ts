@@ -6,13 +6,15 @@ import {
   type StaticLegendOptions,
 } from '../static-legend.js'
 import { validateCoordinateValues } from '../mark-values.js'
+import type { MarkerSymbol } from './marker-symbol.js'
 
 export type LineValue = ScaleValue | null | undefined
 export type LineValues = ArrayLike<LineValue>
 
 export interface LineMarkerOptions {
-  symbolSize?: number
+  symbol?: MarkerSymbol
   skip?: number
+  /** D3 symbol area in square CSS pixels; defaults to v4's 10. */
   size?: number
   fill?: string
   stroke?: string
@@ -57,11 +59,7 @@ export interface LineMark {
   readonly strokeLinejoin?: 'miter' | 'round' | 'bevel'
   readonly digits?: number
   readonly vectorEffect?: 'none' | 'non-scaling-stroke'
-  readonly markers:
-    | Readonly<
-        Required<Omit<LineMarkerOptions, 'symbolSize'>> & Pick<LineMarkerOptions, 'symbolSize'>
-      >
-    | undefined
+  readonly markers: Readonly<Required<LineMarkerOptions>> | undefined
   readonly area: Readonly<Required<LineAreaOptions>> | undefined
 }
 
@@ -190,28 +188,43 @@ function normalizeLineMarkers(markers: LineOptions['markers']): LineMark['marker
   }
   validateKeys(
     markerOptions,
-    ['size', 'fill', 'stroke', 'strokeWidth', 'symbolSize', 'skip'],
+    ['symbol', 'size', 'fill', 'stroke', 'strokeWidth', 'skip'],
     'line.markers',
   )
+  const symbol = markerOptions.symbol ?? 'circle'
   if (
-    markerOptions.symbolSize !== undefined &&
-    (!Number.isFinite(markerOptions.symbolSize) || markerOptions.symbolSize <= 0)
+    ![
+      'circle',
+      'cross',
+      'square',
+      'diamond',
+      'star',
+      'wye',
+      'triangle',
+      'triangle-up',
+      'triangle-down',
+      'triangle-left',
+      'triangle-right',
+      'x',
+      'plus',
+      'rectangle',
+    ].includes(symbol)
   ) {
-    throw new Error('line.markers.symbolSize must be positive.')
+    throw new Error('line.markers.symbol is not a supported marker shape.')
   }
   const skip = markerOptions.skip ?? 1
   if (!Number.isSafeInteger(skip) || skip < 1)
     throw new Error('line.markers.skip must be a positive integer.')
-  const size = markerOptions.size ?? 4
-  const strokeWidth = markerOptions.strokeWidth ?? (markerOptions.symbolSize === undefined ? 0 : 1)
+  const size = markerOptions.size ?? 10
+  const strokeWidth = markerOptions.strokeWidth ?? (symbol === 'x' || symbol === 'plus' ? 1 : 0)
   validateMarkerDimensions(size, strokeWidth)
   validateMarkerColors(markerOptions)
   return Object.freeze({
-    symbolSize: markerOptions.symbolSize,
+    symbol,
     skip,
     size,
     fill: markerOptions.fill ?? '',
-    stroke: markerOptions.stroke ?? 'none',
+    stroke: markerOptions.stroke ?? '',
     strokeWidth,
   })
 }
@@ -221,10 +234,8 @@ function validateMarkerDimensions(size: number, strokeWidth: number): void {
     ['size', size],
     ['strokeWidth', strokeWidth],
   ] as const) {
-    if (!Number.isFinite(value) || value < 0 || (key === 'size' && value === 0)) {
-      throw new Error(
-        `line.markers.${key} must be a ${key === 'size' ? 'positive' : 'nonnegative'} finite number.`,
-      )
+    if (!Number.isFinite(value) || value < 0) {
+      throw new Error(`line.markers.${key} must be a nonnegative finite number.`)
     }
   }
 }

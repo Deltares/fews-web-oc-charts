@@ -182,6 +182,7 @@ export type {
   LineValue,
   LineValues,
 } from './plot/marks/line/line.js'
+export type { MarkerSymbol } from './plot/marks/line/marker-symbol.js'
 export {
   linearScale,
   logScale,

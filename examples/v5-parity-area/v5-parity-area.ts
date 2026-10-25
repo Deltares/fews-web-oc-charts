@@ -64,7 +64,7 @@ parityPlot('chart-container-step', {
       yValues: data.map((event) => event.y + 1 + offset),
       line: false,
       digits: 3,
-      markers: { symbolSize: 40, fill: 'white', stroke: fill, strokeWidth: 2 },
+      markers: { size: 40, fill: 'white', stroke: fill, strokeWidth: 2 },
     }),
   ]),
 })

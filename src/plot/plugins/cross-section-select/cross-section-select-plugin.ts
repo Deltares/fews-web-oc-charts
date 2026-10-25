@@ -18,6 +18,7 @@ import { isLineMark } from '../../marks/line/line.js'
 import { isSeriesMark } from '../../marks/line/series.js'
 import { displayInspectionValue } from '../../interaction/inspection.js'
 import { svgElement } from '../../rendering/svg.js'
+import { markerSymbolPath, markerSymbolRotation } from '../../marks/line/marker-symbol.js'
 
 interface CrossSectionValidationContext {
   readonly marks: readonly object[]
@@ -260,21 +261,29 @@ function installCrossSectionSelect(handle: CrossSectionSelectHandle, context: Pl
       .map(({ point }) => {
         const styles = resolveLineStyles(point.mark, theme)
         const color = point.mark.stroke ?? styles.line.stroke
-        const markerSize = point.mark.markers?.size ?? 4
-        const markerFill = point.mark.markers?.fill || color
-        const markerStroke = point.mark.markers?.stroke
-        const hasStroke = !!markerStroke && markerStroke !== 'none'
-        pointLayer.append(
-          svgElement('circle', {
-            cx: point.x,
-            cy: point.y,
-            r: markerSize,
-            fill: markerFill,
-            stroke: hasStroke ? markerStroke : 'none',
-            'stroke-width': hasStroke ? (point.mark.markers?.strokeWidth ?? 0) : 0,
-            'data-cross-section-point': point.id ?? '',
-          }),
-        )
+        const markerShape = styles.marker.shape
+        const markerArea = point.mark.markers ? styles.marker.size : 16 * Math.PI
+        const markerSize = Math.sqrt(markerArea / Math.PI)
+        const openShape = markerShape === 'x' || markerShape === 'plus'
+        const marker =
+          markerShape === 'circle'
+            ? svgElement('circle', {
+                cx: point.x,
+                cy: point.y,
+                r: markerSize,
+                fill: styles.marker.fill,
+                stroke: styles.marker.stroke,
+                'stroke-width': styles.marker.strokeWidth,
+              })
+            : svgElement('path', {
+                d: markerSymbolPath(markerShape, markerArea),
+                transform: `translate(${point.x},${point.y}) rotate(${markerSymbolRotation(markerShape)})`,
+                fill: openShape ? 'none' : styles.marker.fill,
+                stroke: styles.marker.stroke,
+                'stroke-width': styles.marker.strokeWidth,
+              })
+        marker.dataset.crossSectionPoint = point.id ?? ''
+        pointLayer.append(marker)
         const group = svgElement('g', { 'data-cross-section-entry': point.id ?? '' })
         const background = svgElement('rect', {
           height: labelHeight,
