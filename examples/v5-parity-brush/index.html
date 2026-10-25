@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>v4/v5 parity: brush</title>
+  </head>
+  <body>
+    <nav aria-label="Examples">
+      <a href="/">All examples</a>
+      <a href="../brush/">v4 brush</a>
+      <a href="../v5-brush/">v5 brush</a>
+    </nav>
+    <h1>v4/v5 parity: brush</h1>
+    <p>
+      Both versions use the same hourly time series, overview navigator and two-way time-domain
+      synchronization. Drag in either overview to update its main chart. On the v4 main chart, use
+      the wheel to zoom and Shift-drag to pan; on v5, Shift-drag to select and zoom, use the wheel
+      to zoom, or drag without Shift to pan.
+    </p>
+    <main class="parity-grid">
+      <section aria-labelledby="v4-heading">
+        <h2 id="v4-heading">v4</h2>
+        <figure>
+          <div id="v4-main" class="parity-chart"></div>
+          <figcaption>Main chart: wheel zoom and Shift-drag pan.</figcaption>
+        </figure>
+        <figure>
+          <div id="v4-overview" class="parity-overview"></div>
+          <figcaption>Drag the overview brush to select a time window.</figcaption>
+        </figure>
+        <button id="v4-reset" type="button">Reset v4 domains</button>
+        <p id="v4-status" class="parity-status" role="status"></p>
+      </section>
+      <section aria-labelledby="v5-heading">
+        <h2 id="v5-heading">v5</h2>
+        <figure>
+          <div id="v5-main" class="plot-host parity-chart"></div>
+          <figcaption>Main chart: Shift-drag to zoom, wheel to zoom, or drag to pan.</figcaption>
+        </figure>
+        <figure>
+          <div id="v5-overview" class="plot-host parity-overview"></div>
+          <figcaption>
+            Drag the persistent overview brush to select or adjust the time window.
+          </figcaption>
+        </figure>
+        <button id="v5-reset" type="button">Reset v5 domains</button>
+        <p id="v5-status" class="parity-status" role="status"></p>
+      </section>
+    </main>
+    <script type="module" src="./v5-parity-brush.ts"></script>
+  </body>
+</html>
