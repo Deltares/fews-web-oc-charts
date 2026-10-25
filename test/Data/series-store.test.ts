@@ -201,6 +201,36 @@ describe('columnar series stores', () => {
     }
   })
 
+  test('queries indexed x extents within ascending and reversed y windows', () => {
+    const x = Array.from({ length: 400 }, (_, index) => index)
+    const y = x.map((value) => (value % 13 === 0 ? NaN : ((value * 17) % 101) - 50))
+    const store = createSeries({ x, y }, { maxPoints: 300 })
+    store.append({
+      x: Array.from({ length: 200 }, (_, index) => index + 400),
+      y: Array.from({ length: 200 }, (_, index) => (index % 11 === 0 ? NaN : 75 - index)),
+    })
+
+    for (const window of [
+      [-10, 10],
+      [10, -10],
+      [75, 60],
+      [-100, -90],
+    ] as const) {
+      const low = Math.min(...window)
+      const high = Math.max(...window)
+      const values = Array.from({ length: store.length }, (_, index) => ({
+        x: store.xAt(index),
+        y: store.yAt(index),
+      }))
+        .filter(
+          ({ x: xValue, y: yValue }) => Number.isFinite(yValue) && yValue >= low && yValue <= high,
+        )
+        .map(({ x: value }) => value)
+      const expected = values.length ? [Math.min(...values), Math.max(...values)] : undefined
+      expect(store.extent('x', window, 'y')).toEqual(expected)
+    }
+  })
+
   test('float32 precision is opt-in and rejects overflow before mutation', () => {
     const store = createSeries({ x: [1], y: [1 / 3] }, { precision: 'float32' })
     expect(store.yAt(0)).toBe(Math.fround(1 / 3))

@@ -82,6 +82,22 @@ describe('autoscale policies', () => {
     expect(y.domain.get()).toEqual([20, 60])
   })
 
+  test('visible x autoscale filters data-backed series by the y viewport', () => {
+    const x = linearScale({ autoscale: 'visible' })
+    const y = linearScale({ domain: [0, 10] })
+    const data = createSeries({
+      x: [1, 2, 3, 4],
+      y: [5, 50, 8, 80],
+    })
+    plot({
+      directions: { x: 'x' },
+      scales: { x, y },
+      marks: [series(data, { x: 'x', y: 'y' })],
+    })
+
+    expect(x.domain.get()).toEqual([1, 3])
+  })
+
   test('explicit domains override policies until unset; fixed uses the configured fallback', () => {
     const x = timeScale()
     const y = linearScale({ domain: [0, 100], defaultDomain: [-5, 5] })

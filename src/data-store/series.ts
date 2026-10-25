@@ -40,7 +40,8 @@ export interface SeriesStore<Rows = SeriesInput> {
   readonly change: SeriesChange | undefined
   extent(
     axis: 'x' | 'y',
-    xWindow?: readonly [number, number],
+    window?: readonly [number, number],
+    windowAxis?: 'x' | 'y',
   ): readonly [number, number] | undefined
   xAt(index: number): number
   yAt(index: number): number
@@ -216,7 +217,8 @@ function createStore<Rows>(
 
   function extent(
     axis: 'x' | 'y',
-    xWindow?: readonly [number, number],
+    window?: readonly [number, number],
+    windowAxis: 'x' | 'y' = 'x',
   ): readonly [number, number] | undefined {
     if (extentIndexDirty) {
       extentBlocks = Array.from({ length: Math.ceil(x.length / extentBlockSize) }, (_, index) =>
@@ -226,9 +228,9 @@ function createStore<Rows>(
     }
     let first = 0
     let end = count
-    if (xWindow) {
-      const low = Math.min(xWindow[0], xWindow[1])
-      const high = Math.max(xWindow[0], xWindow[1])
+    if (window && windowAxis === 'x') {
+      const low = Math.min(window[0], window[1])
+      const high = Math.max(window[0], window[1])
       let left = 0
       let right = count
       while (left < right) {
@@ -248,15 +250,38 @@ function createStore<Rows>(
     }
     let low = Infinity
     let high = -Infinity
+    const filterLow = window ? Math.min(window[0], window[1]) : -Infinity
+    const filterHigh = window ? Math.max(window[0], window[1]) : Infinity
     const addBlock = (physicalBlock: number) => {
       const block = extentBlocks[physicalBlock]
       if (!block) return
+      if (window) {
+        const filterMin = windowAxis === 'x' ? block.xMin : block.yMin
+        const filterMax = windowAxis === 'x' ? block.xMax : block.yMax
+        if (filterMax < filterLow || filterMin > filterHigh) return
+        if (filterMin < filterLow || filterMax > filterHigh) {
+          const blockStart = physicalBlock * extentBlockSize
+          const blockEnd = Math.min(x.length, blockStart + extentBlockSize)
+          for (let physical = blockStart; physical < blockEnd; physical += 1) {
+            const logical = (physical - head + x.length) % x.length
+            if (logical < first || logical >= end || !Number.isFinite(y[physical])) continue
+            const filterValue = windowAxis === 'x' ? x[physical] : y[physical]
+            if (filterValue < filterLow || filterValue > filterHigh) continue
+            const value = axis === 'x' ? x[physical] : y[physical]
+            low = Math.min(low, value)
+            high = Math.max(high, value)
+          }
+          return
+        }
+      }
       low = Math.min(low, axis === 'x' ? block.xMin : block.yMin)
       high = Math.max(high, axis === 'x' ? block.xMax : block.yMax)
     }
     const addValue = (logical: number) => {
       const physical = slot(logical)
       if (!Number.isFinite(y[physical])) return
+      const filterValue = window ? (windowAxis === 'x' ? x[physical] : y[physical]) : undefined
+      if (filterValue !== undefined && (filterValue < filterLow || filterValue > filterHigh)) return
       const value = axis === 'x' ? x[physical] : y[physical]
       low = Math.min(low, value)
       high = Math.max(high, value)
