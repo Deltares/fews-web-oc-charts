@@ -1,8 +1,76 @@
 import { describe, expect, test } from 'vitest'
-import { bar, createTable } from '../../src/index.js'
+import { bar, createTable, stackedArea } from '../../src/index.js'
 import { tableStorageDiagnostics } from '../../src/data-store/table.js'
 
 describe('aligned tables', () => {
+  test('splice validation checks both interval boundaries and deletions atomically', () => {
+    const data = createTable({ t: [0, 2, 4], start: [0, 2, 4], end: [1, 3, 5], a: [1, 2, 3] })
+    const mark = bar(data, {
+      x: 't',
+      y: 'a',
+      scales: { x: 't', y: 'q' },
+      interval: { start: 'start', end: 'end' },
+    })
+    expect(mark.data).toBe(data)
+    const snapshot = () => Array.from({ length: data.length }, (_, row) => data.sampleId(row))
+    const ids = snapshot()
+    for (const [start, end] of [
+      [0.5, 3],
+      [2, 4.5],
+      [NaN, 3],
+      [2, Infinity],
+    ]) {
+      expect(() =>
+        data.upsert({
+          from: 2,
+          to: 2,
+          rows: { t: [2], start: [start], end: [end], a: [5] },
+        }),
+      ).toThrow()
+      expect(data.version).toBe(0)
+      expect(snapshot()).toEqual(ids)
+    }
+    expect(() => data.prepend({ t: [-1], start: [-1], end: [0.5], a: [1] })).toThrow(
+      /interval.*row 1/,
+    )
+    data.upsert({ from: 2, to: 2, rows: { t: [], start: [], end: [], a: [] } })
+    data.upsert({ from: 2, to: 2, rows: { t: [2], start: [1], end: [4], a: [4] } })
+    expect(data.version).toBe(2)
+    expect(data.length).toBe(3)
+  })
+
+  test.each(['bar', 'area'])('validates every inserted %s row before retention', (kind) => {
+    const data = createTable({ t: [10, 11], a: [1, 2], b: [3, 4] }, { maxPoints: 2 })
+    const options = {
+      x: 't',
+      layers: [
+        { id: 'a', y: 'a' },
+        { id: 'b', y: 'b' },
+      ],
+      scales: { x: 't', y: 'q' },
+    }
+    const mark =
+      kind === 'bar'
+        ? bar(data, { ...options, layout: 'stacked', width: 10 })
+        : stackedArea(data, options)
+    expect(mark.data).toBe(data)
+    expect(() => data.prepend({ t: [0], a: [Number.MAX_VALUE], b: [Number.MAX_VALUE] })).toThrow(
+      /overflow.*row 0/,
+    )
+    expect(() =>
+      data.upsert({
+        from: 0,
+        to: 0,
+        rows: { t: [0], a: [Number.MAX_VALUE], b: [Number.MAX_VALUE] },
+      }),
+    ).toThrow(/overflow.*row 0/)
+    expect(data.version).toBe(0)
+    data.prepend({ t: [0], a: [1], b: [2] })
+    expect(data.version).toBe(1)
+    expect(data.sampleId(0)).toBe(0)
+    expect(data.sampleId(1)).toBe(1)
+  })
+
   test('owns numeric, date and dictionary-encoded categorical columns without exposing buffers', () => {
     const t = [new Date(0), new Date(1)]
     const q = new Float64Array([3, NaN])
