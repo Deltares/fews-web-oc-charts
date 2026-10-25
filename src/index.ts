@@ -225,6 +225,14 @@ export type { DomainChangeSource, SubscribeOptions, Unsubscribe } from './core/r
 export type { EffectHandle } from './core/reactive.js'
 export type { OptionPatch, OptionStateSnapshot } from './core/options.js'
 export { sharedPointer } from './sync/shared-pointer.js'
+export { sharedSelection } from './sync/shared-selection.js'
+export type {
+  SharedSelection,
+  SharedSelectionValue,
+  SharedSelectionRange,
+} from './sync/shared-selection.js'
+export { sharedClock } from './sync/shared-clock.js'
+export type { SharedClock, SharedClockOptions } from './sync/shared-clock.js'
 export type {
   SharedPointer,
   SharedPointerOptions,

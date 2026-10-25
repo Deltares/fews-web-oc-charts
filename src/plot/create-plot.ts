@@ -224,6 +224,7 @@ function createPlotInternal(
   coordinateSystem: CoordinateSystem,
 ): Plot {
   if (!(host instanceof HTMLElement)) throw new Error('createPlot requires an HTMLElement.')
+  const owner = Symbol('plot')
   validatePatch(config)
   const state = createOptionState<PlotOptions>(config, {
     defaults: () => ({
@@ -243,7 +244,7 @@ function createPlotInternal(
     }),
     isAtomicReference: (value) =>
       isScaleHandle(value) || isAxisHandle(value) || isPlotMark(value) || isPlotPlugin(value),
-    validate: (options) => validatePlotOptions(options, coordinateSystem),
+    validate: (options) => validatePlotOptions(options, coordinateSystem, owner),
   })
   const optionState = optionSignal(state)
   const options = optionState.snapshot
@@ -322,6 +323,7 @@ function createPlotInternal(
     () => theme.get(),
   )
   const pluginHost = createPluginHost(scope, {
+    owner,
     element,
     coordinateSystem,
     options,

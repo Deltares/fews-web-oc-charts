@@ -17,6 +17,7 @@ import type { ThemeTokens } from '../../theme/theme.js'
 
 /** The read-only view of a plot that an installed plugin receives. */
 export interface PlotContext {
+  readonly owner: symbol
   readonly element: SVGSVGElement
   readonly coordinateSystem: CoordinateSystem
   readonly options: ReadonlySignal<OptionStateSnapshot<PlotOptions>>
@@ -41,6 +42,7 @@ export interface PlotContext {
 }
 
 export interface PluginValidationContext {
+  readonly owner?: symbol
   readonly coordinateSystem: CoordinateSystem
   readonly plugins: readonly object[]
   readonly marks: readonly object[]

@@ -90,6 +90,7 @@ export function createPluginHost(
     const scope = parentScope.createScope()
     const releases = new Set<() => void>()
     const context: PlotContext = {
+      owner: shared.owner,
       element: shared.element,
       coordinateSystem: shared.coordinateSystem,
       options: shared.options,
