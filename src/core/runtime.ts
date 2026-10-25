@@ -1,7 +1,20 @@
 import { createFrameScheduler, type DirtyLayers } from './frame-scheduler.js'
 import { createReactiveCore } from './reactive.js'
 import type { OptionState, OptionStateSnapshot } from './options.js'
-import type { ReadonlySignal } from './reactive.js'
+import type { EffectHandle, ReadonlySignal } from './reactive.js'
+
+export type { EffectHandle } from './reactive.js'
+
+export interface SubscribeOptions<T = unknown> {
+  /** Call the listener once immediately with the current value (previous = undefined). Default false. */
+  immediate?: boolean
+  /** Removes the subscription when aborted. */
+  signal?: AbortSignal
+  /** Custom equality; defaults to the signal's own equality. */
+  equals?: (next: T, previous: T) => boolean
+}
+
+export type Unsubscribe = () => void
 
 const pending = new Map<(dirty: DirtyLayers) => void, DirtyLayers>()
 export const scheduler = createFrameScheduler(() => {
@@ -16,9 +29,78 @@ export const scheduler = createFrameScheduler(() => {
   }
 })
 
-export const reactive = createReactiveCore(scheduler)
+export const reactive = createReactiveCore(scheduler, {
+  onError(error) {
+    scheduler.enqueueEffect(() => {
+      throw error
+    })
+  },
+})
 export const batch = <T>(run: () => T): T => reactive.batch(run)
 export const untracked = <T>(run: () => T): T => reactive.untracked(run)
+export const effect = (run: () => void | (() => void)): EffectHandle => reactive.effect(run)
+
+export function subscribe<T>(
+  source: ReadonlySignal<T>,
+  listener: (value: T, previous: T | undefined) => void,
+  options: SubscribeOptions<T> = {},
+): Unsubscribe {
+  if (!reactive.isSignal(source)) throw new TypeError('Expected a library signal.')
+  if (options.signal?.aborted) return () => {}
+
+  const equals =
+    options.equals ?? ((next: T, previous: T) => reactive.equals(source, next, previous))
+  let hasDelivered = false
+  let lastDelivered: T | undefined
+  let active = true
+  let disposeEffect: (() => void) | undefined
+  let releaseOwnership = () => {}
+
+  const unsubscribe = () => {
+    if (!active) return
+    active = false
+    options.signal?.removeEventListener('abort', unsubscribe)
+    releaseOwnership()
+    disposeEffect?.()
+  }
+
+  const deliver = (value: T, previous: T | undefined) => {
+    try {
+      untracked(() => listener(value, previous))
+    } catch (error) {
+      scheduler.enqueueEffect(() => {
+        throw error
+      })
+    }
+  }
+
+  disposeEffect = effect(() => {
+    const value = source.get()
+    if (!hasDelivered || !equals(value, lastDelivered!)) {
+      const previous = hasDelivered ? lastDelivered : undefined
+      lastDelivered = value
+      hasDelivered = true
+      deliver(value, previous)
+    }
+  }).dispose
+
+  options.signal?.addEventListener('abort', unsubscribe, { once: true })
+  releaseOwnership = reactive.onDispose(unsubscribe)
+
+  if (options.immediate && active) {
+    try {
+      const value = source.get()
+      lastDelivered = value
+      hasDelivered = true
+      deliver(value, undefined)
+    } catch (error) {
+      unsubscribe()
+      throw error
+    }
+  }
+
+  return unsubscribe
+}
 
 export function optionSignal<T extends object>(
   state: OptionState<T>,
