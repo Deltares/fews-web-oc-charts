@@ -2026,7 +2026,10 @@ row)`, with optional `dx`, `dy`, and `fill`, for SVG and canvas bars.
 
 Run `npm run test:visual:parity` for direct v4/v5 comparisons. The runner fixes
 viewport (1280 x 900), DPR (1), locale (`en-US`), timezone (`UTC`), and data seed;
-waits for fonts/rendering; and compares every RGBA channel with **zero tolerance**.
+waits for fonts/rendering; forces one full repaint of every chart SVG (hidden for
+two animation frames, then shown for two) so incremental repaints from animated v4
+draws cannot leave different anti-aliasing; and compares every RGBA channel with
+**zero tolerance**.
 It covers 25 chart hosts in light and dark themes: 50 comparisons per engine.
 `VISUAL_BROWSERS=chromium` (or `firefox`/`webkit`) selects individual engines.
 Mismatch images are written below the operating system's temporary directory at
@@ -2034,16 +2037,21 @@ Mismatch images are written below the operating system's temporary directory at
 
 | Engine   | Exact comparisons | Remaining changed pixels                                                                 |
 | -------- | ----------------- | ---------------------------------------------------------------------------------------- |
-| Chromium | 46 / 50           | polar-range solid: light 87, dark 94; mapped: light 78, dark 81                          |
+| Chromium | 50 / 50           | None                                                                                     |
 | Firefox  | 50 / 50           | None                                                                                     |
 | WebKit   | 45 / 50           | chart-text dark: 3; polar-line-marker light: 64, dark: 137; simple bar light: 6, dark: 3 |
 
-Thus 141 of 150 comparisons are exact. **The strict parity command intentionally
-exits nonzero for the nine remaining mismatches.** No tolerance was introduced,
-and the residual differences have not been accepted as 100% parity.
-A later run after `5e5fb1b` dropped to 119/150 (marker, step-area, and
-polar-line-marker in every engine). With classic markers on those routes, the
-full rerun is back to the 141/150 results above, with the same nine residuals.
+Thus 145 of 150 comparisons are exact. **The strict parity command intentionally
+exits nonzero for the five remaining WebKit mismatches.** No tolerance was
+introduced, and the residual differences have not been accepted as 100% parity.
+
+- A run after `5e5fb1b` dropped to 119/150 (marker, step-area, and
+  polar-line-marker in every engine); classic markers on those routes restored them.
+- The former Chromium polar-range residuals (78-94 px on arc edges) were a capture
+  artefact: v4's animated `arcTween` left incremental-repaint anti-aliasing. Re-inserting
+  v4's own final markup reproduced v5's pixels exactly, and after a forced full
+  repaint v4 and v5 match with 0 changed pixels. The repaint step does not change
+  WebKit's five residuals.
 The existing v5 visual regression suite also passes all 54 comparisons
 (18 fixtures in each of the three engines), with zero changed pixels.
 Library/type and example-gallery production builds pass, as do all 176 native
