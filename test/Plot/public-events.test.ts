@@ -30,8 +30,12 @@ describe('public plot events', () => {
     const details: unknown[] = []
     const domDetails: unknown[] = []
     plot.on('domainchange', (detail) => details.push(detail))
+    const htmlListener = (event: HTMLElementEventMap['domainchange']) => {
+      domDetails.push(event.detail)
+    }
+    document.createElement('div').addEventListener('domainchange', htmlListener)
     plot.element.addEventListener('domainchange', (event) => {
-      domDetails.push((event as CustomEvent).detail)
+      domDetails.push(event.detail)
     })
 
     scale.update({ domain: [2, 8] })

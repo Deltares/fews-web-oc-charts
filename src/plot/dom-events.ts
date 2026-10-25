@@ -1,0 +1,16 @@
+import type { DomainChangeDetail, LayoutChangeDetail, LegendChangeDetail } from './create-plot.js'
+import type { BrushSelection } from './plugins/brush/brush.js'
+import type { LegendToggleEventDetail } from './plugins/legend/legend.js'
+
+export interface PlotDomEventMap {
+  domainchange: CustomEvent<DomainChangeDetail>
+  layoutchange: CustomEvent<LayoutChangeDetail>
+  legendchange: CustomEvent<LegendChangeDetail>
+  legendtoggle: CustomEvent<LegendToggleEventDetail>
+  brush: CustomEvent<BrushSelection>
+}
+
+declare global {
+  interface HTMLElementEventMap extends PlotDomEventMap {}
+  interface SVGElementEventMap extends HTMLElementEventMap {}
+}

@@ -13,12 +13,17 @@ export type {
   PlotConfig,
   PlotOptions,
   PlotPointer,
+  PlotEventMap,
+  DomainChangeDetail,
+  LayoutChangeDetail,
+  LegendChangeDetail,
   PolarPlot,
   PolarPlotConfig,
   PolarPoint,
   SkewTPlot,
   SkewTPlotConfig,
 } from './plot/create-plot.js'
+export type { PlotDomEventMap } from './plot/dom-events.js'
 export { axis } from './plot/axes/axis.js'
 export type { AxisHandle, AxisOptions, AxisSide } from './plot/axes/axis.js'
 export { zoom } from './plot/plugins/zoom/zoom.js'
@@ -212,6 +217,6 @@ export { layout } from './layout/layout.js'
 export type { PlotLayout, Size, Margins, Region, AxisMeasure } from './layout/layout.js'
 export type { ThemeMode, ThemeTokens } from './theme/theme.js'
 export { batch, effect, subscribe, untracked } from './core/runtime.js'
-export type { SubscribeOptions, Unsubscribe } from './core/runtime.js'
+export type { DomainChangeSource, SubscribeOptions, Unsubscribe } from './core/runtime.js'
 export type { EffectHandle } from './core/reactive.js'
 export type { OptionPatch, OptionStateSnapshot } from './core/options.js'
