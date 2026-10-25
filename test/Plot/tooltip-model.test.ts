@@ -283,6 +283,65 @@ describe('tooltip model', () => {
     expect(hits).not.toHaveBeenCalled()
   })
 
+  test.each([
+    { layers: undefined, names: ['rain'] },
+    {
+      layers: [
+        { id: 'single', y: 'value' },
+        { id: 'forecast', y: 'value', label: 'Forecast' },
+      ],
+      names: ['rain · single', 'rain · Forecast'],
+    },
+  ])('omits unstacked bounds and only names declared layers ($names)', ({ layers, names }) => {
+    const { context, pointer, pathContext } = setup()
+    const mark = bar(createTable({ category: [5], value: [0.4] }), {
+      id: 'rain',
+      x: 'category',
+      y: layers ? undefined : 'value',
+      scales: { x: 'x', y: 'y' },
+      width: 20,
+      layers,
+      layout: layers ? 'grouped' : undefined,
+    })
+    const formatRange = vi.fn(
+      (_lower: string | number, _upper: string | number, info: TooltipFormatContext) =>
+        info.defaultText,
+    )
+    const handle = tooltip({ showX: false, formatRange })
+    const model = () =>
+      computeTooltipModel(
+        handle.options.get().resolved,
+        context,
+        {
+          marks: [mark],
+          pointer: pointer.get(),
+          region: { x: 0, y: 0, width: 100, height: 100 },
+        },
+        pathContext,
+      )
+    expect(model().entries.map((entry) => entry.label)).toEqual(names)
+    for (const entry of model().entries) {
+      expect(entry.details).toBe(' · 0.4')
+      expect(entry.accessibleLabel).toBe(`${entry.label} · 0.4`)
+    }
+    expect(formatRange).not.toHaveBeenCalled()
+
+    handle.update({ bounds: 'always', formatUnit: (info) => (info.axis === 'y' ? 'mm' : '') })
+    for (const entry of model().entries) {
+      expect(entry.details).toBe(' · 0.4 mm · bounds: 0–0.4 mm')
+      expect(entry.accessibleLabel).toBe(`${entry.label}${entry.details}`)
+    }
+    expect(formatRange).toHaveBeenCalled()
+
+    for (const bounds of ['never', undefined] as const) {
+      handle.update({ bounds })
+      for (const entry of model().entries) {
+        expect(entry.details).toBe(' · 0.4 mm')
+        expect(entry.accessibleLabel).toBe(`${entry.label} · 0.4 mm`)
+      }
+    }
+  })
+
   test.each(['vertical', 'horizontal'] as const)(
     'formats %s composite layers and keeps their raw values distinct from bounds',
     (orientation) => {
@@ -375,6 +434,15 @@ describe('tooltip model', () => {
           hit: expect.objectContaining({ layerId: 'forecast', stack: 'total' }),
         }),
       )
+      formatRange.mockClear()
+      handle.update({ bounds: 'never' })
+      expect(model().entries[0].details).toBe(` · ${categoryLabel} · <4.23> m · stack: total`)
+      expect(model().accessibleLabel).not.toContain('bounds:')
+      expect(formatRange).not.toHaveBeenCalled()
+      handle.update({ bounds: 'always' })
+      expect(model().entries[0].details).toBe(formatted.details)
+      handle.update({ bounds: undefined })
+      expect(model().entries[0].details).toBe(formatted.details)
       // @ts-expect-error Runtime callers must also return strings.
       handle.update({ formatRange: () => false })
       expect(model).toThrow('tooltip.formatRange must return a string.')
@@ -430,6 +498,8 @@ describe('tooltip model', () => {
       10,
       expect.objectContaining({ axis: 'x', scale: 'x' }),
     )
+    handle.update({ bounds: 'never' })
+    expect(model().entries[0].details).toBe(' · x: [0–10] m · y: [0–40] m · value: 1.23 K')
     formatRange.mockClear()
     handle.update({ showX: false })
     expect(model().entries[0].details).toBe(' · y: [0–40] m · value: 1.23 K')

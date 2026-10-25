@@ -171,7 +171,9 @@ function tooltipEntry(
           (axis === 'x' ? x : y),
     )
   const name =
-    'layerLabel' in hit ? `${label(mark, index)} · ${hit.layerLabel}` : label(mark, index)
+    'layerLabel' in hit && hit.layerLabel
+      ? `${label(mark, index)} · ${hit.layerLabel}`
+      : label(mark, index)
   const details: string[] = []
   const accessible = [name]
   if (options.showX && valueAxis !== 'x') {
@@ -188,7 +190,12 @@ function tooltipEntry(
     const axis = compositeValueAxis(mark)
     const composite = [format.value(hit.value, axis, digits)]
     if (hit.stack !== undefined) composite.push(`stack: ${hit.stack}`)
-    composite.push(`bounds: ${format.range(hit.lower, hit.upper, axis, digits)}`)
+    if (
+      options.bounds === 'always' ||
+      ((options.bounds ?? 'stacked') === 'stacked' && hit.stack !== undefined)
+    ) {
+      composite.push(`bounds: ${format.range(hit.lower, hit.upper, axis, digits)}`)
+    }
     details.push(...composite)
     accessible.push(...composite)
   }

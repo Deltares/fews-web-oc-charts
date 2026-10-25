@@ -28,7 +28,8 @@ export interface CompositeHit {
   readonly py: number
   readonly distance: number
   readonly layerId: string
-  readonly layerLabel: string
+  /** Undefined for the implicit layer of a single-valued bar mark. */
+  readonly layerLabel?: string
   readonly value: number
   readonly stack?: string
   readonly lower: number
@@ -242,7 +243,7 @@ function barHit(
     py,
     distance,
     layerId: layer.id,
-    layerLabel: layer.label || layer.id,
+    layerLabel: options.layers ? layer.label || layer.id : layer.label,
     value,
     stack: layer.stack,
     lower: endpoint.lowerAt(rectangle.row),
