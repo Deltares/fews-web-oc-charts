@@ -73,6 +73,7 @@ describe('public plot events', () => {
   test('emits legend events when legend entries change', async () => {
     const plot = createTestPlot({
       scales: { x: linearScale(), y: linearScale() },
+      directions: { x: 'x', y: 'y' },
       marks: [line({ x: 'x', y: 'y', xValues: [0, 1], yValues: [2, 3], id: 'series' })],
     })
     await frame()
