@@ -2274,7 +2274,7 @@ no static baselines need updating for this assessment.
 | Shared selection                        | Persistent `brush.selection`, `setSelection()` and brush-to-main navigation exist. Programmatic selection updates do not emit user brush events. Selection snapshots use plot-local scale names; there is no independent `sharedSelection()` API.                                     | Build on the existing validated immutable brush contract, not a second brush implementation. Define scale-identity/local-name mapping and integrate shared selection ownership, clear/update propagation and consumer teardown. Verify two-way synchronization without feedback.                                                                |
 | Shared clock                            | No v5 shared clock API or clock consumer is present in the production core.                                                                                                                                                                                                           | Add a shared current-time signal with explicit ownership/cleanup and deterministic test control. Keep current-time mark/plugin rendering in Phase 6; do not port domain plugins as part of this assessment.                                                                                                                                     |
 | Follow mode                             | `timeScale()` has no `follow` option or follow-state controls. Zoom/pan/reset operate on ordinary domains. The spike demo follows by manually setting its own domain.                                                                                                                 | Implement the window/lead contract, new-data advancement, suspension on user zoom/pan and resumption on reset. Shared consumers must observe one follow state/domain; distinguish user gestures from API/autoscale writes using existing attribution.                                                                                           |
-| Series append/retention                 | `createSeries()`/`fromObjects()` support append, prepend, upsert, replace, clear, `maxPoints` and `maxAge`; appends use circular storage. Store and series-mark tests cover ordering, missing values, mutations, frame coalescing, isolated consumers and teardown.                   | Production line extents and geometry still scan retained samples. There is no production block extent index or range-aware LOD cache; `SeriesChange` currently spans the old and new full range, not just an appended tail. Add mutation/eviction-aware indexing and bounded LOD reuse before claiming incremental append performance.          |
+| Series append/retention                 | `createSeries()`/`fromObjects()` support append, prepend, upsert, replace, clear, `maxPoints` and `maxAge`; appends use circular storage. `SeriesChange` reports operation, resulting invalidation indexes, replacement count and retention exclusions. A 128-sample-block x/y extent index serves unwindowed data-backed line extents.                                                   | Viewport-filtered extents and line geometry still scan retained samples; there is no bounded production LOD cache. Add viewport-aware extent reuse and range-aware LOD before claiming incremental append performance.                                                                                                                                                                                          |
 | Aligned tables and stacks               | Table mutations validate and publish all columns atomically, preserve surviving sample IDs and apply retention. Stack endpoints are shared per table/version/options, with an 8-entry/32 MiB cache limit. Tests cover correctness, mutation invalidation and entry eviction.          | Table mutations materialize/copy merged columns; every version change discards the stack cache and recomputes endpoints across all rows. Add incremental aligned append/retention and affected-row stack updates, preserving named-stack gaps, diverging totals and stable IDs. Cache limits alone are not a measured live-memory plateau.      |
 | Back-pressure and visibility            | The shared frame scheduler merges invalidations, and series-mark tests assert one geometry write for coalesced mutations with unrelated marks unchanged. A module-level ResizeObserver exists.                                                                                        | No `plot.pause()`/`resume()` or production IntersectionObserver exists. Add a shared visibility observer and per-plot render suspension; retain pending dirty work, draw the latest state on resume and release registrations on destroy. Frame coalescing is not producer throttling and does not make synchronous store mutation incremental. |
 | Live example and end-to-end acceptance  | `examples/v5-spike-live/` uses `src/spike/` stores, scheduler and SVG renderer, with manual follow and a timer. It is useful spike evidence, not acceptance of `createPlot()` or production stores.                                                                                   | Add a production live-stream example using public v5 APIs, shared scales and bounded series/table retention, plus deterministic behavioral and resource checks. `connect()` and transformed `linkScales()` remain optional helpers from §3.9/§3.10, not prerequisites for the core work.                                                        |
@@ -2439,8 +2439,7 @@ remain open. Frozen Phase 2 pixel mismatches and static baselines remain unchang
 
 #### Follow state implementation checkpoint
 
-**Status: implementation landed; DOM-independent acceptance and library build pass;
-browser gesture acceptance is pending.** `timeScale({ follow: { window, lead } })`
+**Status: implementation landed; DOM-independent acceptance and browser gesture acceptance pass.** `timeScale({ follow: { window, lead } })`
 now validates numeric millisecond and elapsed (`ms`, `s`, `m`, `h`) durations and ISO
 calendar-day durations.
 While active, the shared time scale derives its window from the latest data extent,
@@ -2465,10 +2464,27 @@ The DOM-independent suite passes:
 npx vitest run --browser.enabled=false test/core/follow.test.ts
 ```
 
-`npm run build` passes. The browser interaction suite is in
-`test/Plot/follow.test.ts`; this environment's Chromium crashed during launch
-(`SEGV_ACCERR`) before executing tests, so peer-gesture browser acceptance remains
-unverified here. No Phase 2 visual baselines were changed.
+`npm run build` passes. The browser interaction suite `test/Plot/follow.test.ts` passed
+all three tests in the user's local run on 2026-10-25. No Phase 2 visual baselines were
+changed.
+
+#### Incremental series mutation metadata checkpoint
+
+**Status: series mutation metadata and extent reuse implemented; stack/table incrementality remains open.**
+`SeriesChange` preserves its inclusive domain `from`/`to` fields and now reports the
+operation, prior/resulting lengths, submitted input length, half-open invalidated index
+range, explicitly replaced row count, and rows evicted by capacity or age retention.
+Append-only invalidation starts at the previous length when retention does not evict
+rows; retention exclusions include both existing and submitted rows, and front eviction
+invalidates the full resulting sequence. A 128-sample-block extent index updates only
+blocks touched by mutations unless storage is reallocated or replaced. Full-domain
+unwindowed line extents use the index; viewport y-extents use binary search on the
+ordered x column and aggregate fully covered blocks, scanning only partial block edges.
+The user reports the full browser suite passed (63 files, 562 tests). After viewport
+extent reuse was added, the focused DOM-independent series-store suite passed (17 tests)
+and `npm run build` passed. The earlier browser crash note is superseded by the user's
+full-suite result. Viewport-filtered x-extents, bounded geometry/LOD reuse, and
+incremental table/stack processing remain open.
 
 ## 8. Additional improvements to consider
 

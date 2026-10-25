@@ -80,6 +80,19 @@ function lineExtents(mark: LineLikeMark, context: MarkExtentContext) {
   if (store) {
     const _version = store.version
   }
+  if (store && (!window || coordinate === 'y')) {
+    const values =
+      window && coordinate === 'y'
+        ? store.extent('y', [Number(window[0]), Number(window[1])])
+        : store.extent(coordinate)
+    const eligible = values !== undefined
+    if (values) {
+      context.add(values[0])
+      context.add(values[1])
+    }
+    if (eligible && coordinate === 'y' && mark.area) context.add(mark.area.to)
+    return
+  }
   const length = store?.length ?? staticMark?.xValues.length ?? 0
   let eligible = false
   for (let index = 0; index < length; index += 1) {
