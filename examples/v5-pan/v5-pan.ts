@@ -1,15 +1,18 @@
 import '../shared/v5.css'
-import { axis, createPlot, line, linearScale, ModifierKey, timeScale, pan } from '@lib'
+import { axis, createPlot, effect, line, linearScale, ModifierKey, timeScale, pan } from '@lib'
 
-const host = document.querySelector<HTMLElement>('#chart')
-const mode = document.querySelector<HTMLSelectElement>('#mode')
-const modifier = document.querySelector<HTMLSelectElement>('#modifier')
-const reset = document.querySelector<HTMLButtonElement>('#reset')
-const status = document.querySelector<HTMLElement>('#status')
-const snapshot = document.querySelector<HTMLElement>('#snapshot')
-if (!host || !mode || !modifier || !reset || !status || !snapshot) {
-  throw new Error('The pan example is missing required elements.')
+function required<T extends Element>(selector: string): T {
+  const element = document.querySelector<T>(selector)
+  if (!element) throw new Error(`The pan example is missing "${selector}".`)
+  return element
 }
+const host = required<HTMLElement>('#chart')
+const mode = required<HTMLSelectElement>('#mode')
+const modifier = required<HTMLSelectElement>('#modifier')
+const enabled = required<HTMLInputElement>('#enabled')
+const reset = required<HTMLButtonElement>('#reset')
+const status = required<HTMLElement>('#status')
+const snapshot = required<HTMLElement>('#snapshot')
 
 const hour = 3_600_000
 const start = Date.UTC(2026, 0, 1)
@@ -44,7 +47,7 @@ const plot = createPlot(host, {
 })
 const events = new AbortController()
 
-function updateStatus() {
+const snapshotEffect = effect(() => {
   snapshot.textContent = JSON.stringify(
     {
       time: t.domain.get().map((value) => new Date(Number(value)).toISOString()),
@@ -53,7 +56,12 @@ function updateStatus() {
     null,
     2,
   )
-  status.textContent = `${modifier.value === 'none' ? 'No modifier' : `${modifier.value} required`}; drag pans ${mode.value}.`
+})
+
+function updateStatus() {
+  status.textContent = enabled.checked
+    ? `${modifier.value === 'none' ? 'No modifier' : `${modifier.value} required`}; drag pans ${mode.value}.`
+    : 'Pan disabled; dragging leaves the domains unchanged.'
 }
 
 function selectedMode(value: string): 'x' | 'y' | 'xy' {
@@ -82,20 +90,27 @@ function updateOptions() {
 for (const control of [mode, modifier]) {
   control.addEventListener('change', updateOptions, events)
 }
+enabled.addEventListener(
+  'change',
+  () => {
+    plot.update({ plugins: enabled.checked ? [interaction] : [] })
+    updateStatus()
+  },
+  events,
+)
 reset.addEventListener(
   'click',
   () => {
     t.domain.set([start, end])
     q.domain.set([0, 100])
-    updateStatus()
   },
   events,
 )
-plot.element.addEventListener('pointerup', updateStatus, events)
 updateStatus()
 
 function dispose() {
   events.abort()
+  snapshotEffect.dispose()
   plot.destroy()
 }
 window.addEventListener(

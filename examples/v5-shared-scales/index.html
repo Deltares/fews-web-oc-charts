@@ -17,8 +17,8 @@
       detail plot and shared handles alive.
     </p>
     <p class="note">
-      Phase 1 public API: plots and axes only. Data marks and gesture interactions are not yet
-      available. The controls below update scale state programmatically.
+      Drag either plot to pan, scroll to zoom and double-click to reset. One pan and one zoom handle
+      are installed on both plots; the shared scale handles keep them synchronized.
     </p>
     <div class="controls">
       <label for="start-hour">
@@ -39,6 +39,14 @@
         <input id="detail-width" type="range" min="55" max="100" value="70" />
         <output id="width-value" for="detail-width">70%</output>
       </label>
+      <label for="gesture-mode">
+        Pan and zoom direction
+        <select id="gesture-mode">
+          <option value="x" selected>Horizontal (x)</option>
+          <option value="y">Vertical (y)</option>
+          <option value="xy">Both (xy)</option>
+        </select>
+      </label>
       <button id="toggle-overview" type="button">Destroy overview</button>
       <button id="reset" type="button">Reset domains</button>
     </div>
@@ -56,14 +64,19 @@
     <p id="subscription-status" class="status" role="status">
       Waiting for the shared time scale subscription.
     </p>
+    <h2>Shared domains</h2>
+    <pre id="snapshot" aria-label="Shared scale domains"></pre>
     <h2>Public API</h2>
     <pre><code>const t = time({ domain: [start, end] })
 const q = linear({ domain: [0, 100] })
-const overview = createPlot(elA, { scales: { t, q }, axes: [...] })
-const detail = createPlot(elB, { scales: { t, q }, axes: [...] })
+const panning = pan({ mode: 'x' })
+const zooming = zoom({ mode: 'x', wheel: 'x' })
+const overview = createPlot(elA, { scales: { t, q }, axes: [...], plugins: [panning, zooming] })
+const detail = createPlot(elB, { scales: { t, q }, axes: [...], plugins: [panning, zooming] })
 
 subscribe(t.domain, domain => console.log('One notification for both plots', domain))
 t.domain.set([nextStart, nextEnd]) // both plots, independent ranges
+panning.update({ mode: 'xy' })      // reconfigures the gesture on both plots
 overview.destroy()              // detail and shared handles survive</code></pre>
     <script type="module" src="./v5-shared-scales.ts"></script>
   </body>

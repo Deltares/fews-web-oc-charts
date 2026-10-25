@@ -56,6 +56,11 @@ export interface ReactiveCoreOptions {
 export interface ReactiveCore {
   signal<T>(value: T, equals?: (left: T, right: T) => boolean): Signal<T>
   computed<T>(calculate: () => T, equals?: (left: T, right: T) => boolean): ComputedSignal<T>
+  /** Registers a view whose `get()` reads library signals, so `subscribe` accepts it. */
+  register<T, V extends ReadonlySignal<T> = ReadonlySignal<T>>(
+    view: V,
+    equals?: (left: T, right: T) => boolean,
+  ): V
   isSignal(value: unknown): value is ReadonlySignal<unknown>
   equals<T>(source: ReadonlySignal<T>, left: T, right: T): boolean
   onDispose(cleanup: () => void): () => void
@@ -385,6 +390,11 @@ export function createReactiveCore(
   return {
     signal,
     computed,
+    register(view, equals = Object.is) {
+      signals.add(view)
+      signalEqualities.set(view, (left, right) => equals(left as never, right as never))
+      return view
+    },
     isSignal(value): value is ReadonlySignal<unknown> {
       return typeof value === 'object' && value !== null && signals.has(value)
     },

@@ -1,5 +1,16 @@
 import '../shared/v5.css'
-import { axis, batch, createPlot, linearScale, subscribe, timeScale, type Plot } from '@lib'
+import {
+  axis,
+  batch,
+  createPlot,
+  effect,
+  linearScale,
+  pan,
+  subscribe,
+  timeScale,
+  zoom,
+  type Plot,
+} from '@lib'
 
 const overviewHost = document.querySelector<HTMLElement>('#overview')
 const detailHost = document.querySelector<HTMLElement>('#detail')
@@ -9,10 +20,12 @@ const maximum = document.querySelector<HTMLSelectElement>('#maximum')
 const width = document.querySelector<HTMLInputElement>('#detail-width')
 const startValue = document.querySelector<HTMLOutputElement>('#start-value')
 const widthValue = document.querySelector<HTMLOutputElement>('#width-value')
+const gestureMode = document.querySelector<HTMLSelectElement>('#gesture-mode')
 const toggle = document.querySelector<HTMLButtonElement>('#toggle-overview')
 const reset = document.querySelector<HTMLButtonElement>('#reset')
 const status = document.querySelector<HTMLElement>('#status')
 const subscriptionStatus = document.querySelector<HTMLElement>('#subscription-status')
+const snapshot = document.querySelector<HTMLElement>('#snapshot')
 if (
   !overviewHost ||
   !detailHost ||
@@ -22,10 +35,12 @@ if (
   !width ||
   !startValue ||
   !widthValue ||
+  !gestureMode ||
   !toggle ||
   !reset ||
   !status ||
-  !subscriptionStatus
+  !subscriptionStatus ||
+  !snapshot
 ) {
   throw new Error('The shared-scale example is missing required elements.')
 }
@@ -33,7 +48,9 @@ if (
 const start = Date.UTC(2026, 0, 1)
 const hour = 3_600_000
 const t = timeScale({ domain: [start, start + 6 * hour], timeZone: 'UTC' })
-const q = linearScale({ domain: [0, 100], includeZero: true })
+const q = linearScale({ domain: [0, 100] })
+const panning = pan({ mode: 'x' })
+const zooming = zoom({ mode: 'x', wheel: 'x' })
 const events = new AbortController()
 const timeLabel = new Intl.DateTimeFormat('en-GB', {
   timeZone: 'UTC',
@@ -56,6 +73,7 @@ function mount(element: HTMLElement, title: string): Plot {
       }),
       axis('q', { position: 'left', label: 'Discharge', unit: 'm3/s', grid: true }),
     ],
+    plugins: [panning, zooming],
   })
 }
 
@@ -74,6 +92,32 @@ subscribe(
       'One subscription observes the scale shared by both plots.'
   },
   { signal: events.signal },
+)
+
+const snapshotEffect = effect(() => {
+  snapshot.textContent = JSON.stringify(
+    {
+      time: t.domain.get().map((value) => new Date(Number(value)).toISOString()),
+      discharge: q.domain.get(),
+    },
+    null,
+    2,
+  )
+})
+
+function selectedMode(value: string): 'x' | 'y' | 'xy' {
+  if (value === 'x' || value === 'y' || value === 'xy') return value
+  throw new Error(`Unknown gesture direction "${value}".`)
+}
+
+gestureMode.addEventListener(
+  'change',
+  () => {
+    const mode = selectedMode(gestureMode.value)
+    panning.update({ mode })
+    zooming.update({ mode, wheel: mode })
+  },
+  events,
 )
 
 const describe = () => {
@@ -126,6 +170,7 @@ describe()
 
 function dispose() {
   events.abort()
+  snapshotEffect.dispose()
   overview.destroy()
   detail.destroy()
 }

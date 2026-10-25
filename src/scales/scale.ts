@@ -303,14 +303,17 @@ function createScale(kind: ScaleKind, initial: OptionPatch<ScaleOptions>): Scale
   const handle: ScaleHandle = {
     kind,
     options,
-    domain: {
-      get: () => domain.get(),
-      get version() {
-        return domain.version
+    domain: reactive.register<readonly ScaleValue[], Signal<readonly ScaleValue[]>>(
+      {
+        get: () => domain.get(),
+        get version() {
+          return domain.version
+        },
+        set: (value) => handle.update({ domain: value }),
+        update: (updater) => handle.update({ domain: updater(domain.get()) }),
       },
-      set: (value) => handle.update({ domain: value }),
-      update: (updater) => handle.update({ domain: updater(domain.get()) }),
-    },
+      equalDomain,
+    ),
     update(patch) {
       validateKeys(patch, keys, 'scale')
       if (state.update(patch)) {
