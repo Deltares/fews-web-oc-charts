@@ -35,6 +35,7 @@ for (const skip of [1, 5]) {
         line: false,
         digits: 3,
         markers: {
+          render: 'classic',
           size: skip === 1 ? 50 : 100,
           skip,
           fill: skip === 1 ? 'black' : 'blue',

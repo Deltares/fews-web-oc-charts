@@ -13,6 +13,11 @@ export type LineValues = ArrayLike<LineValue>
 
 export interface LineMarkerOptions {
   symbol?: MarkerSymbol
+  /**
+   * `'classic'` reproduces v4: one path with SVG `<marker>` symbols painted via
+   * `context-fill`/`context-stroke`. Browser support for those values varies.
+   */
+  render?: 'default' | 'classic'
   skip?: number
   /** D3 symbol area in square CSS pixels; defaults to v4's 10. */
   size?: number
@@ -188,9 +193,13 @@ function normalizeLineMarkers(markers: LineOptions['markers']): LineMark['marker
   }
   validateKeys(
     markerOptions,
-    ['symbol', 'size', 'fill', 'stroke', 'strokeWidth', 'skip'],
+    ['symbol', 'render', 'size', 'fill', 'stroke', 'strokeWidth', 'skip'],
     'line.markers',
   )
+  const render = markerOptions.render ?? 'default'
+  if (render !== 'default' && render !== 'classic') {
+    throw new Error('line.markers.render must be default or classic.')
+  }
   const symbol = markerOptions.symbol ?? 'circle'
   if (
     ![
@@ -221,6 +230,7 @@ function normalizeLineMarkers(markers: LineOptions['markers']): LineMark['marker
   validateMarkerColors(markerOptions)
   return Object.freeze({
     symbol,
+    render,
     skip,
     size,
     fill: markerOptions.fill ?? '',

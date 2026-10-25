@@ -85,7 +85,7 @@ function visual(options: Readonly<SeriesOptions>): LineMark {
       throw new TypeError('series.markers must be false or options.')
     validateKeys(
       options.markers,
-      ['symbol', 'size', 'fill', 'stroke', 'strokeWidth', 'skip'],
+      ['symbol', 'render', 'size', 'fill', 'stroke', 'strokeWidth', 'skip'],
       'series.markers',
     )
   }
@@ -95,6 +95,7 @@ function visual(options: Readonly<SeriesOptions>): LineMark {
       : {
           size: options.markers.size,
           symbol: options.markers.symbol,
+          render: options.markers.render,
           fill: options.markers.fill,
           stroke: options.markers.stroke,
           strokeWidth: options.markers.strokeWidth,

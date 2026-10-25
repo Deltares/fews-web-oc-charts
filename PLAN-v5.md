@@ -2008,6 +2008,13 @@ v5 plot/mark APIs, not v4 chart instances or copied reference SVG DOM.
 - Lines and series support dash arrays, cap/join styles, coordinate `digits`,
   `vectorEffect`, and SVG-symbol-area markers with a `skip` interval.
   Angular/radial lines and markers are supported; polar areas still require bands.
+- Line/series `markers.render: 'classic'` draws markers like v4 `ChartMarker`: one
+  path carrying `marker-start/mid/end` references to an SVG `<marker>` with
+  `context-fill`/`context-stroke`. The default `'default'` renderer keeps per-point
+  circles/paths; classic mode inherits the engine-specific `context-*` support
+  (WebKit paints black) and is intended only for reference parity. Commit `5e5fb1b`
+  had replaced this rendering for every marker and regressed the marker,
+  step-area, and polar-line-marker comparisons; the parity routes now opt in.
 - Bands support Cartesian `linear`, `basis`, `step`, `step-before`, and
   `step-after` curves for equal x endpoints, plus `shapeRendering`.
 - Bars support formatted SVG label overlays through `text.format(value, layerId,
@@ -2034,6 +2041,10 @@ Mismatch images are written below the operating system's temporary directory at
 Thus 141 of 150 comparisons are exact. **The strict parity command intentionally
 exits nonzero for the nine remaining mismatches.** No tolerance was introduced,
 and the residual differences have not been accepted as 100% parity.
+A later run after `5e5fb1b` dropped to 119/150 (marker, step-area, and
+polar-line-marker in every engine). Classic markers restore the v4 marker DOM,
+geometry, and computed styles for those routes; this table must be refreshed with
+a full rerun before it is relied on again.
 The existing v5 visual regression suite also passes all 54 comparisons
 (18 fixtures in each of the three engines), with zero changed pixels.
 Library/type and example-gallery production builds pass, as do all 176 native
