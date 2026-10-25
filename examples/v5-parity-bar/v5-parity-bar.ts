@@ -58,6 +58,7 @@ for (const mapped of [false, true]) {
         strokeLinecap: 'butt',
         strokeLinejoin: 'miter',
         digits: 3,
+        vectorEffect: 'none',
       }),
     )
   parityPlot(mapped ? 'chart-container-colormapped' : 'chart-container-simple', {
