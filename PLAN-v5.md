@@ -2075,11 +2075,19 @@ toggle with a click or Enter/Space. Visible, mixed and hidden entries use opacit
 displaying only leaf series/layers without changing their IDs or the headless model;
 `showGroups` defaults to true and is editable at runtime. It supports top,
 bottom, left and right docks plus four plot-overlay corners, and can be repositioned at
-runtime. Composite bar and stacked-area hit testing are implemented; remaining Phase 3
-examples and exit criteria remain. The current mark interaction contract is documented
+runtime. Composite bar and stacked-area hit testing are implemented; the Phase 3
+interaction parity follow-up is complete. The current mark interaction contract is documented
 after the parity follow-up below.
 
 #### Phase 3 v4 interaction parity follow-up
+
+**Status: complete.** All six interaction suites (brush, legend, mark-hits,
+mouseover, pan and zoom) passed together in Chromium in the user's local
+`npm run test:interaction` run on 2026-10-25. This completes the behavioral parity
+follow-up; the frozen Phase 2 static pixel mismatches remain separate.
+
+Run all six interaction suites sequentially with `npm run test:interaction`.
+The command stops on the first failing suite.
 
 The v4 gallery has interaction examples that were not covered by the static parity
 checkpoint. Reuse the native v5 APIs and examples below as the starting point for
