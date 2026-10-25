@@ -5,6 +5,7 @@ import {
   brush,
   brushEvent,
   createPlot,
+  effect,
   line,
   linearScale,
   ModifierKey,
@@ -28,6 +29,7 @@ const modifier = required<HTMLSelectElement>('#modifier')
 const clear = required<HTMLButtonElement>('#clear')
 const status = required<HTMLElement>('#status')
 const snapshot = required<HTMLElement>('#snapshot')
+const domains = required<HTMLElement>('#domains')
 
 const hour = 3_600_000
 const start = Date.UTC(2026, 0, 1)
@@ -74,6 +76,19 @@ const overview = createPlot(overviewHost, {
   plugins: [navigator],
 })
 const events = new AbortController()
+const toIso = (range: readonly (number | string)[] | undefined) =>
+  range?.map((value) => new Date(Number(value)).toISOString()) ?? null
+const domainsEffect = effect(() => {
+  domains.textContent = JSON.stringify(
+    {
+      t: toIso(t.domain.get()),
+      q: q.domain.get(),
+      navigator: toIso(navigator.selection.get()?.scales.t),
+    },
+    null,
+    2,
+  )
+})
 
 function updateStatus() {
   const requirement = modifier.value === 'none' ? 'Drag' : `Hold ${modifier.value} and drag`
@@ -177,6 +192,7 @@ plot.element.addEventListener(
 
 function dispose() {
   events.abort()
+  domainsEffect.dispose()
   plot.destroy()
   overview.destroy()
 }
