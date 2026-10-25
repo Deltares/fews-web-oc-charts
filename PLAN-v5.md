@@ -2307,11 +2307,13 @@ Playwright Chromium launch/cleanup before retrying browser validation.
    Test bidirectional selection, clear, unequal bindings, missing/incompatible scales,
    runtime membership changes and teardown. Test one shared clock update observed by
    multiple consumers and explicit clock cleanup, without wall-clock sleeps.
-3. **Follow state and gesture integration.** Implement window/lead validation and
-   follow state on the shared time scale. Test exact domains after append, empty data,
-   retention and reset; zoom/pan in either peer suspends follow for both, while data
-   continues arriving. Make API-write and reset-policy semantics explicit before
-   implementing them; do not silently change existing zoom reset behavior.
+3. **Follow state and gesture integration (implemented; browser acceptance pending).**
+   Implement window/lead validation and follow state on the shared time scale. Test
+   exact domains after append, empty data, retention and reset; zoom/pan in either peer
+   suspends follow for both, while data continues arriving. Policy: API domain writes
+   preserve follow and hold their requested domain until the next data mutation; reset
+   keeps the existing initial/full/toggle target operation, then resumes at the current
+   follow window.
 4. **Incremental live data path.** Add precise mutation/eviction metadata and production
    extent/LOD reuse, then incremental aligned-table and stack processing. Verify
    append, wrap, age/count retention, upsert and replace against full recomputation,
@@ -2431,9 +2433,42 @@ plus independent shared-clock consumers. The validation suite covers incompatibl
 peer mappings and atomic plot patches before resources are mounted. The brush runner
 confirmed Shift-drag selection, brush-to-domain updates, overview navigation and two-way
 synchronization. The pan runner confirmed direction, modifier, button and enable/disable
-behavior plus shared-scale synchronization. Follow mode,
+behavior plus shared-scale synchronization. Follow gesture browser acceptance,
 visibility pause, incremental live processing and production live-stream acceptance
 remain open. Frozen Phase 2 pixel mismatches and static baselines remain unchanged.
+
+#### Follow state implementation checkpoint
+
+**Status: implementation landed; DOM-independent acceptance and library build pass;
+browser gesture acceptance is pending.** `timeScale({ follow: { window, lead } })`
+now validates numeric millisecond and elapsed (`ms`, `s`, `m`, `h`) durations and ISO
+calendar-day durations.
+While active, the shared time scale derives its window from the latest data extent,
+applying lead before window; empty data retains the configured base domain. Count
+retention and appends are read through the existing reactive extent sources, including
+mutations whose extent does not change.
+
+`ScaleHandle.following`, `pauseFollow()` and `resumeFollow()` expose shared follow
+state/control. Explicit pause holds the currently resolved domain, including any
+padding/nice resolution, instead of restoring an older API/base domain; resume
+recomputes the latest follow window. Domain writes while paused replace the held
+domain without resuming follow. Wheel zoom and pan attribution suspend follow for every consumer of the
+shared scale; reset resumes it after applying the existing configured reset target.
+API domain writes leave follow active and hold the requested domain until the next data
+mutation. The focused tests cover validation, empty/live/retained data, exact domains,
+API override, explicit pause/resume, reset, shared scale identity and local-calendar
+window behavior across a DST gap.
+
+The DOM-independent suite passes:
+
+```sh
+npx vitest run --browser.enabled=false test/core/follow.test.ts
+```
+
+`npm run build` passes. The browser interaction suite is in
+`test/Plot/follow.test.ts`; this environment's Chromium crashed during launch
+(`SEGV_ACCERR`) before executing tests, so peer-gesture browser acceptance remains
+unverified here. No Phase 2 visual baselines were changed.
 
 ## 8. Additional improvements to consider
 

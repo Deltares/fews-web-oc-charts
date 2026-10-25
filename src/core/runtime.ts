@@ -37,6 +37,10 @@ export function withSource<T>(source: DomainChangeSource, run: () => T): T {
   }
 }
 
+export function currentDomainChangeSource(): DomainChangeSource | undefined {
+  return currentSource
+}
+
 export function recordScaleSource(scale: ScaleHandle, version: number) {
   scaleSources.set(scale, { source: currentSource ?? 'api', version })
 }

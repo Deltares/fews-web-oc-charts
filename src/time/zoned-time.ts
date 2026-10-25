@@ -79,6 +79,59 @@ export function zoneOffset(timeZone: string, epochMs: number): number {
   return (localAsUtc - epochSecond) / minute
 }
 
+export function shiftZonedDays(timeZone: string, epochMs: number, days: number): number {
+  if (!Number.isSafeInteger(days)) throw new RangeError('days must be a safe integer.')
+  const parts = zonedParts(timeZone, epochMs)
+  const milliseconds = ((epochMs % 1000) + 1000) % 1000
+  const localDate = new Date(0)
+  localDate.setUTCFullYear(parts.year, parts.month - 1, parts.day + days)
+  localDate.setUTCHours(parts.hour, parts.minute, parts.second, milliseconds)
+  const localTime = localDate.getTime()
+  if (!Number.isFinite(localTime) || Math.abs(localTime) > 8.64e15) {
+    throw new RangeError('Calendar day shift is outside the JavaScript Date range.')
+  }
+  const candidates = possibleInstants(timeZone, localTime - milliseconds)
+  const originalOffset = zoneOffset(timeZone, epochMs)
+  const sameOffset = candidates.find(
+    (candidate) => zoneOffset(timeZone, candidate) === originalOffset,
+  )
+  let normalizedGap: number | undefined
+  if (candidates.length === 0) {
+    const localTarget = localTime - milliseconds
+    const offsets = new Set<number>()
+    for (let delta = -36; delta <= 36; delta += 3) {
+      offsets.add(zoneOffset(timeZone, localTarget + delta * hour))
+    }
+    normalizedGap = [...offsets]
+      .map((offset) => {
+        const instant = localTarget - offset * minute
+        const shifted = zonedParts(timeZone, instant)
+        return {
+          instant,
+          local: Date.UTC(
+            shifted.year,
+            shifted.month - 1,
+            shifted.day,
+            shifted.hour,
+            shifted.minute,
+            shifted.second,
+          ),
+        }
+      })
+      .filter(({ local }) => local > localTarget)
+      .sort((left, right) => left.local - right.local || left.instant - right.instant)[0]?.instant
+  }
+  const result =
+    (sameOffset ??
+      candidates[0] ??
+      normalizedGap ??
+      localTime - milliseconds - originalOffset * minute) + milliseconds
+  if (!Number.isFinite(result) || Math.abs(result) > 8.64e15) {
+    throw new RangeError('Calendar day shift is outside the JavaScript Date range.')
+  }
+  return result
+}
+
 function possibleInstants(timeZone: string, localTime: number): number[] {
   const offsets = new Set<number>()
   for (let delta = -36; delta <= 36; delta += 3) {
