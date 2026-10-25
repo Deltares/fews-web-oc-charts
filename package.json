@@ -36,6 +36,7 @@
     "test:visual": "node scripts/phase1-visual-regression.mjs",
     "test:visual:update": "node scripts/phase1-visual-regression.mjs --update",
     "test:visual:parity": "node scripts/static-visual-parity.mjs",
+    "test:interaction:zoom": "node scripts/zoom-parity-interaction.mjs",
     "spike:benchmark": "node scripts/phase0-benchmark.mjs",
     "spike:interaction": "node scripts/phase0-interaction.mjs",
     "sonar": "sonar-scanner -Dsonar.host.url=$SONAR_URL -Dsonar.login=$SONAR_TOKEN -Dsonar.projectKey=$SONAR_KEY -Dsonar.projectName='Delft-FEWS Web OC Charts'"

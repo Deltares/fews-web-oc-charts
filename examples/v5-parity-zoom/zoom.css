@@ -1,0 +1,24 @@
+.zoom-parity-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.zoom-parity-grid section {
+  min-width: 0;
+}
+
+.zoom-parity-chart {
+  width: 100%;
+  height: 320px;
+}
+
+.zoom-parity-grid .status {
+  min-height: 3em;
+}
+
+@media (max-width: 900px) {
+  .zoom-parity-grid {
+    grid-template-columns: 1fr;
+  }
+}
