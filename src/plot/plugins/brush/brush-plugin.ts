@@ -6,6 +6,8 @@ import {
   isBrushHandle,
   validateBrushScaleSelection,
   validateBrushSelections,
+  connectBrushSelection,
+  validateSharedBrushContext,
   type BrushHandle,
   type BrushOptions,
   type BrushSelection,
@@ -40,6 +42,13 @@ interface Gesture {
 }
 
 function installBrush(handle: BrushHandle, context: PlotContext) {
+  const disconnectSelection = connectBrushSelection(handle, {
+    owner: context.owner,
+    get scales() {
+      return context.options.get().resolved.scales
+    },
+    direction: (name) => context.direction(name),
+  })
   const layer = svgElement('g', { 'data-layer': 'brush', 'pointer-events': 'none' })
   const selection = svgElement('rect', {
     'data-brush-selection': '',
@@ -168,6 +177,7 @@ function installBrush(handle: BrushHandle, context: PlotContext) {
       config.mode !== gesture.config.mode ||
       config.modifier !== gesture.config.modifier ||
       config.persistent !== gesture.config.persistent ||
+      config.selection !== gesture.config.selection ||
       handle.selection.get() !== lastPublished
     ) {
       finish()
@@ -237,6 +247,7 @@ function installBrush(handle: BrushHandle, context: PlotContext) {
         (config.mode !== active.config.mode ||
           config.modifier !== active.config.modifier ||
           config.persistent !== active.config.persistent ||
+          config.selection !== active.config.selection ||
           stored !== lastPublished)
       )
         finish()
@@ -308,6 +319,7 @@ function installBrush(handle: BrushHandle, context: PlotContext) {
     destroy() {
       finish()
       stopValidation()
+      disconnectSelection()
       layer.remove()
     },
   }
@@ -324,7 +336,9 @@ export const brushDefinition: PluginDefinition<BrushHandle> = {
     if (coordinateSystem !== 'cartesian') {
       throw new Error('The brush plugin currently supports Cartesian plots only.')
     }
-    const selection = handle.selection.get()
+    validateSharedBrushContext(handle, context)
+    const shared = handle.options.get().resolved.selection
+    const selection = shared ? undefined : handle.selection.get()
     if (selection) validateBrushScaleSelection(selection, scales, (name) => context.direction(name))
   },
   install: installBrush,

@@ -20,7 +20,9 @@
       Drag either plot to pan, scroll to zoom and double-click to reset. One pan and one zoom handle
       are installed on both plots; the shared scale handles keep them synchronized. Move over either
       plot to share the crosshair's time and discharge values. Each plot projects those values
-      through its own pixel ranges; leaving hides both guides.
+      through its own pixel ranges; leaving hides both guides. Shift-drag to create, move or resize
+      a persistent time selection in either plot. Removing a plot leaves the selection intact. The
+      shared clock below starts stopped; it does not change the chart domains.
     </p>
     <div class="controls">
       <label for="start-hour">
@@ -51,6 +53,9 @@
       </label>
       <button id="toggle-overview" type="button">Destroy overview</button>
       <button id="reset" type="button">Reset domains</button>
+      <button id="clear-selection" type="button">Clear selection</button>
+      <button id="tick-clock" type="button">Tick clock now</button>
+      <button id="toggle-clock" type="button" aria-pressed="false">Start clock</button>
     </div>
     <figure>
       <div id="overview" class="plot-host"></div>
@@ -68,6 +73,8 @@
     </p>
     <h2>Shared domains</h2>
     <pre id="snapshot" aria-label="Shared scale domains"></pre>
+    <h2>Shared selection and clock</h2>
+    <pre id="sync-snapshot" aria-label="Shared selection and clock"></pre>
     <h2>Public API</h2>
     <pre><code>const t = time({ domain: [start, end] })
 const q = linear({ domain: [0, 100] })
@@ -75,13 +82,26 @@ const panning = pan({ mode: 'x' })
 const zooming = zoom({ mode: 'x', wheel: 'x' })
 const pointer = sharedPointer({ by: 'xy' })
 const guides = crosshair({ pointer, labels: { x: 't', y: 'q' } })
-const overview = createPlot(elA, { scales: { t, q }, axes: [...], plugins: [panning, zooming, guides] })
-const detail = createPlot(elB, { scales: { t, q }, axes: [...], plugins: [panning, zooming, guides] })
+const selection = sharedSelection()
+const clock = sharedClock({ initial: start }) // stopped until start()
+const plugins = () => [
+  panning, zooming, guides,
+  brush({ mode: 'x', persistent: true, selection }),
+]
+const overview = createPlot(elA, { scales: { t, q }, axes: [...], plugins: plugins() })
+const detail = createPlot(elB, { scales: { t, q }, axes: [...], plugins: plugins() })
 
 subscribe(t.domain, domain => console.log('One notification for both plots', domain))
+subscribe(selection.selection, value => console.log('Shared domain ranges', value))
+subscribe(clock.time, time => console.log('Shared current time', time))
+selection.setSelection(undefined) // explicit clear; plot destruction does not clear
+clock.tick()                      // manual refresh from Date.now()
+clock.start()                     // one shared timer, not one timer per plot
+clock.stop()
 t.domain.set([nextStart, nextEnd]) // both plots, independent ranges
 panning.update({ mode: 'xy' })      // reconfigures the gesture on both plots
-overview.destroy()              // detail and shared handles survive</code></pre>
+overview.destroy()              // detail and shared handles survive
+clock.destroy()                 // application-owned cleanup when finished</code></pre>
     <script type="module" src="./v5-shared-scales.ts"></script>
   </body>
 </html>

@@ -2,6 +2,7 @@ import '../shared/v5.css'
 import {
   axis,
   batch,
+  brush,
   createPlot,
   crosshair,
   effect,
@@ -9,6 +10,8 @@ import {
   pan,
   subscribe,
   sharedPointer,
+  sharedSelection,
+  sharedClock,
   timeScale,
   zoom,
   type Plot,
@@ -28,6 +31,10 @@ const reset = document.querySelector<HTMLButtonElement>('#reset')
 const status = document.querySelector<HTMLElement>('#status')
 const subscriptionStatus = document.querySelector<HTMLElement>('#subscription-status')
 const snapshot = document.querySelector<HTMLElement>('#snapshot')
+const syncSnapshot = document.querySelector<HTMLElement>('#sync-snapshot')
+const clearSelection = document.querySelector<HTMLButtonElement>('#clear-selection')
+const tickClock = document.querySelector<HTMLButtonElement>('#tick-clock')
+const toggleClock = document.querySelector<HTMLButtonElement>('#toggle-clock')
 if (
   !overviewHost ||
   !detailHost ||
@@ -42,7 +49,11 @@ if (
   !reset ||
   !status ||
   !subscriptionStatus ||
-  !snapshot
+  !snapshot ||
+  !syncSnapshot ||
+  !clearSelection ||
+  !tickClock ||
+  !toggleClock
 ) {
   throw new Error('The shared-scale example is missing required elements.')
 }
@@ -55,6 +66,8 @@ const panning = pan({ mode: 'x' })
 const zooming = zoom({ mode: 'x', wheel: 'x' })
 const pointer = sharedPointer({ by: 'xy' })
 const guides = crosshair({ pointer, labels: { x: 't', y: 'q' } })
+const selection = sharedSelection()
+const clock = sharedClock({ initial: start })
 const events = new AbortController()
 const timeLabel = new Intl.DateTimeFormat('en-GB', {
   timeZone: 'UTC',
@@ -77,7 +90,7 @@ function mount(element: HTMLElement, title: string): Plot {
       }),
       axis('q', { position: 'left', label: 'Discharge', unit: 'm3/s', grid: true }),
     ],
-    plugins: [panning, zooming, guides],
+    plugins: [panning, zooming, guides, brush({ mode: 'x', persistent: true, selection })],
   })
 }
 
@@ -108,6 +121,33 @@ const snapshotEffect = effect(() => {
     2,
   )
 })
+const syncEffect = effect(() => {
+  syncSnapshot.textContent = JSON.stringify(
+    {
+      selection:
+        selection.selection.get()?.ranges.map((entry) => ({
+          axis: entry.axis,
+          range: entry.range,
+        })) ?? null,
+      clock: new Date(clock.time.get()).toISOString(),
+      running: clock.running.get(),
+    },
+    null,
+    2,
+  )
+  toggleClock.textContent = clock.running.get() ? 'Stop clock' : 'Start clock'
+  toggleClock.setAttribute('aria-pressed', String(clock.running.get()))
+})
+clearSelection.addEventListener('click', () => selection.setSelection(undefined), events)
+tickClock.addEventListener('click', () => clock.tick(), events)
+toggleClock.addEventListener(
+  'click',
+  () => {
+    if (clock.running.get()) clock.stop()
+    else clock.start()
+  },
+  events,
+)
 
 function selectedMode(value: string): 'x' | 'y' | 'xy' {
   if (value === 'x' || value === 'y' || value === 'xy') return value
@@ -175,6 +215,8 @@ describe()
 function dispose() {
   events.abort()
   snapshotEffect.dispose()
+  syncEffect.dispose()
+  clock.destroy()
   overview.destroy()
   detail.destroy()
 }

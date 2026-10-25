@@ -72,6 +72,7 @@ function validatePlotAppearance(options: PlotOptions) {
 function validatePlotCollections(
   options: PlotOptions,
   coordinateSystem: CoordinateSystem = 'cartesian',
+  owner?: symbol,
 ) {
   if (!Array.isArray(options.axes)) throw new Error('plot.axes must be an array.')
   if (!Array.isArray(options.marks)) throw new Error('plot.marks must be an array.')
@@ -83,6 +84,7 @@ function validatePlotCollections(
     }
   }
   validatePlugins(options.plugins, {
+    owner,
     coordinateSystem,
     plugins: options.plugins,
     marks: options.marks,
@@ -217,10 +219,14 @@ function validateSkewTOptions(options: PlotOptions, coordinateSystem: Coordinate
   }
 }
 
-export function validatePlotOptions(options: PlotOptions, coordinateSystem: CoordinateSystem) {
+export function validatePlotOptions(
+  options: PlotOptions,
+  coordinateSystem: CoordinateSystem,
+  owner?: symbol,
+) {
   validateSkewTOptions(options, coordinateSystem)
   validatePlotAppearance(options)
-  validatePlotCollections(options, coordinateSystem)
+  validatePlotCollections(options, coordinateSystem, owner)
   validatePlotAxes(options, coordinateSystem)
   validatePlotScales(options, coordinateSystem)
   validatePlotMarks(options, coordinateSystem)
