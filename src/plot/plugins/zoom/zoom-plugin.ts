@@ -9,6 +9,9 @@ import { isBrushHandle } from '../brush/brush.js'
 import { clamp, orderedBounds } from '../brush/brush-selection.js'
 import { isPanHandle } from '../pan/pan.js'
 
+const autoModeThreshold = 25
+type ZoomSelectionMode = Exclude<ZoomOptions['mode'], 'auto'>
+
 function installZoom(handle: ZoomHandle, context: PlotContext) {
   const initialDomains = new Map<
     string,
@@ -31,7 +34,15 @@ function installZoom(handle: ZoomHandle, context: PlotContext) {
     display: 'none',
   })
   context.element.append(selection)
-  let active: { pointerId: number; x: number; y: number; config: Readonly<ZoomOptions> } | undefined
+  let active:
+    | {
+        pointerId: number
+        x: number
+        y: number
+        config: Readonly<ZoomOptions>
+        mode: ZoomSelectionMode | undefined
+      }
+    | undefined
   let captured = false
   const originalTouchAction = context.element.style.getPropertyValue('touch-action')
   const originalTouchPriority = context.element.style.getPropertyPriority('touch-action')
@@ -91,7 +102,23 @@ function installZoom(handle: ZoomHandle, context: PlotContext) {
       clamp(position.svgX, region.x, region.x + region.width),
       clamp(position.svgY, region.y, region.y + region.height),
     )
-    const mode = active.config.mode
+    const dx = bounds.x1 - bounds.x0
+    const dy = bounds.y1 - bounds.y0
+    if (active.config.mode === 'auto') {
+      active.mode =
+        dx <= autoModeThreshold && dy <= autoModeThreshold
+          ? undefined
+          : dy <= autoModeThreshold
+            ? 'x'
+            : dx <= autoModeThreshold
+              ? 'y'
+              : 'xy'
+    }
+    const mode = active.mode
+    if (!mode) {
+      selection.setAttribute('display', 'none')
+      return
+    }
     // Ignore click jitter in each selected direction.
     if (
       (mode.includes('x') && bounds.x1 - bounds.x0 < 3) ||
@@ -132,10 +159,16 @@ function installZoom(handle: ZoomHandle, context: PlotContext) {
       return
     const position = context.locate(event)
     const axes = new Set<'x' | 'y'>()
-    if (config.mode.includes('x')) axes.add('x')
-    if (config.mode.includes('y')) axes.add('y')
+    if (config.mode === 'auto' || config.mode.includes('x')) axes.add('x')
+    if (config.mode === 'auto' || config.mode.includes('y')) axes.add('y')
     if (!position?.inside || !zoomableScales(axes).length) return
-    active = { pointerId: event.pointerId, x: position.svgX, y: position.svgY, config }
+    active = {
+      pointerId: event.pointerId,
+      x: position.svgX,
+      y: position.svgY,
+      config,
+      mode: config.mode === 'auto' ? undefined : config.mode,
+    }
     if (event.isTrusted) {
       context.element.setPointerCapture(event.pointerId)
       captured = true
@@ -149,10 +182,10 @@ function installZoom(handle: ZoomHandle, context: PlotContext) {
   })
   context.on('pointerup', (event) => {
     if (!active || event.pointerId !== active.pointerId) return
-    const mode = active.config.mode
     const bounds = dragBounds(event)
+    const mode = active?.mode
     finish(event)
-    if (!bounds) return
+    if (!bounds || !mode) return
     const axes = new Set<'x' | 'y'>()
     if (mode.includes('x')) axes.add('x')
     if (mode.includes('y')) axes.add('y')
@@ -177,8 +210,9 @@ function installZoom(handle: ZoomHandle, context: PlotContext) {
     const position = context.locate(event)
     if (!position?.inside) return
     const activeAxes = new Set<'x' | 'y'>()
-    if (config.mode.includes('x') && config.wheel.includes('x')) activeAxes.add('x')
-    if (config.mode.includes('y') && config.wheel.includes('y')) activeAxes.add('y')
+    const mode = config.mode === 'auto' ? 'xy' : config.mode
+    if (mode.includes('x') && config.wheel.includes('x')) activeAxes.add('x')
+    if (mode.includes('y') && config.wheel.includes('y')) activeAxes.add('y')
     if (activeAxes.size === 0) return
     finish()
     const factor = Math.exp(Math.max(-1, Math.min(1, event.deltaY * 0.002)))
@@ -208,8 +242,9 @@ function installZoom(handle: ZoomHandle, context: PlotContext) {
     if (!context.locate(event)?.inside) return
     finish()
     const axes = new Set<'x' | 'y'>()
-    if (config.mode.includes('x')) axes.add('x')
-    if (config.mode.includes('y')) axes.add('y')
+    const mode = config.mode === 'auto' ? 'xy' : config.mode
+    if (mode.includes('x')) axes.add('x')
+    if (mode.includes('y')) axes.add('y')
     for (const { name, binding } of zoomableScales(axes)) {
       if (config.reset === 'toggle' && toggled) {
         const previous = toggledDomains.get(name)

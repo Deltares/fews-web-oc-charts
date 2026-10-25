@@ -45,7 +45,7 @@ function pointer(plot: Plot, type: string, x: number, y: number, options: Pointe
 }
 
 async function dragSetup(
-  mode: 'x' | 'y' | 'xy' = 'xy',
+  mode: 'x' | 'y' | 'xy' | 'auto' = 'xy',
   plugins: NonNullable<PlotConfig['plugins']> = [],
 ) {
   const host = document.createElement('div')
@@ -116,6 +116,26 @@ test.each(['x', 'y', 'xy'] as const)(
       )
       expect(Object.isFrozen(detail.domain)).toBe(true)
     }
+  },
+)
+
+test.each([
+  { direction: 'horizontal', start: [300, 100], end: [100, 110], expected: 'x' },
+  { direction: 'vertical', start: [100, 230], end: [110, 80], expected: 'y' },
+  { direction: 'diagonal', start: [300, 230], end: [100, 80], expected: 'xy' },
+] as const)(
+  'automatic box zoom selects the $expected axis for a $direction drag',
+  async ({ start, end, expected }) => {
+    const { plot, x, y } = await dragSetup('auto')
+    pointer(plot, 'pointerdown', ...start)
+    pointer(plot, 'pointerup', ...end)
+    await frame()
+    expect(x.domain.get()).toEqual(
+      expected.includes('x') ? [expect.closeTo(80, 10), expect.closeTo(280, 10)] : [0, 360],
+    )
+    expect(y.domain.get()).toEqual(
+      expected.includes('y') ? [expect.closeTo(50, 10), expect.closeTo(200, 10)] : [0, 260],
+    )
   },
 )
 
@@ -247,7 +267,7 @@ test('wheel/reset events report changed scales and release listeners on removal 
   hosts.push(host)
   const x = linearScale({ domain: [0, 100] })
   const y = linearScale({ domain: [0, 100] })
-  const interaction = zoom({ mode: 'xy', wheel: 'xy' })
+  const interaction = zoom({ mode: 'auto', wheel: 'xy' })
   const plot = createPlot(host, {
     width: 400,
     height: 300,
