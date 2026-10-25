@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
-import { effect, reactive, subscribe } from '../../src/core/runtime.js'
+import { effect, reactive, sourceOf, subscribe, withSource } from '../../src/core/runtime.js'
+import { linearScale, registerScaleExtents } from '../../src/scales/scale.js'
 
 let pendingFrames: FrameRequestCallback[] = []
 
@@ -142,5 +143,35 @@ describe('public reactive runtime', () => {
     expect(runs).toEqual([1, 2])
     expect(handle.runCount).toBe(2)
     handle.dispose()
+  })
+
+  test('attributes scale writes to their source and falls back to api', () => {
+    const scale = linearScale({ domain: [0, 10] })
+
+    withSource('wheel', () => scale.update({ domain: [1, 9] }))
+    expect(sourceOf(scale)).toBe('wheel')
+
+    scale.update({ domain: [2, 8] })
+    expect(sourceOf(scale)).toBe('api')
+  })
+
+  test('restores source context and expires attribution after an autoscale change', () => {
+    const scale = linearScale()
+    const extent = reactive.signal<readonly [number, number]>([0, 1])
+    const unregister = registerScaleExtents(scale, () => extent.get())
+
+    withSource('wheel', () => {
+      scale.update({ domain: [2, 8] })
+      withSource('pan', () => scale.update({ domain: [3, 7] }))
+      scale.update({ domain: [4, 6] })
+    })
+    expect(sourceOf(scale)).toBe('wheel')
+
+    scale.update({ domain: undefined })
+    expect(sourceOf(scale)).toBe('api')
+    extent.set([10, 20])
+    expect(scale.domain.get()).toEqual([10, 20])
+    expect(sourceOf(scale)).toBeUndefined()
+    unregister()
   })
 })

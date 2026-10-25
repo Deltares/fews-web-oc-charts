@@ -1,6 +1,15 @@
 import { createOptionState, type OptionPatch, type OptionStateSnapshot } from '../core/options.js'
 import { DirtyLayer, type DirtyLayers } from '../core/frame-scheduler.js'
-import { reactive, invalidate, cancelRender, optionSignal } from '../core/runtime.js'
+import {
+  reactive,
+  invalidate,
+  cancelRender,
+  optionSignal,
+  scheduler,
+  sourceOf,
+  type DomainChangeSource,
+  type Unsubscribe,
+} from '../core/runtime.js'
 import type { ReadonlySignal } from '../core/reactive.js'
 import {
   isScaleHandle,
@@ -36,7 +45,13 @@ import { renderSkewTAxes } from './axes/render-skew-t-axes.js'
 import { createScaleBindings } from './scales/scale-bindings.js'
 import { createMarkLayer } from './marks/mark-layer.js'
 import { createPointerHub, type PlotPointer } from './interaction/pointer-hub.js'
-import { createLegendModel, type LegendModel } from './plugins/legend/legend.js'
+import {
+  createLegendModel,
+  type LegendEntry,
+  type LegendModel,
+  type LegendToggleEventDetail,
+} from './plugins/legend/legend.js'
+import type { BrushSelection } from './plugins/brush/brush.js'
 
 export type { PlotPointer } from './interaction/pointer-hub.js'
 import {
@@ -65,6 +80,33 @@ export interface PlotOptions {
   axes: readonly AxisHandle[]
   marks: readonly PlotMark[]
   plugins: readonly PlotPlugin[]
+}
+
+export interface DomainChangeDetail {
+  readonly scale: string
+  readonly handle: ScaleHandle
+  readonly domain: readonly ScaleValue[]
+  readonly previous: readonly ScaleValue[] | undefined
+  readonly explicit: boolean
+  readonly source: DomainChangeSource
+}
+
+export interface LayoutChangeDetail {
+  readonly size: Readonly<Size>
+  readonly regions: PlotLayout
+  readonly previous: PlotLayout | undefined
+}
+
+export interface LegendChangeDetail {
+  readonly entries: readonly LegendEntry[]
+}
+
+export interface PlotEventMap {
+  domainchange: DomainChangeDetail
+  layoutchange: LayoutChangeDetail
+  legendchange: LegendChangeDetail
+  legendtoggle: LegendToggleEventDetail
+  brush: BrushSelection
 }
 
 export type PlotConfig = Omit<
@@ -98,6 +140,11 @@ export interface Plot {
   readonly legend: LegendModel
   readonly scales: Readonly<Record<string, ScaleBinding>>
   readonly destroyed: boolean
+  on<K extends keyof PlotEventMap>(
+    type: K,
+    listener: (detail: PlotEventMap[K]) => void,
+    options?: { signal?: AbortSignal },
+  ): Unsubscribe
   update(patch: PlotConfig): void
   setConfig(config: PlotConfig): void
   destroy(): void
@@ -139,6 +186,36 @@ function dependenciesChanged(previous: DependencyGroups | undefined, current: De
     const after = current[key]
     return before?.length !== after.length || after.some((value, index) => value !== before[index])
   })
+}
+
+function equalRegion(left: PlotLayout['plot'], right: PlotLayout['plot']) {
+  return (
+    left.x === right.x &&
+    left.y === right.y &&
+    left.width === right.width &&
+    left.height === right.height
+  )
+}
+
+function equalMargins(left: PlotLayout['margins'], right: PlotLayout['margins']) {
+  return (
+    left.top === right.top &&
+    left.right === right.right &&
+    left.bottom === right.bottom &&
+    left.left === right.left
+  )
+}
+
+function equalLayout(left: PlotLayout, right: PlotLayout) {
+  return equalRegion(left.plot, right.plot) && equalMargins(left.margins, right.margins)
+}
+
+function equalSize(left: Readonly<Size>, right: Readonly<Size>) {
+  return left.width === right.width && left.height === right.height
+}
+
+function equalDomain(left: readonly ScaleValue[], right: readonly ScaleValue[]) {
+  return left.length === right.length && left.every((value, index) => value === right[index])
 }
 
 function createPlotInternal(
@@ -273,6 +350,100 @@ function createPlotInternal(
     locate: (event) => pointerHub.locate(event),
     on: (type, handler) => pointerHub.on(type, handler),
   })
+  const plotListeners = new Map<keyof PlotEventMap, Set<(detail: unknown) => void>>()
+  let previousLegendEntries = reactive.untracked(() => legend.entries.get())
+
+  function notifyPlotListeners<K extends keyof PlotEventMap>(type: K, detail: PlotEventMap[K]) {
+    for (const listener of [...(plotListeners.get(type) ?? [])]) {
+      try {
+        listener(detail)
+      } catch (error) {
+        scheduler.enqueueEffect(() => {
+          throw error
+        })
+      }
+    }
+  }
+
+  function dispatchPlotEvent<K extends keyof PlotEventMap>(type: K, detail: PlotEventMap[K]) {
+    reactive.untracked(() => {
+      element.dispatchEvent(
+        new CustomEvent<PlotEventMap[K]>(type, { detail, bubbles: true, composed: true }),
+      )
+      notifyPlotListeners(type, detail)
+    })
+  }
+
+  const forwardLegendToggle = (event: Event) =>
+    notifyPlotListeners('legendtoggle', (event as CustomEvent<LegendToggleEventDetail>).detail)
+  const forwardBrush = (event: Event) =>
+    notifyPlotListeners('brush', (event as CustomEvent<BrushSelection>).detail)
+  element.addEventListener('legendtoggle', forwardLegendToggle)
+  element.addEventListener('brush', forwardBrush)
+
+  const domainEffects = new Map<string, { scale: ScaleHandle; dispose: () => void }>()
+  let layoutPrevious: { size: Readonly<Size>; regions: PlotLayout } | undefined
+  let initialLayoutRendered = false
+
+  function currentLayoutSnapshot() {
+    return {
+      size: size.get(),
+      regions: regions.get(),
+    }
+  }
+
+  function reconcileDomainEffects() {
+    const currentScales = scaleBindings.scales
+    for (const [name, observer] of domainEffects) {
+      if (currentScales[name]?.scale !== observer.scale) {
+        observer.dispose()
+        domainEffects.delete(name)
+      }
+    }
+    for (const [name, binding] of Object.entries(currentScales)) {
+      if (domainEffects.has(name)) continue
+      let previous = reactive.untracked(() => binding.scale.domain.get())
+      const observer = scope.run(() =>
+        reactive.effect(() => {
+          const domain = binding.scale.domain.get()
+          const explicit = binding.scale.options.get().explicit.domain !== undefined
+          if (equalDomain(domain, previous)) return
+          const detail: DomainChangeDetail = Object.freeze({
+            scale: name,
+            handle: binding.scale,
+            domain,
+            previous,
+            explicit,
+            source: sourceOf(binding.scale) ?? (explicit ? 'api' : 'autoscale'),
+          })
+          previous = domain
+          dispatchPlotEvent('domainchange', detail)
+        }),
+      )
+      domainEffects.set(name, { scale: binding.scale, dispose: () => observer.dispose() })
+    }
+  }
+
+  function on<K extends keyof PlotEventMap>(
+    type: K,
+    listener: (detail: PlotEventMap[K]) => void,
+    options: { signal?: AbortSignal } = {},
+  ): Unsubscribe {
+    if (destroyed || options.signal?.aborted) return () => {}
+    const listeners = plotListeners.get(type) ?? new Set<(detail: unknown) => void>()
+    listeners.add(listener as (detail: unknown) => void)
+    plotListeners.set(type, listeners)
+    let active = true
+    const unsubscribe = () => {
+      if (!active) return
+      active = false
+      options.signal?.removeEventListener('abort', unsubscribe)
+      listeners.delete(listener as (detail: unknown) => void)
+      if (listeners.size === 0) plotListeners.delete(type)
+    }
+    options.signal?.addEventListener('abort', unsubscribe, { once: true })
+    return unsubscribe
+  }
 
   function reconcile() {
     const current = options.get().resolved
@@ -311,6 +482,7 @@ function createPlotInternal(
       }
     }
     scaleBindings.reconcile(current)
+    reconcileDomainEffects()
     pluginHost.reconcile(current.plugins)
   }
 
@@ -535,6 +707,10 @@ function createPlotInternal(
     }
     if (dirty & (DirtyLayer.layout | DirtyLayer.axes)) renderAxesForCurrent(current, tokens)
     markLayer.render(dirty, current, tokens)
+    if (!initialLayoutRendered && dirty & DirtyLayer.layout) {
+      layoutPrevious = reactive.untracked(currentLayoutSnapshot)
+      initialLayoutRendered = true
+    }
   }
 
   host.append(element)
@@ -604,6 +780,37 @@ function createPlotInternal(
       }
       invalidate(render, DirtyLayer.style | (fontChanged ? DirtyLayer.layout : 0))
     })
+    reactive.effect(() => {
+      const current = currentLayoutSnapshot()
+      const previous = layoutPrevious
+      if (!previous) {
+        layoutPrevious = current
+        return
+      }
+      if (!initialLayoutRendered) return
+      if (
+        equalSize(current.size, previous.size) &&
+        equalLayout(current.regions, previous.regions)
+      ) {
+        return
+      }
+      layoutPrevious = current
+      dispatchPlotEvent(
+        'layoutchange',
+        Object.freeze({
+          size: current.size,
+          regions: current.regions,
+          previous: previous.regions,
+        }),
+      )
+    })
+    reactive.effect(() => {
+      const entries = legend.entries.get()
+      if (entries !== previousLegendEntries) {
+        previousLegendEntries = entries
+        dispatchPlotEvent('legendchange', Object.freeze({ entries }))
+      }
+    })
   })
   function apply(patch: PlotConfig, replace: boolean) {
     if (destroyed) throw new Error('Cannot update a destroyed plot.')
@@ -638,6 +845,7 @@ function createPlotInternal(
     get destroyed() {
       return destroyed
     },
+    on,
     update(patch) {
       apply(patch, false)
     },
@@ -656,6 +864,10 @@ function createPlotInternal(
       markLayer.dispose()
       scaleBindings.dispose()
       scope.dispose()
+      domainEffects.clear()
+      plotListeners.clear()
+      element.removeEventListener('legendtoggle', forwardLegendToggle)
+      element.removeEventListener('brush', forwardBrush)
       for (const dispose of axisValidators.values()) dispose()
       axisValidators.clear()
       cancelRender(render)

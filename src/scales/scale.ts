@@ -1,6 +1,6 @@
 import { scaleBand, scaleLinear, scaleLog, scaleUtc } from 'd3-scale'
 import { createOptionState, type OptionPatch, type OptionStateSnapshot } from '../core/options.js'
-import { reactive, optionSignal } from '../core/runtime.js'
+import { reactive, optionSignal, recordScaleSource } from '../core/runtime.js'
 import type { ReadonlySignal, Signal } from '../core/reactive.js'
 import { finiteNonnegative, validateKeys } from '../core/validation.js'
 import { niceDegreeSteps } from '../Utils/niceDegreeSteps.js'
@@ -313,7 +313,10 @@ function createScale(kind: ScaleKind, initial: OptionPatch<ScaleOptions>): Scale
     },
     update(patch) {
       validateKeys(patch, keys, 'scale')
-      if (state.update(patch)) optionState.publish()
+      if (state.update(patch)) {
+        optionState.publish()
+        recordScaleSource(handle, domain.version)
+      }
     },
   }
   handles.add(handle)
