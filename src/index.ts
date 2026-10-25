@@ -154,6 +154,7 @@ export { createTable } from './data-store/table.js'
 export type {
   TableStore,
   TableView,
+  TableChange,
   TableInput,
   TableValue,
   TableOptions,

@@ -16,9 +16,23 @@ export interface TableView {
   valueAt(column: string, row: number): TableValue
   sampleId(row: number): number
 }
+export interface TableChange {
+  readonly version: number
+  readonly operation: 'append' | 'prepend' | 'upsert' | 'replace' | 'clear'
+  readonly previousLength: number
+  readonly length: number
+  readonly inputLength: number
+  readonly invalidatedFrom: number
+  readonly invalidatedTo: number
+  readonly replaced: number
+  readonly evicted: number
+  readonly from: TableValue | undefined
+  readonly to: TableValue | undefined
+}
 export interface TableStore extends TableView {
   readonly x: string
   readonly version: number
+  readonly change: TableChange | undefined
   append(rows: TableInput): void
   prepend(rows: TableInput): void
   replace(rows: TableInput): void
@@ -28,10 +42,16 @@ export interface TableStore extends TableView {
 
 type Column = { values: Float64Array; dictionary?: readonly string[] }
 const stores = new WeakSet<object>()
-const validators = new WeakMap<TableStore, Set<WeakRef<(view: TableView) => void>>>()
+const validators = new WeakMap<
+  TableStore,
+  Set<WeakRef<(view: TableView, appendFrom?: number) => void>>
+>()
 export const isTableStore = (value: object): value is TableStore => stores.has(value)
 
-export function validateTableUpdates(store: TableStore, validate: (view: TableView) => void) {
+export function validateTableUpdates(
+  store: TableStore,
+  validate: (view: TableView, appendFrom?: number) => void,
+) {
   const entries = validators.get(store)
   if (!entries) throw new TypeError('Expected a table store.')
   const entry = new WeakRef(validate)
@@ -59,7 +79,8 @@ export function createTable(initial: TableInput, options: TableOptions = {}): Ta
   let ids: readonly number[] = []
   let currentView: TableView
   const version = reactive.signal(0)
-  const checks = new Set<WeakRef<(view: TableView) => void>>()
+  let change: TableChange | undefined
+  const checks = new Set<WeakRef<(view: TableView, appendFrom?: number) => void>>()
 
   function copy(input: TableInput): Map<string, Column> {
     if (
@@ -161,18 +182,23 @@ export function createTable(initial: TableInput, options: TableOptions = {}): Ta
     })
   }
 
-  function commit(candidate: Map<string, Column>, sampleIds: readonly number[], publish: boolean) {
-    const candidateView = view(candidate, sampleIds)
-    for (const entry of checks) {
-      const validate = entry.deref()
-      if (validate) validate(candidateView)
-      else checks.delete(entry)
-    }
+  function commit(
+    candidate: Map<string, Column>,
+    sampleIds: readonly number[],
+    publish: boolean,
+    appendFrom?: number,
+  ) {
     let start = Math.max(0, sampleIds.length - (options.maxPoints ?? Infinity))
     const key = candidate.get(x)!
     if (options.maxAge !== undefined && sampleIds.length) {
       const cutoff = key.values[sampleIds.length - 1] - options.maxAge
       while (start < sampleIds.length && key.values[start] < cutoff) start += 1
+    }
+    const candidateView = view(candidate, sampleIds)
+    for (const entry of checks) {
+      const validate = entry.deref()
+      if (validate) validate(candidateView, start === 0 ? appendFrom : undefined)
+      else checks.delete(entry)
     }
     if (start) {
       candidate = new Map(
@@ -187,6 +213,7 @@ export function createTable(initial: TableInput, options: TableOptions = {}): Ta
     ids = sampleIds
     currentView = view(columns, ids)
     if (publish) version.update((value) => value + 1)
+    return start
   }
   const first = copy(initial)
   commit(
@@ -199,9 +226,11 @@ export function createTable(initial: TableInput, options: TableOptions = {}): Ta
     input: TableInput,
     mode: 'append' | 'prepend' | 'replace',
     bounds?: { from: number; to: number },
+    operationOverride?: TableChange['operation'],
   ) {
     const incoming = copy(input)
     const count = incoming.get(x)!.values.length
+    const previousLength = ids.length
     if (bounds) {
       if (
         columns.get(x)!.dictionary ||
@@ -245,7 +274,33 @@ export function createTable(initial: TableInput, options: TableOptions = {}): Ta
       ...Array.from({ length: count }, (_, row) => nextId + row),
       ...ids.slice(after),
     ]
-    commit(copy(merged), sampleIds, true)
+    const appendFrom = mode === 'append' && !bounds ? previousLength : undefined
+    const start = commit(copy(merged), sampleIds, false, appendFrom)
+    const operation = bounds ? 'upsert' : (operationOverride ?? mode)
+    const replaced = bounds ? after - before : mode === 'replace' ? previousLength : 0
+    const evicted = start
+    const firstCurrent = previousLength ? current.valueAt(x, 0) : undefined
+    const lastCurrent = previousLength ? current.valueAt(x, previousLength - 1) : undefined
+    const firstAdded = count ? added.valueAt(x, 0) : undefined
+    const lastAdded = count ? added.valueAt(x, count - 1) : undefined
+    change = Object.freeze({
+      version: version.get() + 1,
+      operation,
+      previousLength,
+      length: ids.length,
+      inputLength: count,
+      invalidatedFrom: operation === 'append' && evicted === 0 ? previousLength : 0,
+      invalidatedTo: ids.length,
+      replaced,
+      evicted,
+      from:
+        bounds?.from ??
+        (mode === 'append' ? (firstCurrent ?? firstAdded) : (firstAdded ?? firstCurrent)),
+      to:
+        bounds?.to ??
+        (mode === 'prepend' ? (lastCurrent ?? lastAdded) : (lastAdded ?? lastCurrent)),
+    })
+    version.update((value) => value + 1)
     nextId += count
   }
 
@@ -258,6 +313,10 @@ export function createTable(initial: TableInput, options: TableOptions = {}): Ta
     get version() {
       return version.get()
     },
+    get change() {
+      version.get()
+      return change
+    },
     kind: (name: string) => currentView.kind(name),
     valueAt: (name: string, row: number) => currentView.valueAt(name, row),
     sampleId: (row: number) => currentView.sampleId(row),
@@ -267,7 +326,9 @@ export function createTable(initial: TableInput, options: TableOptions = {}): Ta
     upsert: (input: { from: number; to: number; rows: TableInput }) =>
       mutate(input.rows, 'replace', input),
     clear() {
-      if (ids.length) mutate(Object.fromEntries(names.map((name) => [name, []])), 'replace')
+      if (ids.length) {
+        mutate(Object.fromEntries(names.map((name) => [name, []])), 'replace', undefined, 'clear')
+      }
     },
   })
   stores.add(store)
