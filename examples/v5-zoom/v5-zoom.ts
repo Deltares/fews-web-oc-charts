@@ -92,6 +92,15 @@ function updateOptions() {
   updateStatus()
 }
 
+plot.on(
+  'domainchange',
+  () => {
+    const xDomain = t.domain.get().map((value) => new Date(Number(value)).toISOString())
+    snapshot.textContent = JSON.stringify({ time: xDomain, value: q.domain.get() }, null, 2)
+  },
+  { signal: events.signal },
+)
+
 for (const control of [mode, wheelEnabled, modifier]) {
   control.addEventListener('change', updateOptions, events)
 }
@@ -104,7 +113,6 @@ reset.addEventListener(
   },
   events,
 )
-plot.element.addEventListener('wheel', updateStatus, events)
 updateStatus()
 
 function dispose() {

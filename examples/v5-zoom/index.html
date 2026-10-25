@@ -54,6 +54,9 @@
     <pre><code>const interaction = zoom({ mode: 'x', wheel: 'x' })
 const plot = createPlot(host, { scales: { t, q }, axes, marks, plugins: [interaction] })
 interaction.update({ mode: 'xy', wheel: 'xy' }) // both axes respond to the wheel
+plot.on('domainchange', ({ scale, domain, source }) => {
+  console.log(scale, domain, source) // wheel zoom and resets update the snapshot reactively
+})
 // Wheel over the plot to zoom; double-click inside the plot to reset.</code></pre>
     <script type="module" src="./v5-zoom.ts"></script>
   </body>

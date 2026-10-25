@@ -13,7 +13,6 @@ import {
   type LegendEntry,
   type LegendPosition,
 } from '@lib'
-import { reactive } from '../../src/core/runtime.js'
 
 const legendPositions = [
   'top',
@@ -37,7 +36,6 @@ function required<T extends HTMLElement>(selector: string): T {
 }
 
 const events = new AbortController()
-const scope = reactive.createScope()
 const legendHost = required('#legend')
 const status = required('#legend-status')
 const renderer = required<HTMLSelectElement>('#renderer')
@@ -155,15 +153,16 @@ function renderEntries(entries: readonly LegendEntry[]): HTMLUListElement {
   return list
 }
 
-scope.run(() => {
-  reactive.effect(() => {
-    const focusedId = legendHost.contains(document.activeElement)
-      ? document.activeElement?.id
-      : undefined
-    legendHost.replaceChildren(renderEntries(plot.legend.entries.get()))
-    if (focusedId) document.getElementById(focusedId)?.focus()
-  })
-})
+function updateLegend(entries: readonly LegendEntry[]) {
+  const focusedId = legendHost.contains(document.activeElement)
+    ? document.activeElement?.id
+    : undefined
+  legendHost.replaceChildren(renderEntries(entries))
+  if (focusedId) document.getElementById(focusedId)?.focus()
+}
+
+updateLegend(plot.legend.entries.get())
+plot.on('legendchange', ({ entries }) => updateLegend(entries), { signal: events.signal })
 
 legendHost.addEventListener(
   'click',
@@ -231,7 +230,6 @@ plot.element.addEventListener(
 
 function dispose() {
   events.abort()
-  scope.dispose()
   plot.destroy()
 }
 window.addEventListener(
