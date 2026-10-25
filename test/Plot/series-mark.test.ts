@@ -40,6 +40,30 @@ afterEach(() => {
 })
 
 describe('data-backed series marks', () => {
+  test('accepts every FEWS marker symbol in data-backed series options', () => {
+    const symbols = [
+      'circle',
+      'cross',
+      'square',
+      'diamond',
+      'star',
+      'wye',
+      'triangle',
+      'triangle-up',
+      'triangle-down',
+      'triangle-left',
+      'triangle-right',
+      'x',
+      'plus',
+      'rectangle',
+    ] as const
+    const data = createSeries({ x: [0], y: [1] })
+    for (const symbol of symbols) {
+      const mark = series(data, { x: 'x', y: 'y', markers: { symbol } })
+      expect(mark.markers?.symbol).toBe(symbol)
+    }
+  })
+
   test('renders shared store line/markers/area with gaps and live mutations without replacing handles', async () => {
     const data = fromObjects(
       [
@@ -152,7 +176,9 @@ describe('data-backed series marks', () => {
     await frame()
     expect(line.getAttribute('stroke')).not.toBe('red')
     expect(line.getAttribute('stroke-width')).toBe('3')
-    expect(current.element.querySelector('circle')?.getAttribute('r')).toBe('7')
+    expect(Number(current.element.querySelector('circle')?.getAttribute('r'))).toBeCloseTo(
+      Math.sqrt(7 / Math.PI),
+    )
     expect(writes.mock.calls.some(([key]) => key === 'd')).toBe(false)
     expect(read).not.toHaveBeenCalled()
     expect(data.version).toBe(0)
@@ -168,6 +194,33 @@ describe('data-backed series marks', () => {
     expect(line.getAttribute('display')).toBe('')
     expect(line.getAttribute('stroke-width')).toBe('1.5')
     expect(current.element.querySelector('[data-mark="area"]')).toBeNull()
+  })
+
+  test('updates the marker symbol on a series without retaining the previous SVG element type', async () => {
+    const mark = series(createSeries({ x: [0, 1], y: [1, 2] }), {
+      id: 'obs',
+      x: 'x',
+      y: 'y',
+      markers: { symbol: 'x' },
+    })
+    const current = plot(host(), {
+      directions: { x: 'x' },
+      scales: { x: linearScale(), y: linearScale() },
+      marks: [mark],
+    })
+    await frame()
+    const group = current.element.querySelector('[data-mark="markers"]')!
+    expect(group.querySelector('[data-mark="marker"]')?.tagName).toBe('path')
+
+    mark.update({ markers: { symbol: 'circle' } })
+    await frame()
+    expect(group.querySelectorAll('[data-mark="marker"]')).toHaveLength(2)
+    expect(group.querySelector('[data-mark="marker"]')?.tagName).toBe('circle')
+
+    mark.update({ markers: { symbol: 'rectangle' } })
+    await frame()
+    expect(group.querySelectorAll('[data-mark="marker"]')).toHaveLength(2)
+    expect(group.querySelector('[data-mark="marker"]')?.tagName).toBe('path')
   })
 
   test('validates rebindings atomically across every plot, rejects categorical scales and immutable IDs', async () => {

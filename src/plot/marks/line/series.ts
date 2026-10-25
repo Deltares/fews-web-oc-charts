@@ -24,9 +24,7 @@ export interface SeriesLineOptions extends Pick<
   width?: number
 }
 
-export interface SeriesMarkerOptions extends LineMarkerOptions {
-  symbol?: 'circle'
-}
+export type SeriesMarkerOptions = LineMarkerOptions
 
 export interface SeriesOptions {
   id?: string
@@ -87,22 +85,19 @@ function visual(options: Readonly<SeriesOptions>): LineMark {
       throw new TypeError('series.markers must be false or options.')
     validateKeys(
       options.markers,
-      ['symbol', 'size', 'fill', 'stroke', 'strokeWidth', 'symbolSize', 'skip'],
+      ['symbol', 'size', 'fill', 'stroke', 'strokeWidth', 'skip'],
       'series.markers',
     )
-    if (options.markers.symbol !== undefined && options.markers.symbol !== 'circle') {
-      throw new Error('series.markers.symbol currently supports circle only.')
-    }
   }
   const markers =
     options.markers === false
       ? false
       : {
           size: options.markers.size,
+          symbol: options.markers.symbol,
           fill: options.markers.fill,
           stroke: options.markers.stroke,
           strokeWidth: options.markers.strokeWidth,
-          symbolSize: options.markers.symbolSize,
           skip: options.markers.skip,
         }
   return line({

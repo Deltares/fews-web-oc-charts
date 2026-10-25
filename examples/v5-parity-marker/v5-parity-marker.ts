@@ -35,7 +35,7 @@ for (const skip of [1, 5]) {
         line: false,
         digits: 3,
         markers: {
-          symbolSize: skip === 1 ? 50 : 100,
+          size: skip === 1 ? 50 : 100,
           skip,
           fill: skip === 1 ? 'black' : 'blue',
           stroke: skip === 1 ? 'red' : 'none',

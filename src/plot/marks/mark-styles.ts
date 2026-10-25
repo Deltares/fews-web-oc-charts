@@ -56,14 +56,13 @@ export function resolveLineStyles(
       opacity: mark.area?.opacity ?? 0,
     },
     marker: {
-      shape: 'circle' as const,
+      shape: mark.markers?.symbol ?? 'circle',
       fill: mark.markers?.fill || stroke,
-      stroke: mark.markers?.stroke ?? 'none',
+      stroke:
+        mark.markers?.stroke ||
+        (mark.markers?.symbol === 'x' || mark.markers?.symbol === 'plus' ? stroke : 'none'),
       strokeWidth: mark.markers?.strokeWidth ?? 0,
-      size:
-        mark.markers?.symbolSize === undefined
-          ? (mark.markers?.size ?? 0)
-          : Math.sqrt(mark.markers.symbolSize / Math.PI),
+      size: mark.markers?.size ?? 10,
     },
   }
 }

@@ -521,7 +521,7 @@ describe('headless legend model', () => {
       x: 'x',
       y: 'y',
       area: { to: 0, opacity: 0.25 },
-      markers: { symbolSize: 16, stroke: 'black' },
+      markers: { size: 16, stroke: 'black', strokeWidth: 1 },
     })
     const current = plot({
       scales: { x: linearScale({ domain: [0, 1] }), y: linearScale({ domain: [0, 4] }) },
@@ -530,7 +530,7 @@ describe('headless legend model', () => {
     })
     await frame()
     const area = current.element.querySelector('[data-mark="area"]')!
-    const marker = current.element.querySelector('[data-mark="markers"] > path')!
+    const marker = current.element.querySelector('[data-mark="markers"] > [data-mark="marker"]')!
     expect(current.legend.entries.get()[0].symbol).toMatchObject({
       parts: [
         {
@@ -544,7 +544,7 @@ describe('headless legend model', () => {
           fill: marker.getAttribute('fill'),
           stroke: 'black',
           strokeWidth: 1,
-          size: Math.sqrt(16 / Math.PI),
+          size: 16,
         },
       ],
     })

@@ -38,7 +38,7 @@ parityPolarPlot('chart-container', {
       yValues,
       line: false,
       digits: 3,
-      markers: { symbolSize: 20, fill: 'white', stroke: 'black', strokeWidth: 1 },
+      markers: { size: 20, fill: 'white', stroke: 'black', strokeWidth: 1 },
     }),
   ],
 })

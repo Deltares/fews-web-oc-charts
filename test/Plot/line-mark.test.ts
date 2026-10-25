@@ -42,6 +42,39 @@ afterEach(() => {
 })
 
 describe('static line marks', () => {
+  test('normalizes every FEWS marker symbol and keeps open symbols visible by default', () => {
+    const symbols = [
+      'circle',
+      'cross',
+      'square',
+      'diamond',
+      'star',
+      'wye',
+      'triangle',
+      'triangle-up',
+      'triangle-down',
+      'triangle-left',
+      'triangle-right',
+      'x',
+      'plus',
+      'rectangle',
+    ] as const
+    for (const symbol of symbols) {
+      const mark = line({
+        x: 'x',
+        y: 'y',
+        xValues: [0],
+        yValues: [1],
+        markers: { symbol },
+      })
+      expect(mark.markers?.symbol).toBe(symbol)
+      expect(mark.markers?.size).toBe(10)
+      if (symbol === 'x' || symbol === 'plus') {
+        expect(mark.markers?.strokeWidth).toBeGreaterThan(0)
+      }
+    }
+  })
+
   test('normalizes and validates the line visibility flag', () => {
     const options = { x: 'x', y: 'y', xValues: [0, 1], yValues: [1, 2] }
     expect(line(options).line).toBe(true)
@@ -260,9 +293,62 @@ describe('static line marks', () => {
     )
     expect(areaPath.getAttribute('fill-opacity')).toBe('0.3')
     expect(markerGroup.querySelectorAll('circle')).toHaveLength(4)
-    expect(markerGroup.querySelector('circle')?.getAttribute('r')).toBe('5')
+    expect(Number(markerGroup.querySelector('circle')?.getAttribute('r'))).toBeCloseTo(
+      Math.sqrt(5 / Math.PI),
+    )
     expect(markerGroup.querySelector('circle')?.getAttribute('fill')).toBe('#ffffff')
     expect(markerGroup.querySelector('circle')?.getAttribute('stroke')).toBe('#1677a6')
+  })
+
+  test('renders the FEWS marker symbol set with oriented triangles and open x/plus glyphs', async () => {
+    const symbols = [
+      'circle',
+      'cross',
+      'square',
+      'diamond',
+      'star',
+      'wye',
+      'triangle',
+      'triangle-up',
+      'triangle-down',
+      'triangle-left',
+      'triangle-right',
+      'x',
+      'plus',
+      'rectangle',
+    ] as const
+    const current = plot(host(), {
+      scales: { x: linearScale({ domain: [0, 1] }), y: linearScale({ domain: [0, 1] }) },
+      directions: { x: 'x' },
+      marks: symbols.map((symbol) =>
+        line({
+          id: symbol,
+          x: 'x',
+          y: 'y',
+          xValues: [0.5],
+          yValues: [0.5],
+          markers: { symbol },
+        }),
+      ),
+    })
+    await frame()
+
+    for (const shape of symbols) {
+      const group = current.element.querySelector<SVGGElement>(
+        `[data-mark="markers"][data-mark-id="${shape}"]`,
+      )!
+      const marker = group.querySelector<SVGElement>('[data-mark="marker"]')!
+      expect(marker.tagName).toBe(shape === 'circle' ? 'circle' : 'path')
+      if (shape !== 'circle') expect(marker.getAttribute('d')).not.toBe('')
+      if (shape === 'triangle-down') expect(marker.getAttribute('transform')).toContain('180')
+      if (shape === 'triangle-left') expect(marker.getAttribute('transform')).toContain('-90')
+      if (shape === 'triangle-right') expect(marker.getAttribute('transform')).toContain('90')
+      if (shape === 'x' || shape === 'plus') {
+        expect(marker.getAttribute('fill')).toBe('none')
+        expect(marker.getAttribute('stroke')).not.toBe('none')
+        expect(Number(marker.getAttribute('stroke-width'))).toBeGreaterThan(0)
+      }
+    }
   })
 
   test('removes optional series layers when replacing a marked line', async () => {
@@ -397,9 +483,12 @@ describe('static line marks', () => {
       unexpected: true,
     }
     expect(() => line(invalid)).toThrow(/line.unexpected/)
+    expect(
+      line({ x: 'x', y: 'y', xValues: [0], yValues: [1], markers: { size: 0 } }).markers?.size,
+    ).toBe(0)
     expect(() =>
-      line({ x: 'x', y: 'y', xValues: [0], yValues: [1], markers: { size: 0 } }),
-    ).toThrow(/markers.size/)
+      line({ x: 'x', y: 'y', xValues: [0], yValues: [1], markers: { size: -1 } }),
+    ).toThrow(/nonnegative finite/)
     expect(() =>
       line({ x: 'x', y: 'y', xValues: [0], yValues: [1], area: { to: 0, opacity: 2 } }),
     ).toThrow(/area.opacity/)
