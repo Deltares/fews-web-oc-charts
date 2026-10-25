@@ -2076,7 +2076,40 @@ displaying only leaf series/layers without changing their IDs or the headless mo
 `showGroups` defaults to true and is editable at runtime. It supports top,
 bottom, left and right docks plus four plot-overlay corners, and can be repositioned at
 runtime. Composite bar and stacked-area hit testing are implemented; remaining Phase 3
-examples and exit criteria remain. The current mark interaction contract is:
+examples and exit criteria remain. The current mark interaction contract is documented
+after the parity follow-up below.
+
+#### Phase 3 v4 interaction parity follow-up
+
+The v4 gallery has interaction examples that were not covered by the static parity
+checkpoint. Reuse the native v5 APIs and examples below as the starting point for
+behavioral parity fixtures; do not treat the static screenshot comparisons above as
+interaction coverage.
+
+| v4 example(s)                              | Native v5 starting point                         | Parity work to cover                                                                                         |
+| ------------------------------------------ | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `mouseover`                                | `examples/v5-parity-mouseover/`, `examples/v5-tooltip/`, `examples/v5-crosshair/` | All-series and selected-mark inspection, vertical guides, nearest-sample behavior and number formatting. The new parity route demonstrates numeric/time x scales, selected traces, extent-aware formatting and y-directed inspection; focused browser assertions remain to be added. |
+| `brush`                                    | `examples/v5-brush/`                              | Shift-drag selection, brush-to-domain updates, overview navigator and two-way domain synchronization.       |
+| `wheel-zoom`, `zoom-options`, `zoom-events` | `examples/v5-zoom/`                               | X/Y/XY wheel modes, modifiers, disabled wheel, runtime option changes, reset behavior and user readouts.   |
+| `panning`, `shared-panning`, `shared-zoom`  | `examples/v5-pan/`, `examples/v5-shared-scales/`  | Mouse button/modifier and direction options, enable/disable behavior, and synchronization through shared scale handles. |
+| `legend`                                   | `examples/v5-legend/`                             | Visibility changes for line/marker/area entries and grouped entries, including keyboard activation where supported. |
+
+Add focused browser interaction cases for these behaviors, asserting resulting scale
+domains, selections, hit/tooltip content, visibility and lifecycle cleanup rather than
+relying only on screenshots. Also exercise the supported mark hits on the existing
+`basic-line`, `marker`, `bar` and `matrix` parity routes: line/series samples, bar
+rectangles/layers and finite heatmap cells (missing heatmap cells must not hit).
+Keep those checks separate from the strict static v4/v5 pixel comparisons.
+
+Parity is behavioral, not an instruction to reproduce every v4 implementation detail.
+The v5 tooltip remains text-only, so v4 arbitrary HTML formatter output is not a
+requirement; match its supported formatting and selection behavior without inserting
+untrusted HTML. The built-in v5 legend intentionally omits v4 checkbox/isolate/show-all
+controls; cover the headless legend model and built-in toggle behavior, and record any
+required product-level UX difference explicitly rather than claiming exact control
+parity. The Phase 3 exit criterion is complete when each listed example has a named
+v5 fixture or an explicit documented exclusion, its applicable interactions have
+focused browser assertions, and differences from v4 are recorded.
 
 | Mark kind                 | Hover / hit behavior                                    | Crosshair snapping                                                            | Tooltip                                    | Visibility                                                                   |
 | ------------------------- | ------------------------------------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------ | ---------------------------------------------------------------------------- |

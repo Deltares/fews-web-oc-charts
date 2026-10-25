@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>v4/v5 parity: mouseover</title>
+  </head>
+  <body>
+    <nav aria-label="Examples">
+      <a href="/">All examples</a>
+      <a href="../mouseover/">v4 mouseover</a>
+      <a href="../v5-tooltip/">v5 tooltip</a>
+      <a href="../v5-crosshair/">v5 crosshair</a>
+    </nav>
+    <h1>v4/v5 parity: mouseover</h1>
+    <p>
+      Native v5 interaction counterparts to the v4 mouseover examples. Hover each plot or use a
+      touch pointer to inspect the nearest sample.
+    </p>
+    <main class="interaction-grid">
+      <section aria-labelledby="all-series-heading">
+        <h2 id="all-series-heading">All series — numeric x</h2>
+        <p>Inspect every series at the nearest x coordinate.</p>
+        <div id="all-series" class="plot-host"></div>
+      </section>
+      <section aria-labelledby="selected-series-heading">
+        <h2 id="selected-series-heading">Selected series — time x</h2>
+        <p>Only Example 1 and Example 3 are included in the tooltip.</p>
+        <div id="selected-series" class="plot-host"></div>
+      </section>
+      <section aria-labelledby="formatting-heading">
+        <h2 id="formatting-heading">Custom number and label formatting</h2>
+        <p>
+          The formatter uses the configured value extent and precision, and adds a value unit. Mark
+          symbols retain their series colors.
+        </p>
+        <div id="formatted-series" class="plot-host"></div>
+      </section>
+      <section aria-labelledby="vertical-heading">
+        <h2 id="vertical-heading">Vertical inspection — nearest y</h2>
+        <p>
+          A horizontal guide follows the pointer's value; each series reports its nearest y sample.
+        </p>
+        <div id="vertical-series" class="plot-host"></div>
+      </section>
+    </main>
+    <aside class="compatibility-note">
+      <strong>Formatter compatibility:</strong> v5 tooltip content is text-only. The v4 example that
+      returns custom HTML is represented by safe formatted text and the mark's colored symbol;
+      arbitrary HTML formatter output is intentionally not reproduced.
+    </aside>
+    <script type="module" src="./v5-parity-mouseover.ts"></script>
+  </body>
+</html>
