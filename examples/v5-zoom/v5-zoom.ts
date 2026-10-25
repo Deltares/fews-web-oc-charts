@@ -1,5 +1,5 @@
 import '../shared/v5.css'
-import { axis, createPlot, line, linearScale, ModifierKey, timeScale, zoom } from '@lib'
+import { axis, createPlot, effect, line, linearScale, ModifierKey, timeScale, zoom } from '@lib'
 
 function required<T extends HTMLElement>(selector: string): T {
   const element = document.querySelector<T>(selector)
@@ -120,7 +120,6 @@ plot.on(
       `domainchange: ${scale}; source: ${source}; ${explicit ? 'manual domain' : 'autoscale'}.`,
     )
     eventStatus.textContent = [...latestChanges.values()].join(' ')
-    updateStatus()
   },
   { signal: events.signal },
 )
@@ -135,15 +134,15 @@ reset.addEventListener(
     t.domain.set([start, end])
     q.update({ domain: undefined })
     eventStatus.textContent = 'Initial view restored by the application (API).'
-    updateStatus()
   },
   events,
 )
 eventStatus.textContent = 'Waiting for a domainchange event.'
-updateStatus()
+const statusEffect = effect(updateStatus)
 
 function dispose() {
   events.abort()
+  statusEffect.dispose()
   plot.destroy()
 }
 window.addEventListener(

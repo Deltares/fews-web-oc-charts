@@ -25,6 +25,7 @@ import {
   linearScale,
   ModifierKey,
   pan,
+  subscribe,
   timeScale,
   type DataPoint,
   zoom,
@@ -166,9 +167,15 @@ if (!v4Reset || !v5Reset) {
 }
 
 const events = new AbortController()
-function syncV5Navigator() {
-  v5Navigator.setSelection({ mode: 'x', scales: { t: v5Time.domain.get() } })
-}
+let overviewDomain = v5Time.domain.get()
+subscribe(
+  v5Time.domain,
+  (domain) => {
+    if (domain === overviewDomain) return
+    v5Navigator.setSelection({ mode: 'x', scales: { t: domain } })
+  },
+  { signal: events.signal },
+)
 
 v5Main.element.addEventListener(
   brushEvent,
@@ -177,7 +184,6 @@ v5Main.element.addEventListener(
     const selectedTime = selection.scales.t
     if (!selectedTime) return
     v5Time.domain.set(selectedTime)
-    syncV5Navigator()
     v5Status.textContent = 'Main-chart brush selection updated the overview navigator.'
   },
   events,
@@ -189,21 +195,12 @@ v5Overview.element.addEventListener(
     const selectedTime = selection.scales.t
     if (!selectedTime) return
     v5Time.domain.set(selectedTime)
+    // Do not echo rounded time domains back into the brush during its active gesture.
+    overviewDomain = v5Time.domain.get()
     v5Status.textContent = 'Overview brush selection updated the main chart.'
   },
   events,
 )
-for (const type of ['wheel', 'dblclick', 'pointerup']) {
-  v5Main.element.addEventListener(type, syncV5Navigator, events)
-}
-v5Main.element.addEventListener(
-  'pointermove',
-  (event: PointerEvent) => {
-    if (event.buttons === 1 && !event.shiftKey) syncV5Navigator()
-  },
-  events,
-)
-
 v4Reset.addEventListener(
   'click',
   () => {
@@ -217,7 +214,6 @@ v5Reset.addEventListener(
   'click',
   () => {
     v5Time.domain.set(v5InitialDomain)
-    v5Navigator.setSelection({ mode: 'x', scales: { t: v5InitialDomain } })
     v5Status.textContent = 'v5 domains reset.'
   },
   events,

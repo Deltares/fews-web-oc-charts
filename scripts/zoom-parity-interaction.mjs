@@ -17,6 +17,13 @@ try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } })
   const errors = []
   page.on('pageerror', (error) => errors.push(error.message))
+  await page.route('**/examples/v5-zoom/v5-zoom.ts', async (route) => {
+    const response = await route.fetch()
+    await route.fulfill({
+      response,
+      body: `${await response.text()}\nglobalThis.exampleScales = { t, q };`,
+    })
+  })
   await page.goto(`http://127.0.0.1:${address.port}/examples/v5-parity-zoom/`)
   await page.locator('#v5-chart svg').waitFor()
   await page.waitForFunction(() =>
@@ -210,6 +217,17 @@ try {
   })
   const nativeInitial = await snapshot('native')
   const nativeSvg = await chart('native').elementHandle()
+  await page.evaluate(() => {
+    globalThis.exampleScales.t.domain.set([Date.UTC(2026, 0, 2), Date.UTC(2026, 0, 3)])
+    globalThis.exampleScales.q.update({ domain: [10, 90] })
+  })
+  await settled()
+  const apiSnapshot = await snapshot('native')
+  assert.deepEqual(apiSnapshot.time, ['2026-01-02T00:00:00.000Z', '2026-01-03T00:00:00.000Z'])
+  assert.deepEqual(apiSnapshot.value, [10, 90])
+  assert.equal(apiSnapshot.valueDomain, 'manual')
+  assert.match(await page.locator('#status').textContent(), /manual domain/)
+  await restore()
   for (const mode of ['x', 'y', 'xy']) {
     await restore()
     await page.selectOption('#mode', mode)

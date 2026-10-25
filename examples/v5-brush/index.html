@@ -75,12 +75,19 @@ navigator.setSelection({ mode: 'x', scales: { t: [visibleStart, visibleEnd] } })
 const overview = createPlot(host, {
   scales: { t: overviewTime, q }, axes, marks, plugins: [navigator],
 })
+let overviewDomain = mainTime.domain.get()
 overview.element.addEventListener(brushEvent, (event) =&gt; {
   const selection = (event as CustomEvent&lt;BrushSelection&gt;).detail
   mainTime.domain.set(selection.scales.t)
+  overviewDomain = mainTime.domain.get()
 })
-// Programmatic updates do not emit brush events, so bidirectional sync does not loop:
-navigator.setSelection({ mode: 'x', scales: { t: mainTime.domain.get() } })
+// Follow every domain change, including API updates, without polling input events.
+// Skip overview echoes: time rounding must not cancel the active navigator gesture.
+subscribe(mainTime.domain, (domain) =&gt; {
+  if (domain !== overviewDomain) {
+    navigator.setSelection({ mode: 'x', scales: { t: domain } })
+  }
+}, { signal: events.signal })
 navigator.setSelection(undefined) // Clear the persistent selection.</code></pre>
     <script type="module" src="./v5-brush.ts"></script>
   </body>

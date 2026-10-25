@@ -10,6 +10,7 @@ import {
   linearScale,
   ModifierKey,
   pan,
+  subscribe,
   timeScale,
   zoom,
   type BrushMode,
@@ -76,6 +77,19 @@ const overview = createPlot(overviewHost, {
   plugins: [navigator],
 })
 const events = new AbortController()
+let overviewDomain = t.domain.get()
+function subscribeNavigator() {
+  return subscribe(
+    t.domain,
+    (domain, previous) => {
+      if (previous !== undefined && domain !== overviewDomain) {
+        navigator.setSelection({ mode: 'x', scales: { t: domain } })
+      }
+    },
+    { immediate: true, signal: events.signal },
+  )
+}
+let stopNavigatorSync = subscribeNavigator()
 const toIso = (range: readonly (number | string)[] | undefined) =>
   range?.map((value) => new Date(Number(value)).toISOString()) ?? null
 const domainsEffect = effect(() => {
@@ -135,7 +149,6 @@ plot.element.addEventListener(
         if (selection.scales.t) t.domain.set(selection.scales.t)
         if (selection.scales.q) q.domain.set(selection.scales.q)
       })
-      syncNavigator()
     }
     snapshot.textContent = JSON.stringify(
       {
@@ -155,11 +168,14 @@ plot.element.addEventListener(
   events,
 )
 function clearReadout() {
+  // Reset the subscription baseline so the pending reset does not restore the cleared brush.
+  stopNavigatorSync()
   batch(() => {
     t.domain.set([start, start + 48 * hour])
     q.domain.set([0, 100])
   })
   navigator.setSelection(undefined)
+  stopNavigatorSync = subscribeNavigator()
   snapshot.textContent = 'No selection yet.'
   updateStatus()
 }
@@ -167,29 +183,17 @@ clear.addEventListener('click', clearReadout, events)
 snapshot.textContent = 'No selection yet.'
 updateStatus()
 
-function syncNavigator() {
-  navigator.setSelection({ mode: 'x', scales: { t: t.domain.get() } })
-}
 overview.element.addEventListener(
   brushEvent,
   (event) => {
     const selection = (event as CustomEvent<BrushSelection>).detail
     t.domain.set(selection.scales.t)
+    // Do not echo rounded time domains back into the brush during its active gesture.
+    overviewDomain = t.domain.get()
     status.textContent = 'Overview selection updated the main chart time domain.'
   },
   events,
 )
-for (const type of ['wheel', 'dblclick', 'pointerup']) {
-  plot.element.addEventListener(type, syncNavigator, events)
-}
-plot.element.addEventListener(
-  'pointermove',
-  (event) => {
-    if (event.buttons === 1 && !event.shiftKey) syncNavigator()
-  },
-  events,
-)
-
 function dispose() {
   events.abort()
   domainsEffect.dispose()
