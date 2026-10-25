@@ -2,6 +2,7 @@ import { createFrameScheduler, type DirtyLayers } from './frame-scheduler.js'
 import { createReactiveCore } from './reactive.js'
 import type { OptionState, OptionStateSnapshot } from './options.js'
 import type { EffectHandle, ReadonlySignal } from './reactive.js'
+import type { ScaleHandle } from '../scales/scale.js'
 
 export type { EffectHandle } from './reactive.js'
 
@@ -15,6 +16,35 @@ export interface SubscribeOptions<T = unknown> {
 }
 
 export type Unsubscribe = () => void
+
+export type DomainChangeSource = 'zoom' | 'wheel' | 'pan' | 'brush' | 'reset' | 'autoscale' | 'api'
+
+interface ScaleSource {
+  source: DomainChangeSource
+  version: number
+}
+
+let currentSource: DomainChangeSource | undefined
+const scaleSources = new WeakMap<ScaleHandle, ScaleSource>()
+
+export function withSource<T>(source: DomainChangeSource, run: () => T): T {
+  const previousSource = currentSource
+  currentSource = source
+  try {
+    return run()
+  } finally {
+    currentSource = previousSource
+  }
+}
+
+export function recordScaleSource(scale: ScaleHandle, version: number) {
+  scaleSources.set(scale, { source: currentSource ?? 'api', version })
+}
+
+export function sourceOf(scale: ScaleHandle): DomainChangeSource | undefined {
+  const attribution = scaleSources.get(scale)
+  return attribution?.version === scale.domain.version ? attribution.source : undefined
+}
 
 const pending = new Map<(dirty: DirtyLayers) => void, DirtyLayers>()
 export const scheduler = createFrameScheduler(() => {
@@ -53,16 +83,7 @@ export function subscribe<T>(
   let hasDelivered = false
   let lastDelivered: T | undefined
   let active = true
-  let disposeEffect: (() => void) | undefined
   let releaseOwnership = () => {}
-
-  const unsubscribe = () => {
-    if (!active) return
-    active = false
-    options.signal?.removeEventListener('abort', unsubscribe)
-    releaseOwnership()
-    disposeEffect?.()
-  }
 
   const deliver = (value: T, previous: T | undefined) => {
     try {
@@ -74,7 +95,7 @@ export function subscribe<T>(
     }
   }
 
-  disposeEffect = effect(() => {
+  const subscription = effect(() => {
     const value = source.get()
     if (!hasDelivered || !equals(value, lastDelivered!)) {
       const previous = hasDelivered ? lastDelivered : undefined
@@ -82,7 +103,15 @@ export function subscribe<T>(
       hasDelivered = true
       deliver(value, previous)
     }
-  }).dispose
+  })
+
+  const unsubscribe = () => {
+    if (!active) return
+    active = false
+    options.signal?.removeEventListener('abort', unsubscribe)
+    releaseOwnership()
+    subscription.dispose()
+  }
 
   options.signal?.addEventListener('abort', unsubscribe, { once: true })
   releaseOwnership = reactive.onDispose(unsubscribe)

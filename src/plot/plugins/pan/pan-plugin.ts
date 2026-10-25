@@ -1,5 +1,5 @@
 import type { ScaleBinding } from '../../../scales/scale.js'
-import { reactive } from '../../../core/runtime.js'
+import { reactive, withSource } from '../../../core/runtime.js'
 import { matchesModifierKey } from '../../../Utils/modifierKey.js'
 import { isBrushHandle } from '../brush/brush.js'
 import type { PlotContext, PluginDefinition } from '../plugin-definition.js'
@@ -136,7 +136,7 @@ function panScale(
     binding.scale.kind === 'log' ? value * (before / after) : value + before - after
   const nextDomain = domain.map((value) => shiftDomain(Number(value)))
   if (!isValidScaleDomain(binding.scale.kind, nextDomain)) return
-  binding.scale.update({ domain: nextDomain })
+  withSource('pan', () => binding.scale.update({ domain: nextDomain }))
 }
 
 export const panDefinition: PluginDefinition<PanHandle> = {

@@ -1,4 +1,5 @@
 import type { ScaleHandle, ScaleValue } from '../../../scales/scale.js'
+import { withSource } from '../../../core/runtime.js'
 import { matchesModifierKey } from '../../../Utils/modifierKey.js'
 import type { PlotContext, PluginDefinition } from '../plugin-definition.js'
 import { isZoomHandle, type ZoomHandle } from './zoom.js'
@@ -52,7 +53,7 @@ function installZoom(handle: ZoomHandle, context: PlotContext) {
           : (value: number) => anchor + (value - anchor) * factor
       const nextDomain = [zoomValue(Number(domain[0])), zoomValue(Number(domain[1]))] as const
       if (!isValidScaleDomain(binding.scale.kind, nextDomain)) continue
-      binding.scale.update({ domain: nextDomain })
+      withSource('wheel', () => binding.scale.update({ domain: nextDomain }))
       changed = true
     }
     if (changed) {
@@ -71,16 +72,16 @@ function installZoom(handle: ZoomHandle, context: PlotContext) {
     for (const { name, binding } of zoomableScales(axes)) {
       if (config.reset === 'toggle' && toggled) {
         const previous = toggledDomains.get(name)
-        if (previous) binding.scale.update({ domain: previous })
+        if (previous) withSource('reset', () => binding.scale.update({ domain: previous }))
         toggledDomains.delete(name)
         continue
       }
       if (config.reset === 'toggle') toggledDomains.set(name, binding.scale.domain.get())
       const initial = initialDomains.get(name)
       if (config.reset === 'initial' && initial?.scale === binding.scale) {
-        binding.scale.update({ domain: initial.domain })
+        withSource('reset', () => binding.scale.update({ domain: initial.domain }))
       } else {
-        binding.scale.update({ domain: undefined })
+        withSource('reset', () => binding.scale.update({ domain: undefined }))
       }
     }
     toggled = config.reset === 'toggle' && !toggled
