@@ -224,3 +224,10 @@ export { batch, effect, subscribe, untracked } from './core/runtime.js'
 export type { DomainChangeSource, SubscribeOptions, Unsubscribe } from './core/runtime.js'
 export type { EffectHandle } from './core/reactive.js'
 export type { OptionPatch, OptionStateSnapshot } from './core/options.js'
+export { sharedPointer } from './sync/shared-pointer.js'
+export type {
+  SharedPointer,
+  SharedPointerOptions,
+  SharedPointerState,
+  SharedPointerValue,
+} from './sync/shared-pointer.js'

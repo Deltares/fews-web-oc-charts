@@ -242,6 +242,7 @@ describe('tooltip model', () => {
       hit,
       hits: [hit],
       layers: [],
+      axes: 'xy',
       options: guide.options.get().resolved,
       coordinates: [
         {

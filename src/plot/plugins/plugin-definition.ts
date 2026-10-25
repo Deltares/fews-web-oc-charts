@@ -23,6 +23,8 @@ export interface PlotContext {
   readonly size: ReadonlySignal<Readonly<Size>>
   readonly regions: ReadonlySignal<PlotLayout>
   readonly pointer: ReadonlySignal<PlotPointer>
+  /** Observes local input publications only, never a projected shared pointer. */
+  onPointer(listener: (pointer: PlotPointer) => void): () => void
   readonly legend: LegendModel
   readonly theme: ReadonlySignal<ThemeTokens>
   /** Measures an application-layout viewport instead of the original plot host. */

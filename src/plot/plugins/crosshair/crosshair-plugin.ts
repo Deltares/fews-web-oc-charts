@@ -14,6 +14,11 @@ import { svgElement } from '../../rendering/svg.js'
 import { barLayers, isBarMark } from '../../marks/bar/bar.js'
 import { isStackedAreaMark } from '../../marks/stacked-area/stacked-area.js'
 import { histogramBar, isHistogramMark } from '../../marks/histogram/histogram.js'
+import {
+  publishSharedPointer,
+  releaseSharedPointer,
+  type SharedPointer,
+} from '../../../sync/shared-pointer.js'
 
 interface CrosshairCallout {
   readonly group: SVGGElement
@@ -86,7 +91,7 @@ function installCrosshair(handle: CrosshairHandle, context: PlotContext) {
   context.element.append(layer)
 
   function layerGuideIds(snap: CrosshairOptions['snap']) {
-    if (!snap || snap.axis !== 'x') return []
+    if (snap?.axis !== 'x') return []
     if (isBarMark(snap.mark)) {
       const options = snap.mark.options.get().resolved
       if (options.orientation !== 'vertical') return []
@@ -116,7 +121,7 @@ function installCrosshair(handle: CrosshairHandle, context: PlotContext) {
 
   function createCallout(axis: 'x' | 'y', layerId: string | undefined): CrosshairCallout {
     const group = svgElement('g', { 'data-crosshair-label': axis })
-    if (layerId !== undefined) group.setAttribute('data-crosshair-layer', layerId)
+    if (layerId !== undefined) group.dataset.crosshairLayer = layerId
     const background = svgElement('rect', {
       height: 22,
       rx: 3,
@@ -143,10 +148,66 @@ function installCrosshair(handle: CrosshairHandle, context: PlotContext) {
   const stopValidation = validateCrosshairUpdates(handle, validateOptions)
   validateOptions(handle.options.get().resolved)
 
+  const source = Symbol('crosshair pointer source')
+  let shared: SharedPointer | undefined
+  let bindings: { name: string; scale: ScaleHandle; direction: string }[] = []
+  let disconnect = () => {}
+  context.scope.run(() => {
+    reactive.onDispose(() => disconnect())
+    reactive.effect(() => {
+      const next = handle.options.get().resolved.pointer
+      const entries = Object.entries(context.options.get().resolved.scales).map(
+        ([name, scale]) => ({
+          name,
+          scale,
+          direction: context.direction(name),
+        }),
+      )
+      if (
+        next === shared &&
+        entries.length === bindings.length &&
+        entries.every(
+          (entry, index) =>
+            entry.name === bindings[index].name &&
+            entry.scale === bindings[index].scale &&
+            entry.direction === bindings[index].direction,
+        )
+      )
+        return
+      disconnect()
+      shared = next
+      bindings = entries
+      if (!next) {
+        disconnect = () => {}
+        return
+      }
+      const stop = context.onPointer((pointer) => {
+        if (handle.options.get().resolved.pointer !== next) return
+        const currentScales = context.options.get().resolved.scales
+        const values = pointer.inside
+          ? entries.flatMap(({ name, scale, direction }) => {
+              const value = pointer.x.get(name)
+              return currentScales[name] === scale &&
+                context.direction(name) === direction &&
+                next.by.includes(direction) &&
+                value !== undefined
+                ? [{ scale, value }]
+                : []
+            })
+          : []
+        publishSharedPointer(next, source, values)
+      })
+      disconnect = () => {
+        stop()
+        releaseSharedPointer(next, source)
+      }
+    })
+  })
+
   context.scope.run(() =>
     reactive.effect(() => {
       const inspection = context.inspectCrosshair(handle)
-      const { mode } = inspection.options
+      const mode = inspection.axes
       const region = context.regions.get().plot
       const visible = inspection.visible
       const x = inspection.point.x - region.x

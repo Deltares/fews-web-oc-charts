@@ -48,6 +48,7 @@ export interface PointerHubContext {
 
 export interface PointerHub {
   readonly pointer: ReadonlySignal<PlotPointer>
+  onPointer(listener: (pointer: PlotPointer) => void): () => void
   /** Maps client coordinates to plot coordinates; undefined while the plot has no size. */
   locate(event: { readonly clientX: number; readonly clientY: number }): PlotPosition | undefined
   /** Registers a gesture handler; the element listener exists only while handlers do. */
@@ -60,6 +61,7 @@ const outside: PlotPointer = Object.freeze({ px: 0, py: 0, x: new Map(), inside:
 export function createPointerHub(context: PointerHubContext): PointerHub {
   const { element, coordinateSystem, size, regions, scales, options } = context
   const pointer = reactive.signal<PlotPointer>(outside)
+  const pointerConsumers = new Set<(pointer: PlotPointer) => void>()
   const gestures = new Map<GestureType, Set<(event: Event) => void>>()
   const gestureListeners = new Map<GestureType, (event: Event) => void>()
   let frame: number | undefined
@@ -89,6 +91,7 @@ export function createPointerHub(context: PointerHubContext): PointerHub {
     const position = locate(next)
     if (!position) {
       pointer.set(outside)
+      for (const listener of pointerConsumers) listener(outside)
       return
     }
     const current = options()
@@ -110,6 +113,7 @@ export function createPointerHub(context: PointerHubContext): PointerHub {
         inside: next.entered && position.inside,
       }),
     )
+    for (const listener of pointerConsumers) listener(pointer.get())
   }
 
   function queue(event: PointerEvent, entered: boolean) {
@@ -138,6 +142,12 @@ export function createPointerHub(context: PointerHubContext): PointerHub {
 
   return {
     pointer,
+    onPointer(listener) {
+      pointerConsumers.add(listener)
+      return () => {
+        pointerConsumers.delete(listener)
+      }
+    },
     locate,
     on(type, handler) {
       if (disposed) throw new Error('Cannot register a gesture on a destroyed plot.')
@@ -169,6 +179,7 @@ export function createPointerHub(context: PointerHubContext): PointerHub {
       if (frame !== undefined) cancelAnimationFrame(frame)
       frame = undefined
       pending = undefined
+      pointerConsumers.clear()
     },
   }
 }
