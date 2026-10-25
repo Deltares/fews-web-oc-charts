@@ -37,7 +37,8 @@
     "spike:interaction": "node scripts/phase0-interaction.mjs",
     "test:visual": "node scripts/phase1-visual-regression.mjs",
     "test:visual:update": "node scripts/phase1-visual-regression.mjs --update",
-    "test:visual:parity": "node scripts/static-visual-parity.mjs"
+    "test:visual:parity": "node scripts/static-visual-parity.mjs",
+    "test:interaction:zoom": "node scripts/zoom-parity-interaction.mjs"
   },
   "devDependencies": {
     "@types/d3": "^7.4.3",

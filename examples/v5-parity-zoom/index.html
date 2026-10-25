@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>v4/v5 parity: zoom</title>
+  </head>
+  <body>
+    <nav aria-label="Examples">
+      <a href="/">All examples</a>
+      <a href="../wheel-zoom/">v4 wheel zoom</a>
+      <a href="../zoom-options/">v4 zoom options</a>
+      <a href="../zoom-events/">v4 zoom events</a>
+      <a href="../v5-zoom/">v5 zoom</a>
+    </nav>
+    <h1>v4/v5 parity: zoom</h1>
+    <p>
+      Wheel over either chart to zoom at the cursor. Change these options without recreating either
+      plot; disabling the wheel still allows double-click reset. The charts share data and controls,
+      not domains.
+    </p>
+    <fieldset class="controls">
+      <legend>Runtime zoom options</legend>
+      <label>
+        Direction
+        <select id="mode">
+          <option value="x">Horizontal (x)</option>
+          <option value="y">Vertical (y)</option>
+          <option value="xy">Both (xy)</option>
+        </select>
+      </label>
+      <label>
+        <input id="wheel-enabled" type="checkbox" checked />
+        Enable wheel zoom
+      </label>
+      <label>
+        Required wheel modifier
+        <select id="modifier">
+          <option value="none">None</option>
+          <option value="ctrl">Ctrl</option>
+          <option value="shift">Shift</option>
+        </select>
+      </label>
+      <label>
+        Double-click reset
+        <select id="reset-mode">
+          <option value="initial">Initial</option>
+          <option value="full">Full data</option>
+          <option value="toggle">Toggle</option>
+        </select>
+      </label>
+      <button id="reset" type="button">Restore both initial views</button>
+    </fieldset>
+    <p id="options-status" role="status"></p>
+    <main class="zoom-parity-grid">
+      <section aria-labelledby="v4-heading">
+        <h2 id="v4-heading">v4</h2>
+        <figure>
+          <div id="v4-chart" class="zoom-parity-chart"></div>
+          <figcaption>
+            ZoomHandler wheel modes, runtime options and zoom/reset callbacks.
+          </figcaption>
+        </figure>
+        <p id="v4-status" class="status" role="status"></p>
+        <pre id="v4-snapshot" aria-label="v4 current scale domains"></pre>
+      </section>
+      <section aria-labelledby="v5-heading">
+        <h2 id="v5-heading">v5</h2>
+        <figure>
+          <div id="v5-chart" class="plot-host zoom-parity-chart"></div>
+          <figcaption>
+            Native zoom plugin and public domainchange events, including source.
+          </figcaption>
+        </figure>
+        <p id="v5-status" class="status" role="status"></p>
+        <pre id="v5-snapshot" aria-label="v5 current scale domains"></pre>
+      </section>
+    </main>
+    <h2>Intentional differences</h2>
+    <ul>
+      <li>
+        Wheel step sizes and axis padding differ: compare affected directions and behavior, not
+        identical domain endpoints.
+      </li>
+      <li>
+        v4 resets both axes. v5 resets only the selected direction. Neither version requires the
+        wheel modifier for double-click reset.
+      </li>
+      <li>
+        v4 toggle alternates initial and full extents. v5 toggle first shows the full extent, then
+        restores the previous zoomed domain. Initial reset restores v5 y autoscaling; zooming y
+        makes its domain manual until reset.
+      </li>
+      <li>
+        The second half of the series is higher and outside the initial time window. v4 excludes
+        this continuation from initial autoscaling but includes it in full reset; v5 starts with an
+        explicit time window and autoscales visible values. v4's time-axis toggle compares Date
+        objects by identity and may stay at the initial time extent; the numeric y axis demonstrates
+        its initial/full toggle.
+      </li>
+      <li>
+        v4 reports zoom/reset callbacks. v5 reports one domainchange per changed scale with wheel,
+        reset, autoscale or API source; the readout retains the latest event for each scale. No
+        event is emitted when the domain is unchanged.
+      </li>
+      <li>
+        v4 also supports drag selection in ZoomHandler. In v5 this is a separate brush plugin; see
+        the <a href="../v5-parity-brush/">brush parity example</a>.
+      </li>
+    </ul>
+    <h2>Native v5 API</h2>
+    <pre><code>const interaction = zoom({ mode: 'x', wheel: 'x', reset: 'initial' })
+interaction.update({ mode: 'xy', wheel: 'xy', modifier: ModifierKey.Shift })
+interaction.update({ wheel: 'none' }) // double-click reset remains available
+interaction.update({ reset: 'toggle' })
+plot.on('domainchange', ({ scale, domain, source, explicit }) => {
+  // Update application-owned readouts; explicit distinguishes manual domains from autoscaling.
+})</code></pre>
+    <script type="module" src="./v5-parity-zoom.ts"></script>
+  </body>
+</html>
