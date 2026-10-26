@@ -2003,8 +2003,10 @@ v5 plot/mark APIs, not v4 chart instances or copied reference SVG DOM.
 - Plot `axisLayout: 'inset'` uses margins as the plot boundary and paints axes
   before marks. `autoMargins: true` grows inset margins to fit measured ticks.
   `background: 'plot'` restricts the background to the plot region;
-  `clipMarks: false` permits overflowing marks. Existing defaults remain
-  `'outside'`, `false`, `'chart'`, and `true`, respectively.
+  `clipMarks: false` permits overflowing marks. Defaults are
+  `'outside'`, `false`, `'plot'`, and `true`, respectively. The chart outside the
+  plot region is transparent by default, matching v4; use `background: 'chart'`
+  to color the entire chart.
   Public scale projections remain absolute even when inset marks use local geometry.
 - Lines and series support dash arrays, cap/join styles, coordinate `digits`,
   `vectorEffect`, and SVG-symbol-area markers with a `skip` interval.

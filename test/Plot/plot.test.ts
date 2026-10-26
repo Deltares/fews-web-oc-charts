@@ -52,6 +52,48 @@ afterEach(() => {
 })
 
 describe('createPlot named scales', () => {
+  test('colors only the plot canvas by default across themes and resize', async () => {
+    const element = host()
+    element.style.backgroundColor = 'rgb(255, 200, 100)'
+    element.style.setProperty('--fews-chart-background', '#abcdef')
+    const current = plot(element, {
+      width: 500,
+      height: 300,
+      title: 'Flow',
+      margins: { top: 20, right: 30, bottom: 40, left: 50 },
+      scales: { y: linearScale() },
+      axes: [axis('y', { position: 'left' })],
+    })
+    await frame()
+    const background = current.element.firstElementChild as SVGRectElement
+    const expectPlotBackground = () => {
+      const region = current.regions.get().plot
+      for (const name of ['x', 'y', 'width', 'height'] as const) {
+        expect(Number(background.getAttribute(name))).toBe(region[name])
+      }
+      expect(region.x).toBeGreaterThan(0)
+      expect(region.y).toBeGreaterThan(0)
+      expect(getComputedStyle(current.element).backgroundColor).toBe('rgba(0, 0, 0, 0)')
+      expect(getComputedStyle(background).fill).toBe('rgb(171, 205, 239)')
+    }
+    expect(current.options.get().resolved.background).toBe('plot')
+    expectPlotBackground()
+    current.update({ theme: 'dark', width: 600, height: 400 })
+    await frame()
+    expectPlotBackground()
+
+    current.update({ background: 'chart' })
+    await frame()
+    expect(background.getAttribute('x')).toBe('0')
+    expect(background.getAttribute('y')).toBe('0')
+    expect(background.getAttribute('width')).toBe('600')
+    expect(background.getAttribute('height')).toBe('400')
+
+    current.update({ background: undefined })
+    await frame()
+    expectPlotBackground()
+  })
+
   test('aligns natural horizontal plot areas and releases padding after removal', async () => {
     const alignment = alignGroup()
     const first = plot(host(), {
