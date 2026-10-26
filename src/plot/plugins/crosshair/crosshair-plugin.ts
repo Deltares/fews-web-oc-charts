@@ -123,7 +123,6 @@ function installCrosshair(handle: CrosshairHandle, context: PlotContext) {
     const group = svgElement('g', { 'data-crosshair-label': axis })
     if (layerId !== undefined) group.dataset.crosshairLayer = layerId
     const background = svgElement('rect', {
-      height: 22,
       rx: 3,
       fill: 'var(--fews-chart-tooltip-background, #fff)',
       stroke: 'currentColor',
@@ -131,9 +130,8 @@ function installCrosshair(handle: CrosshairHandle, context: PlotContext) {
     })
     const text = svgElement('text', {
       x: 6,
-      y: 15,
+      'dominant-baseline': 'central',
       fill: 'var(--fews-chart-tooltip-color, #222)',
-      'font-size': 12,
     })
     group.append(background, text)
     callouts.append(group)
@@ -279,6 +277,7 @@ function installCrosshair(handle: CrosshairHandle, context: PlotContext) {
       for (const nodes of calloutNodes.values()) nodes.group.setAttribute('display', 'none')
       const activeCallouts = new Set<string>()
       const theme = context.theme.get()
+      const height = theme.fontSize + 10
       for (const coordinate of inspection.coordinates) {
         if (coordinate.layerId !== undefined && !guideSet.has(coordinate.layerId)) continue
         const key = calloutKey(coordinate.axis, coordinate.layerId)
@@ -297,16 +296,21 @@ function installCrosshair(handle: CrosshairHandle, context: PlotContext) {
         )
         if (nodes.text.textContent !== text) nodes.text.textContent = text
         if (nodes.measuredText !== text || nodes.measuredTheme !== theme) {
+          nodes.text.setAttribute('font-family', theme.fontFamily)
+          nodes.text.setAttribute('font-size', String(theme.fontSize))
+          nodes.text.setAttribute('y', String(height / 2))
           nodes.background.setAttribute('width', String(nodes.text.getComputedTextLength() + 12))
+          nodes.background.setAttribute('height', String(height))
           nodes.measuredText = text
           nodes.measuredTheme = theme
         }
         const width = Number(nodes.background.getAttribute('width'))
         const size = context.size.get()
         const left = coordinate.axis === 'x' ? x - width / 2 : -width
-        const top = coordinate.axis === 'x' ? region.height : coordinate.position - region.y - 11
+        const top =
+          coordinate.axis === 'x' ? region.height : coordinate.position - region.y - height / 2
         const clampedX = Math.max(-region.x, Math.min(size.width - region.x - width, left))
-        const clampedY = Math.max(-region.y, Math.min(size.height - region.y - 22, top))
+        const clampedY = Math.max(-region.y, Math.min(size.height - region.y - height, top))
         nodes.group.setAttribute('transform', `translate(${clampedX} ${clampedY})`)
       }
       for (const [key, nodes] of calloutNodes) {
