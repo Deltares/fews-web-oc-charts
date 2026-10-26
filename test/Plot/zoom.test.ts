@@ -231,14 +231,12 @@ test('box zoom uses local projections for log, time and reversed scales, skippin
   const expectedX = [plot.scales.x.invert(300), plot.scales.x.invert(100)]
   const selectedY = [plot.scales.y.invert(230.05), plot.scales.y.invert(80.05)]
   expect(selectedY).toEqual([expect.closeTo(499.5, 10), expect.closeTo(1999.5, 10)])
-  const expectedY = selectedY.map((value) => Number(new Date(value)))
+  const expectedY = selectedY.map((value) => expect.closeTo(value, 10))
   pointer(plot, 'pointerdown', 100, 80.05)
   pointer(plot, 'pointerup', 300, 230.05)
   await frame()
   expect(x.domain.get()).toEqual(expectedX.map((value) => expect.closeTo(value, 10)))
-  expect(y.options.get().explicit.domain).toEqual(
-    selectedY.map((value) => expect.closeTo(value, 10)),
-  )
+  expect(y.options.get().explicit.domain).toEqual(expectedY)
   expect(y.domain.get()).toEqual(expectedY)
   expect(categories.domain.get()).toEqual(['a', 'b'])
 })
@@ -280,7 +278,7 @@ test.each([true, false])(
     await frame()
     const details: DomainChangeDetail[] = []
     plot.on('domainchange', (detail) => details.push(detail))
-    plot.on('brush', ({ scales }) => x.domain.set(scales.x))
+    plot.on('brush', ({ scales }) => plot.scales.x.scale.domain.set(scales.x))
     pointer(plot, 'pointerdown', 100, 100, { shiftKey: true })
     pointer(plot, 'pointerup', 300, 200, { shiftKey: true })
     await frame()

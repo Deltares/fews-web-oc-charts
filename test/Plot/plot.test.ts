@@ -486,7 +486,7 @@ describe('createPlot named scales', () => {
   test.each(['pan', 'zoom'] as const)(
     'ignores %s updates outside the Date range without changing the domain',
     async (gesture) => {
-      const domain = [8.64e15 - 10000, 8.64e15]
+      const domain = [8.64e15 - 10000, 8.64e15] as const
       const x = timeScale({ domain })
       const current = plot(host(), {
         width: 500,

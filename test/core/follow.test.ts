@@ -104,7 +104,7 @@ test.each([0, 0.25])(
   },
 )
 
-test.each([undefined, [0, 1]])(
+test.each([undefined, [0, 1] as const])(
   'pausing holds the displayed window rather than the base domain %j',
   (domain) => {
     const store = createSeries({ x: [1_000, 1_100], y: [1, 2] })

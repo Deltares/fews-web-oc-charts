@@ -26,7 +26,7 @@ describe('positive logarithmic scale', () => {
       [-100, -10],
       [1000, 100],
       [1, Infinity],
-    ]) {
+    ] as const) {
       expect(() => scale.update({ domain })).toThrow()
       expect(scale.domain.get()).toEqual([100, 1000])
     }

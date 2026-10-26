@@ -146,8 +146,8 @@ plot.element.addEventListener(
     const selection = (event as CustomEvent<BrushSelection>).detail
     if (applyZoom.checked) {
       batch(() => {
-        if (selection.scales.t) t.domain.set(selection.scales.t)
-        if (selection.scales.q) q.domain.set(selection.scales.q)
+        if (selection.scales.t) plot.scales.t.scale.domain.set(selection.scales.t)
+        if (selection.scales.q) plot.scales.q.scale.domain.set(selection.scales.q)
       })
     }
     snapshot.textContent = JSON.stringify(
@@ -187,7 +187,7 @@ overview.element.addEventListener(
   brushEvent,
   (event) => {
     const selection = (event as CustomEvent<BrushSelection>).detail
-    t.domain.set(selection.scales.t)
+    plot.scales.t.scale.domain.set(selection.scales.t)
     // Do not echo rounded time domains back into the brush during its active gesture.
     overviewDomain = t.domain.get()
     status.textContent = 'Overview selection updated the main chart time domain.'
