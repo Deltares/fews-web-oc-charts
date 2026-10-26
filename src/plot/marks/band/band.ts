@@ -1,4 +1,5 @@
 import { validateKeys } from '../../../core/validation.js'
+import { reactive, untracked } from '../../../core/runtime.js'
 import {
   registerStaticLegend,
   staticLegendKeys,
@@ -32,9 +33,24 @@ export interface BandMark {
   readonly yValues: readonly BandRangeValue[]
   readonly fill: string | undefined
   readonly opacity: number
+  update(patch: BandUpdate): void
 }
 
+/** Data and appearance can change; identity, scale bindings and legend metadata stay fixed. */
+export type BandUpdate = Partial<
+  Pick<BandOptions, 'xValues' | 'yValues' | 'fill' | 'opacity' | 'curve' | 'shapeRendering'>
+>
+
 const bandMarks = new WeakSet<object>()
+const updateValidators = new WeakMap<BandMark, Set<(candidate: BandMark) => void>>()
+
+export function validateBandUpdates(mark: BandMark, validate: (candidate: BandMark) => void) {
+  const validators = updateValidators.get(mark)!
+  validators.add(validate)
+  return () => {
+    validators.delete(validate)
+  }
+}
 
 export function isBandMark(value: object): value is BandMark {
   return bandMarks.has(value)
@@ -58,7 +74,7 @@ function validateScaleNames(options: BandOptions) {
   }
 }
 
-export function band(options: BandOptions): BandMark {
+function normalizeBand(options: BandOptions, previous?: Omit<BandMark, 'update'>) {
   if (!options || typeof options !== 'object') throw new Error('band options must be an object.')
   validateKeys(
     options,
@@ -86,8 +102,14 @@ export function band(options: BandOptions): BandMark {
     throw new Error('band.id must be a non-empty string.')
   }
   validateScaleNames(options)
-  const xValues = copyNumericRanges(options.xValues, 'band', 'xValues')
-  const yValues = copyNumericRanges(options.yValues, 'band', 'yValues')
+  const xValues =
+    previous && options.xValues === previous.xValues
+      ? previous.xValues
+      : copyNumericRanges(options.xValues, 'band', 'xValues')
+  const yValues =
+    previous && options.yValues === previous.yValues
+      ? previous.yValues
+      : copyNumericRanges(options.yValues, 'band', 'yValues')
   if (xValues.length !== yValues.length) {
     throw new Error('band.xValues and band.yValues must have equal lengths.')
   }
@@ -99,7 +121,7 @@ export function band(options: BandOptions): BandMark {
   if (!Number.isFinite(opacity) || opacity < 0 || opacity > 1) {
     throw new Error('band.opacity must be between 0 and 1.')
   }
-  const mark = Object.freeze({
+  return Object.freeze({
     shapeRendering: options.shapeRendering,
     curve: options.curve,
     id: options.id,
@@ -110,7 +132,53 @@ export function band(options: BandOptions): BandMark {
     fill: options.fill,
     opacity,
   })
+}
+
+export function band(options: BandOptions): BandMark {
+  const state = reactive.signal(normalizeBand(options))
+  const validators = new Set<(candidate: BandMark) => void>()
+  const mark: BandMark = Object.freeze({
+    id: options.id,
+    x: options.x,
+    y: options.y,
+    get shapeRendering() {
+      return state.get().shapeRendering
+    },
+    get curve() {
+      return state.get().curve
+    },
+    get xValues() {
+      return state.get().xValues
+    },
+    get yValues() {
+      return state.get().yValues
+    },
+    get fill() {
+      return state.get().fill
+    },
+    get opacity() {
+      return state.get().opacity
+    },
+    update(patch: BandUpdate) {
+      if (!patch || typeof patch !== 'object' || Array.isArray(patch)) {
+        throw new Error('band update must be an object.')
+      }
+      validateKeys(
+        patch,
+        ['xValues', 'yValues', 'fill', 'opacity', 'curve', 'shapeRendering'],
+        'band',
+      )
+      untracked(() => {
+        const previous = state.get()
+        const next = normalizeBand({ ...previous, ...patch }, previous)
+        const candidate: BandMark = { ...next, update: mark.update }
+        for (const validate of validators) validate(candidate)
+        state.set(next)
+      })
+    },
+  })
   bandMarks.add(mark)
+  updateValidators.set(mark, validators)
   registerStaticLegend(mark, options, 'band')
   return mark
 }

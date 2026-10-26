@@ -132,6 +132,7 @@ export { band, band as range } from './plot/marks/band/band.js'
 export type {
   BandMark,
   BandOptions,
+  BandUpdate,
   BandRange,
   BandRangeValue,
   BandRangeValues,

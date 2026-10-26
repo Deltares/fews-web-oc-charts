@@ -1,6 +1,6 @@
 import { arc, area, curveLinear, curveBasis, curveStep, curveStepBefore, curveStepAfter } from 'd3'
 import type { ThemeTokens } from '../../../theme/theme.js'
-import { isBandMark, type BandMark, type BandRange } from './band.js'
+import { isBandMark, validateBandUpdates, type BandMark, type BandRange } from './band.js'
 import { svgElement } from '../../axes/render-axes.js'
 import {
   accent,
@@ -100,6 +100,9 @@ function createBandRenderer(): MarkRenderer<BandMark> {
       const region = context.plot
       const key = [
         mark,
+        mark.xValues,
+        mark.yValues,
+        mark.curve,
         context.localCoordinates,
         ...scaleKey(xScale),
         ...scaleKey(yScale),
@@ -121,7 +124,11 @@ function createBandRenderer(): MarkRenderer<BandMark> {
         group.removeAttribute('transform')
       }
       if (mark.curve) {
-        group.replaceChildren()
+        let path = group.querySelector<SVGPathElement>('[data-mark="band-area"]')
+        if (!path) {
+          path = svgElement('path', { 'data-mark': 'band-area', stroke: 'none' })
+          group.replaceChildren(path)
+        }
         const curve = {
           linear: curveLinear,
           basis: curveBasis,
@@ -136,19 +143,23 @@ function createBandRenderer(): MarkRenderer<BandMark> {
           .y0((index) => yScale.project(mark.yValues[index]![0]))
           .y1((index) => yScale.project(mark.yValues[index]![1]))
           .curve(curve)
-        group.append(
-          svgElement('path', {
-            'data-mark': 'band-area',
-            d: generator(samples) ?? '',
-            stroke: 'none',
-          }),
-        )
+        path.setAttribute('d', generator(samples) ?? '')
         return
       }
       renderBandRanges(group, mark, context)
     },
     style(mark: BandMark, tokens: ThemeTokens) {
-      if (!styleKey.changed([mark, mark.fill, mark.opacity, tokens.accent])) return
+      if (
+        !styleKey.changed([
+          mark,
+          mark.fill,
+          mark.opacity,
+          mark.curve,
+          mark.shapeRendering,
+          tokens.accent,
+        ])
+      )
+        return
       group.setAttribute('fill', mark.fill ?? accent(tokens))
       group.setAttribute('fill-opacity', String(mark.curve ? 1 : mark.opacity))
       group.setAttribute('opacity', String(mark.curve ? mark.opacity : 1))
@@ -186,7 +197,12 @@ export const bandDefinition: MarkDefinition<BandMark> = {
   },
   legend: (mark, tokens) =>
     staticLegend(mark, { type: 'area', fill: mark.fill ?? accent(tokens), opacity: mark.opacity }),
-  track: (mark) => isStaticMarkVisible(mark),
+  track(mark) {
+    mark.xValues
+    isStaticMarkVisible(mark)
+  },
+  validateUpdates: (mark, context) =>
+    validateBandUpdates(mark, (candidate) => bandDefinition.validate(candidate, context())),
   extents(mark, context) {
     if (!isStaticMarkVisible(mark)) return
     let coordinate: 'x' | 'y' | undefined
