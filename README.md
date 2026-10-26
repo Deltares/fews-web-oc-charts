@@ -153,6 +153,10 @@ disappear on release or cancellation and are not persistent resize controls. Sel
 must span at least 3 SVG pixels; clicks and cancelled drags do not zoom.
 Selections are clamped to the plot, continuous scales use their local projections
 (including reversed, log and time scales), and band scales are left unchanged.
+Horizontal and vertical box zooms hold the other continuous axis at its current
+range, rather than autoscaling it to the newly visible data. This also pauses
+live follow on that axis. Clearing its domain, updating its autoscale policy, or
+resetting that axis resumes automatic domain calculation.
 `wheel: 'none'` disables only wheel zoom. `modifier` applies to both box and wheel
 zoom; double-click reset remains modifier-independent.
 

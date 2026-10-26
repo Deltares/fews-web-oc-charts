@@ -173,6 +173,62 @@ test('automatic zoom shows directional guides and hides them when the gesture en
   expect(visibleHandles()).toEqual([])
 })
 
+test.each([
+  { mode: 'x', direction: 'x', padding: 0 },
+  { mode: 'y', direction: 'y', padding: 0 },
+  { mode: 'auto', direction: 'x', padding: 0.1 },
+  { mode: 'auto', direction: 'y', padding: 0.1 },
+] as const)(
+  '$mode box zoom in $direction preserves the opposite autoscaled viewport (padding: $padding)',
+  async ({ mode, direction, padding }) => {
+    const { plot, interaction } = await dragSetup(mode)
+    const opposite = direction === 'x' ? 'y' : 'x'
+    const selected = linearScale({ domain: [0, 100] })
+    const unselected = linearScale({ autoscale: 'visible', padding, nice: true })
+    plot.update({
+      scales: { [direction]: selected, [opposite]: unselected },
+      marks: [line({ x: 'x', y: 'y', xValues: [0, 50, 100], yValues: [0, 50, 100] })],
+    })
+    await frame()
+    const original = [...unselected.domain.get()]
+    const details: DomainChangeDetail[] = []
+    plot.on('domainchange', (detail) => details.push(detail))
+    const start = direction === 'x' ? [110, 150] : [200, 85]
+    const end = direction === 'x' ? [290, 150] : [200, 215]
+
+    pointer(plot, 'pointerdown', start[0], start[1])
+    pointer(plot, 'pointermove', end[0], end[1])
+    await frame()
+    expect(unselected.domain.get()).toEqual(original)
+    expect(selected.domain.get()).toEqual([0, 100])
+    pointer(plot, 'pointerup', end[0], end[1])
+    await frame()
+    expect(selected.domain.get()).toEqual([expect.closeTo(25, 10), expect.closeTo(75, 10)])
+    expect(unselected.domain.get()).toEqual(original)
+    expect(details.map(({ scale, source }) => ({ scale, source }))).toEqual([
+      { scale: direction, source: 'zoom' },
+    ])
+
+    plot.update({
+      marks: [line({ x: 'x', y: 'y', xValues: [0, 50, 100], yValues: [0, 500, 1000] })],
+    })
+    await frame()
+    expect(unselected.domain.get()).toEqual(original)
+
+    plot.update({
+      marks: [line({ x: 'x', y: 'y', xValues: [0, 50, 100], yValues: [0, 50, 100] })],
+    })
+    interaction.update({ mode: 'xy', reset: 'initial' })
+    pointer(plot, 'dblclick', 200, 150)
+    await frame()
+    expect(unselected.options.get().explicit.domain).toBeUndefined()
+    const resumed = [...unselected.domain.get()]
+    selected.domain.set([40, 60])
+    await frame()
+    expect(unselected.domain.get()).not.toEqual(resumed)
+  },
+)
+
 test('box zoom ignores invalid starts, tiny drags, cancellation and stale gestures', async () => {
   const { plot, x, interaction } = await dragSetup('x')
   interaction.update({ modifier: ModifierKey.Ctrl })
