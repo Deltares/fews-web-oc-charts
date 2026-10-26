@@ -88,6 +88,49 @@ afterEach(() => {
 })
 
 describe('tooltip plugin', () => {
+  test.each([0.75, 1, 1.25, 1.5])(
+    'aligns the tooltip arrow with the crosshair at body zoom %s',
+    async (zoom) => {
+      const previousZoom = document.body.style.zoom
+      try {
+        document.body.style.zoom = String(zoom)
+        const { plot, guide, interaction } = await linkedPlot()
+        vi.mocked(plot.element.getBoundingClientRect).mockRestore()
+        guide.update({ mode: 'xy' })
+        for (const position of ['top', 'bottom', 'left', 'right'] as const) {
+          interaction.update({ position })
+          const rect = plot.element.getBoundingClientRect()
+          plot.element.dispatchEvent(
+            new PointerEvent('pointermove', {
+              clientX: rect.left + (plot.scales.t.project(5) / 500) * rect.width,
+              clientY: rect.top + (plot.scales.q.project(20) / 300) * rect.height,
+              isPrimary: true,
+            }),
+          )
+          await frame()
+          const node = document.querySelector<HTMLDivElement>('[data-layer="tooltip"]')!
+          expect(node.getAttribute('aria-hidden')).toBe('false')
+          const arrow = node.querySelector('[data-tooltip-arrow]')!.getBoundingClientRect()
+          const vertical = plot.element
+            .querySelector('[data-crosshair-axis="x"]')!
+            .getBoundingClientRect()
+          const horizontal = plot.element
+            .querySelector('[data-crosshair-axis="y"]')!
+            .getBoundingClientRect()
+          expect(Math.abs(arrow.x + arrow.width / 2 - vertical.x)).toBeLessThan(1)
+          expect(Math.abs(arrow.y + arrow.height / 2 - horizontal.y)).toBeLessThan(1)
+          const bounds = node.getBoundingClientRect()
+          expect(bounds.left).toBeGreaterThanOrEqual(0)
+          expect(bounds.top).toBeGreaterThanOrEqual(0)
+          expect(bounds.right).toBeLessThanOrEqual(window.innerWidth)
+          expect(bounds.bottom).toBeLessThanOrEqual(window.innerHeight)
+        }
+      } finally {
+        document.body.style.zoom = previousZoom
+      }
+    },
+  )
+
   test('sizes portalled tooltips and crosshair callouts with initial and live theme fonts', async () => {
     const host = document.createElement('div')
     host.style.setProperty('--fews-chart-font-family', 'monospace')

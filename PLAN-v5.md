@@ -1359,6 +1359,9 @@ detail.destroy()
   backgrounds and update callout clamping and cross-section label collision layout.
   All axis text, including classic Cartesian ticks/captions and classic polar
   angular/radial labels, inherits `--fews-chart-font-family` from the chart.
+  Tooltip placement converts viewport coordinates and bounds into the portalled
+  tooltip's CSS coordinate system so body-level CSS `zoom` keeps its arrow aligned
+  with the crosshair while preserving UI scaling.
 - Plot/scale/axis updates support set, recursive patch and explicit `undefined` reset.
   Arrays replace membership/order; omitted scale names remain, while `undefined`
   removes a binding. Removing a scale used by an axis requires removing/rebinding that
