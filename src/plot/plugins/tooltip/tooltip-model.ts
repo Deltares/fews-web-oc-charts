@@ -19,7 +19,7 @@ import { isHistogramMark } from '../../marks/histogram/histogram.js'
 import { isHeatmapMark } from '../../marks/heatmap/heatmap.js'
 import { isHeatmapHit, isHoverMark, markColor, selectHoverHits } from '../hover-hits.js'
 import { markDefinition } from '../../marks/marks.js'
-import type { MarkHit } from '../../marks/mark-definition.js'
+import type { MarkHit, MarkLegend } from '../../marks/mark-definition.js'
 import type { SymbolSpec } from '../legend/legend.js'
 import { lineLegendSymbol } from '../../marks/mark-styles.js'
 import type { ScaleValue } from '../../../scales/scale.js'
@@ -50,17 +50,11 @@ export interface TooltipModel {
 
 export const isTooltipMark: (mark: object) => mark is TooltipMark = isHoverMark
 
-function label(mark: TooltipMark, index: number) {
-  if (isSeriesMark(mark))
-    return mark.options.get().resolved.label || mark.id || `Series ${index + 1}`
-  if (isBarMark(mark) || isStackedAreaMark(mark)) {
-    const options = mark.options.get().resolved
-    return options.label || mark.id || `Mark ${index + 1}`
-  }
-  if (isHistogramMark(mark)) {
-    const options = mark.options.get().resolved
-    return options.label || mark.id || `Histogram ${index + 1}`
-  }
+function label(mark: TooltipMark, index: number, legend: MarkLegend | undefined) {
+  if (legend?.label) return legend.label
+  if (isSeriesMark(mark)) return mark.id || `Series ${index + 1}`
+  if (isBarMark(mark) || isStackedAreaMark(mark)) return mark.id || `Mark ${index + 1}`
+  if (isHistogramMark(mark)) return mark.id || `Histogram ${index + 1}`
   return mark.id || mark.y
 }
 
@@ -129,13 +123,19 @@ function tooltipEntry(
   inspection: CrosshairInspection | undefined,
 ): TooltipEntry {
   const format = tooltipFormatter(mark, hit, context, options)
+  const showX = options.showX ?? options.axis !== 'x'
+  const showY = options.showY ?? options.axis !== 'y'
+  const coordinate = (axis: 'x' | 'y', text: string) =>
+    options.coordinateLabels ? `${axis}: ${text}` : text
+  const tokens = context.theme.get()
+  const legend = markDefinition(mark).legend?.(mark, tokens)
+  const name = label(mark, index, legend)
   if (isHeatmapMark(mark) && isHeatmapHit(hit)) {
     const heatmapOptions = mark.options.get().resolved
-    const name = label(mark, index)
     const value = format.value(hit.value, 'value', options.digits ?? 2)
     const details = [
-      ...(options.showX ? [`x: ${format.range(hit.xStart, hit.xEnd, 'x')}`] : []),
-      `y: ${format.range(hit.yStart, hit.yEnd, 'y')}`,
+      ...(showX ? [coordinate('x', format.range(hit.xStart, hit.xEnd, 'x'))] : []),
+      ...(showY ? [coordinate('y', format.range(hit.yStart, hit.yEnd, 'y'))] : []),
       `value: ${value}`,
     ]
     return {
@@ -150,8 +150,6 @@ function tooltipEntry(
     }
   }
   const pointMark = isLineMark(mark) || isSeriesMark(mark)
-  const tokens = context.theme.get()
-  const legend = markDefinition(mark).legend?.(mark, tokens)
   const symbol = isLineMark(mark) ? lineLegendSymbol(mark, tokens) : legend?.symbol
   if (!symbol) throw new Error('Tooltip marks must provide a legend symbol.')
   const layer =
@@ -159,8 +157,8 @@ function tooltipEntry(
   const color = markColor(mark, hit, tokens, 'text')
   const digits = options.digits ?? (pointMark ? mark.digits : undefined)
   const valueAxis = 'layerId' in hit ? compositeValueAxis(mark) : undefined
-  const x = valueAxis !== 'x' && options.showX ? format.value(hit.x, 'x') : ''
-  const y = valueAxis !== 'y' ? format.value(hit.y, 'y', digits) : ''
+  const x = valueAxis !== 'x' && showX ? format.value(hit.x, 'x') : ''
+  const y = valueAxis !== 'y' && showY ? format.value(hit.y, 'y', digits) : ''
   const redundant = (axis: 'x' | 'y') =>
     inspection?.coordinates.some(
       (coordinate) =>
@@ -170,21 +168,18 @@ function tooltipEntry(
         displayValue(coordinate.value, context, coordinate.scale, coordinate.digits) ===
           (axis === 'x' ? x : y),
     )
-  const name =
-    'layerLabel' in hit && hit.layerLabel
-      ? `${label(mark, index)} · ${hit.layerLabel}`
-      : label(mark, index)
+  const entryName = 'layerLabel' in hit && hit.layerLabel ? `${name} · ${hit.layerLabel}` : name
   const details: string[] = []
-  const accessible = [name]
-  if (options.showX && valueAxis !== 'x') {
-    accessible.push(x)
-    if (!redundant('x')) {
-      details.push(context.scales[mark.x]?.scale.kind === 'time' ? x : `x: ${x}`)
-    }
+  const accessible = [entryName]
+  if (showX && valueAxis !== 'x') {
+    const text = coordinate('x', x)
+    accessible.push(text)
+    if (!redundant('x')) details.push(text)
   }
-  if (valueAxis !== 'y') {
-    accessible.push(`y: ${y}`)
-    if (!redundant('y')) details.push(inspection ? y : `y: ${y}`)
+  if (showY && valueAxis !== 'y') {
+    const text = coordinate('y', y)
+    accessible.push(text)
+    if (!redundant('y')) details.push(text)
   }
   if ('layerId' in hit) {
     const axis = compositeValueAxis(mark)
@@ -200,7 +195,7 @@ function tooltipEntry(
     accessible.push(...composite)
   }
   return {
-    label: name,
+    label: entryName,
     color,
     details: details.length ? ` · ${details.join(' · ')}` : '',
     accessibleLabel: accessible.join(' · '),

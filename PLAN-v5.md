@@ -2167,10 +2167,15 @@ hit-test is shared with the tooltip plugin. Tooltip supports nearest-x samples a
 line/series marks or one nearest actual sample in xy mode, plus rectangle hits for bars and
 filled-path hits for stacked areas. Composite entries retain layer identity and report raw
 values, named stacks and cumulative bounds; overlapping area stacks resolve to the topmost
-painted layer. `tooltip({ showX: false, digits: 2 })` hides sample x coordinates and rounds
+painted layer. Tooltip coordinate visibility defaults to the value axis: x inspection
+shows y, y inspection shows x, and xy inspection shows both. `showX` and `showY`
+override this; `undefined` restores axis-based visibility. `coordinateLabels: true`
+adds x/y prefixes to visible and accessible coordinates (default: false). Names use
+configured legend labels before IDs, including static lines and marker-only marks.
+`tooltip({ showX: false, digits: 2 })` hides sample x coordinates and rounds
 numeric y values, composite raw values and bounds to at most two decimal places, including
-accessible labels, without changing source data. Defaults preserve x coordinates and existing
-mark precision. Composite tooltips show the raw value once, without a `value:` label, rather than repeating
+accessible labels, without changing source data. Defaults preserve existing mark precision.
+Composite tooltips show the raw value once, without a `value:` label, rather than repeating
 it as a coordinate on the value axis; the category coordinate and stack bounds remain available.
 Content remains text-only, with viewport-aware placement, runtime option
 updates and plugin lifecycle cleanup. The

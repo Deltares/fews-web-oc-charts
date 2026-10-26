@@ -46,8 +46,12 @@ export interface TooltipOptions {
   /** Inspected marks; symbols reuse their legend styles, with layer and heatmap hit colors. */
   marks?: readonly TooltipMark[]
   position: TooltipPlacementPosition
-  /** Includes the sample's x coordinate, independently of crosshair callouts. */
-  showX: boolean
+  /** Includes the sample's x coordinate. Defaults to axis !== 'x'. */
+  showX?: boolean
+  /** Includes the sample's y coordinate. Defaults to axis !== 'y'. */
+  showY?: boolean
+  /** Prefixes coordinates with x: and y:. Default: false. */
+  coordinateLabels: boolean
   /** Decimal places for values and composite bounds; defaults to the mark's precision. */
   digits?: number
   /** When to append composite bounds to visible and accessible text. Default: 'stacked'. */
@@ -75,6 +79,8 @@ const optionKeys = [
   'position',
   'crosshair',
   'showX',
+  'showY',
+  'coordinateLabels',
   'digits',
   'bounds',
   'formatValue',
@@ -137,7 +143,9 @@ export function tooltip(initial: OptionPatch<TooltipOptions> = {}): TooltipHandl
       marks: undefined,
       position: 'right',
       crosshair: undefined,
-      showX: true,
+      showX: undefined,
+      showY: undefined,
+      coordinateLabels: false,
       digits: undefined,
       bounds: 'stacked',
       formatValue: undefined,
@@ -150,8 +158,13 @@ export function tooltip(initial: OptionPatch<TooltipOptions> = {}): TooltipHandl
           throw new TypeError(`tooltip.${key} must be a function.`)
         }
       }
-      if (typeof options.showX !== 'boolean') {
-        throw new TypeError('tooltip.showX must be boolean.')
+      for (const key of ['showX', 'showY'] as const) {
+        if (options[key] !== undefined && typeof options[key] !== 'boolean') {
+          throw new TypeError(`tooltip.${key} must be boolean.`)
+        }
+      }
+      if (typeof options.coordinateLabels !== 'boolean') {
+        throw new TypeError('tooltip.coordinateLabels must be boolean.')
       }
       if (
         options.bounds !== undefined &&
