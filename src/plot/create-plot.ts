@@ -11,6 +11,7 @@ import {
   type Unsubscribe,
 } from '../core/runtime.js'
 import type { ReadonlySignal } from '../core/reactive.js'
+import { connectAlignGroup, isAlignGroup, type AlignGroup } from '../layout/align-group.js'
 import {
   isScaleHandle,
   type ScaleBinding,
@@ -76,6 +77,7 @@ export interface PlotOptions {
   margins: Margins
   theme: ThemeMode
   themeElement?: Element
+  align?: AlignGroup
   scales: Record<string, ScaleHandle>
   directions: Record<string, 'x' | 'y'>
   axes: readonly AxisHandle[]
@@ -112,13 +114,14 @@ export interface PlotEventMap {
 
 export type PlotConfig = Omit<
   OptionPatch<PlotOptions>,
-  'scales' | 'axes' | 'marks' | 'plugins' | 'themeElement'
+  'scales' | 'axes' | 'marks' | 'plugins' | 'themeElement' | 'align'
 > & {
   scales?: Record<string, ScaleHandle | undefined>
   axes?: readonly AxisHandle[]
   marks?: readonly PlotMark[]
   plugins?: readonly PlotPlugin[]
   themeElement?: Element
+  align?: AlignGroup
 }
 
 export type PolarPlotConfig = Omit<PlotConfig, 'directions'>
@@ -179,6 +182,7 @@ type DependencyGroups = Readonly<Record<string, readonly unknown[]>>
 interface PlotDependencySnapshot {
   readonly layout: DependencyGroups
   readonly marks: DependencyGroups
+  readonly alignment: readonly unknown[]
 }
 
 function dependenciesChanged(previous: DependencyGroups | undefined, current: DependencyGroups) {
@@ -257,7 +261,11 @@ function createPlotInternal(
       plugins: [],
     }),
     isAtomicReference: (value) =>
-      isScaleHandle(value) || isAxisHandle(value) || isPlotMark(value) || isPlotPlugin(value),
+      isScaleHandle(value) ||
+      isAxisHandle(value) ||
+      isPlotMark(value) ||
+      isPlotPlugin(value) ||
+      isAlignGroup(value),
     validate: (options) => validatePlotOptions(options, coordinateSystem, owner),
   })
   const optionState = optionSignal(state)
@@ -278,6 +286,7 @@ function createPlotInternal(
   )
   const themeVersion = reactive.signal(0)
   const scope = reactive.createScope()
+  let alignment: { group: AlignGroup; member: ReturnType<typeof connectAlignGroup> } | undefined
   const measurer = createTextMeasurer()
   const axisWidths = new Map<AxisHandle, { version: number; thickness: number }>()
   const insetWidths = new Map<AxisHandle, number>()
@@ -485,6 +494,12 @@ function createPlotInternal(
 
   function reconcile() {
     const current = options.get().resolved
+    if (alignment?.group !== current.align) {
+      alignment?.member.dispose()
+      alignment = current.align
+        ? { group: current.align, member: connectAlignGroup(current.align) }
+        : undefined
+    }
     markLayer.reconcile(current)
     for (const [axis, dispose] of axisValidators) {
       if (!current.axes.includes(axis)) {
@@ -645,12 +660,33 @@ function createPlotInternal(
     )
     const measures = cartesianAxes.map((axis) => measureAxis(axis, tokens))
     const { margins, insetMargins } = layoutMargins(current, tokens, cartesianAxes)
-    const nextRegions = layout(
+    const naturalRegions = layout(
       actualSize,
       current.axisLayout === 'inset' ? [] : measures,
       current.axisLayout === 'inset' ? insetMargins : margins,
       current.title ? tokens.fontSize * 2 : 0,
     )
+    alignment?.member.report(
+      actualSize.width,
+      naturalRegions.margins.left,
+      naturalRegions.margins.right,
+    )
+    const aligned = alignment?.group.bounds.get()
+    const baseMargins = current.axisLayout === 'inset' ? insetMargins : margins
+    const nextRegions = aligned
+      ? layout(
+          actualSize,
+          current.axisLayout === 'inset' ? [] : measures,
+          {
+            ...baseMargins,
+            left: baseMargins.left + Math.max(0, aligned.left - naturalRegions.margins.left),
+            right:
+              baseMargins.right +
+              Math.max(0, actualSize.width - naturalRegions.margins.right - aligned.right),
+          },
+          current.title ? tokens.fontSize * 2 : 0,
+        )
+      : naturalRegions
     if (
       !identicalLayout(
         reactive.untracked(() => regions.get()),
@@ -808,12 +844,16 @@ function createPlotInternal(
           membership: current.marks,
           projection: [current.axisLayout, current.skewT?.skew, ...scaleDependencies],
         },
+        alignment: [current.align, current.align?.bounds.get()],
       }
       const layoutChanged = dependenciesChanged(dependencySnapshot?.layout, nextDependencies.layout)
       const marksChanged = dependenciesChanged(dependencySnapshot?.marks, nextDependencies.marks)
+      const alignmentChanged = nextDependencies.alignment.some(
+        (value, index) => value !== dependencySnapshot?.alignment[index],
+      )
       dependencySnapshot = nextDependencies
-      if (layoutChanged) {
-        insetWidths.clear()
+      if (layoutChanged || alignmentChanged) {
+        if (layoutChanged) insetWidths.clear()
         requestRender(DirtyLayer.layout | DirtyLayer.axes)
       } else if (marksChanged) {
         markLayer.invalidateAll()
@@ -928,6 +968,8 @@ function createPlotInternal(
     destroy() {
       if (destroyed) return
       destroyed = true
+      alignment?.member.dispose()
+      alignment = undefined
       stopVisibility()
       pluginHost.dispose()
       legend.dispose()

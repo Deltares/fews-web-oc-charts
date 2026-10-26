@@ -1,5 +1,6 @@
 import { validateKeys, finiteNonnegative } from '../core/validation.js'
 import { isScaleHandle } from '../scales/scale.js'
+import { isAlignGroup } from '../layout/align-group.js'
 import { isAxisHandle, type AxisHandle, type AxisOptions, type AxisSide } from './axes/axis.js'
 import { coordinateAdapter } from './coordinates/coordinate-system.js'
 import type {
@@ -23,6 +24,7 @@ const optionKeys = [
   'margins',
   'theme',
   'themeElement',
+  'align',
   'scales',
   'directions',
   'axes',
@@ -224,6 +226,14 @@ export function validatePlotOptions(
   coordinateSystem: CoordinateSystem,
   owner?: symbol,
 ) {
+  if (options.align !== undefined) {
+    if (!options.align || !isAlignGroup(options.align)) {
+      throw new TypeError('plot.align must be an alignGroup() handle.')
+    }
+    if (coordinateSystem !== 'cartesian') {
+      throw new Error('plot.align requires a Cartesian plot.')
+    }
+  }
   validateSkewTOptions(options, coordinateSystem)
   validatePlotAppearance(options)
   validatePlotCollections(options, coordinateSystem, owner)

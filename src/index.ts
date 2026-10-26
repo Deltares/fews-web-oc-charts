@@ -41,6 +41,7 @@ export type {
   BrushHandle,
   BrushMode,
   BrushOptions,
+  BrushConfig,
   BrushSelection,
   BrushSelectionMode,
 } from './plot/plugins/brush/brush.js'
@@ -227,6 +228,8 @@ export type {
   AutoscaleContext,
 } from './scales/scale.js'
 export { layout } from './layout/layout.js'
+export { alignGroup } from './layout/align-group.js'
+export type { AlignGroup, AlignmentBounds } from './layout/align-group.js'
 export type { PlotLayout, Size, Margins, Region, AxisMeasure } from './layout/layout.js'
 export type { ThemeMode, ThemeTokens } from './theme/theme.js'
 export { batch, effect, subscribe, untracked } from './core/runtime.js'

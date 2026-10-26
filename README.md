@@ -136,7 +136,7 @@ order. To combine interactions, use distinct modifiers, for example default box 
 `pan({ modifier: ModifierKey.Ctrl })` and the default Shift brush. A pan with
 `modifier: ModifierKey.None` owns all drags, so remove it to enable box zoom.
 
-Brush remains selection-only: it does not change domains automatically. Domain
+By default, brush remains selection-only: it does not change domains automatically. Domain
 updates made synchronously in a `plot.on('brush', ...)` or DOM `brush` listener
 are attributed to `source: 'brush'`:
 
@@ -154,3 +154,62 @@ notify domain subscribers again, but explicit domain writes can still change
 autoscale or live-follow behavior.
 Box zoom and brush-driven domain updates pause a time scale's live follow window,
 just like wheel zoom and pan; reset resumes following.
+
+## Overview brushes bound to detail scales
+
+Use an explicit `targets` map to connect overview scale names to independent detail
+scales. The brush initializes its selection from the targets when installed, updates
+them continuously during dragging, and follows subsequent target-domain changes:
+
+```ts
+const detailTime = timeScale({ domain: [start, end] })
+const navigator = brush({
+  mode: 'x',
+  persistent: true,
+  modifier: ModifierKey.None,
+  targets: { t: detailTime },
+})
+const overview = createPlot(overviewHost, {
+  scales: { t: timeScale({ domain: [fullStart, fullEnd] }) },
+  directions: { t: 'x' },
+  plugins: [navigator],
+})
+```
+
+Targets require `persistent: true` and continuous scales of the same kind as their
+named overview scales, with strictly increasing domains. Each target must be distinct
+and cannot be any scale installed in that overview plot. `targets` and shared
+`selection` handles are mutually exclusive. Multiple mappings support `xy`; `auto`
+derives the initial selection direction from the mapped overview scales.
+
+User gestures update targets with `source: 'brush'` and pause live-follow mode.
+`setSelection()` also updates mapped targets, with normal API attribution; passing
+`undefined` clears only the selection and leaves the target domains unchanged.
+Target changes are reflected through the frame scheduler without emitting new brush
+events. Equal echoes preserve the gesture; genuine external selection changes cancel it.
+Target synchronization stops when the plugin is removed or its plot is destroyed,
+and restarts from the current target domains when reinstalled. Resetting targets is
+still explicit; clearing a selection does not reset or resume live-follow mode.
+
+## Aligning vertically stacked plots
+
+Share an `alignGroup()` through the plots' `align` option to coordinate their left
+and right plot boundaries:
+
+```ts
+const alignment = alignGroup()
+const detail = createPlot(detailHost, { align: alignment, scales, axes, marks })
+const overview = createPlot(overviewHost, { align: alignment, scales: overviewScales })
+```
+
+This is opt-in and supports Cartesian plots with outside or inset axes. Hosts should
+share a horizontal origin; alignment is in local SVG coordinates, not page coordinates.
+The group uses the largest natural left inset and smallest natural right boundary,
+so narrower plots constrain the common plotting width. Top and bottom margins remain
+independent. Each plot reports its unaligned requirements, avoiding margin feedback
+loops as axes, labels, themes or sizes change. Empty plot areas remain valid.
+
+`alignment.bounds` exposes the coordinated `{ left, right }` coordinates as a signal,
+or `undefined` when no members have reported layout. Removing `align` (including via
+`setConfig()`) or destroying a plot releases its contribution and lets peers shrink
+their padding again. No separate group cleanup is required.
