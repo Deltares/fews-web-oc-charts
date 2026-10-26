@@ -124,14 +124,12 @@ function installCrosshair(handle: CrosshairHandle, context: PlotContext) {
     if (layerId !== undefined) group.dataset.crosshairLayer = layerId
     const background = svgElement('rect', {
       rx: 3,
-      fill: 'var(--fews-chart-tooltip-background, #fff)',
       stroke: 'currentColor',
       'stroke-opacity': 0.4,
     })
     const text = svgElement('text', {
       x: 6,
       'dominant-baseline': 'central',
-      fill: 'var(--fews-chart-tooltip-color, #222)',
     })
     group.append(background, text)
     callouts.append(group)
@@ -296,6 +294,8 @@ function installCrosshair(handle: CrosshairHandle, context: PlotContext) {
         )
         if (nodes.text.textContent !== text) nodes.text.textContent = text
         if (nodes.measuredText !== text || nodes.measuredTheme !== theme) {
+          nodes.background.setAttribute('fill', theme.tooltipBackground)
+          nodes.text.setAttribute('fill', theme.tooltipColor)
           nodes.text.setAttribute('font-family', theme.fontFamily)
           nodes.text.setAttribute('font-size', String(theme.fontSize))
           nodes.text.setAttribute('y', String(height / 2))

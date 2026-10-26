@@ -88,6 +88,65 @@ afterEach(() => {
 })
 
 describe('tooltip plugin', () => {
+  test.each(['light', 'dark', 'auto'] as const)(
+    'themes portalled tooltips, arrows and crosshair callouts in %s mode',
+    async (theme) => {
+      const matchMedia = window.matchMedia.bind(window)
+      vi.spyOn(window, 'matchMedia').mockImplementation((query) => {
+        const media = matchMedia(query)
+        Object.defineProperty(media, 'matches', { value: true })
+        return media
+      })
+      const host = document.createElement('div')
+      const { plot, guide, interaction, move } = await linkedPlot(
+        { theme, themeElement: host },
+        host,
+      )
+      guide.update({ mode: 'xy' })
+      await move(5, 20)
+      const node = document.querySelector<HTMLDivElement>('[data-layer="tooltip"]')!
+      expect(node.parentElement).toBe(document.body)
+      const check = (background: string, color: string) => {
+        expect(node.getAttribute('aria-hidden')).toBe('false')
+        expect(getComputedStyle(node).backgroundColor).toBe(background)
+        expect(getComputedStyle(node).color).toBe(color)
+        const arrow = node.querySelector('[data-tooltip-arrow]')!
+        const style = getComputedStyle(arrow)
+        expect([
+          style.borderTopColor,
+          style.borderBottomColor,
+          style.borderLeftColor,
+          style.borderRightColor,
+        ]).toContain(background)
+        const callouts = [...plot.element.querySelectorAll('[data-crosshair-label]')]
+        expect(callouts).toHaveLength(2)
+        for (const callout of callouts) {
+          expect(getComputedStyle(callout.querySelector('rect')!).fill).toBe(background)
+          expect(getComputedStyle(callout.querySelector('text')!).fill).toBe(color)
+        }
+      }
+      check(
+        theme === 'light' ? 'rgb(255, 255, 255)' : 'rgb(0, 0, 0)',
+        theme === 'light' ? 'rgb(34, 34, 34)' : 'rgb(237, 242, 244)',
+      )
+      plot.update({ theme: 'light' })
+      await frame()
+      check('rgb(255, 255, 255)', 'rgb(34, 34, 34)')
+      plot.update({ theme: 'dark' })
+      await frame()
+      for (const position of ['top', 'bottom', 'left', 'right'] as const) {
+        interaction.update({ position })
+        await frame()
+        check('rgb(0, 0, 0)', 'rgb(237, 242, 244)')
+      }
+      host.style.setProperty('--fews-chart-tooltip-background', '#123456')
+      host.style.setProperty('--fews-chart-tooltip-color', '#fedcba')
+      await vi.waitFor(() => expect(plot.theme.get().tooltipBackground).toBe('#123456'))
+      await frame()
+      check('rgb(18, 52, 86)', 'rgb(254, 220, 186)')
+    },
+  )
+
   test.each([0.75, 1, 1.25, 1.5])(
     'aligns the tooltip arrow with the crosshair at body zoom %s',
     async (zoom) => {

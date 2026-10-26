@@ -4,6 +4,8 @@ export interface ThemeTokens {
   readonly foreground: string
   readonly grid: string
   readonly accent: string
+  readonly tooltipBackground: string
+  readonly tooltipColor: string
   readonly fontFamily: string
   readonly fontSize: number
 }
@@ -13,6 +15,8 @@ const light: ThemeTokens = {
   foreground: '#263238',
   grid: '#dce2e5',
   accent: '#0077bb',
+  tooltipBackground: '#fff',
+  tooltipColor: '#222',
   fontFamily: 'sans-serif',
   fontSize: 12,
 }
@@ -22,6 +26,8 @@ const dark: ThemeTokens = {
   foreground: '#edf2f4',
   grid: '#45545e',
   accent: '#66c2ff',
+  tooltipBackground: '#000',
+  tooltipColor: '#edf2f4',
 }
 
 export function resolveTheme(element: Element, mode: ThemeMode, prefersDark: boolean): ThemeTokens {
@@ -43,6 +49,8 @@ export function resolveTheme(element: Element, mode: ThemeMode, prefersDark: boo
     foreground: token('foreground', defaults.foreground),
     grid: token('grid', defaults.grid),
     accent: token('accent', defaults.accent),
+    tooltipBackground: token('tooltip-background', defaults.tooltipBackground),
+    tooltipColor: token('tooltip-color', defaults.tooltipColor),
     fontFamily: token('font-family', defaults.fontFamily),
     fontSize,
   })

@@ -14,7 +14,7 @@ export function positionTooltipArrow(
     arrow.setAttribute('aria-hidden', 'true')
     element.append(arrow)
   }
-  const background = 'var(--fews-chart-tooltip-background, #fff)'
+  const background = getComputedStyle(element).backgroundColor
   const horizontal =
     placement.position === TooltipPosition.Left || placement.position === TooltipPosition.Right
   const offset = horizontal

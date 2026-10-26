@@ -78,6 +78,37 @@ afterEach(() => {
 })
 
 describe('cross-section select plugin', () => {
+  test('themes cross-section labels and callouts without changing series colors', async () => {
+    const host = document.createElement('div')
+    const { plot } = await setup(undefined, { theme: 'dark', themeElement: host }, host)
+    const check = (background: string, color: string) => {
+      const callout = plot.element.querySelector('[data-cross-section-callout]')!
+      expect(getComputedStyle(callout.querySelector('rect')!).fill).toBe(background)
+      expect(getComputedStyle(callout.querySelector('text')!).fill).toBe(color)
+      const labels = [...plot.element.querySelectorAll('[data-cross-section-entry]')]
+      expect(labels).toHaveLength(2)
+      for (const label of labels) {
+        expect(getComputedStyle(label.querySelector('rect')!).fill).toBe(background)
+      }
+      expect(labels.map((label) => getComputedStyle(label.querySelector('text')!).fill)).toEqual([
+        'rgb(22, 119, 166)',
+        'rgb(213, 94, 0)',
+      ])
+    }
+    check('rgb(0, 0, 0)', 'rgb(237, 242, 244)')
+    plot.update({ theme: 'light' })
+    await frame()
+    check('rgb(255, 255, 255)', 'rgb(34, 34, 34)')
+    plot.update({ theme: 'dark' })
+    await frame()
+    check('rgb(0, 0, 0)', 'rgb(237, 242, 244)')
+    host.style.setProperty('--fews-chart-tooltip-background', '#123456')
+    host.style.setProperty('--fews-chart-tooltip-color', '#fedcba')
+    await vi.waitFor(() => expect(plot.theme.get().tooltipBackground).toBe('#123456'))
+    await frame()
+    check('rgb(18, 52, 86)', 'rgb(254, 220, 186)')
+  })
+
   test('remeasures callouts and sample labels for initial and live theme fonts', async () => {
     const host = document.createElement('div')
     host.style.setProperty('--fews-chart-font-family', 'monospace')
