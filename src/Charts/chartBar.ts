@@ -80,6 +80,8 @@ export class ChartBar extends Chart {
         return d[yKey] === null ? 0 : Math.abs(yScale(0) - yScale(d[yKey]))
       })
       .attr('fill', (d) => {
+        // Without a color key, inherit the fill from the chart group style.
+        if (colorKey === undefined) return null
         const value = d[colorKey]
         return typeof value === 'number' || value instanceof Date ? colorMap(value) : 'none'
       })
