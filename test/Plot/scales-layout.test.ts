@@ -18,7 +18,7 @@ describe('named scale domain state', () => {
     [0.125, 0.875],
     [Date.UTC(2026, 0, 1) + 0.25, Date.UTC(2026, 0, 1) + 1000.75],
   ])('preserves fractional time endpoints %s to %s', (low, high) => {
-    const domain = [low, high]
+    const domain = [low, high] as const
     const scale = timeScale({ defaultDomain: domain })
     expect(scale.domain.get()).toEqual(domain)
     const binding = bindScale(scale, { get: () => [0, 100], version: 0 })
@@ -78,7 +78,7 @@ describe('named scale domain state', () => {
   })
 
   test('owns input arrays and resolves nice, includeZero, symmetric and defaults', () => {
-    const input = [2, 8]
+    const input: [number, number] = [2, 8]
     const scale = linearScale({ domain: input, includeZero: true, nice: true })
     input[1] = 100
     expect(scale.domain.get()).toEqual([0, 8])

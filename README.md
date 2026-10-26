@@ -59,6 +59,7 @@ import { subscribe, timeScale } from '@deltares/fews-web-oc-charts'
 
 const time = timeScale({ domain: [start, end] })
 const stop = subscribe(time.domain, (domain, previous) => {
+  // domain: readonly [number, number]; previous: readonly [number, number] | undefined
   model.value = domain
   console.log('Previous domain:', previous)
 })
@@ -76,6 +77,24 @@ Time scale domains use numeric epoch milliseconds and preserve fractional millis
 through domain updates, autoscaling, live-follow windows and projection. Setting
 `nice: true` opts into UTC calendar-based domain rounding. Converting endpoints to
 JavaScript `Date` objects truncates fractional milliseconds.
+
+Continuous scale constructors (`linearScale`, `logScale`, `timeScale`, `degreesScale`,
+`angularScale` and `radialScale`) expose domains as `readonly [number, number]`.
+`bandScale` exposes `readonly string[]`. These types are retained by `sharedScale()`,
+domain updater callbacks and `subscribe()`. Domain options and writes use the same
+types; annotate separately declared numeric pairs as tuples rather than `number[]`:
+
+```ts
+const domain: [number, number] = [start, end]
+const time = timeScale({ domain })
+time.domain.update(([from, to]) => [from + 0.25, to + 0.25])
+```
+
+Use `ScaleHandle<'time'>` (or another specific kind) when annotating a known scale.
+The default `ScaleHandle` and dynamic `plot.scales` bindings remain general-purpose:
+their domains contain numbers or strings, and runtime validation still enforces each
+scale's domain rules. Brush events also use dynamic scale names and general domains;
+forward them through the matching plot binding when the scale kind is not statically known.
 
 For changes associated with a plot, use its typed `on()` method:
 
@@ -123,7 +142,7 @@ are attributed to `source: 'brush'`:
 
 ```ts
 plot.on('brush', ({ scales }) => {
-  time.domain.set(scales.t)
+  plot.scales.t.scale.domain.set(scales.t)
 })
 ```
 

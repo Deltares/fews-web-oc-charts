@@ -97,5 +97,7 @@ onParityThemeChange(() => {
   sparse.update({ marks })
   availabilityX.update({ domain: [...new Set(availability.map((event) => event.date))] })
   availabilityY.update({ domain: [...new Set(availability.map((event) => event.series))] })
-  timeY.update({ domain: [...new Set(timeData.map((event) => String(Math.round(event.y))))] })
+  timeY.update({
+    domain: [...new Set<string>(timeData.map((event) => String(Math.round(event.y))))],
+  })
 })

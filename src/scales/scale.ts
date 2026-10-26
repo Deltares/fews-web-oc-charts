@@ -13,6 +13,13 @@ import { shiftZonedDays, zonedTicks } from '../time/zoned-time.js'
 
 export type ScaleValue = number | string
 export type ScaleKind = 'linear' | 'log' | 'time' | 'band' | 'degrees' | 'angular' | 'radial'
+export type ContinuousScaleKind = Exclude<ScaleKind, 'band'>
+export type NumericDomain = readonly [number, number]
+export type ScaleDomain<K extends ScaleKind = ScaleKind> = ScaleKind extends K
+  ? readonly ScaleValue[]
+  : K extends 'band'
+    ? readonly string[]
+    : NumericDomain
 export type ScaleRange = readonly [number, number]
 export type PixelRange = ScaleRange
 export type PolarDirection = 'clockwise' | 'anticlockwise'
@@ -33,9 +40,9 @@ export interface AutoscaleContext {
 export type AutoscalePolicy =
   'data' | 'visible' | 'fixed' | ((context: AutoscaleContext) => readonly ScaleValue[] | undefined)
 
-export interface ScaleOptions {
-  domain?: readonly ScaleValue[]
-  defaultDomain: readonly ScaleValue[]
+export interface ScaleOptions<Domain extends readonly ScaleValue[] = readonly ScaleValue[]> {
+  domain?: Domain
+  defaultDomain: Domain
   autoscale: AutoscalePolicy
   reverse: boolean
   nice: boolean
@@ -53,10 +60,11 @@ export interface ScaleOptions {
   innerRadius?: number
 }
 
-export type CartesianScaleOptions = Omit<
-  ScaleOptions,
+export type CartesianScaleOptions<Domain extends readonly ScaleValue[] = NumericDomain> = Omit<
+  ScaleOptions<Domain>,
   'direction' | 'intercept' | 'range' | 'innerRadius' | 'follow'
 >
+export type BandScaleOptions = CartesianScaleOptions<readonly string[]>
 export interface TimeScaleOptions extends CartesianScaleOptions {
   follow?: TimeFollowOptions
 }
@@ -69,22 +77,26 @@ export interface RadialScaleOptions extends CartesianScaleOptions {
   innerRadius?: number
 }
 
-export interface ScaleHandle {
-  readonly kind: ScaleKind
-  readonly domain: Signal<readonly ScaleValue[]>
+export type ScaleHandle<K extends ScaleKind = ScaleKind> = TypedScaleHandle<ScaleDomain<K>, K>
+
+interface TypedScaleHandle<Domain extends readonly ScaleValue[], K extends ScaleKind> {
+  readonly kind: K
+  readonly domain: Signal<Domain>
   readonly following: ReadonlySignal<boolean>
-  readonly options: ReadonlySignal<OptionStateSnapshot<ScaleOptions>>
-  update(patch: OptionPatch<ScaleOptions>): void
+  readonly options: ReadonlySignal<OptionStateSnapshot<ScaleOptions<Domain>>>
+  update(patch: OptionPatch<ScaleOptions<Domain>>): void
   pauseFollow(): void
   resumeFollow(): void
 }
 
-export interface ScaleBinding {
-  readonly scale: ScaleHandle
+export type ScaleBinding<K extends ScaleKind = ScaleKind> = TypedScaleBinding<ScaleDomain<K>, K>
+
+interface TypedScaleBinding<Domain extends readonly ScaleValue[], K extends ScaleKind> {
+  readonly scale: TypedScaleHandle<Domain, K>
   readonly range: ReadonlySignal<ScaleRange>
-  project(value: ScaleValue): number
+  project(value: Domain[number]): number
   invert(pixel: number): number
-  ticks(count?: number, timeZone?: string): readonly ScaleValue[]
+  ticks(count?: number, timeZone?: string): readonly Domain[number][]
   readonly bandwidth: number
 }
 
@@ -166,7 +178,11 @@ function shiftFollowDuration(
   return shifted
 }
 
-function createScale(kind: ScaleKind, initial: OptionPatch<ScaleOptions>): ScaleHandle {
+function createScale<K extends ScaleKind>(
+  kind: K,
+  initial: OptionPatch<ScaleOptions<ScaleDomain<K>>>,
+): ScaleHandle<K>
+function createScale(kind: ScaleKind, initial: OptionPatch<ScaleOptions>) {
   function validateDomain(values: readonly ScaleValue[], path: string) {
     if (!Array.isArray(values)) throw new Error(`${path} must be an array.`)
     if (kind === 'band') {
@@ -424,7 +440,7 @@ function createScale(kind: ScaleKind, initial: OptionPatch<ScaleOptions>): Scale
       },
       equalDomain,
     ),
-    update(patch) {
+    update(patch: OptionPatch<ScaleOptions>) {
       validateKeys(patch, keys, 'scale')
       const previousFollow = options.get().resolved.follow
       const source = currentDomainChangeSource() ?? 'api'
@@ -530,7 +546,7 @@ export const logScale = (options: OptionPatch<CartesianScaleOptions> = {}) =>
   createScale('log', options)
 export const timeScale = (options: OptionPatch<TimeScaleOptions> = {}) =>
   createScale('time', options)
-export const bandScale = (options: OptionPatch<CartesianScaleOptions> = {}) =>
+export const bandScale = (options: OptionPatch<BandScaleOptions> = {}) =>
   createScale('band', options)
 export const degreesScale = (options: OptionPatch<CartesianScaleOptions> = {}) =>
   createScale('degrees', options)
@@ -540,11 +556,15 @@ export const radialScale = (options: OptionPatch<RadialScaleOptions> = {}) =>
   createScale('radial', options)
 
 /** Scales are shareable by default; this documents ownership without copying state. */
-export function sharedScale(scale: ScaleHandle): ScaleHandle {
+export function sharedScale<T extends ScaleHandle>(scale: T): T {
   if (!isScaleHandle(scale)) throw new Error('sharedScale requires a scale handle.')
   return scale
 }
 
+export function bindScale<K extends ScaleKind>(
+  scale: ScaleHandle<K>,
+  range: ReadonlySignal<ScaleRange>,
+): ScaleBinding<K>
 export function bindScale(scale: ScaleHandle, range: ReadonlySignal<ScaleRange>): ScaleBinding {
   const derived = reactive.computed(() => {
     const domain = scale.domain.get()

@@ -16,6 +16,7 @@ import {
   type BrushSelection,
   type Plot,
   type PlotConfig,
+  type ScaleHandle,
 } from '../../src/index.js'
 
 const plots: Plot[] = []
@@ -324,7 +325,7 @@ describe('persistent brush', () => {
   test('controls an independent main scale live without narrowing the overview', async () => {
     const interaction = brush({ mode: 'x', persistent: true, modifier: ModifierKey.None })
     const plot = await setup(interaction)
-    const mainTime = linearScale({ domain: [0, 460] })
+    const mainTime: ScaleHandle = linearScale({ domain: [0, 460] })
     plot.element.addEventListener(brushEvent, (event) => {
       mainTime.domain.set((event as CustomEvent<BrushSelection>).detail.scales.x)
     })

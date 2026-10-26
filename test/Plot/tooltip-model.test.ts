@@ -13,6 +13,7 @@ import {
   heatmap,
   timeScale,
   tooltip,
+  type ContinuousScaleKind,
   type TooltipFormatContext,
 } from '../../src/index.js'
 import { reactive } from '../../src/core/runtime.js'
@@ -45,7 +46,10 @@ function setup() {
   const context = {
     theme: reactive.signal(resolveTheme(document.documentElement, 'light', false)),
     scales: {
-      x: bindScale(linearScale({ domain: [0, 10] }), reactive.signal([0, 100] as const)),
+      x: bindScale<ContinuousScaleKind>(
+        linearScale({ domain: [0, 10] }),
+        reactive.signal([0, 100] as const),
+      ),
       y: bindScale(linearScale({ domain: [0, 40] }), reactive.signal([100, 0] as const)),
     },
     inspectCrosshair: vi.fn<PlotContext['inspectCrosshair']>(),

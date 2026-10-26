@@ -183,7 +183,7 @@ v5Main.element.addEventListener(
     const selection = (event as CustomEvent<BrushSelection>).detail
     const selectedTime = selection.scales.t
     if (!selectedTime) return
-    v5Time.domain.set(selectedTime)
+    v5Main.scales.t.scale.domain.set(selectedTime)
     v5Status.textContent = 'Main-chart brush selection updated the overview navigator.'
   },
   events,
@@ -194,7 +194,7 @@ v5Overview.element.addEventListener(
     const selection = (event as CustomEvent<BrushSelection>).detail
     const selectedTime = selection.scales.t
     if (!selectedTime) return
-    v5Time.domain.set(selectedTime)
+    v5Main.scales.t.scale.domain.set(selectedTime)
     // Do not echo rounded time domains back into the brush during its active gesture.
     overviewDomain = v5Time.domain.get()
     v5Status.textContent = 'Overview brush selection updated the main chart.'
