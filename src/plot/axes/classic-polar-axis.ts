@@ -45,6 +45,7 @@ export function renderClassicPolarAxes(
     axisBottom(radialScale).ticks(radialAxis.options.get().resolved.tickCount),
   )
   radialGroup.setAttribute('font-size', '1em')
+  radialGroup.setAttribute('font-family', 'inherit')
   radialGroup.querySelector('.domain')?.setAttribute('stroke', 'none')
   axesLayer.append(radialGroup)
   for (const value of radialScale.ticks(radialAxis.options.get().resolved.tickCount)) {
@@ -69,7 +70,6 @@ export function renderClassicPolarAxes(
   }
   const angularGroup = svgElement('g', {
     transform: `${center} rotate(${-degrees(intercept)})`,
-    'font-family': 'sans-serif',
   })
   axesLayer.append(angularGroup)
   for (const value of ticks) {

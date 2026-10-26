@@ -52,6 +52,34 @@ afterEach(() => {
 })
 
 describe('createPlot named scales', () => {
+  test.each(['default', 'classic'] as const)(
+    'inherits the chart font for all %s axis text and the title',
+    async (style) => {
+      const element = host()
+      element.style.setProperty('--fews-chart-font-family', 'monospace')
+      const current = plot(element, {
+        themeElement: element,
+        title: 'Flow',
+        scales: { x: linearScale(), y: linearScale() },
+        axes: [
+          axis('x', { style, position: 'bottom', label: 'Time', unit: 's' }),
+          axis('y', { style, position: 'left', label: 'Discharge', unit: 'm3/s' }),
+        ],
+      })
+      await frame()
+      const check = (family: string) => {
+        const labels = [...current.element.querySelectorAll('text')]
+        expect(labels.length).toBeGreaterThan(5)
+        for (const label of labels) expect(getComputedStyle(label).fontFamily).toBe(family)
+      }
+      check('monospace')
+      element.style.setProperty('--fews-chart-font-family', 'serif')
+      await vi.waitFor(() => expect(current.theme.get().fontFamily).toBe('serif'))
+      await frame()
+      check('serif')
+    },
+  )
+
   test('colors only the plot canvas by default across themes and resize', async () => {
     const element = host()
     element.style.backgroundColor = 'rgb(255, 200, 100)'

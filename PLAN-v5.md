@@ -1357,6 +1357,8 @@ detail.destroy()
   Tooltip, crosshair and cross-section labels use the resolved font family and size,
   including tooltips portalled to the document body. Font changes resize their
   backgrounds and update callout clamping and cross-section label collision layout.
+  All axis text, including classic Cartesian ticks/captions and classic polar
+  angular/radial labels, inherits `--fews-chart-font-family` from the chart.
 - Plot/scale/axis updates support set, recursive patch and explicit `undefined` reset.
   Arrays replace membership/order; omitted scale names remain, while `undefined`
   removes a binding. Removing a scale used by an axis requires removing/rebinding that

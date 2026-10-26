@@ -38,6 +38,36 @@ afterEach(() => {
 })
 
 describe('createPolarPlot', () => {
+  test.each(['default', 'classic'] as const)(
+    'inherits the chart font for all %s polar axis text',
+    async (style) => {
+      const element = host()
+      element.style.setProperty('--fews-chart-font-family', 'monospace')
+      const current = plot(element, {
+        themeElement: element,
+        scales: {
+          theta: angularScale({ domain: [0, 360] }),
+          distance: radialScale({ domain: [0, 10] }),
+        },
+        axes: [
+          axis('theta', { style, position: 'angular', label: 'Direction', unit: 'deg' }),
+          axis('distance', { style, position: 'radial', label: 'Distance', unit: 'm' }),
+        ],
+      })
+      await frame()
+      const check = (family: string) => {
+        const labels = [...current.element.querySelectorAll('text')]
+        expect(labels.length).toBeGreaterThan(5)
+        for (const label of labels) expect(getComputedStyle(label).fontFamily).toBe(family)
+      }
+      check('monospace')
+      element.style.setProperty('--fews-chart-font-family', 'serif')
+      await vi.waitFor(() => expect(current.theme.get().fontFamily).toBe('serif'))
+      await frame()
+      check('serif')
+    },
+  )
+
   test('colors only the polar canvas by default and supports full-chart backgrounds', async () => {
     const current = plot(host(), {
       width: 500,
