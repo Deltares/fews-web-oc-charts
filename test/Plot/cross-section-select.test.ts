@@ -3,6 +3,7 @@ import {
   axis,
   createPlot,
   crossSectionSelect,
+  crosshair,
   linearScale,
   line,
   ModifierKey,
@@ -78,6 +79,48 @@ afterEach(() => {
 })
 
 describe('cross-section select plugin', () => {
+  test.each([true, false])(
+    'paints mouseover callouts above cross-section callouts (crosshair first: %s)',
+    async (crosshairFirst) => {
+      const section = crossSectionSelect(5, undefined, { x: 't', draggable: true })
+      const mouseover = crosshair({ mode: 'x', labels: { x: 't' } })
+      const plugins = crosshairFirst ? [mouseover, section] : [section, mouseover]
+      const { plot } = await setup(section, { plugins })
+      const check = () => {
+        const crosshairLayer = plot.element.querySelector('[data-layer="crosshair"]')!
+        const sectionLayer = plot.element.querySelector('[data-layer="cross-section-select"]')!
+        expect(
+          sectionLayer.compareDocumentPosition(crosshairLayer) & Node.DOCUMENT_POSITION_FOLLOWING,
+        ).toBeTruthy()
+        expect(
+          plot.element.querySelector('[data-cross-section-hitbox]')?.getAttribute('pointer-events'),
+        ).toBe('all')
+      }
+      plot.element.dispatchEvent(
+        new PointerEvent('pointermove', {
+          clientX: plot.scales.t.project(5),
+          clientY: plot.scales.q.project(20),
+          isPrimary: true,
+        }),
+      )
+      await frame()
+      expect(plot.element.querySelector('[data-crosshair-label="x"]')).not.toBeNull()
+      expect(plot.element.querySelector('[data-cross-section-callout]')).not.toBeNull()
+      check()
+      plot.update({ plugins: [...plugins].reverse(), theme: 'dark', width: 600 })
+      await frame()
+      check()
+      plot.update({ plugins: [mouseover] })
+      plot.update({ plugins: [mouseover, section] })
+      await frame()
+      check()
+      plot.update({ plugins: [section] })
+      plot.update({ plugins: [section, mouseover] })
+      await frame()
+      check()
+    },
+  )
+
   test('themes cross-section labels and callouts without changing series colors', async () => {
     const host = document.createElement('div')
     const { plot } = await setup(undefined, { theme: 'dark', themeElement: host }, host)

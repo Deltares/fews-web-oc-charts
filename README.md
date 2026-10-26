@@ -17,6 +17,9 @@ to customize these colors, including tooltips portalled to the document body.
 With `theme: 'auto'`, the colors follow the system color scheme. Set `themeElement`
 to observe live CSS class/style changes, as with other theme tokens.
 
+Mouseover crosshair callouts render above persistent cross-section callouts and
+sample labels, regardless of plugin installation order.
+
 ## Automatic mark color contrast
 
 FEWS configuration colors can be retained as source colors while improving their

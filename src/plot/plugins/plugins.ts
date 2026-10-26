@@ -160,6 +160,17 @@ export function createPluginHost(
       for (const plugin of plugins) {
         if (!mounted.has(plugin)) mounted.set(plugin, install(plugin))
       }
+      // SVG paints in DOM order; mouseover callouts must cover persistent cross-section labels.
+      const crosshair = shared.element.querySelector(':scope > [data-layer="crosshair"]')
+      if (crosshair) {
+        for (const section of shared.element.querySelectorAll(
+          ':scope > [data-layer="cross-section-select"]',
+        )) {
+          if (crosshair.compareDocumentPosition(section) & Node.DOCUMENT_POSITION_FOLLOWING) {
+            shared.element.insertBefore(section, crosshair)
+          }
+        }
+      }
     },
     dispose() {
       const entries = [...mounted.values()].reverse()
