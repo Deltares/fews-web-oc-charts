@@ -22,8 +22,20 @@ import type { PlotContext } from '../../src/plot/plugins/plugin-definition.js'
 import { bindScale } from '../../src/scales/scale.js'
 import { barRectangles } from '../../src/plot/marks/bar/bar-geometry.js'
 import { lineDefinition } from '../../src/plot/marks/line/line-mark.js'
-import { resolveTheme } from '../../src/theme/theme.js'
+import type { ThemeTokens } from '../../src/theme/theme.js'
 import { lineLegendSymbol } from '../../src/plot/marks/mark-styles.js'
+
+const theme: ThemeTokens = {
+  colorContrast: 'none',
+  background: '#ffffff',
+  foreground: '#263238',
+  grid: '#dce2e5',
+  accent: '#0077bb',
+  tooltipBackground: '#fff',
+  tooltipColor: '#222',
+  fontFamily: 'sans-serif',
+  fontSize: 12,
+}
 
 function setup() {
   const first = line({
@@ -44,7 +56,7 @@ function setup() {
   })
   const pointer = reactive.signal({ px: 50, py: 50, inside: true, x: new Map<string, number>() })
   const context = {
-    theme: reactive.signal(resolveTheme(document.documentElement, 'light', false)),
+    theme: reactive.signal(theme),
     scales: {
       x: bindScale<ContinuousScaleKind>(
         linearScale({ domain: [0, 10] }),
@@ -55,7 +67,7 @@ function setup() {
     inspectCrosshair: vi.fn<PlotContext['inspectCrosshair']>(),
   }
   const pathContext = vi.fn<() => CanvasRenderingContext2D | undefined>()
-  const handle = tooltip({ digits: 2 })
+  const handle = tooltip({ digits: 2, showX: true, coordinateLabels: true })
   const model = () =>
     computeTooltipModel(
       handle.options.get().resolved,
@@ -75,6 +87,117 @@ afterEach(() => {
 })
 
 describe('tooltip model', () => {
+  test.each([
+    { axis: 'x', details: ' · 20.12', accessible: '<First> · 20.12' },
+    { axis: 'y', details: ' · 5', accessible: '<First> · 5' },
+    { axis: 'xy', details: ' · 5 · 20.12', accessible: '<First> · 5 · 20.12' },
+  ] as const)(
+    'defaults to value coordinates without prefixes for $axis inspection',
+    ({ axis, details, accessible }) => {
+      const { handle, model } = setup()
+      handle.update({ axis, showX: undefined, showY: undefined, coordinateLabels: undefined })
+      expect(model().entries[0]).toMatchObject({ details, accessibleLabel: accessible })
+      handle.update({ showX: false, showY: false })
+      expect(model().entries[0]).toMatchObject({ details: '', accessibleLabel: '<First>' })
+      handle.update({ showX: true, showY: true, coordinateLabels: true })
+      expect(model().entries[0]).toMatchObject({
+        details: ' · x: 5 · y: 20.12',
+        accessibleLabel: '<First> · x: 5 · y: 20.12',
+      })
+    },
+  )
+
+  test('recomputes automatic coordinates when the axis changes, preserving explicit overrides', () => {
+    const { handle, model } = setup()
+    handle.update({ showX: undefined, showY: undefined, coordinateLabels: false })
+    expect(model().entries[0].details).toBe(' · 20.12')
+    handle.update({ axis: 'y' })
+    expect(model().entries[0].details).toBe(' · 5')
+    handle.update({ showY: true, axis: 'x' })
+    expect(model().entries[0].details).toBe(' · 20.12')
+    handle.update({ axis: 'y' })
+    expect(model().entries[0].details).toBe(' · 5 · 20.12')
+    handle.update({ showY: undefined })
+    expect(model().entries[0].details).toBe(' · 5')
+  })
+
+  test.each([true, false])(
+    'uses static legend labels for line=%s, including marker-only marks',
+    (drawLine) => {
+      const { context, pointer, pathContext } = setup()
+      const mark = line({
+        id: 'internal-id',
+        label: 'Current speed',
+        x: 'x',
+        y: 'y',
+        xValues: [0.42],
+        yValues: [20],
+        line: drawLine,
+        markers: true,
+      })
+      const model = computeTooltipModel(
+        tooltip({
+          axis: 'y',
+          formatUnit: (info) => (info.axis === 'x' ? 'm/s' : 'm'),
+        }).options.get().resolved,
+        context,
+        {
+          marks: [mark],
+          pointer: pointer.get(),
+          region: { x: 0, y: 0, width: 100, height: 100 },
+        },
+        pathContext,
+      )
+      expect(model.entries[0]).toMatchObject({
+        label: 'Current speed',
+        details: ' · 0.42 m/s',
+        accessibleLabel: 'Current speed · 0.42 m/s',
+      })
+    },
+  )
+
+  test.each([20.12345, 23])(
+    'omits depth from visible and accessible text at crosshair depth %s',
+    (depth) => {
+      const { context, handle, model } = setup()
+      const guide = crosshair({ mode: 'y', labels: { y: 'y' } })
+      context.inspectCrosshair.mockReturnValue({
+        point: { x: 50, y: context.scales.y.project(depth) },
+        visible: true,
+        hit: undefined,
+        hits: [],
+        layers: [],
+        axes: 'y',
+        options: guide.options.get().resolved,
+        coordinates: [
+          {
+            axis: 'y',
+            scale: 'y',
+            value: depth,
+            digits: undefined,
+            position: context.scales.y.project(depth),
+            layerId: undefined,
+          },
+        ],
+      })
+      const formatUnit = vi.fn((_info: TooltipFormatContext) => 'm/s')
+      handle.update({
+        axis: 'y',
+        crosshair: guide,
+        showX: undefined,
+        showY: undefined,
+        coordinateLabels: false,
+        formatUnit,
+      })
+      const result = model()
+      expect(result.entries[0]).toMatchObject({
+        details: ' · 5 m/s',
+        accessibleLabel: '<First> · 5 m/s',
+      })
+      expect(formatUnit.mock.calls.every(([info]) => info.axis === 'x')).toBe(true)
+    },
+  )
+
   test('queries each selected mark through its registered hit function', () => {
     const { first, second, context, pathContext, handle, model } = setup()
     const hits = vi.spyOn(lineDefinition, 'hits')
@@ -105,10 +228,10 @@ describe('tooltip model', () => {
       label: '<First>',
       color: 'blue',
       details: ' · x: 5 · y: 20.12',
-      accessibleLabel: '<First> · 5 · y: 20.12',
+      accessibleLabel: '<First> · x: 5 · y: 20.12',
       symbol: lineLegendSymbol(first, context.theme.get()),
     })
-    expect(result.accessibleLabel).toBe('<First> · 5 · y: 20.12; Second · 5 · y: 20.12')
+    expect(result.accessibleLabel).toBe('<First> · x: 5 · y: 20.12; Second · x: 5 · y: 20.12')
     expect(result.point).toEqual({ x: 50, y: 50 })
     expect(pathContext).not.toHaveBeenCalled()
   })
@@ -122,7 +245,7 @@ describe('tooltip model', () => {
     handle.update({ marks: [first], formatValue, formatUnit })
     const result = model()
     expect(result.entries[0].details).toBe(' · x: 5 · y: (20.12) m')
-    expect(result.accessibleLabel).toBe('<First> · 5 · y: (20.12) m')
+    expect(result.accessibleLabel).toBe('<First> · x: 5 · y: (20.12) m')
     expect(formatValue).toHaveBeenCalledWith(
       20.12345,
       expect.objectContaining({
@@ -153,7 +276,17 @@ describe('tooltip model', () => {
       dateStyle: 'medium',
       timeStyle: 'short',
     }).format(new Date(5))
-    expect(model().entries[0].details).toBe(` · [${expected}] · y: [20.12]`)
+    expect(model().entries[0].details).toBe(` · x: [${expected}] · y: [20.12]`)
+    handle.update({
+      showX: undefined,
+      showY: undefined,
+      coordinateLabels: undefined,
+      formatValue: undefined,
+    })
+    expect(model().entries[0]).toMatchObject({
+      details: ' · 20.12',
+      accessibleLabel: '<First> · 20.12',
+    })
   })
 
   test('propagates formatter errors and rejects non-string results', () => {
@@ -222,7 +355,7 @@ describe('tooltip model', () => {
       formatUnit: (info) => (info.axis === 'y' ? 'm' : ''),
     })
     expect(model().entries[0].details).toBe(' · x: [5] · y: [20] m')
-    expect(model().accessibleLabel).toBe('Series 1 · [5] · y: [20] m')
+    expect(model().accessibleLabel).toBe('Series 1 · x: [5] · y: [20] m')
   })
 
   test('omits x only when requested and returns an empty model outside the plot', () => {
@@ -271,17 +404,17 @@ describe('tooltip model', () => {
     handle.update({ crosshair: guide })
     expect(model().entries).toHaveLength(1)
     expect(model().entries[0].details).toBe('')
-    expect(model().entries[0].accessibleLabel).toBe('<First> · 5 · y: 20.12')
+    expect(model().entries[0].accessibleLabel).toBe('<First> · x: 5 · y: 20.12')
     expect(model().point).toEqual(inspection.point)
     handle.update({ digits: 3 })
-    expect(model().entries[0].details).toBe(' · 20.123')
+    expect(model().entries[0].details).toBe(' · y: 20.123')
     handle.update({ digits: 2, formatValue: (_value, info) => info.defaultText })
     expect(model().entries[0].details).toBe('')
     handle.update({ formatUnit: (info) => (info.axis === 'y' ? 'm' : '') })
-    expect(model().entries[0].details).toBe(' · 20.12 m')
-    expect(model().entries[0].accessibleLabel).toBe('<First> · 5 · y: 20.12 m')
+    expect(model().entries[0].details).toBe(' · y: 20.12 m')
+    expect(model().entries[0].accessibleLabel).toBe('<First> · x: 5 · y: 20.12 m')
     handle.update({ formatUnit: undefined, formatValue: (_value, info) => `[${info.defaultText}]` })
-    expect(model().entries[0].details).toBe(' · x: [5] · [20.12]')
+    expect(model().entries[0].details).toBe(' · x: [5] · y: [20.12]')
     context.inspectCrosshair.mockReturnValue({ ...inspection, visible: false })
     expect(model().entries).toEqual([])
     expect(hits).not.toHaveBeenCalled()
@@ -376,13 +509,13 @@ describe('tooltip model', () => {
         ),
       }
       const rectangle = barRectangles(mark, scales).find((entry) => entry.layerId === 'forecast')!
-      const handle = tooltip({ axis: 'xy', digits: 2 })
+      const handle = tooltip({ axis: 'xy', digits: 2, coordinateLabels: true })
       const model = () =>
         computeTooltipModel(
           handle.options.get().resolved,
           {
             scales,
-            theme: reactive.signal(resolveTheme(document.documentElement, 'light', false)),
+            theme: reactive.signal(theme),
             inspectCrosshair: vi.fn<PlotContext['inspectCrosshair']>(),
           },
           {
@@ -404,7 +537,7 @@ describe('tooltip model', () => {
         label: 'flow · Forecast',
         color: 'red',
         details: ` · ${categoryLabel} · 4.23 · stack: total · bounds: 3.12–7.36`,
-        accessibleLabel: `flow · Forecast · ${orientation === 'vertical' ? 'one' : categoryLabel} · 4.23 · stack: total · bounds: 3.12–7.36`,
+        accessibleLabel: `flow · Forecast · ${categoryLabel} · 4.23 · stack: total · bounds: 3.12–7.36`,
         symbol: { type: 'bar', fill: 'red' },
       })
       const axis = orientation === 'vertical' ? 'y' : 'x'
@@ -457,10 +590,11 @@ describe('tooltip model', () => {
     const { context, pointer, pathContext } = setup()
     const mark = heatmap(createGrid({ xEdges: [0, 10], yEdges: [0, 40], values: [1.2345] }), {
       id: 'grid',
+      label: 'Temperature',
       scales: { x: 'x', y: 'y' },
       color: colorScale({ colors: ['black', 'white'] }),
     })
-    const handle = tooltip({ digits: 2 })
+    const handle = tooltip({ digits: 2, showX: true, coordinateLabels: true })
     const model = () =>
       computeTooltipModel(
         handle.options.get().resolved,
@@ -486,7 +620,7 @@ describe('tooltip model', () => {
       formatUnit: (info) => (info.axis === 'value' ? 'K' : 'm'),
     })
     expect(model().entries[0].details).toBe(' · x: [0–10] m · y: [0–40] m · value: 1.23 K')
-    expect(model().accessibleLabel).toBe('grid · x: [0–10] m · y: [0–40] m · value: 1.23 K')
+    expect(model().accessibleLabel).toBe('Temperature · x: [0–10] m · y: [0–40] m · value: 1.23 K')
     expect(formatValue).toHaveBeenCalledWith(
       1.2345,
       expect.objectContaining({
@@ -510,5 +644,10 @@ describe('tooltip model', () => {
     expect(formatRange).toHaveBeenCalledTimes(1)
     handle.update({ formatRange: undefined, formatUnit: undefined, formatValue: undefined })
     expect(model().entries[0].details).toBe(' · y: 0–40 · value: 1.23')
+    handle.update({ showX: true, showY: false, coordinateLabels: false })
+    expect(model().entries[0].details).toBe(' · 0–10 · value: 1.23')
+    expect(model().accessibleLabel).toBe('Temperature · 0–10 · value: 1.23')
+    handle.update({ showX: false })
+    expect(model().entries[0].details).toBe(' · value: 1.23')
   })
 })

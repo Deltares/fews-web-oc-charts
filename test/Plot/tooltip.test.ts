@@ -48,7 +48,12 @@ async function linkedPlot(
     snap: { mark: observed, axis: 'x' },
     labels: { x: 't', y: 'q' },
   })
-  const interaction = tooltip({ marks: [observed, forecast], crosshair: guide })
+  const interaction = tooltip({
+    marks: [observed, forecast],
+    crosshair: guide,
+    showX: true,
+    showY: true,
+  })
   const scales = {
     t: linearScale({ domain: [0, 10] }),
     q: linearScale({ domain: [0, 40] }),
@@ -88,6 +93,85 @@ afterEach(() => {
 })
 
 describe('tooltip plugin', () => {
+  test('inspects vertical profiles between samples with legend labels and depth only in the callout', async () => {
+    const host = document.createElement('div')
+    document.body.append(host)
+    hosts.push(host)
+    const speed = line({
+      id: 'speed-id',
+      label: 'Current speed',
+      x: 'speed',
+      y: 'depth',
+      xValues: [0.4, 0.42],
+      yValues: [0, 10],
+    })
+    const direction = line({
+      id: 'direction-id',
+      label: 'Current direction',
+      x: 'direction',
+      y: 'depth',
+      xValues: [180, 185],
+      yValues: [0, 10],
+      line: false,
+      markers: true,
+    })
+    const guide = crosshair({ mode: 'y', labels: { y: 'depth' } })
+    const interaction = tooltip({
+      axis: 'y',
+      position: 'top',
+      crosshair: guide,
+      formatValue: (_value, info) =>
+        info.scale === 'direction' ? `${info.defaultText}°` : info.defaultText,
+      formatUnit: (info) => (info.scale === 'speed' ? 'm/s' : info.scale === 'depth' ? 'm' : ''),
+    })
+    const plot = createPlot(host, {
+      width: 500,
+      height: 300,
+      directions: { speed: 'x', direction: 'x', depth: 'y' },
+      scales: {
+        speed: linearScale({ domain: [0, 1] }),
+        direction: linearScale({ domain: [0, 360] }),
+        depth: linearScale({ domain: [0, 10] }),
+      },
+      marks: [speed, direction],
+      plugins: [guide, interaction],
+    })
+    plots.push(plot)
+    await frame()
+    vi.spyOn(plot.element, 'getBoundingClientRect').mockImplementation(() => {
+      const { width, height } = plot.size.get()
+      return new DOMRect(0, 0, width, height)
+    })
+    for (const depth of [6, 10]) {
+      plot.element.dispatchEvent(
+        new PointerEvent('pointermove', {
+          clientX: plot.scales.speed.project(0.42),
+          clientY: plot.scales.depth.project(depth),
+          isPrimary: true,
+        }),
+      )
+      await frame()
+      const node = document.querySelector('[data-layer="tooltip"]')!
+      expect(
+        [...node.querySelectorAll('[data-tooltip-label]')].map((row) => row.textContent),
+      ).toEqual(plot.legend.entries.get().map((entry) => entry.label))
+      expect(
+        [...node.querySelectorAll('[data-tooltip-entry]')].map((row) => row.textContent),
+      ).toEqual(['Current speed · 0.42 m/s', 'Current direction · 185°'])
+      expect(node.getAttribute('aria-label')).toBe(
+        'Current speed · 0.42 m/s; Current direction · 185°',
+      )
+      expect(plot.element.querySelector('[data-crosshair-label="y"]')?.textContent).toBe(
+        String(depth),
+      )
+    }
+    interaction.update({ showY: true, coordinateLabels: true })
+    await frame()
+    const node = document.querySelector('[data-layer="tooltip"]')!
+    expect(node.textContent).toContain('x: 0.42 m/s')
+    expect(node.getAttribute('aria-label')).toContain('y: 10 m')
+  })
+
   test.each(['light', 'dark', 'auto'] as const)(
     'themes portalled tooltips, arrows and crosshair callouts in %s mode',
     async (theme) => {
@@ -248,9 +332,23 @@ describe('tooltip plugin', () => {
       expect(() => handle.update({ digits })).toThrow('tooltip.digits')
       expect(handle.options.get().resolved.digits).toBe(2)
     }
-    expect(() => tooltip({ showX: null })).toThrow('tooltip.showX')
-    handle.update({ showX: undefined, digits: undefined })
-    expect(handle.options.get().resolved.showX).toBe(true)
+    for (const key of ['showX', 'showY', 'coordinateLabels'] as const) {
+      for (const value of [null, 0, 'false', {}, []]) {
+        expect(() => tooltip({ [key]: value })).toThrow(`tooltip.${key}`)
+        expect(() => handle.update({ [key]: value, digits: 3 })).toThrow(`tooltip.${key}`)
+        expect(handle.options.get().resolved.digits).toBe(2)
+      }
+    }
+    handle.update({ showY: false, coordinateLabels: true })
+    handle.update({
+      showX: undefined,
+      showY: undefined,
+      coordinateLabels: undefined,
+      digits: undefined,
+    })
+    expect(handle.options.get().resolved.showX).toBeUndefined()
+    expect(handle.options.get().resolved.showY).toBeUndefined()
+    expect(handle.options.get().resolved.coordinateLabels).toBe(false)
     expect(handle.options.get().resolved.digits).toBeUndefined()
   })
 
@@ -349,16 +447,16 @@ describe('tooltip plugin', () => {
       formatUnit: (info) => (info.axis === 'y' ? 'm' : ''),
     })
     await frame()
-    expect(entries()).toEqual(['observed · <b>20</b> m', 'forecast · x: 4 · <b>30</b> m'])
+    expect(entries()).toEqual(['observed · <b>20</b> m', 'forecast · 4 · <b>30</b> m'])
     const node = document.querySelector('[data-layer="tooltip"]')!
     expect(node.querySelector('b')).toBeNull()
     expect(node.getAttribute('aria-label')).toBe(
-      'observed · 5 · y: <b>20</b> m; forecast · 4 · y: <b>30</b> m',
+      'observed · 5 · <b>20</b> m; forecast · 4 · <b>30</b> m',
     )
     expect(guide.options.get().resolved.labels).toEqual({ x: 't', y: 'q' })
     interaction.update({ formatValue: undefined, formatUnit: undefined })
     await frame()
-    expect(entries()).toEqual(['observed · 20', 'forecast · x: 4 · 30'])
+    expect(entries()).toEqual(['observed · 20', 'forecast · 4 · 30'])
   })
 
   test('hides x coordinates and rounds values without changing source samples', async () => {
@@ -371,12 +469,12 @@ describe('tooltip plugin', () => {
     await move(4.2, 20)
     expect(entries()).toEqual(['precise · 20.12'])
     expect(document.querySelector('[data-layer="tooltip"]')?.getAttribute('aria-label')).toBe(
-      'precise · y: 20.12',
+      'precise · 20.12',
     )
     expect(data.yAt(0)).toBe(20.12345)
     interaction.update({ showX: true, digits: undefined })
     await frame()
-    expect(entries()).toEqual(['precise · x: 5 · 20.12345'])
+    expect(entries()).toEqual(['precise · 5 · 20.12345'])
   })
 
   test('shows nearest x samples as text and removes its DOM on destroy', async () => {
@@ -425,7 +523,7 @@ describe('tooltip plugin', () => {
 
     const node = document.querySelector<HTMLDivElement>('[data-layer="tooltip"]')
     expect(node?.textContent).toContain('observed')
-    expect(node?.textContent).toContain('y: 20')
+    expect(node?.textContent).toContain(' · 20')
     expect(node?.textContent).toContain('forecast')
     const entries = node?.querySelectorAll<HTMLElement>('[data-tooltip-entry]')
     expect(entries).toHaveLength(2)
@@ -505,7 +603,7 @@ describe('tooltip plugin', () => {
     expect(data.valueAt('forecast', 0)).toBe(4.23456)
     interaction.update({ showX: undefined, digits: undefined })
     await frame()
-    expect(node.textContent).toContain('x: one')
+    expect(node.textContent).toContain(' · one')
     expect(node.textContent).toContain(' · 4.23456 · ')
     expect(node.textContent).not.toContain('y:')
 
@@ -768,7 +866,7 @@ describe('tooltip plugin', () => {
       xValues: [0, 10],
       yValues: [0, 10],
     })
-    const interaction = tooltip({ axis: 'xy', marks: [sample] })
+    const interaction = tooltip({ axis: 'xy', marks: [sample], coordinateLabels: true })
     const plot = createPlot(host, {
       width: 500,
       height: 300,
@@ -804,12 +902,12 @@ describe('tooltip plugin', () => {
       guide.update({ mode })
       await move(5, 20)
       expect(entries()[0]).toBe(
-        mode === 'x' ? 'observed · 20' : mode === 'y' ? 'observed · x: 5' : 'observed',
+        mode === 'x' ? 'observed · 20' : mode === 'y' ? 'observed · 5' : 'observed',
       )
-      expect(entries()[1]).toBe('forecast · x: 4 · 30')
+      expect(entries()[1]).toBe('forecast · 4 · 30')
       expect(
         document.querySelector('[data-layer="tooltip"]')?.getAttribute('aria-label'),
-      ).toContain('observed · 5 · y: 20')
+      ).toContain('observed · 5 · 20')
       const labels = [...plot.element.querySelectorAll('[data-crosshair-label]')]
       expect(labels.map((node) => node.getAttribute('data-crosshair-label'))).toEqual(
         mode === 'xy' ? ['x', 'y'] : [mode],
@@ -834,10 +932,10 @@ describe('tooltip plugin', () => {
     )
     guide.update({ mode: 'y', snap: { mark: observed, axis: 'y' } })
     await frame()
-    expect(entries()).toEqual(['observed · x: 5', 'forecast · x: 4 · 30'])
+    expect(entries()).toEqual(['observed · 5', 'forecast · 4 · 30'])
     guide.update({ labels: undefined })
     await frame()
-    expect(entries()).toEqual(['observed · x: 5 · 20', 'forecast · x: 4 · 30'])
+    expect(entries()).toEqual(['observed · 5 · 20', 'forecast · 4 · 30'])
     expect(plot.element.querySelector('[data-crosshair-label]')).toBeNull()
   })
 
@@ -845,7 +943,7 @@ describe('tooltip plugin', () => {
     const { guide, move, entries } = await linkedPlot()
     guide.update({ mode: 'xy', snap: undefined })
     await move(6, 25)
-    expect(entries()).toEqual(['observed · x: 5 · 20', 'forecast · x: 4 · 30'])
+    expect(entries()).toEqual(['observed · 5 · 20', 'forecast · 4 · 30'])
   })
 
   test('retains coordinates when the callout belongs to a different scale', async () => {
@@ -859,7 +957,7 @@ describe('tooltip plugin', () => {
     })
     guide.update({ labels: { x: 'other' } })
     await move(5, 20)
-    expect(entries()[0]).toBe('observed · x: 5 · 20')
+    expect(entries()[0]).toBe('observed · 5 · 20')
   })
 
   test('restores standalone content and cleans up linked overlays', async () => {
@@ -871,7 +969,7 @@ describe('tooltip plugin', () => {
     interaction.update({ crosshair: undefined })
     plot.update({ plugins: [interaction] })
     await frame()
-    expect(entries()[0]).toBe('observed · x: 5 · y: 20')
+    expect(entries()[0]).toBe('observed · 5 · 20')
     expect(plot.element.querySelector('[data-layer="crosshair"]')).toBeNull()
     plot.update({ plugins: [guide, interaction] })
     interaction.update({ crosshair: guide })

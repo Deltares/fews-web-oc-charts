@@ -127,8 +127,8 @@ describe('interaction coverage for histogram and heatmap marks', () => {
     vi.spyOn(plot.element, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 500, 300))
 
     await move(plot, plot.scales.time.project(0.5), plot.scales.level.project(1))
-    expect(tooltipEntries()[0]).toContain('x: 0–1')
-    expect(tooltipEntries()[0]).toContain('y: 0–2')
+    expect(tooltipEntries()[0]).toContain(' · 0–2')
+    expect(tooltipEntries()[0]).not.toContain('0–1')
     expect(tooltipEntries()[0]).toContain('value: 2.5')
     expect(plot.element.querySelector('[data-layer="crosshair"]')?.getAttribute('display')).toBe('')
 

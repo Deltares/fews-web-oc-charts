@@ -53,19 +53,11 @@ try {
 
   await open('v5-parity-basic-line', '#chart-container svg')
   const lineTooltip = await hoverChart('chart-container')
-  assert.match(
-    await lineTooltip.textContent(),
-    /y · x: .* · y:/,
-    'Line samples must be inspectable',
-  )
+  assert.match(await lineTooltip.textContent(), /y · -?\d/, 'Line samples must be inspectable')
 
   await open('v5-parity-marker', '#chart-container svg')
   const markerTooltip = await hoverChart('chart-container')
-  assert.match(
-    await markerTooltip.textContent(),
-    /y · .* · y:/,
-    'Marker samples must be inspectable',
-  )
+  assert.match(await markerTooltip.textContent(), /y · -?\d/, 'Marker samples must be inspectable')
 
   await open('v5-parity-bar', '#chart-container-simple svg')
   const barTooltip = await hoverChart(

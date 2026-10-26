@@ -68,6 +68,32 @@ Use `plot.update({ colorContrast: 'none' })` to disable adjustment, or
 
 ## Tooltip formatting
 
+Coordinate visibility defaults to the value axis: `axis: 'x'` shows only y,
+`axis: 'y'` shows only x, and `axis: 'xy'` shows both. Override these defaults
+with `showX` and `showY`; passing `undefined` restores automatic visibility,
+including after axis updates. `coordinateLabels` defaults to `false`; set it to
+`true` to prefix coordinates with `x:` and `y:` in both visible and accessible
+text, including time coordinates and heatmap ranges. These v5 defaults replace
+the previous always-visible coordinates and implicit prefixes.
+
+For vertical profiles, no application-specific renderer is needed:
+
+```ts
+const profileTooltip = tooltip({
+  axis: 'y',
+  position: 'top',
+  crosshair: depthCrosshair,
+  formatUnit: (context) => (context.scale === 'speed' ? 'm/s' : ''),
+})
+```
+
+Only sampled x values appear; depth stays in the crosshair callout even between
+samples. Explicit `showX: true, showY: false, coordinateLabels: false` gives the
+same display. These options control coordinates, not composite raw values,
+stacks/bounds or independent heatmap cell values. Tooltip names use the configured
+legend label for every supported mark, including static lines and marker-only
+lines, falling back to the mark ID or its built-in name when no label is set.
+
 Use optional formatter hooks to customize tooltip values, units and ranges:
 
 ```ts
@@ -97,8 +123,9 @@ layer/stack information where applicable), `axis`, named `scale`, `digits`, and
 their x axis. Units are supplied by the hook, not inferred from axis labels.
 
 Hooks affect both visible text and accessible labels, never source data or
-crosshair callouts. Linked crosshair coordinates are omitted only when their
-displayed text exactly matches the tooltip's text, including units. Formatter
+crosshair callouts. Enabled linked crosshair coordinates are omitted from visible
+text only when their displayed text exactly matches the tooltip's text, including units.
+Hidden coordinates are omitted from both visible and accessible text. Formatter
 results are rendered as plain text, not HTML.
 
 Replace hooks using `inspection.update({ formatValue: ... })`, or pass `undefined`

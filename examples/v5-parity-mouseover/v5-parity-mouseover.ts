@@ -143,6 +143,8 @@ parityPlot('formatted-series', {
     tooltip({
       marks: formattedMarks,
       crosshair: formattedCrosshair,
+      showX: true,
+      coordinateLabels: true,
       digits: 2,
       formatValue: (value, context) => {
         if (context.axis === 'x') return Number(value).toFixed(2)
