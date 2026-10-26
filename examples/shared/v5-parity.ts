@@ -15,7 +15,7 @@ export function parityPlot(id: string, config: PlotConfig): Plot {
   const plot = createPlot(host, {
     axisLayout: 'inset',
     autoMargins: true,
-    background: 'plot',
+    background: 'canvas',
     themeElement: document.documentElement,
     ...config,
     margins: { top: 40, right: 40, bottom: 40, left: 40, ...config.margins },
@@ -29,7 +29,7 @@ export function parityPolarPlot(id: string, config: PolarPlotConfig) {
   if (!host) throw new Error(`Missing parity example host "${id}".`)
   const plot = createPolarPlot(host, {
     axisLayout: 'inset',
-    background: 'plot',
+    background: 'canvas',
     clipMarks: false,
     themeElement: document.documentElement,
     ...config,

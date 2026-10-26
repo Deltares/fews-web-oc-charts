@@ -54,8 +54,8 @@ function validatePlotAppearance(options: PlotOptions) {
   if (!['outside', 'inset'].includes(options.axisLayout)) {
     throw new Error('plot.axisLayout must be outside or inset.')
   }
-  if (!['chart', 'plot'].includes(options.background)) {
-    throw new Error('plot.background must be chart or plot.')
+  if (!['plot', 'canvas'].includes(options.background)) {
+    throw new Error('plot.background must be plot or canvas.')
   }
   for (const dimension of ['width', 'height'] as const) {
     if (options[dimension] !== undefined) finiteNonnegative(options[dimension], `plot.${dimension}`)
