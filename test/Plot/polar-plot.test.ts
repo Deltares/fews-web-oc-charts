@@ -65,7 +65,7 @@ describe('createPolarPlot', () => {
     expectPolarBackground()
     expect(getComputedStyle(polarBackground).fill).toBe('rgb(24, 32, 38)')
 
-    current.update({ background: 'chart' })
+    current.update({ background: 'plot' })
     await frame()
     expect(background.getAttribute('display')).toBe('')
     expect(background.getAttribute('width')).toBe('600')

@@ -20,7 +20,7 @@ const dewPoint = [18, 15, 10, -2, -12, -24, -38, -50, -58, -65, -72, -76]
 
 const plot = createSkewTPlot(host, {
   title: 'Synthetic weather sounding',
-  background: 'plot',
+  background: 'canvas',
   scales: {
     temperature: linearScale({ domain: [-40, 50] }),
     pressure: logScale({ domain: [100, 1000], reverse: true }),

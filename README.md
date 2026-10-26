@@ -2,12 +2,12 @@
 
 ## Chart background
 
-Charts are transparent outside the plotting canvas, matching v4. By default,
-`background: 'plot'` applies the theme background only to the plot region (the
+Plots are transparent outside the plotting canvas, matching v4. By default,
+`background: 'canvas'` applies the theme background only to the canvas (the
 sector or annulus for polar plots). Set `--fews-chart-background` to customize
 that color. Axes, titles and outer margins keep the host's background visible.
 
-Use `background: 'chart'` to explicitly color the entire chart instead.
+Use `background: 'plot'` to explicitly color the entire plot instead.
 
 ## Tooltip formatting
 

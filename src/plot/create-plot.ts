@@ -72,7 +72,7 @@ export interface PlotOptions {
   clipMarks: boolean
   autoMargins: boolean
   axisLayout: 'outside' | 'inset'
-  background: 'chart' | 'plot'
+  background: 'plot' | 'canvas'
   width?: number
   height?: number
   title: string
@@ -258,7 +258,7 @@ function createPlotInternal(
       clipMarks: true,
       autoMargins: false,
       axisLayout: 'outside',
-      background: 'plot',
+      background: 'canvas',
       title: '',
       margins: { top: 8, right: 8, bottom: 8, left: 8 },
       theme: 'auto',
@@ -625,7 +625,7 @@ function createPlotInternal(
   }
 
   function renderPolarBackground(current: PlotOptions, plotRegion: PlotLayout['plot']) {
-    const polarFill = coordinateSystem === 'polar' && current.background === 'plot'
+    const polarFill = coordinateSystem === 'polar' && current.background === 'canvas'
     background.setAttribute('display', polarFill ? 'none' : '')
     polarBackground.setAttribute('display', polarFill ? '' : 'none')
     if (!polarFill) return
@@ -662,7 +662,7 @@ function createPlotInternal(
     localMarks: boolean,
   ) {
     const backgroundRegion =
-      current.background === 'plot'
+      current.background === 'canvas'
         ? plotRegion
         : { x: 0, y: 0, width: actualSize.width, height: actualSize.height }
     for (const name of ['x', 'y', 'width', 'height'] as const) {

@@ -76,13 +76,13 @@ describe('createPlot named scales', () => {
       expect(getComputedStyle(current.element).backgroundColor).toBe('rgba(0, 0, 0, 0)')
       expect(getComputedStyle(background).fill).toBe('rgb(171, 205, 239)')
     }
-    expect(current.options.get().resolved.background).toBe('plot')
+    expect(current.options.get().resolved.background).toBe('canvas')
     expectPlotBackground()
     current.update({ theme: 'dark', width: 600, height: 400 })
     await frame()
     expectPlotBackground()
 
-    current.update({ background: 'chart' })
+    current.update({ background: 'plot' })
     await frame()
     expect(background.getAttribute('x')).toBe('0')
     expect(background.getAttribute('y')).toBe('0')
@@ -202,7 +202,7 @@ describe('createPlot named scales', () => {
       height: 300,
       margins: { top: 40, right: 40, bottom: 40, left: 40 },
       axisLayout: 'inset',
-      background: 'plot',
+      background: 'canvas',
       clipMarks: false,
       directions: { x: 'x' },
       scales: {
