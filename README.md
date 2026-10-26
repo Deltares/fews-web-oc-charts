@@ -129,6 +129,53 @@ Matching bubbling, composed DOM `CustomEvent`s are dispatched on `plot.element`,
 typed `detail` available to `HTMLElement` and `SVGElement` event listeners. Existing
 `legendtoggle` and `brush` events are also available through `plot.on()`.
 
+## Updating bands
+
+`band()` (also exported as `range()`) returns a reactive handle. Update interval
+data and appearance without replacing the mark or calling `plot.update()`:
+
+```ts
+const envelope = band({
+  id: 'envelope',
+  x: 'time',
+  y: 'value',
+  xValues: [
+    [t0, t0],
+    [t1, t1],
+  ],
+  yValues: [
+    [low0, high0],
+    [low1, high1],
+  ],
+  curve: 'linear',
+})
+
+envelope.update({
+  xValues: [
+    [t1, t1],
+    [t2, t2],
+  ],
+  yValues: [
+    [low1, high1],
+    [low2, high2],
+  ],
+  fill: '#1677a6',
+  opacity: 0.3,
+})
+```
+
+Updates accept `xValues`, `yValues`, `fill`, `opacity`, `curve` and `shapeRendering`.
+Omitted fields stay unchanged. Passing `undefined` clears optional styling
+(`opacity` returns to 1); both data arrays remain required and must have equal
+lengths. Supply both arrays in one update when changing their length. Input ranges
+are copied, and invalid updates throw without changing the mark.
+
+Rendering, automatic scale domains and legend symbols react to updates. Existing
+interval nodes and curved paths are reused while their geometry type stays the same.
+Curved bands still require equal x endpoints and a cartesian plot. Identity (`id`),
+scale bindings (`x`, `y`) and legend metadata stay fixed; replace the mark to change
+them. Legend visibility is preserved across updates.
+
 ## Series gaps
 
 Series y values accept `null` or `NaN` for missing values. Both are stored as `NaN` gaps,

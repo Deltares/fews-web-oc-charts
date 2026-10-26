@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test } from 'vitest'
 import {
   angularScale,
+  band,
   createPlot,
   createPolarPlot,
   linearScale,
@@ -38,6 +39,216 @@ afterEach(() => {
 })
 
 describe('band marks', () => {
+  test('updates data, autoscale and legend styling without replacing the mark or SVG nodes', async () => {
+    const mark = band({
+      id: 'live-band',
+      label: 'Live band',
+      x: 'x',
+      y: 'y',
+      xValues: [[1, 2]],
+      yValues: [[3, 4]],
+    })
+    const plot = create(host(), {
+      width: 400,
+      height: 240,
+      scales: { x: linearScale(), y: linearScale() },
+      directions: { x: 'x' },
+      marks: [mark],
+    })
+    await frame()
+    const group = plot.element.querySelector('[data-mark="band"]')!
+    const rect = group.firstElementChild!
+    mark.update({
+      xValues: [
+        [2, 5],
+        [6, 8],
+      ],
+      yValues: [
+        [10, 20],
+        [30, 40],
+      ],
+      fill: '#1677a6',
+      opacity: 0.4,
+      shapeRendering: 'crispEdges',
+    })
+    await frame()
+    expect(plot.scales.x.scale.domain.get()).toEqual([2, 8])
+    expect(plot.scales.y.scale.domain.get()).toEqual([10, 40])
+    expect(plot.element.querySelector('[data-mark="band"]')).toBe(group)
+    expect(group.firstElementChild).toBe(rect)
+    expect(group.children).toHaveLength(2)
+    expect(rect.getAttribute('x')).toBe(String(plot.scales.x.project(2)))
+    expect(rect.getAttribute('width')).toBe(
+      String(plot.scales.x.project(5) - plot.scales.x.project(2)),
+    )
+    expect(group.getAttribute('fill')).toBe('#1677a6')
+    expect(group.getAttribute('fill-opacity')).toBe('0.4')
+    expect(group.getAttribute('shape-rendering')).toBe('crispEdges')
+    expect(plot.legend.entries.get()[0]?.symbol).toMatchObject({
+      fill: '#1677a6',
+      opacity: 0.4,
+    })
+
+    const values = mark.xValues
+    mark.update({ fill: undefined, opacity: undefined, shapeRendering: undefined })
+    await frame()
+    expect(mark.xValues).toBe(values)
+    expect(mark.fill).toBeUndefined()
+    expect(mark.opacity).toBe(1)
+    expect(group.getAttribute('fill-opacity')).toBe('1')
+    expect(group.hasAttribute('shape-rendering')).toBe(false)
+    expect(group.firstElementChild).toBe(rect)
+    mark.update({ xValues: [[4, 5]], yValues: [[12, 18]] })
+    await frame()
+    expect(group.children).toHaveLength(1)
+    expect(group.firstElementChild).toBe(rect)
+  })
+
+  test('reuses curved paths and switches between curve and interval geometry', async () => {
+    const mark = range({
+      x: 'x',
+      y: 'y',
+      xValues: [
+        [0, 0],
+        [1, 1],
+      ],
+      yValues: [
+        [0, 1],
+        [1, 2],
+      ],
+      curve: 'linear',
+      opacity: 0.3,
+    })
+    const plot = create(host(), {
+      scales: { x: linearScale({ domain: [0, 2] }), y: linearScale({ domain: [0, 5] }) },
+      directions: { x: 'x' },
+      marks: [mark],
+    })
+    await frame()
+    const group = plot.element.querySelector('[data-mark="band"]')!
+    const path = group.firstElementChild!
+    const original = path.getAttribute('d')
+    mark.update({
+      yValues: [
+        [1, 3],
+        [2, 4],
+      ],
+      curve: 'step',
+    })
+    await frame()
+    expect(group.firstElementChild).toBe(path)
+    expect(path.getAttribute('d')).not.toBe(original)
+    expect(group.getAttribute('opacity')).toBe('0.3')
+    expect(group.getAttribute('fill-opacity')).toBe('1')
+
+    mark.update({
+      curve: undefined,
+      xValues: [
+        [0, 1],
+        [1, 2],
+      ],
+    })
+    await frame()
+    expect([...group.children].map((node) => node.localName)).toEqual(['rect', 'rect'])
+    expect(group.getAttribute('opacity')).toBe('1')
+    expect(group.getAttribute('fill-opacity')).toBe('0.3')
+    mark.update({
+      curve: 'basis',
+      xValues: [
+        [0, 0],
+        [1, 1],
+      ],
+    })
+    await frame()
+    expect(group.children).toHaveLength(1)
+    expect(group.firstElementChild?.getAttribute('data-mark')).toBe('band-area')
+  })
+
+  test('validates updates atomically and copies incoming ranges', () => {
+    const mark = range({ x: 'x', y: 'y', xValues: [[0, 1]], yValues: [[0, 1]] })
+    const original = mark.xValues
+    expect(() => mark.update({ xValues: [[2, 1]], fill: 'red' })).toThrow(/ascending pair/)
+    expect(() => mark.update({ yValues: [] })).toThrow(/equal lengths/)
+    expect(() => mark.update({ opacity: 2 })).toThrow(/between 0 and 1/)
+    expect(() => mark.update({ fill: '' })).toThrow(/non-empty string/)
+    expect(() => mark.update({ curve: 'basis' })).toThrow(/equal x endpoints/)
+    // @ts-expect-error Scale bindings cannot be updated.
+    expect(() => mark.update({ x: 'other' })).toThrow(/Unknown option/)
+    // @ts-expect-error Identity cannot be updated.
+    expect(() => mark.update({ id: 'other' })).toThrow(/Unknown option/)
+    // @ts-expect-error Invalid curve values are also rejected at runtime.
+    expect(() => mark.update({ curve: 'invalid' })).toThrow(/band.curve/)
+    // @ts-expect-error Invalid shape-rendering values are also rejected at runtime.
+    expect(() => mark.update({ shapeRendering: 'invalid' })).toThrow(/band.shapeRendering/)
+    // @ts-expect-error Updates must be objects.
+    expect(() => mark.update(null)).toThrow(/must be an object/)
+    expect(mark.xValues).toBe(original)
+    expect(mark.fill).toBeUndefined()
+    const values: [number, number][] = [[2, 3]]
+    mark.update({ xValues: values })
+    values[0][0] = 100
+    expect(mark.xValues).toEqual([[2, 3]])
+    expect(Object.isFrozen(mark.xValues[0])).toBe(true)
+  })
+
+  test('updates polar sectors and releases plot-specific validation when removed', async () => {
+    const mark = range({
+      x: 'theta',
+      y: 'distance',
+      xValues: [[30, 30]],
+      yValues: [[2, 4]],
+    })
+    const plot = createPolarPlot(host(), {
+      scales: {
+        theta: angularScale({ domain: [0, 360] }),
+        distance: radialScale({ domain: [0, 10] }),
+      },
+      marks: [mark],
+    })
+    plots.push(plot)
+    await frame()
+    const path = plot.element.querySelector('[data-mark="band-range"]')!
+    const original = path.getAttribute('d')
+    expect(() => mark.update({ curve: 'linear', fill: 'red' })).toThrow(/cartesian plots only/)
+    expect(mark.curve).toBeUndefined()
+    expect(mark.fill).toBeUndefined()
+    mark.update({ xValues: [[30, 90]], yValues: [[3, 6]] })
+    await frame()
+    expect(plot.element.querySelector('[data-mark="band-range"]')).toBe(path)
+    expect(path.getAttribute('d')).not.toBe(original)
+    plot.update({ marks: [] })
+    expect(() => mark.update({ xValues: [[30, 30]], curve: 'linear' })).not.toThrow()
+  })
+
+  test('retains legend visibility through updates and renders the latest data when shown', async () => {
+    const mark = range({
+      id: 'hidden-band',
+      label: 'Band',
+      x: 'x',
+      y: 'y',
+      xValues: [[0, 1]],
+      yValues: [[0, 1]],
+    })
+    const plot = create(host(), {
+      scales: { x: linearScale(), y: linearScale() },
+      directions: { x: 'x' },
+      marks: [mark],
+    })
+    await frame()
+    plot.legend.setVisible('hidden-band', false)
+    mark.update({ xValues: [[2, 4]], yValues: [[5, 8]], fill: 'red' })
+    await frame()
+    const group = plot.element.querySelector('[data-mark="band"]')!
+    expect(group.getAttribute('display')).toBe('none')
+    expect(plot.legend.entries.get()[0]?.visibility).toBe('hidden')
+    plot.legend.setVisible('hidden-band', true)
+    await frame()
+    expect(group.hasAttribute('display')).toBe(false)
+    expect(group.getAttribute('fill')).toBe('red')
+    expect(plot.scales.x.scale.domain.get()).toEqual([2, 4])
+    expect(plot.scales.y.scale.domain.get()).toEqual([5, 8])
+  })
+
   test('replaces curved paths with interval rectangles for the same mark ID', async () => {
     const config = {
       id: 'changing',
