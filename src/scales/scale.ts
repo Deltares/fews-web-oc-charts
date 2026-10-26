@@ -104,6 +104,13 @@ const handles = new WeakSet<object>()
 type ExtentSource = (mode: 'data' | 'visible') => readonly ScaleValue[] | undefined
 const extentSources = new WeakMap<ScaleHandle, (source: ExtentSource) => () => void>()
 const dataDomains = new WeakMap<ScaleHandle, () => readonly ScaleValue[]>()
+const autoscalePauses = new WeakMap<ScaleHandle, () => void>()
+
+export function pauseScaleAutoscale(scale: ScaleHandle): void {
+  const pause = autoscalePauses.get(scale)
+  if (!pause) throw new Error('Expected a scale handle.')
+  pause()
+}
 
 export function registerScaleExtents(scale: ScaleHandle, source: ExtentSource): () => void {
   const register = extentSources.get(scale)
@@ -387,7 +394,10 @@ function createScale(kind: ScaleKind, initial: OptionPatch<ScaleOptions>) {
     { readonly domain: readonly ScaleValue[]; readonly dataVersion: number } | undefined
   >(undefined)
   const pausedDomain = reactive.signal<readonly ScaleValue[] | undefined>(undefined)
+  const pausedAutoscaleDomain = reactive.signal<readonly ScaleValue[] | undefined>(undefined)
   function automaticDomain(config: Readonly<ScaleOptions>, policy = config.autoscale) {
+    const held = pausedAutoscaleDomain.get()
+    if (held !== undefined) return held
     if (config.follow !== undefined && !followingState.get()) {
       const paused = pausedDomain.get()
       if (paused !== undefined) return paused
@@ -449,6 +459,14 @@ function createScale(kind: ScaleKind, initial: OptionPatch<ScaleOptions>) {
       const configuredFollow = options.get().resolved.follow
       if (Object.hasOwn(patch, 'domain') || configuredFollow === undefined || source === 'reset') {
         pausedDomain.set(undefined)
+      }
+      if (
+        Object.hasOwn(patch, 'domain') ||
+        Object.hasOwn(patch, 'autoscale') ||
+        Object.hasOwn(patch, 'follow') ||
+        source === 'reset'
+      ) {
+        pausedAutoscaleDomain.set(undefined)
       }
       let followChanged = false
       const setFollowing = (value: boolean) => {
@@ -520,11 +538,17 @@ function createScale(kind: ScaleKind, initial: OptionPatch<ScaleOptions>) {
       if (followingState.get()) return
       followingState.set(true)
       pausedDomain.set(undefined)
+      pausedAutoscaleDomain.set(undefined)
       followOverride.set(undefined)
       recordScaleSource(handle, domain.version)
     },
   }
   handles.add(handle)
+  autoscalePauses.set(handle, () => {
+    if (options.get().resolved.domain !== undefined && !followingState.get()) return
+    pausedAutoscaleDomain.set(domain.get())
+    if (followingState.get()) handle.pauseFollow()
+  })
   extentSources.set(handle, (source) => {
     sources.add(source)
     sourceVersion.update((value) => value + 1)

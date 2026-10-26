@@ -1,4 +1,4 @@
-import type { ScaleHandle, ScaleValue } from '../../../scales/scale.js'
+import { pauseScaleAutoscale, type ScaleHandle, type ScaleValue } from '../../../scales/scale.js'
 import { reactive, withSource } from '../../../core/runtime.js'
 import { matchesModifierKey } from '../../../Utils/modifierKey.js'
 import type { PlotContext, PluginDefinition } from '../plugin-definition.js'
@@ -233,6 +233,12 @@ function installZoom(handle: ZoomHandle, context: PlotContext) {
       return isValidScaleDomain(binding.scale.kind, domain) ? [{ binding, domain }] : []
     })
     withSource('zoom', () => {
+      if (changes.length) {
+        const inactiveAxes = new Set<'x' | 'y'>()
+        if (!axes.has('x')) inactiveAxes.add('x')
+        if (!axes.has('y')) inactiveAxes.add('y')
+        for (const { binding } of zoomableScales(inactiveAxes)) pauseScaleAutoscale(binding.scale)
+      }
       for (const { binding, domain } of changes) binding.scale.update({ domain })
     })
     if (changes.length) toggled = false
