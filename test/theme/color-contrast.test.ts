@@ -1,10 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import { rgb } from 'd3-color'
-import {
-  improveColorContrast,
-  resolveMarkColor,
-  tooltipColorTheme,
-} from '../../src/theme/color-contrast.js'
+import { improveColorContrast, resolveMarkColor } from '../../src/theme/color-contrast.js'
 import type { ThemeTokens } from '../../src/theme/theme.js'
 import { resolveLineStyles, resolveCompositeStyle } from '../../src/plot/marks/mark-styles.js'
 
@@ -160,16 +156,22 @@ describe('automatic color contrast', () => {
     }
   })
 
-  test('uses distinct thresholds and backgrounds for marks and label text', () => {
+  test('uses only the tooltip background with distinct thresholds for marks and text', () => {
     const mark = resolveMarkColor('#222', theme)
-    const label = resolveMarkColor('#222', theme, 'text', theme.tooltipBackground)
-    expect(contrast(mark, theme.background)).toBeGreaterThanOrEqual(3)
-    expect(contrast(mark, theme.background)).toBeLessThan(3.12)
+    const label = resolveMarkColor('#222', theme, 'text')
+    expect(contrast(mark, theme.tooltipBackground)).toBeGreaterThanOrEqual(3)
+    expect(contrast(mark, theme.tooltipBackground)).toBeLessThan(3.12)
     expect(contrast(label, theme.tooltipBackground)).toBeGreaterThanOrEqual(4.5)
     expect(contrast(label, theme.tooltipBackground)).toBeLessThan(4.62)
     expect(resolveMarkColor('currentColor', theme)).toBe(theme.foreground)
-    expect(tooltipColorTheme(theme).background).toBe(theme.tooltipBackground)
-    expect(tooltipColorTheme(theme)).toBe(tooltipColorTheme(theme))
+    for (const background of ['#fff', '#000', '#777', 'transparent']) {
+      expect(resolveMarkColor('#222', { ...theme, background })).toBe(mark)
+      expect(resolveMarkColor('#222', { ...theme, background }, 'text')).toBe(label)
+    }
+    const lightTooltip = { ...theme, tooltipBackground: '#fff' }
+    expect(resolveMarkColor('#222', lightTooltip)).toBe('#222')
+    expect(resolveMarkColor('#222', lightTooltip, 'text')).toBe('#222')
+    expect(resolveMarkColor('#222', lightTooltip)).not.toBe(mark)
   })
 
   test('shares corrected styles across lines, markers and composite fills without mutating input', () => {

@@ -42,13 +42,16 @@ repeatedly modifying an adjusted color.
 
 Adjustment applies to lines, markers, fills, rules, text and vector marks, including
 composite layers and their SVG/canvas renderers, legend swatches and highlights.
-Tooltip symbols, tooltip names and cross-section sample labels use the tooltip
-background instead of the canvas background. Heatmap color-scale mappings and
+All adjusted colors, including tooltip symbols, tooltip names and cross-section
+sample labels, use only the tooltip background as their contrast reference.
+Heatmap color-scale mappings and
 their swatches remain unchanged because their colors encode values.
 
-The comparison uses `--fews-chart-background` (or the theme default), not the
-transparent outer margins or an external legend's host background. Set an opaque
-theme background to match your canvas; translucent theme backgrounds are rejected
+The comparison uses `--fews-chart-tooltip-background` (or its theme default),
+never `--fews-chart-background`, transparent outer margins or an external legend's
+host background. Changing only the canvas background leaves adjusted colors
+unchanged; changing the tooltip background recalculates them. Translucent tooltip
+backgrounds are rejected
 by automatic adjustment. CSS color variables and `currentColor` resolve in the
 plot host/theme context. Observe live host class/style changes with `themeElement`.
 SVG paint servers such as gradients, `none` and context paints are left intact.

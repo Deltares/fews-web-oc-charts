@@ -23,7 +23,6 @@ import type { MarkHit } from '../../marks/mark-definition.js'
 import type { SymbolSpec } from '../legend/legend.js'
 import { lineLegendSymbol } from '../../marks/mark-styles.js'
 import type { ScaleValue } from '../../../scales/scale.js'
-import { tooltipColorTheme } from '../../../theme/color-contrast.js'
 
 type TooltipHit = MarkHit
 type TooltipContext = Pick<PlotContext, 'scales' | 'inspectCrosshair' | 'theme'>
@@ -152,13 +151,12 @@ function tooltipEntry(
   }
   const pointMark = isLineMark(mark) || isSeriesMark(mark)
   const tokens = context.theme.get()
-  const symbolTheme = tooltipColorTheme(tokens)
-  const legend = markDefinition(mark).legend?.(mark, symbolTheme)
-  const symbol = isLineMark(mark) ? lineLegendSymbol(mark, symbolTheme) : legend?.symbol
+  const legend = markDefinition(mark).legend?.(mark, tokens)
+  const symbol = isLineMark(mark) ? lineLegendSymbol(mark, tokens) : legend?.symbol
   if (!symbol) throw new Error('Tooltip marks must provide a legend symbol.')
   const layer =
     'layerId' in hit ? legend?.layers?.find((candidate) => candidate.id === hit.layerId) : undefined
-  const color = markColor(mark, hit, tokens, 'text', tokens.tooltipBackground)
+  const color = markColor(mark, hit, tokens, 'text')
   const digits = options.digits ?? (pointMark ? mark.digits : undefined)
   const valueAxis = 'layerId' in hit ? compositeValueAxis(mark) : undefined
   const x = valueAxis !== 'x' && options.showX ? format.value(hit.x, 'x') : ''
