@@ -1,9 +1,25 @@
 import { describe, expect, test } from 'vitest'
-import { formatZonedTickLabels, zonedParts, zonedTicks } from '../../src/time/zoned-time.js'
+import {
+  formatZonedTickLabels,
+  shiftZonedDays,
+  zoneOffset,
+  zonedParts,
+  zonedTicks,
+} from '../../src/time/zoned-time.js'
 
 const instant = (value: string) => Date.parse(value)
 
 describe('public civil-time tick generation', () => {
+  test.each([1000.25, -1000.25, -0.25])(
+    'preserves fractional milliseconds when shifting %s by calendar days',
+    (epoch) => {
+      expect(zoneOffset('UTC', epoch)).toBe(0)
+      expect(shiftZonedDays('UTC', epoch, 0)).toBe(epoch)
+      expect(shiftZonedDays('UTC', epoch, 1)).toBe(epoch + 86_400_000)
+      expect(shiftZonedDays('UTC', epoch, -1)).toBe(epoch - 86_400_000)
+    },
+  )
+
   test('omits spring gaps and disambiguates repeated fall-back hours', () => {
     const spring = zonedTicks(
       'Europe/Amsterdam',

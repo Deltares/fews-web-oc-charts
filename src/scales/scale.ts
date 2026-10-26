@@ -324,14 +324,16 @@ function createScale(kind: ScaleKind, initial: OptionPatch<ScaleOptions>): Scale
       low = kind === 'radial' ? Math.max(0, low - pad) : low - pad
       high += pad
     }
-    const numeric =
-      kind === 'time'
-        ? scaleUtc().domain([low, high])
-        : kind === 'log'
-          ? scaleLog().domain([low, high])
-          : scaleLinear().domain([low, high])
-    if (config.nice) numeric.nice()
-    const result = numeric.domain().map(Number)
+    let result = [low, high]
+    if (config.nice) {
+      const numeric =
+        kind === 'time'
+          ? scaleUtc().domain(result)
+          : kind === 'log'
+            ? scaleLog().domain(result)
+            : scaleLinear().domain(result)
+      result = numeric.nice().domain().map(Number)
+    }
     if (
       result.some(
         (value) =>

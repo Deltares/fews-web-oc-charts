@@ -90,15 +90,19 @@ test.each(['zoom', 'brush'] as const)(
   },
 )
 
-test('calendar-day windows use local civil time across daylight-saving gaps', () => {
-  const store = createSeries({ x: [Date.UTC(2025, 2, 31, 0, 30)], y: [1] })
-  const scale = timeScale({
-    timeZone: 'Europe/Amsterdam',
-    follow: { window: 'P1D' },
-  })
-  connectData(scale, store)
-  expect(scale.domain.get()).toEqual([Date.UTC(2025, 2, 30, 1, 30), Date.UTC(2025, 2, 31, 0, 30)])
-})
+test.each([0, 0.25])(
+  'calendar-day windows use local civil time across daylight-saving gaps (fraction: %s)',
+  (fraction) => {
+    const end = Date.UTC(2025, 2, 31, 0, 30) + fraction
+    const store = createSeries({ x: [end], y: [1] })
+    const scale = timeScale({
+      timeZone: 'Europe/Amsterdam',
+      follow: { window: 'P1D' },
+    })
+    connectData(scale, store)
+    expect(scale.domain.get()).toEqual([Date.UTC(2025, 2, 30, 1, 30) + fraction, end])
+  },
+)
 
 test.each([undefined, [0, 1]])(
   'pausing holds the displayed window rather than the base domain %j',

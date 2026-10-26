@@ -9,6 +9,8 @@ import {
   logScale,
   ModifierKey,
   pan,
+  sharedSelection,
+  subscribe,
   timeScale,
   type BrushHandle,
   type BrushSelection,
@@ -70,6 +72,63 @@ afterEach(() => {
 })
 
 describe('persistent brush', () => {
+  test.each([false, true])(
+    'continues a fractional-time drag through equal selection and scale echoes (shared: %s)',
+    async (shared) => {
+      const interaction = brush({
+        mode: 'x',
+        modifier: ModifierKey.None,
+        persistent: true,
+        selection: shared ? sharedSelection() : undefined,
+      })
+      const x = timeScale({ domain: [1000.25, 1460.25] })
+      const plot = await setup(interaction, {
+        scales: { x, y: linearScale({ domain: [0, 260] }) },
+      })
+      const notifications = vi.fn()
+      const stop = subscribe(x.domain, notifications, { immediate: true })
+      const events = vi.fn((detail: BrushSelection) => {
+        interaction.setSelection({
+          mode: detail.mode,
+          scales: { x: [...detail.scales.x] },
+        })
+        x.update({ domain: [...x.domain.get()] })
+      })
+      plot.on('brush', events)
+      try {
+        await frame()
+        notifications.mockClear()
+        const domainVersion = x.domain.version
+        const optionsVersion = x.options.version
+        expect(plot.scales.x.project(1080.25)).toBeCloseTo(100, 10)
+        expect(plot.scales.x.invert(100)).toBe(1080.25)
+        pointer(plot, 'pointerdown', 100, 100)
+        pointer(plot, 'pointermove', 300, 150)
+        expect(interaction.selection.get()?.scales.x).toEqual([1080.25, 1280.25])
+        const selection = interaction.selection.get()!
+        interaction.setSelection({
+          mode: selection.mode,
+          scales: { x: [...selection.scales.x] },
+        })
+        x.update({ domain: [...x.domain.get()] })
+        await frame()
+        expect(interaction.selection.get()).toBe(selection)
+        pointer(plot, 'pointermove', 350, 150)
+        await frame()
+        pointer(plot, 'pointerup', 400, 150)
+        await frame()
+        expect(events).toHaveBeenCalledTimes(3)
+        expect(interaction.selection.get()?.scales.x).toEqual([1080.25, 1380.25])
+        expect(rectangle(plot)).toEqual([100, 20, 300, 260])
+        expect(x.domain.version).toBe(domainVersion)
+        expect(x.options.version).toBe(optionsVersion)
+        expect(notifications).not.toHaveBeenCalled()
+      } finally {
+        stop()
+      }
+    },
+  )
+
   test('publishes live selection and retains movable, resizable handles after release', async () => {
     const interaction = brush({ mode: 'x', modifier: ModifierKey.None, persistent: true })
     const plot = await setup(interaction)

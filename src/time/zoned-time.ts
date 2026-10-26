@@ -48,7 +48,7 @@ export function zonedParts(timeZone: string, epochMs: number): ZonedParts {
   }
   const values = new Map(
     formatter(timeZone)
-      .formatToParts(new Date(epochMs))
+      .formatToParts(new Date(Math.floor(epochMs)))
       .filter((part) => part.type !== 'literal')
       .map((part) => [part.type, Number(part.value)]),
   )
@@ -85,8 +85,8 @@ export function shiftZonedDays(timeZone: string, epochMs: number, days: number):
   const milliseconds = ((epochMs % 1000) + 1000) % 1000
   const localDate = new Date(0)
   localDate.setUTCFullYear(parts.year, parts.month - 1, parts.day + days)
-  localDate.setUTCHours(parts.hour, parts.minute, parts.second, milliseconds)
-  const localTime = localDate.getTime()
+  localDate.setUTCHours(parts.hour, parts.minute, parts.second, 0)
+  const localTime = localDate.getTime() + milliseconds
   if (!Number.isFinite(localTime) || Math.abs(localTime) > 8.64e15) {
     throw new RangeError('Calendar day shift is outside the JavaScript Date range.')
   }

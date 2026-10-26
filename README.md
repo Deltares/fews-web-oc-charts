@@ -72,6 +72,11 @@ The optional `immediate` setting delivers the current value synchronously. Provi
 created inside a reactive scope are disposed with that scope. Use `{ equals }` to override
 the signal's equality check.
 
+Time scale domains use numeric epoch milliseconds and preserve fractional milliseconds
+through domain updates, autoscaling, live-follow windows and projection. Setting
+`nice: true` opts into UTC calendar-based domain rounding. Converting endpoints to
+JavaScript `Date` objects truncates fractional milliseconds.
+
 For changes associated with a plot, use its typed `on()` method:
 
 ```ts
@@ -124,5 +129,9 @@ plot.on('brush', ({ scales }) => {
 
 Deferred updates (after an `await`, timer or scheduled subscription) are independent
 API changes and retain `source: 'api'`.
+Echoing an equal persistent selection through `brush.setSelection()` does not cancel
+an active drag; changing the controlled selection does. Equal scale domains do not
+notify domain subscribers again, but explicit domain writes can still change
+autoscale or live-follow behavior.
 Box zoom and brush-driven domain updates pause a time scale's live follow window,
 just like wheel zoom and pan; reset resumes following.
