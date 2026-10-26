@@ -258,7 +258,7 @@ function createPlotInternal(
       clipMarks: true,
       autoMargins: false,
       axisLayout: 'outside',
-      background: 'chart',
+      background: 'plot',
       title: '',
       margins: { top: 8, right: 8, bottom: 8, left: 8 },
       theme: 'auto',

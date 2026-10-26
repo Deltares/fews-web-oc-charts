@@ -38,6 +38,45 @@ afterEach(() => {
 })
 
 describe('createPolarPlot', () => {
+  test('colors only the polar canvas by default and supports full-chart backgrounds', async () => {
+    const current = plot(host(), {
+      width: 500,
+      height: 300,
+      scales: {
+        theta: angularScale({ domain: [0, 180] }),
+        distance: radialScale({ domain: [0, 10], innerRadius: 0.25 }),
+      },
+    })
+    await frame()
+    const background = current.element.firstElementChild as SVGRectElement
+    const polarBackground = background.nextElementSibling as SVGPathElement
+    const expectPolarBackground = () => {
+      const region = current.regions.get().plot
+      expect(background.getAttribute('display')).toBe('none')
+      expect(polarBackground.getAttribute('display')).toBe('')
+      expect(polarBackground.getAttribute('d')).toMatch(/^M.+A.+Z$/)
+      expect(polarBackground.getAttribute('transform')).toBe(
+        `translate(${region.x + region.width / 2},${region.y + region.height / 2})`,
+      )
+    }
+    expectPolarBackground()
+    current.update({ theme: 'dark', width: 600 })
+    await frame()
+    expectPolarBackground()
+    expect(getComputedStyle(polarBackground).fill).toBe('rgb(24, 32, 38)')
+
+    current.update({ background: 'chart' })
+    await frame()
+    expect(background.getAttribute('display')).toBe('')
+    expect(background.getAttribute('width')).toBe('600')
+    expect(background.getAttribute('height')).toBe('300')
+    expect(polarBackground.getAttribute('display')).toBe('none')
+
+    current.update({ background: undefined })
+    await frame()
+    expectPolarBackground()
+  })
+
   test('renders polar lines and keeps classic axis updates atomic', async () => {
     const angular = axis('theta', { position: 'angular', style: 'classic' })
     const radial = axis('distance', { position: 'radial', style: 'classic' })
