@@ -366,7 +366,7 @@ function createLineRenderer(): MarkRenderer<LineLikeMark> {
         mark.vectorEffect,
         mark.markers,
         mark.area,
-        tokens.accent,
+        tokens,
       ]
       if (!styleKey.changed(key)) return
       const styles = resolveLineStyles(mark, tokens)

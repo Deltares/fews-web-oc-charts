@@ -23,6 +23,7 @@ const optionKeys = [
   'title',
   'margins',
   'theme',
+  'colorContrast',
   'themeElement',
   'align',
   'scales',
@@ -63,6 +64,8 @@ function validatePlotAppearance(options: PlotOptions) {
   if (typeof options.title !== 'string') throw new Error('plot.title must be a string.')
   if (!['auto', 'light', 'dark'].includes(options.theme))
     throw new Error('plot.theme must be auto, light or dark.')
+  if (!['none', 'auto'].includes(options.colorContrast))
+    throw new Error('plot.colorContrast must be none or auto.')
   if (options.themeElement !== undefined && !(options.themeElement instanceof Element)) {
     throw new Error('plot.themeElement must be an Element.')
   }

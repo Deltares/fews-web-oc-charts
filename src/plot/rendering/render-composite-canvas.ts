@@ -1,6 +1,7 @@
 import type { CompositeStyle } from '../marks/composite.js'
 import { svgElement } from '../axes/render-axes.js'
 import { resolveCompositeStyle } from '../marks/mark-styles.js'
+import type { ThemeTokens } from '../../theme/theme.js'
 
 export interface CanvasShape {
   readonly layerId: string
@@ -50,7 +51,7 @@ export function styleCompositeCanvas(
   group: SVGGElement,
   layers: ReadonlyMap<string, CompositeStyle>,
   options: CompositeStyle,
-  accent: string,
+  tokens: ThemeTokens,
 ): boolean {
   const surface = surfaces.get(group)
   if (!surface) return false
@@ -69,7 +70,7 @@ export function styleCompositeCanvas(
       { fill: string; stroke: string; opacity: number; width: number }
     >()
     for (const [id, layer] of layers) {
-      const style = resolveCompositeStyle(layer, options, accent)
+      const style = resolveCompositeStyle(layer, options, tokens)
       probe.setAttribute('fill', style.fill)
       probe.setAttribute('stroke', style.stroke)
       const computed = getComputedStyle(probe)

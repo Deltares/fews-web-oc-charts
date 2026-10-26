@@ -5,6 +5,7 @@ import { stackedAreaEndpoints, type StackedAreaMark } from './stacked-area.js'
 import { svgElement } from '../../axes/render-axes.js'
 import type { StackEndpoints } from '../../../layout/stack.js'
 import { resolveCompositeStyle } from '../mark-styles.js'
+import type { ThemeTokens } from '../../../theme/theme.js'
 import {
   clearCompositeCanvas,
   renderCompositeCanvas,
@@ -244,14 +245,14 @@ export function stackedAreaPaths(
   return result
 }
 
-export function styleStackedAreas(group: SVGGElement, mark: StackedAreaMark, accent: string) {
+export function styleStackedAreas(group: SVGGElement, mark: StackedAreaMark, tokens: ThemeTokens) {
   const options = mark.options.get().resolved
   const layers = new Map(options.layers.map((layer) => [layer.id, layer]))
-  if (styleCompositeCanvas(group, layers, options, accent)) return
+  if (styleCompositeCanvas(group, layers, options, tokens)) return
   for (const node of group.children) {
     const layer = layers.get(node.getAttribute('data-layer-id')!)
     if (!layer) throw new Error('Missing stackedArea layer for rendered path.')
-    const style = resolveCompositeStyle(layer, options, accent)
+    const style = resolveCompositeStyle(layer, options, tokens)
     node.setAttribute('fill', style.fill)
     node.setAttribute('fill-opacity', String(style.opacity))
     node.setAttribute('stroke', style.stroke)

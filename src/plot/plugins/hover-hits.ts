@@ -12,6 +12,8 @@ import { isHistogramMark, type HistogramMark } from '../marks/histogram/histogra
 import { isHeatmapMark, type HeatmapMark } from '../marks/heatmap/heatmap.js'
 import { markDefinition } from '../marks/marks.js'
 import type { MarkHit } from '../marks/mark-definition.js'
+import type { ThemeTokens } from '../../theme/theme.js'
+import { resolveMarkColor } from '../../theme/color-contrast.js'
 
 /** Marks that can be inspected by pointer plugins such as tooltip() and highlight(). */
 export type HoverMark =
@@ -96,20 +98,36 @@ export function selectHoverHits(
 }
 
 /** Resolves the color of the hovered datum, including composite layers and heatmap cells. */
-export function markColor(mark: HoverMark, hit: MarkHit) {
+export function markColor(
+  mark: HoverMark,
+  hit: MarkHit,
+  tokens: ThemeTokens,
+  role: 'mark' | 'text' = 'mark',
+  background = tokens.background,
+) {
+  const resolve = (color: string | undefined) =>
+    resolveMarkColor(
+      color ??
+        (tokens.colorContrast === 'auto'
+          ? tokens.accent
+          : 'var(--fews-chart-accent, currentColor)'),
+      tokens,
+      role,
+      background,
+    )
   if ('layerId' in hit && (isBarMark(mark) || isStackedAreaMark(mark))) {
     const options = mark.options.get().resolved
     const layer = options.layers?.find((candidate) => candidate.id === hit.layerId)
-    return layer?.fill ?? options.fill ?? 'var(--fews-chart-accent, currentColor)'
+    return resolve(layer?.fill ?? options.fill)
   }
   if (isLineMark(mark) || isSeriesMark(mark)) {
-    return mark.stroke ?? mark.markers?.fill ?? 'var(--fews-chart-accent, currentColor)'
+    return resolve(mark.stroke ?? mark.markers?.fill)
   }
   if (isHistogramMark(mark)) {
-    return mark.options.get().resolved.fill ?? 'var(--fews-chart-accent, currentColor)'
+    return resolve(mark.options.get().resolved.fill)
   }
   if (isHeatmapMark(mark) && isHeatmapHit(hit)) {
     return mark.options.get().resolved.color.map(hit.value)
   }
-  return 'var(--fews-chart-accent, currentColor)'
+  return resolve(undefined)
 }

@@ -1,4 +1,5 @@
 import type { ThemeTokens } from '../../../theme/theme.js'
+import { resolveMarkColor } from '../../../theme/color-contrast.js'
 import { isRuleMark, type RuleMark } from './rule.js'
 import { svgElement } from '../../axes/render-axes.js'
 import {
@@ -42,8 +43,8 @@ function createRuleRenderer(): MarkRenderer<RuleMark> {
       }
     },
     style(mark: RuleMark, tokens: ThemeTokens) {
-      if (!styleKey.changed([mark, mark.stroke, mark.strokeWidth, tokens.accent])) return
-      line.setAttribute('stroke', mark.stroke ?? accent(tokens))
+      if (!styleKey.changed([mark, mark.stroke, mark.strokeWidth, tokens])) return
+      line.setAttribute('stroke', resolveMarkColor(mark.stroke ?? accent(tokens), tokens))
       line.setAttribute('stroke-width', String(mark.strokeWidth))
     },
     destroy() {
@@ -67,7 +68,7 @@ export const ruleDefinition: MarkDefinition<RuleMark> = {
   legend: (mark, tokens) =>
     staticLegend(mark, {
       type: 'rule',
-      stroke: mark.stroke ?? accent(tokens),
+      stroke: resolveMarkColor(mark.stroke ?? accent(tokens), tokens),
       strokeWidth: mark.strokeWidth,
     }),
   // Rules annotate a scale but never contribute to its autoscaled domain.

@@ -3,6 +3,7 @@ import { barLayers, type BarMark } from './bar.js'
 import { barRectangles } from './bar-geometry.js'
 import { svgElement } from '../../axes/render-axes.js'
 import { resolveCompositeStyle } from '../mark-styles.js'
+import type { ThemeTokens } from '../../../theme/theme.js'
 import {
   clearCompositeCanvas,
   renderCompositeCanvas,
@@ -79,15 +80,15 @@ function renderBarLabels(
   }
 }
 
-export function styleBars(group: SVGGElement, mark: BarMark, accent: string) {
+export function styleBars(group: SVGGElement, mark: BarMark, tokens: ThemeTokens) {
   const options = mark.options.get().resolved
   const layers = new Map(barLayers(options).map((layer) => [layer.id, layer]))
-  if (styleCompositeCanvas(group, layers, options, accent)) return
+  if (styleCompositeCanvas(group, layers, options, tokens)) return
   for (const node of group.querySelectorAll<SVGElement>(':scope > *')) {
     if (node.dataset.mark === 'bar-label') continue
     const layer = layers.get(node.dataset.layerId!)
     if (!layer) throw new Error('Missing bar layer for rendered segment.')
-    const style = resolveCompositeStyle(layer, options, accent)
+    const style = resolveCompositeStyle(layer, options, tokens)
     node.setAttribute('fill', style.fill)
     node.setAttribute('fill-opacity', String(style.opacity))
     node.setAttribute('stroke', style.stroke)

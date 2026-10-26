@@ -3,6 +3,7 @@ import type { CompositeStyle } from './composite.js'
 import type { LineMark } from './line/line.js'
 import { accent } from './mark-definition.js'
 import type { SymbolSpec, SymbolPrimitiveSpec } from '../plugins/legend/legend.js'
+import { resolveMarkColor } from '../../theme/color-contrast.js'
 
 export function lineLegendSymbol(
   mark: Omit<LineMark, 'xValues' | 'yValues'>,
@@ -19,12 +20,12 @@ export function lineLegendSymbol(
 export function resolveCompositeStyle(
   layer: CompositeStyle,
   options: CompositeStyle,
-  themeAccent: string,
+  tokens: ThemeTokens,
 ) {
   return {
-    fill: layer.fill ?? options.fill ?? `var(--fews-chart-accent, ${themeAccent})`,
+    fill: resolveMarkColor(layer.fill ?? options.fill ?? accent(tokens), tokens),
     opacity: layer.opacity ?? options.opacity ?? 1,
-    stroke: layer.stroke ?? options.stroke ?? 'none',
+    stroke: resolveMarkColor(layer.stroke ?? options.stroke ?? 'none', tokens),
     strokeWidth: layer.strokeWidth ?? options.strokeWidth ?? 0,
   }
 }
@@ -45,22 +46,24 @@ export function resolveLineStyles(
   const stroke = mark.stroke ?? accent(tokens)
   return {
     line: {
-      stroke,
+      stroke: resolveMarkColor(stroke, tokens),
       strokeWidth: mark.strokeWidth,
       strokeDasharray: mark.strokeDasharray,
       strokeLinecap: mark.strokeLinecap ?? 'round',
       strokeLinejoin: mark.strokeLinejoin ?? 'round',
     },
     area: {
-      fill: mark.area?.fill || stroke,
+      fill: resolveMarkColor(mark.area?.fill || stroke, tokens),
       opacity: mark.area?.opacity ?? 0,
     },
     marker: {
       shape: mark.markers?.symbol ?? 'circle',
-      fill: mark.markers?.fill || stroke,
-      stroke:
+      fill: resolveMarkColor(mark.markers?.fill || stroke, tokens),
+      stroke: resolveMarkColor(
         mark.markers?.stroke ||
-        (mark.markers?.symbol === 'x' || mark.markers?.symbol === 'plus' ? stroke : 'none'),
+          (mark.markers?.symbol === 'x' || mark.markers?.symbol === 'plus' ? stroke : 'none'),
+        tokens,
+      ),
       strokeWidth: mark.markers?.strokeWidth ?? 0,
       size: mark.markers?.size ?? 10,
     },

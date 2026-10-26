@@ -1,5 +1,6 @@
 import { arc, area, curveLinear, curveBasis, curveStep, curveStepBefore, curveStepAfter } from 'd3'
 import type { ThemeTokens } from '../../../theme/theme.js'
+import { resolveMarkColor } from '../../../theme/color-contrast.js'
 import { isBandMark, validateBandUpdates, type BandMark, type BandRange } from './band.js'
 import { svgElement } from '../../axes/render-axes.js'
 import {
@@ -150,17 +151,10 @@ function createBandRenderer(): MarkRenderer<BandMark> {
     },
     style(mark: BandMark, tokens: ThemeTokens) {
       if (
-        !styleKey.changed([
-          mark,
-          mark.fill,
-          mark.opacity,
-          mark.curve,
-          mark.shapeRendering,
-          tokens.accent,
-        ])
+        !styleKey.changed([mark, mark.fill, mark.opacity, mark.curve, mark.shapeRendering, tokens])
       )
         return
-      group.setAttribute('fill', mark.fill ?? accent(tokens))
+      group.setAttribute('fill', resolveMarkColor(mark.fill ?? accent(tokens), tokens))
       group.setAttribute('fill-opacity', String(mark.curve ? 1 : mark.opacity))
       group.setAttribute('opacity', String(mark.curve ? mark.opacity : 1))
       if (mark.shapeRendering) group.setAttribute('shape-rendering', mark.shapeRendering)
@@ -196,7 +190,11 @@ export const bandDefinition: MarkDefinition<BandMark> = {
     }
   },
   legend: (mark, tokens) =>
-    staticLegend(mark, { type: 'area', fill: mark.fill ?? accent(tokens), opacity: mark.opacity }),
+    staticLegend(mark, {
+      type: 'area',
+      fill: resolveMarkColor(mark.fill ?? accent(tokens), tokens),
+      opacity: mark.opacity,
+    }),
   track(mark) {
     mark.xValues
     isStaticMarkVisible(mark)

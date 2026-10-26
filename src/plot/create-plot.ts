@@ -28,6 +28,7 @@ import {
   type PlotLayout,
 } from '../layout/layout.js'
 import { resolveTheme, watchTheme, type ThemeMode, type ThemeTokens } from '../theme/theme.js'
+import type { ColorContrast } from '../theme/color-contrast.js'
 import { isAxisHandle, validateAxisUpdates, type AxisHandle, type AxisSide } from './axes/axis.js'
 import { observeSize } from './resize.js'
 import { observeVisibility } from './visibility.js'
@@ -78,6 +79,7 @@ export interface PlotOptions {
   title: string
   margins: Margins
   theme: ThemeMode
+  colorContrast: ColorContrast
   themeElement?: Element
   align?: AlignGroup
   scales: Record<string, ScaleHandle>
@@ -262,6 +264,7 @@ function createPlotInternal(
       title: '',
       margins: { top: 8, right: 8, bottom: 8, left: 8 },
       theme: 'auto',
+      colorContrast: 'none',
       scales: {},
       directions: {},
       axes: [],
@@ -289,8 +292,14 @@ function createPlotInternal(
   const viewportSize = reactive.signal<Size | undefined>(undefined)
   const regions = reactive.signal(layout({ width: 0, height: 0 }))
   const initialThemeMode = options.get().resolved.theme
+  const initialColorContrast = options.get().resolved.colorContrast
   const theme = reactive.signal(
-    resolveTheme(host, initialThemeMode, matchMedia('(prefers-color-scheme: dark)').matches),
+    resolveTheme(
+      host,
+      initialThemeMode,
+      matchMedia('(prefers-color-scheme: dark)').matches,
+      initialColorContrast,
+    ),
   )
   const themeVersion = reactive.signal(0)
   const scope = reactive.createScope()
@@ -325,6 +334,7 @@ function createPlotInternal(
     else if (deferredDirty !== 0) invalidate(render, deferredDirty)
   }
   let lastThemeMode: ThemeMode | undefined
+  let lastColorContrast: ColorContrast | undefined
   let lastThemeVersion = -1
   let dependencySnapshot: PlotDependencySnapshot | undefined
   let stopTheme = watchTheme(options.get().resolved.themeElement, () =>
@@ -896,13 +906,27 @@ function createPlotInternal(
     reactive.effect(() => {
       const version = themeVersion.get()
       const current = options.get().resolved
-      if (lastThemeMode === current.theme && lastThemeVersion === version) return
+      if (
+        lastThemeMode === current.theme &&
+        lastColorContrast === current.colorContrast &&
+        lastThemeVersion === version
+      )
+        return
       const previous = reactive.untracked(() => theme.get())
       const tokens =
-        lastThemeMode === undefined && current.theme === initialThemeMode && version === 0
+        lastThemeMode === undefined &&
+        current.theme === initialThemeMode &&
+        current.colorContrast === initialColorContrast &&
+        version === 0
           ? previous
-          : resolveTheme(host, current.theme, matchMedia('(prefers-color-scheme: dark)').matches)
+          : resolveTheme(
+              host,
+              current.theme,
+              matchMedia('(prefers-color-scheme: dark)').matches,
+              current.colorContrast,
+            )
       lastThemeMode = current.theme
+      lastColorContrast = current.colorContrast
       lastThemeVersion = version
       theme.set(tokens)
       const fontChanged =

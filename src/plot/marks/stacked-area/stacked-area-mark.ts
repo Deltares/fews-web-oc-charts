@@ -48,9 +48,8 @@ function createStackedAreaRenderer(): MarkRenderer<StackedAreaMark> {
       renderStackedAreas(group, mark, context.scales)
     },
     style(mark: StackedAreaMark, tokens: ThemeTokens) {
-      const canvas = mark.options.get().resolved.renderer === 'canvas'
-      if (!styleKey.changed([mark, mark.options.version, canvas ? tokens : tokens.accent])) return
-      styleStackedAreas(group, mark, tokens.accent)
+      if (!styleKey.changed([mark, mark.options.version, tokens])) return
+      styleStackedAreas(group, mark, tokens)
     },
     destroy() {
       clearCompositeCanvas(group)
@@ -80,7 +79,7 @@ export const stackedAreaDefinition: MarkDefinition<StackedAreaMark> = {
       () => mark.options.get().resolved,
       () => mark.options.get().resolved.layers,
       (visible, layers) => mark.update({ visible, layers }),
-      tokens.accent,
+      tokens,
     ),
   validate(mark, { scales, coordinateSystem, direction }) {
     if (coordinateSystem !== 'cartesian') {

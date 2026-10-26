@@ -153,7 +153,9 @@ export function scaleKey(binding: ScaleBinding): unknown[] {
 }
 
 export function accent(tokens: ThemeTokens) {
-  return `var(--fews-chart-accent, ${tokens.accent})`
+  return tokens.colorContrast === 'auto'
+    ? tokens.accent
+    : `var(--fews-chart-accent, ${tokens.accent})`
 }
 
 export function setMarkId(node: SVGElement | undefined, id: string | undefined) {

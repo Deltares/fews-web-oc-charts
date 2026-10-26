@@ -19,6 +19,8 @@ import { isSeriesMark } from '../../marks/line/series.js'
 import { displayInspectionValue } from '../../interaction/inspection.js'
 import { svgElement } from '../../rendering/svg.js'
 import { markerSymbolPath, markerSymbolRotation } from '../../marks/line/marker-symbol.js'
+import { resolveMarkColor } from '../../../theme/color-contrast.js'
+import { accent } from '../../marks/mark-definition.js'
 
 interface CrossSectionValidationContext {
   readonly marks: readonly object[]
@@ -263,7 +265,7 @@ function installCrossSectionSelect(handle: CrossSectionSelectHandle, context: Pl
     const labels = entries
       .map(({ point }) => {
         const styles = resolveLineStyles(point.mark, theme)
-        const color = point.mark.stroke ?? styles.line.stroke
+        const color = styles.line.stroke
         const markerShape = styles.marker.shape
         const markerArea = point.mark.markers ? styles.marker.size : 16 * Math.PI
         const markerSize = Math.sqrt(markerArea / Math.PI)
@@ -299,7 +301,12 @@ function installCrossSectionSelect(handle: CrossSectionSelectHandle, context: Pl
           'dominant-baseline': 'central',
           'font-family': theme.fontFamily,
           'font-size': theme.fontSize,
-          fill: color,
+          fill: resolveMarkColor(
+            point.mark.stroke ?? accent(theme),
+            theme,
+            'text',
+            theme.tooltipBackground,
+          ),
           'data-cross-section-label': point.id ?? '',
         })
         text.textContent = point.value

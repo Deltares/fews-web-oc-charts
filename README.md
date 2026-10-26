@@ -17,6 +17,49 @@ to customize these colors, including tooltips portalled to the document body.
 With `theme: 'auto'`, the colors follow the system color scheme. Set `themeElement`
 to observe live CSS class/style changes, as with other theme tokens.
 
+## Automatic mark color contrast
+
+FEWS configuration colors can be retained as source colors while improving their
+visibility against the current theme:
+
+```ts
+const plot = createPlot(host, {
+  theme: 'auto',
+  colorContrast: 'auto',
+  // scales, marks, plugins, ...
+})
+```
+
+`colorContrast` defaults to `'none'`, preserving exact configured colors. Opting
+into `'auto'` adjusts OKLCH lightness only when contrast is insufficient, preserving
+hue and reducing chroma only when needed to fit sRGB. It targets **3:1 for mark
+colors** and **4.5:1 for colored text**. The original mark configuration is never
+modified; switching themes recalculates from the original colors rather than
+repeatedly modifying an adjusted color.
+
+Adjustment applies to lines, markers, fills, rules, text and vector marks, including
+composite layers and their SVG/canvas renderers, legend swatches and highlights.
+Tooltip symbols, tooltip names and cross-section sample labels use the tooltip
+background instead of the canvas background. Heatmap color-scale mappings and
+their swatches remain unchanged because their colors encode values.
+
+The comparison uses `--fews-chart-background` (or the theme default), not the
+transparent outer margins or an external legend's host background. Set an opaque
+theme background to match your canvas; translucent theme backgrounds are rejected
+by automatic adjustment. CSS color variables and `currentColor` resolve in the
+plot host/theme context. Observe live host class/style changes with `themeElement`.
+SVG paint servers such as gradients, `none` and context paints are left intact.
+
+Alpha and separate fill opacity are preserved. Alpha is included in the contrast
+calculation; when its target cannot be reached without changing alpha, adjustment
+uses the highest attainable contrast. Separate fill opacity is not increased or
+included in the target, so shaded areas retain their intended transparency.
+This improves visibility, but does not guarantee accessibility for translucent
+fills, thin lines, overlapping marks, or distinguishability between series.
+
+Use `plot.update({ colorContrast: 'none' })` to disable adjustment, or
+`plot.update({ colorContrast: undefined })` to restore the default.
+
 ## Tooltip formatting
 
 Use optional formatter hooks to customize tooltip values, units and ranges:

@@ -11,6 +11,7 @@ import {
 } from '../../src/index.js'
 import { barEndpoints } from '../../src/plot/marks/bar/bar.js'
 import { stackedAreaEndpoints } from '../../src/plot/marks/stacked-area/stacked-area.js'
+import { resolveMarkColor } from '../../src/theme/color-contrast.js'
 
 const plots: Plot[] = []
 const hosts: HTMLElement[] = []
@@ -90,6 +91,53 @@ function expectParity(svg: Plot, canvasPlot: Plot) {
 }
 
 describe('composite canvas parity', () => {
+  test.each(['bar', 'stacked-area', 'histogram'] as const)(
+    '%s shares contrast-adjusted colors across SVG and canvas after theme and option changes',
+    async (kind) => {
+      const data = createTable({ t: [0, 1, 2], a: [1, 2, 3] })
+      const mark = (renderer: 'svg' | 'canvas') => {
+        const options = {
+          scales: { x: 't', y: 'q' },
+          renderer,
+          fill: '#111',
+          stroke: '#222',
+          strokeWidth: 1,
+          opacity: 0.4,
+        }
+        if (kind === 'histogram') {
+          return histogram(data, { ...options, x: 'a', bins: [0, 2, 4] })
+        }
+        const layers = [{ id: 'a', y: 'a' }]
+        return kind === 'bar'
+          ? bar(data, { ...options, x: 't', layers })
+          : stackedArea(data, { ...options, x: 't', layers })
+      }
+      const config = {
+        scales: { t: linearScale({ domain: [0, 4] }), q: linearScale({ domain: [0, 4] }) },
+        directions: { t: 'x' as const, q: 'y' as const },
+        theme: 'dark' as const,
+        colorContrast: 'auto' as const,
+      }
+      const svg = plot({ ...config, marks: [mark('svg')] })
+      const canvas = plot({ ...config, marks: [mark('canvas')] })
+      await frame()
+      const check = () => {
+        expectParity(svg, canvas)
+        const node = svg.element.querySelector('[data-layer-id]')!
+        expect(node.getAttribute('fill')).toBe(resolveMarkColor('#111', svg.theme.get()))
+        expect(node.getAttribute('stroke')).toBe(resolveMarkColor('#222', svg.theme.get()))
+        expect(node.getAttribute('fill-opacity')).toBe('0.4')
+      }
+      check()
+      for (const current of [svg, canvas]) current.update({ theme: 'light' })
+      await frame()
+      check()
+      for (const current of [svg, canvas]) current.update({ theme: 'dark', colorContrast: 'none' })
+      await frame()
+      check()
+    },
+  )
+
   test.each(['vertical', 'horizontal'] as const)(
     'histogram %s intervals share pixels through normalization, rebinning and reversal',
     async (orientation) => {
