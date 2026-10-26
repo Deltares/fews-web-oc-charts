@@ -3,7 +3,8 @@ import { validateKeys } from '../core/validation.js'
 
 export interface SeriesInput {
   x: ArrayLike<number | Date>
-  y: ArrayLike<number>
+  /** Use `null` or `NaN` for missing values (gaps). */
+  y: ArrayLike<number | null>
 }
 
 export interface SeriesStoreOptions {
@@ -105,12 +106,18 @@ function validateColumns(input: SeriesInput, precision: 'float64' | 'float32') {
     const x = epoch(input.x[index], `series.x[${index}]`)
     const y = input.y[index]
     if (x < previous) throw new RangeError(`series.x[${index}] is out of order.`)
+    if (y === null) {
+      previous = x
+      continue
+    }
     if (
       typeof y !== 'number' ||
       (!Number.isFinite(y) && !Number.isNaN(y)) ||
       (precision === 'float32' && Number.isFinite(y) && !Number.isFinite(Math.fround(y)))
     ) {
-      throw new RangeError(`series.y[${index}] must be finite at the requested precision or NaN.`)
+      throw new RangeError(
+        `series.y[${index}] must be finite at the requested precision, NaN or null.`,
+      )
     }
     previous = x
   }
@@ -220,7 +227,7 @@ function createStore<Rows>(
       }
       const physical = (head + count) % x.length
       x[physical] = Number(columns.x[index])
-      y[physical] = columns.y[index]
+      y[physical] = columns.y[index] ?? NaN
       count += 1
       touchedBlocks.add(Math.floor(physical / extentBlockSize))
     }
@@ -587,7 +594,7 @@ function createStore<Rows>(
           nextY[index] = yAt(index)
         } else if (index < before + columns.x.length) {
           nextX[index] = Number(columns.x[index - before])
-          nextY[index] = columns.y[index - before]
+          nextY[index] = columns.y[index - before] ?? NaN
         } else {
           const source = index - before - columns.x.length + after
           nextX[index] = xAt(source)
@@ -698,9 +705,9 @@ export function fromObjects<T>(
         const row = values[index]
         const value = row?.[yKey]
         x[index] = epoch(row?.[xKey], `fromObjects.x[${index}]`)
-        if (typeof value !== 'number')
-          throw new TypeError(`fromObjects.y[${index}] must be a number.`)
-        y[index] = value
+        if (value !== null && typeof value !== 'number')
+          throw new TypeError(`fromObjects.y[${index}] must be a number or null.`)
+        y[index] = value ?? NaN
       }
       return { x, y }
     },
