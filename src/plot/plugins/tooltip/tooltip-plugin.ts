@@ -28,6 +28,11 @@ function positionTooltip(
   if (rect.width <= 0 || rect.height <= 0 || size.width <= 0 || size.height <= 0) return
   const clientX = rect.left + (x / size.width) * rect.width
   const clientY = rect.top + (y / size.height) * rect.height
+  const tooltipRect = element.getBoundingClientRect()
+  const style = getComputedStyle(element)
+  // Body zoom scales fixed-position CSS coordinates, but client rectangles are already scaled.
+  const scaleX = tooltipRect.width / Number.parseFloat(style.width)
+  const scaleY = tooltipRect.height / Number.parseFloat(style.height)
   const preferredPosition: Record<TooltipPlacementPosition, TooltipPosition> = {
     bottom: TooltipPosition.Bottom,
     left: TooltipPosition.Left,
@@ -35,13 +40,13 @@ function positionTooltip(
     top: TooltipPosition.Top,
   }
   const position = calculateTooltipPlacement({
-    x: clientX,
-    y: clientY,
+    x: clientX / scaleX,
+    y: clientY / scaleY,
     preferredPosition: preferredPosition[preferred],
-    containerWidth: window.innerWidth,
-    containerHeight: window.innerHeight,
-    tooltipWidth: element.offsetWidth,
-    tooltipHeight: element.offsetHeight,
+    containerWidth: window.innerWidth / scaleX,
+    containerHeight: window.innerHeight / scaleY,
+    tooltipWidth: tooltipRect.width / scaleX,
+    tooltipHeight: tooltipRect.height / scaleY,
   })
   element.style.left = `${position.x}px`
   element.style.top = `${position.y}px`
@@ -53,7 +58,7 @@ function positionTooltip(
         : position.position === TooltipPosition.Left
           ? 'translate(calc(-100% - 6px), -50%)'
           : 'translate(6px, -50%)'
-  positionTooltipArrow(element, position, clientX, clientY)
+  positionTooltipArrow(element, position, clientX / scaleX, clientY / scaleY)
 }
 
 function renderTooltip(element: HTMLDivElement, context: PlotContext, model: TooltipModel) {
@@ -108,6 +113,7 @@ function installTooltip(handle: TooltipHandle, context: PlotContext) {
     position: 'fixed',
     zIndex: '1000',
     display: 'block',
+    boxSizing: 'border-box',
     visibility: 'hidden',
     pointerEvents: 'none',
     padding: '6px 8px',
