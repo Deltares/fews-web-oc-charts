@@ -102,6 +102,53 @@ test.each([
   expect(x.domain.get()).toEqual([expect.closeTo(80, 10), expect.closeTo(280, 10)])
 })
 
+test.each([
+  { deltaX: -100, deltaY: 0, factor: Math.exp(-0.2) },
+  { deltaX: 100, deltaY: 0, factor: Math.exp(0.2) },
+  { deltaX: 100, deltaY: -100, factor: Math.exp(-0.2) },
+])('Shift wheel zoom uses the reported wheel axis ($deltaX, $deltaY)', async (deltas) => {
+  const { plot, x, interaction } = await dragSetup('x')
+  interaction.update({ wheel: 'x', wheelModifier: ModifierKey.Shift })
+  await frame()
+  const details: DomainChangeDetail[] = []
+  plot.on('domainchange', (detail) => details.push(detail))
+  expect(wheel(plot, { deltaX: deltas.deltaX, deltaY: deltas.deltaY })).toBe(true)
+  expect(x.domain.get()).toEqual([0, 360])
+  expect(wheel(plot, { shiftKey: true, deltaX: deltas.deltaX, deltaY: deltas.deltaY })).toBe(false)
+  await frame()
+  expect(x.domain.get()).toEqual([
+    expect.closeTo(180 - 180 * deltas.factor, 10),
+    expect.closeTo(180 + 180 * deltas.factor, 10),
+  ])
+  expect(details.map(({ source }) => source)).toEqual(['wheel'])
+
+  interaction.update({ modifier: ModifierKey.Shift, wheelModifier: undefined })
+  x.domain.set([0, 360])
+  await frame()
+  expect(wheel(plot, { shiftKey: true, deltaX: deltas.deltaX, deltaY: deltas.deltaY })).toBe(false)
+  await frame()
+  expect(Number(x.domain.get()[1]) - Number(x.domain.get()[0])).toBeCloseTo(360 * deltas.factor)
+})
+
+test('zero wheel movement and unmodified horizontal scrolling do not zoom or cancel a box drag', async () => {
+  const { plot, x, interaction } = await dragSetup('x')
+  interaction.update({ wheel: 'x' })
+  await frame()
+  const details: DomainChangeDetail[] = []
+  plot.on('domainchange', (detail) => details.push(detail))
+  pointer(plot, 'pointerdown', 100, 100)
+  pointer(plot, 'pointermove', 300, 100)
+  expect(wheel(plot, { deltaX: 0, deltaY: 0, shiftKey: true })).toBe(true)
+  expect(wheel(plot, { deltaX: -100, deltaY: 0 })).toBe(true)
+  expect(x.domain.get()).toEqual([0, 360])
+  expect(details).toEqual([])
+  expect(plot.element.querySelector('[data-zoom-selection]')?.getAttribute('display')).toBe('')
+  pointer(plot, 'pointerup', 300, 100)
+  await frame()
+  expect(x.domain.get()).toEqual([expect.closeTo(80, 10), expect.closeTo(280, 10)])
+  expect(details.map(({ source }) => source)).toEqual(['zoom'])
+})
+
 test('wheel modifier inherits, overrides and returns to the current box modifier', async () => {
   const { plot, x, interaction } = await dragSetup('x')
   interaction.update({ wheel: 'x', modifier: ModifierKey.Ctrl })

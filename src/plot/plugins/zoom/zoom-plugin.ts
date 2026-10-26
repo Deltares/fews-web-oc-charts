@@ -254,6 +254,8 @@ function installZoom(handle: ZoomHandle, context: PlotContext) {
       !matchesModifierKey(event, config.wheelModifier ?? config.modifier)
     )
       return
+    const delta = event.deltaY || (event.shiftKey ? event.deltaX : 0)
+    if (delta === 0) return
     const position = context.locate(event)
     if (!position?.inside) return
     const activeAxes = new Set<'x' | 'y'>()
@@ -262,7 +264,7 @@ function installZoom(handle: ZoomHandle, context: PlotContext) {
     if (mode.includes('y') && config.wheel.includes('y')) activeAxes.add('y')
     if (activeAxes.size === 0) return
     finish()
-    const factor = Math.exp(Math.max(-1, Math.min(1, event.deltaY * 0.002)))
+    const factor = Math.exp(Math.max(-1, Math.min(1, delta * 0.002)))
     let changed = false
     for (const { binding, orientation } of zoomableScales(activeAxes)) {
       const anchor = binding.invert(orientation === 'x' ? position.svgX : position.svgY)
