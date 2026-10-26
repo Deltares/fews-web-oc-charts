@@ -73,6 +73,20 @@ The optional `immediate` setting delivers the current value synchronously. Provi
 created inside a reactive scope are disposed with that scope. Use `{ equals }` to override
 the signal's equality check.
 
+Use `plot.subscribe()` for subscriptions that should not outlive a plot. It accepts the same
+options and returns the same idempotent unsubscribe function, and it also unsubscribes
+automatically when the plot is destroyed. Subscribing through a destroyed plot throws.
+
+```ts
+const plot = createPlot(element, { scales: { time } })
+plot.subscribe(time.domain, (domain) => {
+  model.value = domain
+})
+
+// No separate cleanup is needed for the subscription:
+plot.destroy()
+```
+
 Time scale domains use numeric epoch milliseconds and preserve fractional milliseconds
 through domain updates, autoscaling, live-follow windows and projection. Setting
 `nice: true` opts into UTC calendar-based domain rounding. Converting endpoints to
@@ -114,6 +128,17 @@ whether the domain is explicit, and its source (`zoom`, `wheel`, `pan`, `brush`,
 Matching bubbling, composed DOM `CustomEvent`s are dispatched on `plot.element`, with
 typed `detail` available to `HTMLElement` and `SVGElement` event listeners. Existing
 `legendtoggle` and `brush` events are also available through `plot.on()`.
+
+## Series gaps
+
+Series y values accept `null` or `NaN` for missing values. Both are stored as `NaN` gaps,
+so nullable data from services can be passed directly to `createSeries`, `append`,
+`prepend`, `replace`, `upsert` and `fromObjects`. Gaps are ignored by y extents.
+
+```ts
+const values = createSeries({ x: [t0, t1, t2], y: [1.2, null, 1.4] })
+values.append({ x: [new Date(t3)], y: [null] })
+```
 
 ## Box zoom and brush-driven domains
 

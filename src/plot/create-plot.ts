@@ -7,7 +7,9 @@ import {
   optionSignal,
   scheduler,
   sourceOf,
+  subscribe as subscribeSignal,
   type DomainChangeSource,
+  type SubscribeOptions,
   type Unsubscribe,
 } from '../core/runtime.js'
 import type { ReadonlySignal } from '../core/reactive.js'
@@ -150,6 +152,12 @@ export interface Plot {
     type: K,
     listener: (detail: PlotEventMap[K]) => void,
     options?: { signal?: AbortSignal },
+  ): Unsubscribe
+  /** Like `subscribe`, but also unsubscribes automatically when the plot is destroyed. */
+  subscribe<T>(
+    source: ReadonlySignal<T>,
+    listener: (value: T, previous: T | undefined) => void,
+    options?: SubscribeOptions<T>,
   ): Unsubscribe
   update(patch: PlotConfig): void
   setConfig(config: PlotConfig): void
@@ -489,6 +497,32 @@ function createPlotInternal(
       if (listeners.size === 0) plotListeners.delete(type)
     }
     options.signal?.addEventListener('abort', unsubscribe, { once: true })
+    return unsubscribe
+  }
+
+  const ownedSubscriptions = new Set<Unsubscribe>()
+  function subscribe<T>(
+    source: ReadonlySignal<T>,
+    listener: (value: T, previous: T | undefined) => void,
+    options?: SubscribeOptions<T>,
+  ): Unsubscribe {
+    if (destroyed) throw new Error('Cannot subscribe with a destroyed plot.')
+    let active = true
+    let stop: Unsubscribe = () => {}
+    const unsubscribe = () => {
+      if (!active) return
+      active = false
+      ownedSubscriptions.delete(unsubscribe)
+      stop()
+    }
+    ownedSubscriptions.add(unsubscribe)
+    try {
+      stop = subscribeSignal(source, listener, options)
+    } catch (error) {
+      ownedSubscriptions.delete(unsubscribe)
+      throw error
+    }
+    if (!active) stop()
     return unsubscribe
   }
 
@@ -949,6 +983,7 @@ function createPlotInternal(
       return suspended.get()
     },
     on,
+    subscribe,
     update(patch) {
       apply(patch, false)
     },
@@ -968,6 +1003,7 @@ function createPlotInternal(
     destroy() {
       if (destroyed) return
       destroyed = true
+      for (const unsubscribe of [...ownedSubscriptions]) unsubscribe()
       alignment?.member.dispose()
       alignment = undefined
       stopVisibility()

@@ -71,6 +71,29 @@ describe('columnar series stores', () => {
     expect(() => createSeries({ x: [new Date(NaN)], y: [1] })).toThrow(/x\[0\]/)
   })
 
+  test('accepts null y values as gaps on creation, mutation and object rows', () => {
+    const store = createSeries({ x: [new Date(1), 2, 3], y: [1, null, 3] }, { maxPoints: 4 })
+    expect(columns(store)).toEqual({ x: [1, 2, 3], y: [1, NaN, 3] })
+    store.append({ x: [4, 5], y: [null, 5] })
+    expect(columns(store)).toEqual({ x: [2, 3, 4, 5], y: [NaN, 3, NaN, 5] })
+    expect(store.extent('y')).toEqual([3, 5])
+    store.upsert({ from: 3, to: 4, rows: { x: [3, 4], y: [null, 4] } })
+    expect(columns(store)).toEqual({ x: [2, 3, 4, 5], y: [NaN, NaN, 4, 5] })
+    store.prepend({ x: [1], y: [null] })
+    expect(columns(store)).toEqual({ x: [2, 3, 4, 5], y: [NaN, NaN, 4, 5] })
+    store.replace({ x: [1], y: [null] })
+    expect(store.extent('y')).toBeUndefined()
+    expect(columns(createSeries({ x: [1], y: [null] }, { precision: 'float32' })).y).toEqual([NaN])
+
+    const rows: Array<{ t: number; v: number | null }> = [
+      { t: 1, v: null },
+      { t: 2, v: 2 },
+    ]
+    const objects = fromObjects(rows, { x: 't', y: 'v' })
+    expect(columns(objects)).toEqual({ x: [1, 2], y: [NaN, 2] })
+    expect(() => objects.append([{ t: 3, v: undefined as unknown as null }])).toThrow(/y\[0\]/)
+  })
+
   test.each([
     { x: [1], y: [] },
     { x: [2, 1], y: [1, 2] },

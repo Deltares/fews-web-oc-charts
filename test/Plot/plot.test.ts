@@ -1148,6 +1148,47 @@ describe('createPlot named scales', () => {
     expect(() => current.setConfig({})).toThrow(/destroyed plot/)
   })
 
+  test('owns signal subscriptions until unsubscribe, abort or destruction', async () => {
+    const x = timeScale({ domain: [0, 10] })
+    const current = plot(host(), { scales: { x } })
+    const domains: Array<readonly [number, number]> = []
+    const manual = vi.fn()
+    const aborted = vi.fn()
+    const controller = new AbortController()
+    current.subscribe(
+      x.domain,
+      (domain, previous) => {
+        const typed: readonly [number, number] = domain
+        domains.push(typed)
+        expect(previous === undefined || previous[1] <= typed[1]).toBe(true)
+      },
+      { immediate: true },
+    )
+    const stopManual = current.subscribe(x.domain, manual)
+    current.subscribe(x.domain, aborted, { signal: controller.signal })
+    expect(domains).toEqual([[0, 10]])
+
+    x.domain.set([0, 20])
+    await frame()
+    expect(domains).toEqual([
+      [0, 10],
+      [0, 20],
+    ])
+    expect(manual).toHaveBeenCalledTimes(1)
+    expect(aborted).toHaveBeenCalledTimes(1)
+
+    stopManual()
+    stopManual()
+    controller.abort()
+    current.destroy()
+    x.domain.set([0, 30])
+    await frame()
+    expect(domains).toHaveLength(2)
+    expect(manual).toHaveBeenCalledTimes(1)
+    expect(aborted).toHaveBeenCalledTimes(1)
+    expect(() => current.subscribe(x.domain, () => {})).toThrow(/destroyed plot/)
+  })
+
   test('releases reactive consumers and cancels queued rendering before first frame', async () => {
     const q = linearScale()
     q.domain.get()
