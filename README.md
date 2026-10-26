@@ -164,7 +164,8 @@ envelope.update({
 })
 ```
 
-Updates accept `xValues`, `yValues`, `fill`, `opacity`, `curve` and `shapeRendering`.
+Updates accept `x`, `y`, `xValues`, `yValues`, `fill`, `opacity`, `curve`,
+`shapeRendering`, `label`, `legendGroup` and `visible`.
 Omitted fields stay unchanged. Passing `undefined` clears optional styling
 (`opacity` returns to 1); both data arrays remain required and must have equal
 lengths. Supply both arrays in one update when changing their length. Input ranges
@@ -172,9 +173,20 @@ are copied, and invalid updates throw without changing the mark.
 
 Rendering, automatic scale domains and legend symbols react to updates. Existing
 interval nodes and curved paths are reused while their geometry type stays the same.
-Curved bands still require equal x endpoints and a cartesian plot. Identity (`id`),
-scale bindings (`x`, `y`) and legend metadata stay fixed; replace the mark to change
-them. Legend visibility is preserved across updates.
+Curved bands still require equal x endpoints and a cartesian plot. New scale bindings
+are validated against every plot using the mark before an update is applied; the
+target scales must exist and have the correct directions and types. Identity (`id`)
+stays fixed; replace the mark to change it.
+
+Legend visibility is preserved when omitted from an update, including changes made
+by legend toggles. Use `visible: false` to hide the band or `visible: undefined` to
+restore the default (`true`). Set `label: undefined` to remove its legend entry or
+`legendGroup: undefined` to ungroup it. Bindings and legend options can be updated
+alongside data and style in one atomic patch:
+
+```ts
+envelope.update({ y: 'forecast', label: 'Forecast range', legendGroup: 'Forecasts' })
+```
 
 ## Series gaps
 

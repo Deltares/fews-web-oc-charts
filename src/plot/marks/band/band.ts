@@ -1,8 +1,9 @@
 import { validateKeys } from '../../../core/validation.js'
 import { reactive, untracked } from '../../../core/runtime.js'
 import {
-  registerStaticLegend,
+  registerReactiveStaticLegend,
   staticLegendKeys,
+  validateStaticLegendOptions,
   type StaticLegendOptions,
 } from '../static-legend.js'
 import { copyNumericRanges } from '../mark-values.js'
@@ -33,13 +34,14 @@ export interface BandMark {
   readonly yValues: readonly BandRangeValue[]
   readonly fill: string | undefined
   readonly opacity: number
+  readonly label: string | undefined
+  readonly legendGroup: string | undefined
+  readonly visible: boolean
   update(patch: BandUpdate): void
 }
 
-/** Data and appearance can change; identity, scale bindings and legend metadata stay fixed. */
-export type BandUpdate = Partial<
-  Pick<BandOptions, 'xValues' | 'yValues' | 'fill' | 'opacity' | 'curve' | 'shapeRendering'>
->
+/** Updates data, appearance, scale bindings and legend options without changing identity. */
+export type BandUpdate = Partial<Omit<BandOptions, 'id'>>
 
 const bandMarks = new WeakSet<object>()
 const updateValidators = new WeakMap<BandMark, Set<(candidate: BandMark) => void>>()
@@ -102,6 +104,7 @@ function normalizeBand(options: BandOptions, previous?: Omit<BandMark, 'update'>
     throw new Error('band.id must be a non-empty string.')
   }
   validateScaleNames(options)
+  validateStaticLegendOptions(options, 'band')
   const xValues =
     previous && options.xValues === previous.xValues
       ? previous.xValues
@@ -131,6 +134,9 @@ function normalizeBand(options: BandOptions, previous?: Omit<BandMark, 'update'>
     yValues,
     fill: options.fill,
     opacity,
+    label: options.label,
+    legendGroup: options.legendGroup,
+    visible: options.visible ?? true,
   })
 }
 
@@ -139,8 +145,12 @@ export function band(options: BandOptions): BandMark {
   const validators = new Set<(candidate: BandMark) => void>()
   const mark: BandMark = Object.freeze({
     id: options.id,
-    x: options.x,
-    y: options.y,
+    get x() {
+      return state.get().x
+    },
+    get y() {
+      return state.get().y
+    },
     get shapeRendering() {
       return state.get().shapeRendering
     },
@@ -159,13 +169,32 @@ export function band(options: BandOptions): BandMark {
     get opacity() {
       return state.get().opacity
     },
+    get label() {
+      return state.get().label
+    },
+    get legendGroup() {
+      return state.get().legendGroup
+    },
+    get visible() {
+      return state.get().visible
+    },
     update(patch: BandUpdate) {
       if (!patch || typeof patch !== 'object' || Array.isArray(patch)) {
         throw new Error('band update must be an object.')
       }
       validateKeys(
         patch,
-        ['xValues', 'yValues', 'fill', 'opacity', 'curve', 'shapeRendering'],
+        [
+          'x',
+          'y',
+          'xValues',
+          'yValues',
+          'fill',
+          'opacity',
+          'curve',
+          'shapeRendering',
+          ...staticLegendKeys,
+        ],
         'band',
       )
       untracked(() => {
@@ -179,6 +208,10 @@ export function band(options: BandOptions): BandMark {
   })
   bandMarks.add(mark)
   updateValidators.set(mark, validators)
-  registerStaticLegend(mark, options, 'band')
+  registerReactiveStaticLegend(
+    mark,
+    () => state.get(),
+    (visible) => mark.update({ visible }),
+  )
   return mark
 }
