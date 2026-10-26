@@ -57,6 +57,9 @@ function positionTooltip(
 }
 
 function renderTooltip(element: HTMLDivElement, context: PlotContext, model: TooltipModel) {
+  const theme = context.theme.get()
+  element.style.fontFamily = theme.fontFamily
+  element.style.fontSize = `${theme.fontSize}px`
   element.replaceChildren()
   for (const entry of model.entries) {
     const row = document.createElement('div')
@@ -112,7 +115,7 @@ function installTooltip(handle: TooltipHandle, context: PlotContext) {
     background: 'var(--fews-chart-tooltip-background, #fff)',
     color: 'var(--fews-chart-tooltip-color, #222)',
     boxShadow: '0 1px 5px rgb(0 0 0 / 25%)',
-    font: '12px/1.4 sans-serif',
+    lineHeight: '1.4',
     whiteSpace: 'nowrap',
   })
   const describedBy = new Set(

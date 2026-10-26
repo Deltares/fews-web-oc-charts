@@ -23,8 +23,10 @@ async function frame() {
   await new Promise(requestAnimationFrame)
 }
 
-async function linkedPlot() {
-  const host = document.createElement('div')
+async function linkedPlot(
+  config: Parameters<typeof createPlot>[1] = {},
+  host = document.createElement('div'),
+) {
   document.body.append(host)
   hosts.push(host)
   const observed = line({
@@ -59,6 +61,7 @@ async function linkedPlot() {
     scales,
     marks: [observed, forecast],
     plugins: [interaction, guide],
+    ...config,
   })
   plots.push(plot)
   await frame()
@@ -85,6 +88,58 @@ afterEach(() => {
 })
 
 describe('tooltip plugin', () => {
+  test('sizes portalled tooltips and crosshair callouts with initial and live theme fonts', async () => {
+    const host = document.createElement('div')
+    host.style.setProperty('--fews-chart-font-family', 'monospace')
+    host.style.setProperty('--fews-chart-font-size', '24px')
+    const { plot, guide, move } = await linkedPlot({ themeElement: host }, host)
+    guide.update({ mode: 'xy' })
+    await move(5, 20)
+    const tooltipNode = document.querySelector<HTMLDivElement>('[data-layer="tooltip"]')!
+    expect(tooltipNode.parentElement).toBe(document.body)
+    const callouts = [...plot.element.querySelectorAll('[data-crosshair-label]')]
+    expect(callouts).toHaveLength(2)
+    const check = (fontSize: number, fontFamily: string) => {
+      expect(getComputedStyle(tooltipNode).fontFamily).toBe(fontFamily)
+      expect(getComputedStyle(tooltipNode).fontSize).toBe(`${fontSize}px`)
+      for (const row of tooltipNode.querySelectorAll('[data-tooltip-entry]')) {
+        const outer = tooltipNode.getBoundingClientRect()
+        const inner = row.getBoundingClientRect()
+        expect(inner.left).toBeGreaterThanOrEqual(outer.left)
+        expect(inner.right).toBeLessThanOrEqual(outer.right)
+        expect(inner.bottom).toBeLessThanOrEqual(outer.bottom)
+      }
+      for (const callout of callouts) {
+        const text = callout.querySelector('text')!
+        const background = callout.querySelector('rect')!
+        expect(getComputedStyle(text).fontFamily).toBe(fontFamily)
+        expect(getComputedStyle(text).fontSize).toBe(`${fontSize}px`)
+        const box = background.getBBox()
+        const content = text.getBBox()
+        expect(box.width).toBeCloseTo(text.getComputedTextLength() + 12)
+        expect(box.height).toBe(fontSize + 10)
+        expect(content.y).toBeGreaterThanOrEqual(box.y)
+        expect(content.y + content.height).toBeLessThanOrEqual(box.y + box.height)
+        const bounds = callout.getBoundingClientRect()
+        expect(bounds.top).toBeGreaterThanOrEqual(0)
+        expect(bounds.bottom).toBeLessThanOrEqual(plot.size.get().height)
+      }
+    }
+    check(24, 'monospace')
+    const initialWidth = tooltipNode.offsetWidth
+    const initialHeight = tooltipNode.offsetHeight
+    host.style.setProperty('--fews-chart-font-size', '36px')
+    await vi.waitFor(() => expect(plot.theme.get().fontSize).toBe(36))
+    await frame()
+    check(36, 'monospace')
+    expect(tooltipNode.offsetWidth).toBeGreaterThan(initialWidth)
+    expect(tooltipNode.offsetHeight).toBeGreaterThan(initialHeight)
+    host.style.setProperty('--fews-chart-font-family', 'serif')
+    await vi.waitFor(() => expect(plot.theme.get().fontFamily).toBe('serif'))
+    await frame()
+    check(36, 'serif')
+  })
+
   test('validates display options atomically and restores defaults', () => {
     const handle = tooltip({ showX: false, digits: 2 })
     for (const digits of [-1, 1.5, 16, NaN, Infinity]) {

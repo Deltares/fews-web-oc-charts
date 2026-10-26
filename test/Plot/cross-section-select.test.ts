@@ -22,8 +22,8 @@ async function frame() {
 async function setup(
   interaction = crossSectionSelect(5, undefined, { x: 't' }),
   config: Parameters<typeof createPlot>[1] = {},
+  host = document.createElement('div'),
 ) {
-  const host = document.createElement('div')
   document.body.append(host)
   hosts.push(host)
   const first = line({
@@ -78,6 +78,44 @@ afterEach(() => {
 })
 
 describe('cross-section select plugin', () => {
+  test('remeasures callouts and sample labels for initial and live theme fonts', async () => {
+    const host = document.createElement('div')
+    host.style.setProperty('--fews-chart-font-family', 'monospace')
+    host.style.setProperty('--fews-chart-font-size', '24px')
+    const { plot } = await setup(undefined, { themeElement: host }, host)
+    const check = (fontSize: number, fontFamily: string) => {
+      const groups = [
+        plot.element.querySelector('[data-cross-section-callout]')!,
+        ...plot.element.querySelectorAll('[data-cross-section-entry]'),
+      ]
+      expect(groups).toHaveLength(3)
+      for (const [index, group] of groups.entries()) {
+        const text = group.querySelector('text')!
+        const box = group.querySelector('rect')!.getBBox()
+        const content = text.getBBox()
+        const padding = index === 0 ? 12 : fontSize + 8
+        expect(getComputedStyle(text).fontFamily).toBe(fontFamily)
+        expect(getComputedStyle(text).fontSize).toBe(`${fontSize}px`)
+        expect(box.width).toBeCloseTo(text.getComputedTextLength() + padding)
+        expect(box.height).toBe(fontSize + (index === 0 ? 10 : 8))
+        expect(content.y).toBeGreaterThanOrEqual(box.y)
+        expect(content.y + content.height).toBeLessThanOrEqual(box.y + box.height)
+        const bounds = group.getBoundingClientRect()
+        expect(bounds.top).toBeGreaterThanOrEqual(0)
+        expect(bounds.bottom).toBeLessThanOrEqual(plot.size.get().height)
+      }
+    }
+    check(24, 'monospace')
+    host.style.setProperty('--fews-chart-font-size', '36px')
+    await vi.waitFor(() => expect(plot.theme.get().fontSize).toBe(36))
+    await frame()
+    check(36, 'monospace')
+    host.style.setProperty('--fews-chart-font-family', 'serif')
+    await vi.waitFor(() => expect(plot.theme.get().fontFamily).toBe('serif'))
+    await frame()
+    check(36, 'serif')
+  })
+
   test('renders a guide and sample values from each selected line', async () => {
     const { plot, interaction } = await setup()
     expect(plot.element.querySelector('[data-cross-section-line]')?.getAttribute('x1')).toBe(

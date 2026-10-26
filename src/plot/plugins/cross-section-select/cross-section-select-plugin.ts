@@ -164,7 +164,6 @@ function installCrossSectionSelect(handle: CrossSectionSelectHandle, context: Pl
   })
   const callout = svgElement('g', { 'data-cross-section-callout': '' })
   const calloutBackground = svgElement('rect', {
-    height: 22,
     rx: 3,
     fill: 'var(--fews-chart-tooltip-background, #fff)',
     stroke: 'currentColor',
@@ -175,10 +174,8 @@ function installCrossSectionSelect(handle: CrossSectionSelectHandle, context: Pl
   const calloutText = svgElement('text', {
     'data-cross-section-value': '',
     x: 6,
-    y: 15,
+    'dominant-baseline': 'central',
     fill: 'var(--fews-chart-tooltip-color, #222)',
-    'font-family': 'sans-serif',
-    'font-size': 12,
     'pointer-events': 'none',
   })
   callout.append(calloutBackground, calloutText)
@@ -210,6 +207,7 @@ function installCrossSectionSelect(handle: CrossSectionSelectHandle, context: Pl
     const xBinding = binding()
     const plot = context.regions.get().plot
     const size = context.size.get()
+    const theme = context.theme.get()
     const domain = xBinding?.scale.domain.get()
     if (!xBinding || !domain || value < Number(domain[0]) || value > Number(domain[1])) {
       hide()
@@ -244,18 +242,22 @@ function installCrossSectionSelect(handle: CrossSectionSelectHandle, context: Pl
 
     calloutText.textContent =
       options.format?.(value) ?? displayInspectionValue(value, context, options.x, 2)
+    const calloutHeight = theme.fontSize + 10
+    calloutText.setAttribute('font-family', theme.fontFamily)
+    calloutText.setAttribute('font-size', String(theme.fontSize))
+    calloutText.setAttribute('y', String(calloutHeight / 2))
     const calloutWidth = calloutText.getComputedTextLength() + 12
     calloutBackground.setAttribute('width', String(calloutWidth))
+    calloutBackground.setAttribute('height', String(calloutHeight))
     const calloutX = Math.max(0, Math.min(size.width - calloutWidth, x - calloutWidth / 2))
-    const calloutY = Math.max(0, Math.min(size.height - 22, bottom))
+    const calloutY = Math.max(0, Math.min(size.height - calloutHeight, bottom))
     callout.setAttribute('transform', `translate(${calloutX} ${calloutY})`)
 
     stemLayer.replaceChildren()
     pointLayer.replaceChildren()
     labelLayer.replaceChildren()
     if (!entries.length) return
-    const theme = context.theme.get()
-    const labelHeight = 20
+    const labelHeight = theme.fontSize + 8
     const labelGap = 4
     const offset = 12
     const labels = entries
@@ -295,8 +297,8 @@ function installCrossSectionSelect(handle: CrossSectionSelectHandle, context: Pl
           x: labelHeight / 2,
           y: labelHeight / 2,
           'dominant-baseline': 'central',
-          'font-family': 'sans-serif',
-          'font-size': 12,
+          'font-family': theme.fontFamily,
+          'font-size': theme.fontSize,
           fill: color,
           'data-cross-section-label': point.id ?? '',
         })

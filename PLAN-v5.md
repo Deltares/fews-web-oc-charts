@@ -1354,6 +1354,9 @@ detail.destroy()
   or rebuilding SVG paths; font changes remeasure layout and rebuild line geometry.
   Theme observation is opt-in on `themeElement`, never
   implicitly on the document root; system colour-scheme changes are also observed.
+  Tooltip, crosshair and cross-section labels use the resolved font family and size,
+  including tooltips portalled to the document body. Font changes resize their
+  backgrounds and update callout clamping and cross-section label collision layout.
 - Plot/scale/axis updates support set, recursive patch and explicit `undefined` reset.
   Arrays replace membership/order; omitted scale names remain, while `undefined`
   removes a binding. Removing a scale used by an axis requires removing/rebinding that
