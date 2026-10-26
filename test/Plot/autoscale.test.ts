@@ -37,6 +37,22 @@ afterEach(() => {
 })
 
 describe('autoscale policies', () => {
+  test('retains fractional time extents across appends and explicit domain resets', () => {
+    const x = timeScale()
+    const data = createSeries({ x: [1000.25, 2000.75], y: [1, 2] })
+    plot({
+      scales: { x, y: linearScale() },
+      marks: [series(data, { x: 'x', y: 'y' })],
+    })
+    expect(x.domain.get()).toEqual([1000.25, 2000.75])
+    data.append({ x: [3000.125], y: [3] })
+    expect(x.domain.get()).toEqual([1000.25, 3000.125])
+    x.update({ domain: [1500.5, 2500.875] })
+    expect(x.domain.get()).toEqual([1500.5, 2500.875])
+    x.update({ domain: undefined })
+    expect(x.domain.get()).toEqual([1000.25, 3000.125])
+  })
+
   test('static lines contribute only when their line, markers or area are enabled', () => {
     const x = linearScale()
     const y = linearScale()

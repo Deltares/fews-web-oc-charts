@@ -1,7 +1,82 @@
 import { describe, expect, test } from 'vitest'
-import { linearScale, timeScale, bandScale, degreesScale, axis, layout } from '../../src/index.js'
+import {
+  linearScale,
+  timeScale,
+  bandScale,
+  degreesScale,
+  axis,
+  createSeries,
+  layout,
+} from '../../src/index.js'
+import { bindScale, registerScaleExtents } from '../../src/scales/scale.js'
 
 describe('named scale domain state', () => {
+  test.each([
+    [1000.25, 2000.75],
+    [-2000.75, -1000.25],
+    [-0.75, 0.25],
+    [0.125, 0.875],
+    [Date.UTC(2026, 0, 1) + 0.25, Date.UTC(2026, 0, 1) + 1000.75],
+  ])('preserves fractional time endpoints %s to %s', (low, high) => {
+    const domain = [low, high]
+    const scale = timeScale({ defaultDomain: domain })
+    expect(scale.domain.get()).toEqual(domain)
+    const binding = bindScale(scale, { get: () => [0, 100], version: 0 })
+    expect(binding.project(low)).toBe(0)
+    expect(binding.project(high)).toBe(100)
+    expect(binding.invert(0)).toBe(low)
+    expect(binding.invert(100)).toBe(high)
+    scale.update({ domain })
+    expect(scale.domain.get()).toEqual(domain)
+    const version = scale.domain.version
+    const optionsVersion = scale.options.version
+    scale.update({ domain: [...domain] })
+    expect(scale.domain.version).toBe(version)
+    expect(scale.options.version).toBe(optionsVersion)
+    scale.domain.set([low + 0.125, high + 0.125])
+    expect(scale.domain.get()).toEqual([low + 0.125, high + 0.125])
+    scale.update({ domain: undefined })
+    expect(scale.domain.get()).toEqual(domain)
+  })
+
+  test('preserves fractional time padding and only rounds when nice is enabled', () => {
+    const scale = timeScale({ domain: [1000.25, 2000.75], padding: 0.1 })
+    expect(scale.domain.get()).toEqual([900.2, 2100.8])
+    scale.update({ padding: undefined, nice: true })
+    expect(scale.domain.get()).toEqual([1000, 2000])
+    scale.update({ nice: false })
+    expect(scale.domain.get()).toEqual([1000.25, 2000.75])
+  })
+
+  test('preserves fractional store extents in automatic and following domains', () => {
+    const data = createSeries({ x: [1000.25, 1100.75], y: [1, 2] })
+    const automatic = timeScale()
+    const following = timeScale({ follow: { window: 100.5, lead: 20.125 } })
+    const extent = () => {
+      data.version
+      return data.extent('x')
+    }
+    const disconnectAutomatic = registerScaleExtents(automatic, extent)
+    const disconnectFollowing = registerScaleExtents(following, extent)
+    try {
+      expect(automatic.domain.get()).toEqual([1000.25, 1100.75])
+      expect(following.domain.get()).toEqual([980.125, 1080.625])
+      data.append({ x: [1200.875], y: [3] })
+      expect(automatic.domain.get()).toEqual([1000.25, 1200.875])
+      expect(following.domain.get()).toEqual([1080.25, 1180.75])
+      following.update({ domain: [500.25, 600.75] })
+      expect(following.domain.get()).toEqual([500.25, 600.75])
+      following.pauseFollow()
+      data.append({ x: [1300.875], y: [4] })
+      expect(following.domain.get()).toEqual([500.25, 600.75])
+      following.resumeFollow()
+      expect(following.domain.get()).toEqual([1180.25, 1280.75])
+    } finally {
+      disconnectAutomatic()
+      disconnectFollowing()
+    }
+  })
+
   test('owns input arrays and resolves nice, includeZero, symmetric and defaults', () => {
     const input = [2, 8]
     const scale = linearScale({ domain: input, includeZero: true, nice: true })

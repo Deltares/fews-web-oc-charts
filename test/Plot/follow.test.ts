@@ -36,6 +36,28 @@ afterEach(() => {
   hosts.splice(0).forEach((element) => element.remove())
 })
 
+test('preserves fractional milliseconds in follow windows and API overrides', () => {
+  const data = createSeries({ x: [1000.25, 1100.75], y: [1, 2] })
+  const time = timeScale({ follow: { window: 100.5, lead: 20.125 } })
+  plot(host(), {
+    width: 400,
+    height: 240,
+    scales: { x: time, y: linearScale() },
+    marks: [series(data, { x: 'x', y: 'y' })],
+  })
+  expect(time.domain.get()).toEqual([980.125, 1080.625])
+  time.update({ domain: [500.25, 600.75] })
+  expect(time.domain.get()).toEqual([500.25, 600.75])
+  expect(time.following.get()).toBe(true)
+  data.append({ x: [1200.875], y: [3] })
+  expect(time.domain.get()).toEqual([1080.25, 1180.75])
+  time.pauseFollow()
+  data.append({ x: [1300.875], y: [4] })
+  expect(time.domain.get()).toEqual([1080.25, 1180.75])
+  time.resumeFollow()
+  expect(time.domain.get()).toEqual([1180.25, 1280.75])
+})
+
 test('validates follow windows and computes a shared time window on data changes', async () => {
   expect(() => timeScale({ follow: { window: 0 } })).toThrow(/window.*positive/)
   expect(() => timeScale({ follow: { window: 'P0D' } })).toThrow(/window.*positive/)
