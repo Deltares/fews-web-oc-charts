@@ -125,7 +125,7 @@ function createHeatmapRenderer(): MarkRenderer<HeatmapMark> {
             { fill: color.map(grid.valueAt(index)), opacity: options.opacity },
           ]),
         )
-        styleCompositeCanvas(group, styles, {}, tokens.accent)
+        styleCompositeCanvas(group, styles, {}, { ...tokens, colorContrast: 'none' })
       } else {
         indices.forEach((index, node) => {
           group.children[node].setAttribute('fill', color.map(grid.valueAt(index)))

@@ -57,9 +57,8 @@ export function createBarRenderer(kind = 'bar'): MarkRenderer<BarMark> {
       renderBars(group, mark, context.scales)
     },
     style(mark: BarMark, tokens: ThemeTokens) {
-      const canvas = mark.options.get().resolved.renderer === 'canvas'
-      if (!styleKey.changed([mark, mark.options.version, canvas ? tokens : tokens.accent])) return
-      styleBars(group, mark, tokens.accent)
+      if (!styleKey.changed([mark, mark.options.version, tokens])) return
+      styleBars(group, mark, tokens)
     },
     destroy() {
       clearCompositeCanvas(group)
@@ -82,7 +81,7 @@ export const barDefinition: MarkDefinition<BarMark> = {
         mark.options.get().resolved.layers
           ? mark.update({ visible, layers })
           : mark.update({ visible: visible && layers[0]?.visible !== false }),
-      tokens.accent,
+      tokens,
     ),
   validate(mark, context) {
     const { scales, coordinateSystem } = context

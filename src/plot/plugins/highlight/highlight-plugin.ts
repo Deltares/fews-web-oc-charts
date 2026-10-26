@@ -90,7 +90,7 @@ function installHighlight(handle: HighlightHandle, context: PlotContext) {
           (
             markDefinition(mark).highlight?.(mark, hit, {
               scales: context.scales,
-              color: markColor(mark, hit),
+              color: markColor(mark, hit, context.theme.get()),
             }) ?? []
           ).map((shape) => {
             const node = shapeElement(shape)

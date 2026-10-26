@@ -8,6 +8,7 @@ import {
 import type { MarkDefinition, MarkLegend } from '../mark-definition.js'
 import { compositeHits } from '../../interaction/composite-hit-testing.js'
 import { barHighlight } from '../highlight-shapes.js'
+import { resolveMarkColor } from '../../../theme/color-contrast.js'
 
 export const histogramDefinition: MarkDefinition<HistogramMark> = {
   name: 'histogram',
@@ -20,7 +21,11 @@ export const histogramDefinition: MarkDefinition<HistogramMark> = {
     return {
       label: options().label,
       group: options().legendGroup,
-      symbol: { type: 'steps', fill: options().fill ?? tokens.accent, opacity: options().opacity },
+      symbol: {
+        type: 'steps',
+        fill: resolveMarkColor(options().fill ?? tokens.accent, tokens),
+        opacity: options().opacity,
+      },
       visible: () => options().visible,
       setVisible: (visible) => mark.update({ visible }),
     }

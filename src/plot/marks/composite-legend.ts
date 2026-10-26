@@ -1,6 +1,7 @@
 import type { CompositeLayer, CompositeStyle } from './composite.js'
 import type { MarkLegend } from './mark-definition.js'
 import { resolveCompositeStyle } from './mark-styles.js'
+import type { ThemeTokens } from '../../theme/theme.js'
 
 interface LegendOptions extends CompositeStyle {
   readonly label: string
@@ -13,11 +14,11 @@ export function compositeLegend<L extends CompositeLayer>(
   options: () => LegendOptions,
   layers: () => readonly L[],
   update: (visible: boolean, layers: readonly L[]) => void,
-  accent: string,
+  tokens: ThemeTokens,
 ): MarkLegend {
   const symbol = (layer: L) => ({
     type,
-    ...resolveCompositeStyle(layer, options(), accent),
+    ...resolveCompositeStyle(layer, options(), tokens),
   })
   const current = layers()
   return {

@@ -1,5 +1,6 @@
 import { arc } from 'd3'
 import type { ThemeTokens } from '../../../theme/theme.js'
+import { resolveMarkColor } from '../../../theme/color-contrast.js'
 import { isProgressMark, type ProgressMark } from './progress.js'
 import {
   accent,
@@ -75,8 +76,8 @@ function createProgressRenderer(): MarkRenderer<ProgressMark> {
       while (group.children.length > pathIndex) group.lastElementChild?.remove()
     },
     style(mark: ProgressMark, tokens: ThemeTokens) {
-      if (!styleKey.changed([mark, mark.fill, mark.opacity, tokens.accent])) return
-      group.setAttribute('fill', mark.fill ?? accent(tokens))
+      if (!styleKey.changed([mark, mark.fill, mark.opacity, tokens])) return
+      group.setAttribute('fill', resolveMarkColor(mark.fill ?? accent(tokens), tokens))
       group.setAttribute('fill-opacity', String(mark.opacity))
     },
     destroy() {
@@ -132,7 +133,11 @@ export const progressDefinition: MarkDefinition<ProgressMark> = {
     }
   },
   legend: (mark, tokens) =>
-    staticLegend(mark, { type: 'area', fill: mark.fill ?? accent(tokens), opacity: mark.opacity }),
+    staticLegend(mark, {
+      type: 'area',
+      fill: resolveMarkColor(mark.fill ?? accent(tokens), tokens),
+      opacity: mark.opacity,
+    }),
   track: (mark) => isStaticMarkVisible(mark),
   extents(mark, context) {
     progressExtents(mark, context)

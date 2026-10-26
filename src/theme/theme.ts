@@ -1,5 +1,8 @@
+import { registerContrastTheme, type ColorContrast } from './color-contrast.js'
+
 export type ThemeMode = 'auto' | 'light' | 'dark'
 export interface ThemeTokens {
+  readonly colorContrast?: ColorContrast
   readonly background: string
   readonly foreground: string
   readonly grid: string
@@ -11,6 +14,7 @@ export interface ThemeTokens {
 }
 
 const light: ThemeTokens = {
+  colorContrast: 'none',
   background: '#ffffff',
   foreground: '#263238',
   grid: '#dce2e5',
@@ -30,7 +34,12 @@ const dark: ThemeTokens = {
   tooltipColor: '#edf2f4',
 }
 
-export function resolveTheme(element: Element, mode: ThemeMode, prefersDark: boolean): ThemeTokens {
+export function resolveTheme(
+  element: Element,
+  mode: ThemeMode,
+  prefersDark: boolean,
+  colorContrast: ColorContrast = 'none',
+): ThemeTokens {
   const defaults = mode === 'dark' || (mode === 'auto' && prefersDark) ? dark : light
   const style = getComputedStyle(element)
   const token = (name: string, fallback: string) =>
@@ -44,7 +53,8 @@ export function resolveTheme(element: Element, mode: ThemeMode, prefersDark: boo
   ) {
     throw new Error('--fews-chart-font-size must be a positive pixel size.')
   }
-  return Object.freeze({
+  const tokens: ThemeTokens = Object.freeze({
+    colorContrast,
     background: token('background', defaults.background),
     foreground: token('foreground', defaults.foreground),
     grid: token('grid', defaults.grid),
@@ -54,6 +64,8 @@ export function resolveTheme(element: Element, mode: ThemeMode, prefersDark: boo
     fontFamily: token('font-family', defaults.fontFamily),
     fontSize,
   })
+  registerContrastTheme(tokens, element)
+  return tokens
 }
 
 export function watchTheme(observedElement: Element | undefined, changed: () => void): () => void {

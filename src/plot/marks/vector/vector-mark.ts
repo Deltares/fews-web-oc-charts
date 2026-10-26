@@ -1,4 +1,5 @@
 import type { ThemeTokens } from '../../../theme/theme.js'
+import { resolveMarkColor } from '../../../theme/color-contrast.js'
 import {
   accent,
   createKeyCache,
@@ -141,8 +142,8 @@ function createVectorRenderer<M extends VectorMark>(
       while (group.children.length > count) group.lastElementChild?.remove()
     },
     style(mark, tokens: ThemeTokens) {
-      if (!styleKey.changed([mark, mark.color, mark.strokeWidth, tokens.accent])) return
-      const color = mark.color ?? accent(tokens)
+      if (!styleKey.changed([mark, mark.color, mark.strokeWidth, tokens])) return
+      const color = resolveMarkColor(mark.color ?? accent(tokens), tokens)
       for (const item of group.children) {
         const shaft = item.children[0] as SVGLineElement
         const head = item.children[1] as SVGPathElement
@@ -234,7 +235,7 @@ export const arrowsDefinition: MarkDefinition<ArrowsMark> = {
   legend: (mark, tokens) =>
     staticLegend(mark, {
       type: 'arrow',
-      color: mark.color ?? accent(tokens),
+      color: resolveMarkColor(mark.color ?? accent(tokens), tokens),
       strokeWidth: mark.strokeWidth,
     }),
   track: (mark) => isStaticMarkVisible(mark),
@@ -249,7 +250,10 @@ export const directionDefinition: MarkDefinition<DirectionMark> = {
     validateVectorMark(mark, context)
   },
   legend: (mark, tokens) =>
-    staticLegend(mark, { type: 'direction', color: mark.color ?? accent(tokens) }),
+    staticLegend(mark, {
+      type: 'direction',
+      color: resolveMarkColor(mark.color ?? accent(tokens), tokens),
+    }),
   track: (mark) => isStaticMarkVisible(mark),
   extents: vectorExtents,
   createRenderer: () => createVectorRenderer<DirectionMark>('direction'),

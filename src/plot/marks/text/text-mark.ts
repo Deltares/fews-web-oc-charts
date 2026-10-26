@@ -1,4 +1,5 @@
 import type { ThemeTokens } from '../../../theme/theme.js'
+import { resolveMarkColor } from '../../../theme/color-contrast.js'
 import {
   isTextMark,
   isValidTextCoordinate,
@@ -76,10 +77,10 @@ function createTextRenderer(): MarkRenderer<TextMark> {
       while (group.children.length > mark.textValues.length) group.lastElementChild?.remove()
     },
     style(mark: TextMark, tokens: ThemeTokens) {
-      const key = [mark, tokens.accent, tokens.fontFamily, tokens.fontSize]
+      const key = [mark, tokens]
       if (!styleKey.changed(key)) return
       for (const label of group.children) {
-        label.setAttribute('fill', mark.fill ?? accent(tokens))
+        label.setAttribute('fill', resolveMarkColor(mark.fill ?? accent(tokens), tokens, 'text'))
         label.setAttribute(
           'font-family',
           mark.fontFamily ?? `var(--fews-chart-font-family, ${tokens.fontFamily})`,
@@ -116,7 +117,7 @@ export const textDefinition: MarkDefinition<TextMark> = {
   legend: (mark, tokens) =>
     staticLegend(mark, {
       type: 'text',
-      fill: mark.fill ?? accent(tokens),
+      fill: resolveMarkColor(mark.fill ?? accent(tokens), tokens, 'text'),
       fontFamily: mark.fontFamily,
       fontWeight: mark.fontWeight,
     }),
