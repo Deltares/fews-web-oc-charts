@@ -697,7 +697,8 @@ ensemble(fc, {
 - Built-in plugin factories return configurable handles (3.1.1). Their public
   `handle.update(optionsPatch)` is distinct from the installed instance's internal
   `update(dirty)` render hook; user-defined plugins may opt into the same contract.
-- Ported plugins: `zoom({ mode: 'x'|'y'|'xy', wheel, modifier, reset: 'initial'|'full'|'toggle' })`,
+- Ported plugins:
+  `zoom({ mode: 'x'|'y'|'xy', wheel, modifier, wheelModifier, reset: 'initial'|'full'|'toggle' })`,
   `pan`, `brush` (select range → event), `crosshair` (former MouseOver: trace values,
   vertical/horizontal), `tooltip` (HTML, positioning), `legend` (HTML, toggle, isolate),
   `currentTime` (driven by a shared clock signal), `dstIndicator`, `alertLines`,

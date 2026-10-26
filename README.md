@@ -225,8 +225,24 @@ Horizontal and vertical box zooms hold the other continuous axis at its current
 range, rather than autoscaling it to the newly visible data. This also pauses
 live follow on that axis. Clearing its domain, updating its autoscale policy, or
 resetting that axis resumes automatic domain calculation.
-`wheel: 'none'` disables only wheel zoom. `modifier` applies to both box and wheel
-zoom; double-click reset remains modifier-independent.
+`wheel: 'none'` disables only wheel zoom. `modifier` controls box zoom;
+`wheelModifier` independently controls wheel zoom. Omitting `wheelModifier` (or
+updating it to `undefined`) makes wheel zoom use `modifier`, preserving the shared
+modifier behavior. Double-click reset remains modifier-independent.
+
+For example, use Shift for drag/box zoom, Ctrl for drag-to-pan, and no required
+modifier for wheel zoom:
+
+```ts
+const navigation = zoom({
+  mode: 'x',
+  wheel: 'x',
+  modifier: ModifierKey.Shift,
+  wheelModifier: ModifierKey.None,
+})
+const panning = pan({ mode: 'x', modifier: ModifierKey.Ctrl })
+// Install both handles in the plot's plugins array.
+```
 
 Matching brush and pan gestures take precedence over box zoom, independent of plugin
 order. To combine interactions, use distinct modifiers, for example default box zoom,

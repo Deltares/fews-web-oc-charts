@@ -17,8 +17,10 @@ export interface ZoomOptions {
   /** Directions affected by box zoom and reset; also limits wheel directions. */
   mode: ZoomMode
   wheel: ZoomWheelMode
-  /** Required modifier for box and wheel zoom. */
+  /** Required modifier for box zoom; also the default for wheel zoom. */
   modifier: ModifierKey
+  /** Required modifier for wheel zoom. When omitted, uses modifier. */
+  wheelModifier?: ModifierKey
   reset: ZoomResetMode
 }
 
@@ -28,7 +30,7 @@ export interface ZoomHandle {
 }
 
 const handles = new WeakSet<object>()
-const optionKeys = ['id', 'mode', 'wheel', 'modifier', 'reset']
+const optionKeys = ['id', 'mode', 'wheel', 'modifier', 'wheelModifier', 'reset']
 
 export function isZoomHandle(value: object): value is ZoomHandle {
   return handles.has(value)
@@ -55,6 +57,12 @@ export function zoom(initial: OptionPatch<ZoomOptions> = {}): ZoomHandle {
       }
       if (!Object.values(ModifierKey).includes(options.modifier)) {
         throw new Error('zoom.modifier must be none, ctrl or shift.')
+      }
+      if (
+        options.wheelModifier !== undefined &&
+        !Object.values(ModifierKey).includes(options.wheelModifier)
+      ) {
+        throw new Error('zoom.wheelModifier must be none, ctrl or shift.')
       }
       if (!['initial', 'full', 'toggle'].includes(options.reset)) {
         throw new Error('zoom.reset must be initial, full or toggle.')

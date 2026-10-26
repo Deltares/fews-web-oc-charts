@@ -67,6 +67,135 @@ async function dragSetup(
   return { plot, x, y, interaction }
 }
 
+function wheel(plot: Plot, options: WheelEventInit = {}) {
+  const bounds = plot.element.getBoundingClientRect()
+  return plot.element.dispatchEvent(
+    new WheelEvent('wheel', {
+      clientX: bounds.x + 200,
+      clientY: bounds.y + 150,
+      deltaY: -100,
+      cancelable: true,
+      bubbles: true,
+      ...options,
+    }),
+  )
+}
+
+test.each([
+  { modifier: ModifierKey.Ctrl, keys: { ctrlKey: true }, otherKeys: { shiftKey: true } },
+  { modifier: ModifierKey.Shift, keys: { shiftKey: true }, otherKeys: { ctrlKey: true } },
+])('wheel modifier $modifier is independent of box zoom', async ({ modifier, keys, otherKeys }) => {
+  const { plot, x, interaction } = await dragSetup('x')
+  interaction.update({ wheel: 'x', wheelModifier: modifier })
+  await frame()
+  expect(wheel(plot)).toBe(true)
+  expect(wheel(plot, otherKeys)).toBe(true)
+  expect(x.domain.get()).toEqual([0, 360])
+  expect(wheel(plot, keys)).toBe(false)
+  await frame()
+  expect(Number(x.domain.get()[1]) - Number(x.domain.get()[0])).toBeCloseTo(360 * Math.exp(-0.2))
+  x.domain.set([0, 360])
+  await frame()
+  expect(pointer(plot, 'pointerdown', 100, 100)).toBe(false)
+  pointer(plot, 'pointerup', 300, 100)
+  await frame()
+  expect(x.domain.get()).toEqual([expect.closeTo(80, 10), expect.closeTo(280, 10)])
+})
+
+test('wheel modifier inherits, overrides and returns to the current box modifier', async () => {
+  const { plot, x, interaction } = await dragSetup('x')
+  interaction.update({ wheel: 'x', modifier: ModifierKey.Ctrl })
+  await frame()
+  expect(wheel(plot)).toBe(true)
+  expect(wheel(plot, { ctrlKey: true })).toBe(false)
+  await frame()
+
+  interaction.update({ wheelModifier: ModifierKey.None })
+  await frame()
+  expect(wheel(plot)).toBe(false)
+  await frame()
+  const beforeDrag = [...x.domain.get()]
+  expect(pointer(plot, 'pointerdown', 100, 100)).toBe(true)
+  pointer(plot, 'pointerup', 300, 100)
+  expect(x.domain.get()).toEqual(beforeDrag)
+
+  interaction.update({ modifier: ModifierKey.Shift })
+  await frame()
+  expect(wheel(plot)).toBe(false)
+  await frame()
+  interaction.update({ wheelModifier: undefined })
+  await frame()
+  expect(interaction.options.get().explicit.wheelModifier).toBeUndefined()
+  expect(wheel(plot)).toBe(true)
+  expect(wheel(plot, { ctrlKey: true })).toBe(true)
+  expect(wheel(plot, { shiftKey: true })).toBe(false)
+  await frame()
+  interaction.update({ wheel: 'none' })
+  await frame()
+  expect(wheel(plot, { shiftKey: true })).toBe(true)
+})
+
+test('invalid wheel modifiers fail without changing the options', () => {
+  // @ts-expect-error Exercise JavaScript callers passing an unsupported modifier.
+  expect(() => zoom({ wheelModifier: 'alt' })).toThrow(
+    'zoom.wheelModifier must be none, ctrl or shift.',
+  )
+  const interaction = zoom({ wheelModifier: ModifierKey.Ctrl })
+  const before = interaction.options.get()
+  // @ts-expect-error Exercise runtime updates from JavaScript callers.
+  expect(() => interaction.update({ wheelModifier: null })).toThrow(
+    'zoom.wheelModifier must be none, ctrl or shift.',
+  )
+  expect(interaction.options.get()).toEqual(before)
+})
+
+test.each([true, false])(
+  'wheel zoom, box zoom and pan use separate modifiers (zoom first: %s)',
+  async (zoomFirst) => {
+    const panning = pan({ mode: 'x', modifier: ModifierKey.Ctrl })
+    const { plot, x, interaction } = await dragSetup('x', [panning])
+    interaction.update({
+      wheel: 'x',
+      modifier: ModifierKey.Shift,
+      wheelModifier: ModifierKey.None,
+    })
+    if (!zoomFirst) plot.update({ plugins: [panning, interaction] })
+    await frame()
+    const details: DomainChangeDetail[] = []
+    plot.on('domainchange', (detail) => details.push(detail))
+
+    expect(pointer(plot, 'pointerdown', 100, 100)).toBe(true)
+    pointer(plot, 'pointermove', 200, 100)
+    pointer(plot, 'pointerup', 200, 100)
+    expect(x.domain.get()).toEqual([0, 360])
+    expect(wheel(plot)).toBe(false)
+    await frame()
+    expect(details.map(({ source }) => source)).toEqual(['wheel'])
+
+    details.length = 0
+    expect(pointer(plot, 'pointerdown', 100, 100, { ctrlKey: true })).toBe(false)
+    pointer(plot, 'pointermove', 200, 100, { ctrlKey: true })
+    pointer(plot, 'pointerup', 200, 100, { ctrlKey: true })
+    await frame()
+    expect(details.map(({ source }) => source)).toEqual(['pan'])
+    expect(plot.element.querySelector('[data-zoom-selection]')?.getAttribute('display')).toBe(
+      'none',
+    )
+
+    details.length = 0
+    expect(pointer(plot, 'pointerdown', 100, 100, { shiftKey: true })).toBe(false)
+    pointer(plot, 'pointermove', 300, 100, { shiftKey: true })
+    pointer(plot, 'pointerup', 300, 100, { shiftKey: true })
+    await frame()
+    expect(details.map(({ source }) => source)).toEqual(['zoom'])
+    details.length = 0
+    pointer(plot, 'dblclick', 200, 150)
+    await frame()
+    expect(x.domain.get()).toEqual([0, 360])
+    expect(details.map(({ source }) => source)).toEqual(['reset'])
+  },
+)
+
 test.each(['x', 'y', 'xy'] as const)(
   'box zoom commits %s domains on release and emits zoom snapshots',
   async (mode) => {

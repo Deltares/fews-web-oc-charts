@@ -14,8 +14,9 @@
     <h1>v5: interactive zoom</h1>
     <p>
       Drag a box or use the mouse wheel to zoom. Choose which scale directions respond and whether
-      Ctrl or Shift is required. Double-click inside the plot to reset the selected directions using
-      the chosen policy. Options apply immediately without recreating the plot.
+      Ctrl or Shift is required separately for wheel zoom, box zoom and optional drag-to-pan.
+      Double-click inside the plot to reset the selected directions using the chosen policy. Options
+      apply immediately without recreating the plot.
     </p>
     <fieldset class="controls">
       <legend>Zoom interaction</legend>
@@ -32,10 +33,30 @@
         Enable wheel zoom
       </label>
       <label for="modifier">
-        Required modifier
+        Box zoom modifier
         <select id="modifier">
           <option value="none">None</option>
           <option value="ctrl">Ctrl</option>
+          <option value="shift">Shift</option>
+        </select>
+      </label>
+      <label for="wheel-modifier">
+        Wheel zoom modifier
+        <select id="wheel-modifier">
+          <option value="none">None</option>
+          <option value="ctrl">Ctrl</option>
+          <option value="shift">Shift</option>
+        </select>
+      </label>
+      <label for="pan-enabled">
+        <input id="pan-enabled" type="checkbox" />
+        Enable drag-to-pan
+      </label>
+      <label for="pan-modifier">
+        Pan modifier
+        <select id="pan-modifier">
+          <option value="none">None</option>
+          <option value="ctrl" selected>Ctrl</option>
           <option value="shift">Shift</option>
         </select>
       </label>
@@ -56,7 +77,8 @@
         domain follows visible samples until you zoom that axis. Initial reset restores the selected
         scales' original configuration; full reset autoscales all their data. Toggle alternates full
         extent and the previous zoomed domains. The button always restores both initial scales,
-        including visible-data y autoscaling.
+        including visible-data y autoscaling. Pan takes precedence over box zoom when both match the
+        drag's modifier; choose distinct modifiers to use both.
       </figcaption>
     </figure>
     <output id="status" class="status"></output>
@@ -65,8 +87,13 @@
     <h2>Current domains</h2>
     <pre id="snapshot" aria-label="Current scale domains"></pre>
     <h2>Public API</h2>
-    <pre><code>const interaction = zoom({ mode: 'x', wheel: 'x' })
-const plot = createPlot(host, { scales: { t, q }, axes, marks, plugins: [interaction] })
+    <pre><code>const interaction = zoom({
+  mode: 'x', wheel: 'x',
+  modifier: ModifierKey.Shift,
+  wheelModifier: ModifierKey.None,
+})
+const panning = pan({ mode: 'x', modifier: ModifierKey.Ctrl })
+const plot = createPlot(host, { scales: { t, q }, axes, marks, plugins: [interaction, panning] })
 interaction.update({ mode: 'xy', wheel: 'xy' }) // both axes respond to the wheel
 interaction.update({ wheel: 'none', reset: 'toggle' }) // double-click remains enabled
 plot.on('domainchange', ({ scale, domain, source, explicit }) => {
