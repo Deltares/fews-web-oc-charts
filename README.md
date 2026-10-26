@@ -283,6 +283,8 @@ resetting that axis resumes automatic domain calculation.
 `wheelModifier` independently controls wheel zoom. Omitting `wheelModifier` (or
 updating it to `undefined`) makes wheel zoom use `modifier`, preserving the shared
 modifier behavior. Double-click reset remains modifier-independent.
+Shift-wheel zoom also accepts horizontal wheel deltas, since browsers can redirect
+the wheel movement to horizontal scrolling while Shift is held.
 
 For example, use Shift for drag/box zoom, Ctrl for drag-to-pan, and no required
 modifier for wheel zoom:
