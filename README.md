@@ -238,3 +238,48 @@ loops as axes, labels, themes or sizes change. Empty plot areas remain valid.
 or `undefined` when no members have reported layout. Removing `align` (including via
 `setConfig()`) or destroying a plot releases its contribution and lets peers shrink
 their padding again. No separate group cleanup is required.
+
+## Rebuilding configurations
+
+`plot.setConfig(config)` reconciles by identity. Mark renderers are reused for the same
+mark kind and `id`, so value marks such as `line`, `rule` and `text` can be recreated
+for every configuration. Scales, axes and plugins are handles that own state such as
+live domains and active gestures: passing a new handle replaces the old one and its
+state. Keep these handles stable and change them with `handle.update()`.
+
+`handleCache()` does this for configurations that are rebuilt declaratively, for
+example from a framework computed value:
+
+```ts
+const handles = handleCache()
+
+function toConfig(chart: ChartConfig): PlotConfig {
+  return handles.collect(() => ({
+    scales: {
+      x: handles.use('x', timeScale, { domain: chart.domain }),
+      y: handles.use('y', linearScale, { nice: true, includeZero: chart.includeZero }),
+    },
+    axes: [handles.use('axis:y', axis, 'y', { position: 'left', label: chart.label })],
+    marks: chart.series.map((item) =>
+      line({ id: item.id, x: 'x', y: 'y', xValues: item.times, yValues: item.values }),
+    ),
+    plugins: [handles.use('zoom', zoom, { wheel: 'x' })],
+  }))
+}
+
+plot.setConfig(toConfig(nextChart))
+```
+
+`use(key, factory, ...args)` returns the handle cached under `key`, or creates it with
+`factory(...args)`. A trailing plain-object argument holds the options. On reuse, only
+options that changed since the previous `use` of that key are passed to `update()`, and
+options that are no longer supplied are unset, including nested ones. Unchanged
+configuration therefore does not reset live state: a zoomed domain is kept until the
+configured `domain` itself changes. A different factory or different leading arguments,
+such as the scale name of an `axis`, create a new handle.
+
+Option values are compared structurally for plain objects and arrays, and by identity
+for functions, stores and library handles. Hoist callbacks such as `autoscale` or
+`format` out of the rebuild to avoid reapplying them on every pass. `collect()` batches
+its updates and forgets keys that were not used, so removed handles are dropped; a key
+used twice in one pass throws. Use `delete(key)` or `clear()` to force recreation.

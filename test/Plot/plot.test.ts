@@ -20,6 +20,7 @@ import {
   brushEvent,
   crosshair,
   batch,
+  handleCache,
   type Plot,
   type BrushSelection,
 } from '../../src/index.js'
@@ -1146,6 +1147,30 @@ describe('createPlot named scales', () => {
     expect(element.firstChild).toBe(child)
     expect(() => current.update({ title: 'no' })).toThrow(/destroyed plot/)
     expect(() => current.setConfig({})).toThrow(/destroyed plot/)
+  })
+
+  test('keeps cached handles and live domains across declarative setConfig rebuilds', async () => {
+    const handles = handleCache()
+    const config = (label: string) =>
+      handles.collect(() => ({
+        scales: {
+          x: handles.use('x', linearScale, { domain: [0, 10] }),
+          y: handles.use('y', linearScale, { domain: [0, 100] }),
+        },
+        axes: [handles.use('axis:y', axis, 'y', { position: 'left', label })],
+      }))
+    const current = plot(host(), config('Discharge'))
+    await frame()
+    const y = current.options.get().resolved.scales.y
+    const binding = current.scales.y
+    y.domain.set([20, 40])
+    current.setConfig(config('Discharge'))
+    current.setConfig(config('Flow'))
+    await frame()
+    expect(current.options.get().resolved.scales.y).toBe(y)
+    expect(current.scales.y).toBe(binding)
+    expect(y.domain.get()).toEqual([20, 40])
+    expect(current.options.get().resolved.axes[0].options.get().resolved.label).toBe('Flow')
   })
 
   test('owns signal subscriptions until unsubscribe, abort or destruction', async () => {

@@ -236,6 +236,8 @@ export { batch, effect, subscribe, untracked } from './core/runtime.js'
 export type { DomainChangeSource, SubscribeOptions, Unsubscribe } from './core/runtime.js'
 export type { EffectHandle } from './core/reactive.js'
 export type { OptionPatch, OptionStateSnapshot } from './core/options.js'
+export { handleCache } from './core/handle-cache.js'
+export type { HandleCache, HandleFactory, UpdatableHandle } from './core/handle-cache.js'
 export { sharedPointer } from './sync/shared-pointer.js'
 export { sharedSelection } from './sync/shared-selection.js'
 export type {
