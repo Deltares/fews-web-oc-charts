@@ -94,7 +94,7 @@ describe('composite canvas parity', () => {
   test.each(['bar', 'stacked-area', 'histogram'] as const)(
     '%s shares contrast-adjusted colors across SVG and canvas after theme and option changes',
     async (kind) => {
-      const data = createTable({ t: [0, 1, 2], a: [1, 2, 3] })
+      const data = createTable({ t: [0, 1, 2], end: [1, 2, 3], a: [1, 2, 3] })
       const mark = (renderer: 'svg' | 'canvas') => {
         const options = {
           scales: { x: 't', y: 'q' },
@@ -109,7 +109,13 @@ describe('composite canvas parity', () => {
         }
         const layers = [{ id: 'a', y: 'a' }]
         return kind === 'bar'
-          ? bar(data, { ...options, x: 't', layers })
+          ? bar(data, {
+              ...options,
+              x: 't',
+              layers,
+              layout: 'grouped',
+              interval: { start: 't', end: 'end' },
+            })
           : stackedArea(data, { ...options, x: 't', layers })
       }
       const config = {
