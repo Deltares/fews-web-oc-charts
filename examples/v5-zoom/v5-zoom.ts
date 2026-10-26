@@ -1,5 +1,15 @@
 import '../shared/v5.css'
-import { axis, createPlot, effect, line, linearScale, ModifierKey, timeScale, zoom } from '@lib'
+import {
+  axis,
+  createPlot,
+  effect,
+  line,
+  linearScale,
+  ModifierKey,
+  pan,
+  timeScale,
+  zoom,
+} from '@lib'
 
 function required<T extends HTMLElement>(selector: string): T {
   const element = document.querySelector<T>(selector)
@@ -11,6 +21,9 @@ const host = required('#chart')
 const mode = required<HTMLSelectElement>('#mode')
 const wheelEnabled = required<HTMLInputElement>('#wheel-enabled')
 const modifier = required<HTMLSelectElement>('#modifier')
+const wheelModifier = required<HTMLSelectElement>('#wheel-modifier')
+const panEnabled = required<HTMLInputElement>('#pan-enabled')
+const panModifier = required<HTMLSelectElement>('#pan-modifier')
 const resetMode = required<HTMLSelectElement>('#reset-mode')
 const reset = required<HTMLButtonElement>('#reset')
 const status = required('#status')
@@ -31,8 +44,10 @@ const interaction = zoom({
   mode: 'x',
   wheel: 'x',
   modifier: ModifierKey.None,
+  wheelModifier: ModifierKey.None,
   reset: 'initial',
 })
+const panning = pan({ mode: 'x', modifier: ModifierKey.Ctrl })
 const plot = createPlot(host, {
   title: 'Hourly observations',
   scales: { t, q },
@@ -70,13 +85,18 @@ function updateStatus() {
   )
   const modifierDescription =
     modifier.value === 'none' ? 'No modifier' : `${modifier.value} required`
+  const wheelModifierDescription =
+    wheelModifier.value === 'none' ? 'No modifier' : `${wheelModifier.value} required`
+  const panDescription = panEnabled.checked
+    ? `Pan: ${panModifier.value === 'none' ? 'no modifier' : `${panModifier.value} required`}; takes precedence over matching box zoom.`
+    : 'Drag-to-pan is disabled.'
   const scaleDescription = q.options.get().explicit.domain
     ? 'has a manual domain'
     : 'autoscale is following visible data'
   const wheelDescription = wheelEnabled.checked
-    ? `${modifierDescription}; wheel zoom affects ${mode.value}.`
+    ? `${wheelModifierDescription}; wheel zoom affects ${mode.value}.`
     : 'Wheel zoom is disabled.'
-  status.textContent = `${modifierDescription}; drag to box zoom ${mode.value}. ${wheelDescription} Double-click reset: ${resetMode.value}, affecting ${mode.value}. The y scale ${scaleDescription}.`
+  status.textContent = `${modifierDescription}; drag to box zoom ${mode.value}. ${wheelDescription} ${panDescription} Double-click reset: ${resetMode.value}, affecting ${mode.value}. The y scale ${scaleDescription}.`
 }
 
 function selectedMode(value: string, name: string): 'x' | 'y' | 'xy' {
@@ -107,8 +127,11 @@ function updateOptions() {
     mode: selected,
     wheel: wheelEnabled.checked ? selected : 'none',
     modifier: selectedModifier(modifier.value),
+    wheelModifier: selectedModifier(wheelModifier.value),
     reset: policy,
   })
+  panning.update({ mode: selected, modifier: selectedModifier(panModifier.value) })
+  plot.update({ plugins: panEnabled.checked ? [interaction, panning] : [interaction] })
   updateStatus()
 }
 
@@ -124,7 +147,15 @@ plot.on(
   { signal: events.signal },
 )
 
-for (const control of [mode, wheelEnabled, modifier, resetMode]) {
+for (const control of [
+  mode,
+  wheelEnabled,
+  modifier,
+  wheelModifier,
+  panEnabled,
+  panModifier,
+  resetMode,
+]) {
   control.addEventListener('change', updateOptions, events)
 }
 reset.addEventListener(

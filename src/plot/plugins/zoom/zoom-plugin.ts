@@ -249,7 +249,11 @@ function installZoom(handle: ZoomHandle, context: PlotContext) {
 
   context.on('wheel', (event) => {
     const config = handle.options.get().resolved
-    if (config.wheel === 'none' || !matchesModifierKey(event, config.modifier)) return
+    if (
+      config.wheel === 'none' ||
+      !matchesModifierKey(event, config.wheelModifier ?? config.modifier)
+    )
+      return
     const position = context.locate(event)
     if (!position?.inside) return
     const activeAxes = new Set<'x' | 'y'>()
