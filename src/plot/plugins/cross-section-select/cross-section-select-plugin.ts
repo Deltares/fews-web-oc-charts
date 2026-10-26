@@ -165,7 +165,6 @@ function installCrossSectionSelect(handle: CrossSectionSelectHandle, context: Pl
   const callout = svgElement('g', { 'data-cross-section-callout': '' })
   const calloutBackground = svgElement('rect', {
     rx: 3,
-    fill: 'var(--fews-chart-tooltip-background, #fff)',
     stroke: 'currentColor',
     'stroke-opacity': 0.4,
     'data-cross-section-hitbox': '',
@@ -175,7 +174,6 @@ function installCrossSectionSelect(handle: CrossSectionSelectHandle, context: Pl
     'data-cross-section-value': '',
     x: 6,
     'dominant-baseline': 'central',
-    fill: 'var(--fews-chart-tooltip-color, #222)',
     'pointer-events': 'none',
   })
   callout.append(calloutBackground, calloutText)
@@ -243,6 +241,8 @@ function installCrossSectionSelect(handle: CrossSectionSelectHandle, context: Pl
     calloutText.textContent =
       options.format?.(value) ?? displayInspectionValue(value, context, options.x, 2)
     const calloutHeight = theme.fontSize + 10
+    calloutBackground.setAttribute('fill', theme.tooltipBackground)
+    calloutText.setAttribute('fill', theme.tooltipColor)
     calloutText.setAttribute('font-family', theme.fontFamily)
     calloutText.setAttribute('font-size', String(theme.fontSize))
     calloutText.setAttribute('y', String(calloutHeight / 2))
@@ -291,7 +291,7 @@ function installCrossSectionSelect(handle: CrossSectionSelectHandle, context: Pl
         const background = svgElement('rect', {
           height: labelHeight,
           rx: labelHeight / 2,
-          fill: 'var(--fews-chart-tooltip-background, #fff)',
+          fill: theme.tooltipBackground,
         })
         const text = svgElement('text', {
           x: labelHeight / 2,

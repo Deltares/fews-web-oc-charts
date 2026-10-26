@@ -9,6 +9,14 @@ that color. Axes, titles and outer margins keep the host's background visible.
 
 Use `background: 'plot'` to explicitly color the entire plot instead.
 
+Tooltips, cross-section labels and axis callouts use a white background in light
+mode and a black background in dark mode. Callout and tooltip text also follows
+the theme; cross-section sample labels retain their series colors. Override
+`--fews-chart-tooltip-background` and `--fews-chart-tooltip-color` on the plot host
+to customize these colors, including tooltips portalled to the document body.
+With `theme: 'auto'`, the colors follow the system color scheme. Set `themeElement`
+to observe live CSS class/style changes, as with other theme tokens.
+
 ## Tooltip formatting
 
 Use optional formatter hooks to customize tooltip values, units and ranges:

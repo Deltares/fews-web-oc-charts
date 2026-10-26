@@ -65,6 +65,8 @@ function renderTooltip(element: HTMLDivElement, context: PlotContext, model: Too
   const theme = context.theme.get()
   element.style.fontFamily = theme.fontFamily
   element.style.fontSize = `${theme.fontSize}px`
+  element.style.backgroundColor = theme.tooltipBackground
+  element.style.color = theme.tooltipColor
   element.replaceChildren()
   for (const entry of model.entries) {
     const row = document.createElement('div')
@@ -118,8 +120,6 @@ function installTooltip(handle: TooltipHandle, context: PlotContext) {
     pointerEvents: 'none',
     padding: '6px 8px',
     borderRadius: '3px',
-    background: 'var(--fews-chart-tooltip-background, #fff)',
-    color: 'var(--fews-chart-tooltip-color, #222)',
     boxShadow: '0 1px 5px rgb(0 0 0 / 25%)',
     lineHeight: '1.4',
     whiteSpace: 'nowrap',
