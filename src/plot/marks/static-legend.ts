@@ -22,13 +22,13 @@ export function validateLegendGroup(value: unknown, path: string) {
 interface StaticLegendState {
   readonly label: string | undefined
   readonly group: string | undefined
-  readonly visible: Signal<boolean>
+  readonly visible: Pick<Signal<boolean>, 'get' | 'set'>
 }
 
 // Static marks are frozen values, so legend visibility lives beside them.
 const states = new WeakMap<object, StaticLegendState>()
 
-export function registerStaticLegend(mark: object, options: StaticLegendOptions, path: string) {
+export function validateStaticLegendOptions(options: StaticLegendOptions, path: string) {
   if (options.label !== undefined && (typeof options.label !== 'string' || !options.label)) {
     throw new Error(`${path}.label must be a non-empty string.`)
   }
@@ -36,10 +36,31 @@ export function registerStaticLegend(mark: object, options: StaticLegendOptions,
     throw new Error(`${path}.visible must be boolean.`)
   }
   validateLegendGroup(options.legendGroup, path)
+}
+
+export function registerStaticLegend(mark: object, options: StaticLegendOptions, path: string) {
+  validateStaticLegendOptions(options, path)
   states.set(mark, {
     label: options.label,
     group: options.legendGroup,
     visible: reactive.signal(options.visible ?? true),
+  })
+}
+
+/** Uses the mark's own reactive options as the single source of legend state. */
+export function registerReactiveStaticLegend(
+  mark: object,
+  options: () => StaticLegendOptions,
+  setVisible: (visible: boolean) => void,
+) {
+  states.set(mark, {
+    get label() {
+      return options().label
+    },
+    get group() {
+      return options().legendGroup
+    },
+    visible: { get: () => options().visible ?? true, set: setVisible },
   })
 }
 

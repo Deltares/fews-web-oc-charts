@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from 'vitest'
 import {
   angularScale,
   band,
+  bandScale,
   createPlot,
   createPolarPlot,
   linearScale,
@@ -9,6 +10,9 @@ import {
   range,
   type Plot,
 } from '../../src/index.js'
+import { bandDefinition } from '../../src/plot/marks/band/band-mark.js'
+import { markExtents } from '../../src/plot/marks/mark-extents.js'
+import { isStaticMarkVisible, staticLegend } from '../../src/plot/marks/static-legend.js'
 
 const plots: Plot[] = []
 const hosts: HTMLElement[] = []
@@ -39,6 +43,175 @@ afterEach(() => {
 })
 
 describe('band marks', () => {
+  test('validates binding consumers before publishing data or legend state', () => {
+    const mark = band({
+      x: 'x',
+      y: 'y',
+      label: 'Original',
+      xValues: [[0, 1]],
+      yValues: [[2, 4]],
+    })
+    const scales = { x: linearScale(), y: linearScale(), next: linearScale() }
+    const stopFirst = bandDefinition.validateUpdates!(mark, () => ({
+      coordinateSystem: 'cartesian',
+      scales,
+      direction: (name) => (name === 'x' ? 'x' : 'y'),
+    }))
+    const stopSecond = bandDefinition.validateUpdates!(mark, () => ({
+      coordinateSystem: 'cartesian',
+      scales: { x: scales.x, y: scales.y },
+      direction: (name) => (name === 'x' ? 'x' : 'y'),
+    }))
+    try {
+      expect(() =>
+        mark.update({ y: 'next', label: 'Rejected', visible: false, yValues: [[10, 20]] }),
+      ).toThrow(/missing x or y scale/)
+      expect(mark.y).toBe('y')
+      expect(mark.label).toBe('Original')
+      expect(isStaticMarkVisible(mark)).toBe(true)
+      expect(mark.yValues).toEqual([[2, 4]])
+      stopSecond()
+      mark.update({ y: 'next', label: 'Accepted', legendGroup: 'Group' })
+      expect(markExtents([mark], scales, 'y', 'data')).toBeUndefined()
+      expect(markExtents([mark], scales, 'next', 'data')).toEqual([2, 4])
+      const legend = staticLegend(mark, { type: 'area', fill: 'red', opacity: 1 })!
+      expect(legend.label).toBe('Accepted')
+      expect(legend.group).toBe('Group')
+      legend.setVisible(false)
+      mark.update({ label: 'Still hidden', legendGroup: undefined })
+      expect(legend.visible()).toBe(false)
+      expect(mark.visible).toBe(false)
+      expect(markExtents([mark], scales, 'next', 'data')).toBeUndefined()
+      mark.update({ visible: undefined, label: undefined })
+      expect(isStaticMarkVisible(mark)).toBe(true)
+      expect(staticLegend(mark, { type: 'area', fill: 'red', opacity: 1 })).toBeUndefined()
+      expect(markExtents([mark], scales, 'next', 'data')).toEqual([2, 4])
+    } finally {
+      stopFirst()
+      stopSecond()
+    }
+  })
+
+  test('rebinds scales reactively and moves autoscale contributions without replacing nodes', async () => {
+    const mark = band({
+      id: 'rebound',
+      x: 'x',
+      y: 'y',
+      xValues: [[2, 4]],
+      yValues: [[10, 20]],
+    })
+    const plot = create(host(), {
+      width: 400,
+      height: 240,
+      scales: {
+        x: linearScale({ domain: [0, 10] }),
+        x2: linearScale({ domain: [0, 20] }),
+        y: linearScale(),
+        y2: linearScale(),
+      },
+      directions: { x: 'x', x2: 'x' },
+      marks: [mark, band({ x: 'x', y: 'y', xValues: [[0, 1]], yValues: [[0, 1]] })],
+    })
+    await frame()
+    const group = plot.element.querySelector('[data-mark-id="rebound"]')!
+    const rect = group.firstElementChild!
+    const original = rect.getAttribute('x')
+    expect(plot.scales.y.scale.domain.get()).toEqual([0, 20])
+    mark.update({ x: 'x2', y: 'y2' })
+    await frame()
+    expect(mark.x).toBe('x2')
+    expect(mark.y).toBe('y2')
+    expect(plot.scales.y.scale.domain.get()).toEqual([0, 1])
+    expect(plot.scales.y2.scale.domain.get()).toEqual([10, 20])
+    expect(plot.element.querySelector('[data-mark-id="rebound"]')).toBe(group)
+    expect(group.firstElementChild).toBe(rect)
+    expect(rect.getAttribute('x')).not.toBe(original)
+    expect(rect.getAttribute('x')).toBe(String(plot.scales.x2.project(2)))
+  })
+
+  test('rejects binding changes atomically against all plots and releases validators on destroy', () => {
+    const mark = band({
+      x: 'x',
+      y: 'y',
+      label: 'Original',
+      xValues: [[0, 1]],
+      yValues: [[0, 1]],
+    })
+    create(host(), {
+      scales: { x: linearScale(), y: linearScale(), other: linearScale(), category: bandScale() },
+      directions: { x: 'x', category: 'y' },
+      marks: [mark],
+    })
+    const second = create(host(), {
+      scales: { x: linearScale(), y: linearScale() },
+      directions: { x: 'x' },
+      marks: [mark],
+    })
+    expect(() => mark.update({ y: 'other', label: 'Rejected', visible: false })).toThrow(
+      /missing x or y scale/,
+    )
+    expect(mark.y).toBe('y')
+    expect(mark.label).toBe('Original')
+    expect(mark.visible).toBe(true)
+    expect(() => mark.update({ x: 'y' })).toThrow(/x-direction/)
+    expect(() => mark.update({ y: 'category' })).toThrow(/numeric or time scales/)
+    second.destroy()
+    expect(() => mark.update({ y: 'other', label: 'Accepted' })).not.toThrow()
+    expect(mark.y).toBe('other')
+    expect(mark.label).toBe('Accepted')
+  })
+
+  test('updates, clears and restores legend metadata and visibility', async () => {
+    const mark = band({
+      id: 'legend-band',
+      x: 'x',
+      y: 'y',
+      xValues: [[0, 1]],
+      yValues: [[2, 4]],
+    })
+    const plot = create(host(), {
+      scales: { x: linearScale(), y: linearScale() },
+      directions: { x: 'x' },
+      marks: [mark],
+    })
+    await frame()
+    expect(plot.legend.entries.get()).toHaveLength(0)
+    mark.update({ label: 'Forecast', visible: false })
+    await frame()
+    expect(plot.legend.entries.get()[0]).toMatchObject({
+      id: 'legend-band',
+      label: 'Forecast',
+      visibility: 'hidden',
+    })
+    const group = plot.element.querySelector('[data-mark="band"]')!
+    expect(group.getAttribute('display')).toBe('none')
+    mark.update({ label: 'New forecast', legendGroup: 'Forecasts', visible: undefined })
+    await frame()
+    const entry = plot.legend.entries.get()[0]!
+    expect(entry.label).toBe('Forecasts')
+    expect(entry.children[0]).toMatchObject({ label: 'New forecast', visibility: 'visible' })
+    expect(group.hasAttribute('display')).toBe(false)
+    plot.legend.setVisible('legend-band', false)
+    mark.update({ legendGroup: undefined })
+    await frame()
+    expect(mark.visible).toBe(false)
+    expect(plot.legend.entries.get()[0]).toMatchObject({
+      label: 'New forecast',
+      visibility: 'hidden',
+      children: [],
+    })
+    mark.update({ label: undefined })
+    await frame()
+    expect(plot.legend.entries.get()).toHaveLength(0)
+    expect(group.getAttribute('display')).toBe('none')
+    mark.update({ label: 'Restored', visible: true })
+    await frame()
+    expect(plot.legend.entries.get()[0]).toMatchObject({
+      label: 'Restored',
+      visibility: 'visible',
+    })
+  })
+
   test('updates data, autoscale and legend styling without replacing the mark or SVG nodes', async () => {
     const mark = band({
       id: 'live-band',
@@ -172,8 +345,12 @@ describe('band marks', () => {
     expect(() => mark.update({ opacity: 2 })).toThrow(/between 0 and 1/)
     expect(() => mark.update({ fill: '' })).toThrow(/non-empty string/)
     expect(() => mark.update({ curve: 'basis' })).toThrow(/equal x endpoints/)
-    // @ts-expect-error Scale bindings cannot be updated.
-    expect(() => mark.update({ x: 'other' })).toThrow(/Unknown option/)
+    expect(() => mark.update({ x: '' })).toThrow(/must name a plot scale/)
+    expect(() => mark.update({ y: undefined })).toThrow(/must name a plot scale/)
+    expect(() => mark.update({ label: '' })).toThrow(/non-empty string/)
+    expect(() => mark.update({ legendGroup: '' })).toThrow(/non-empty string/)
+    // @ts-expect-error Visibility must be boolean.
+    expect(() => mark.update({ visible: 'yes' })).toThrow(/must be boolean/)
     // @ts-expect-error Identity cannot be updated.
     expect(() => mark.update({ id: 'other' })).toThrow(/Unknown option/)
     // @ts-expect-error Invalid curve values are also rejected at runtime.

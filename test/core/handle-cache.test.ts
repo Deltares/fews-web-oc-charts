@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import {
   axis,
+  band,
   brush,
   crosshair,
   handleCache,
@@ -36,6 +37,30 @@ describe('handleCache', () => {
     expect(build([0, 20])).toBe(first)
     expect(first.options.get().explicit).toEqual({ domain: [0, 20], nice: false })
     expect(first.domain.get()).toEqual([0, 20])
+  })
+
+  test('reuses bands when bindings and legend options change or are removed', () => {
+    const handles = handleCache()
+    const values = {
+      xValues: [[0, 1]] as [number, number][],
+      yValues: [[2, 4]] as [number, number][],
+    }
+    const mark = handles.use('band', band, {
+      ...values,
+      x: 'x',
+      y: 'y',
+      label: 'Original',
+      legendGroup: 'Group',
+      visible: false,
+    })
+    expect(handles.use('band', band, { ...values, x: 'x2', y: 'y2', label: 'Updated' })).toBe(mark)
+    expect(mark.x).toBe('x2')
+    expect(mark.y).toBe('y2')
+    expect(mark.label).toBe('Updated')
+    expect(mark.legendGroup).toBeUndefined()
+    expect(mark.visible).toBe(true)
+    expect(handles.use('band', band, { ...values, x: 'x2', y: 'y2' })).toBe(mark)
+    expect(mark.label).toBeUndefined()
   })
 
   test('unsets options removed from the configuration, including nested ones', () => {
