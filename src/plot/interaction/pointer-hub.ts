@@ -66,6 +66,7 @@ export function createPointerHub(context: PointerHubContext): PointerHub {
   const gestureListeners = new Map<GestureType, (event: Event) => void>()
   let frame: number | undefined
   let pending: { clientX: number; clientY: number; entered: boolean } | undefined
+  let pressed = false
   let disposed = false
 
   function locate(event: { readonly clientX: number; readonly clientY: number }) {
@@ -110,7 +111,7 @@ export function createPointerHub(context: PointerHubContext): PointerHub {
         px: position.plotX,
         py: position.plotY,
         x: values,
-        inside: next.entered && position.inside,
+        inside: next.entered && position.inside && !pressed,
       }),
     )
     for (const listener of pointerConsumers) listener(pointer.get())
@@ -122,12 +123,25 @@ export function createPointerHub(context: PointerHubContext): PointerHub {
     if (frame === undefined) frame = requestAnimationFrame(publish)
   }
 
+  // Hover feedback is suppressed while a button is held, so drag gestures
+  // (zoom, brush, pan) do not show tooltips or crosshairs.
+  function release(event: PointerEvent, entered: boolean) {
+    if (!event.isPrimary) return
+    pressed = false
+    queue(event, entered)
+  }
+
   const pointerListeners = {
     pointerenter: (event: PointerEvent) => queue(event, true),
     pointermove: (event: PointerEvent) => queue(event, true),
-    pointerdown: (event: PointerEvent) => queue(event, true),
-    pointerleave: (event: PointerEvent) => queue(event, false),
-    pointercancel: (event: PointerEvent) => queue(event, false),
+    pointerdown: (event: PointerEvent) => {
+      if (event.isPrimary) pressed = true
+      queue(event, true)
+    },
+    pointerup: (event: PointerEvent) => release(event, true),
+    lostpointercapture: (event: PointerEvent) => release(event, true),
+    pointerleave: (event: PointerEvent) => release(event, false),
+    pointercancel: (event: PointerEvent) => release(event, false),
   }
   for (const [type, listener] of Object.entries(pointerListeners)) {
     element.addEventListener(type as keyof typeof pointerListeners, listener)
