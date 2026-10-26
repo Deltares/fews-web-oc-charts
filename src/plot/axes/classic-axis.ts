@@ -119,6 +119,7 @@ export function renderClassicAxis(
   // are independent of the plot's outer margins.
   select(axisGroup).call(renderer)
   axisGroup.setAttribute('font-size', '1em')
+  axisGroup.setAttribute('font-family', 'inherit')
   let baseline = position === 'right' ? plot.width : position === 'bottom' ? plot.height : 0
   if (options.crossAt) {
     const crossed = bindings[options.crossAt.scale]
@@ -196,7 +197,6 @@ export function renderClassicAxis(
       y,
       fill: 'currentColor',
       'text-anchor': anchor,
-      'font-family': 'sans-serif',
     })
     label.textContent = text
     local.append(label)
