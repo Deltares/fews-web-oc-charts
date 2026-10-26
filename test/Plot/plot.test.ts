@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import {
   createPlot,
+  alignGroup,
   createPolarPlot,
   axis,
   linearScale,
@@ -50,6 +51,108 @@ afterEach(() => {
 })
 
 describe('createPlot named scales', () => {
+  test('aligns natural horizontal plot areas and releases padding after removal', async () => {
+    const alignment = alignGroup()
+    const first = plot(host(), {
+      align: alignment,
+      width: 500,
+      height: 300,
+      margins: { left: 40, right: 20, top: 10, bottom: 30 },
+    })
+    const second = plot(host(), {
+      align: alignment,
+      width: 600,
+      height: 200,
+      margins: { left: 80, right: 50, top: 30, bottom: 10 },
+    })
+    await frame()
+    await frame()
+    expect(first.regions.get().plot).toMatchObject({ x: 80, width: 400, y: 10, height: 260 })
+    expect(second.regions.get().plot).toMatchObject({ x: 80, width: 400, y: 30, height: 160 })
+    const version = first.regions.version
+    await frame()
+    expect(first.regions.version).toBe(version)
+    second.update({ width: 400, margins: { left: 30 } })
+    await frame()
+    await frame()
+    expect(first.regions.get().plot).toMatchObject({ x: 40, width: 310 })
+    expect(second.regions.get().plot).toMatchObject({ x: 40, width: 310 })
+    second.update({ align: undefined })
+    await frame()
+    await frame()
+    expect(first.regions.get().plot).toMatchObject({ x: 40, width: 440 })
+    expect(second.regions.get().plot).toMatchObject({ x: 30, width: 320 })
+    second.update({ align: alignment })
+    await frame()
+    await frame()
+    second.destroy()
+    await frame()
+    await frame()
+    expect(first.regions.get().plot).toMatchObject({ x: 40, width: 440 })
+    first.destroy()
+    expect(alignment.bounds.get()).toBeUndefined()
+  })
+
+  test('aligns measured outside axes with inset plots after axis label changes', async () => {
+    const alignment = alignGroup()
+    const valueAxis = axis('y', { position: 'left', format: () => 'long label' })
+    const first = plot(host(), {
+      align: alignment,
+      width: 500,
+      height: 300,
+      scales: { y: linearScale() },
+      axes: [valueAxis],
+    })
+    const second = plot(host(), {
+      align: alignment,
+      width: 500,
+      height: 200,
+      axisLayout: 'inset',
+    })
+    await frame()
+    await frame()
+    expect(first.regions.get().plot.x).toBeGreaterThan(8)
+    expect(second.regions.get().plot.x).toBe(first.regions.get().plot.x)
+    const left = first.regions.get().plot.x
+    valueAxis.update({ format: () => 'x' })
+    await frame()
+    await frame()
+    expect(first.regions.get().plot.x).toBeLessThan(left)
+    expect(second.regions.get().plot.x).toBe(first.regions.get().plot.x)
+    expect(second.regions.get().plot.width).toBe(first.regions.get().plot.width)
+  })
+
+  test('keeps automatic inset measurements stable while alignment changes', async () => {
+    const alignment = alignGroup()
+    const first = plot(host(), {
+      align: alignment,
+      width: 500,
+      height: 300,
+      axisLayout: 'inset',
+      autoMargins: true,
+      scales: { y: linearScale() },
+      axes: [
+        axis('y', {
+          position: 'left',
+          style: 'classic',
+          format: () => 'long automatic inset label',
+        }),
+      ],
+    })
+    const second = plot(host(), { align: alignment, width: 500, height: 200 })
+    for (let i = 0; i < 5; i += 1) await frame()
+    expect(first.regions.get().plot.x).toBeGreaterThan(8)
+    expect(second.regions.get().plot.x).toBe(first.regions.get().plot.x)
+    const version = first.regions.version
+    for (let i = 0; i < 3; i += 1) await frame()
+    expect(first.regions.version).toBe(version)
+    second.setConfig({ width: 500, height: 200 })
+    await frame()
+    await frame()
+    expect(second.regions.get().plot.x).toBe(8)
+    expect(first.regions.get().plot.x).toBeGreaterThan(8)
+  })
+
   test('keeps inset mark geometry local and public projections absolute', async () => {
     const current = plot(host(), {
       width: 500,

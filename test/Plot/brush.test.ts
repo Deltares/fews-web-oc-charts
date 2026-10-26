@@ -73,6 +73,86 @@ afterEach(() => {
 })
 
 describe('persistent brush', () => {
+  test('binds detail targets in both directions without echoing or narrowing the overview', async () => {
+    const target = timeScale({ domain: [1080.25, 1280.25], follow: { window: 200 } })
+    const overview = timeScale({ domain: [1000.25, 1460.25] })
+    const interaction = brush({
+      mode: 'x',
+      persistent: true,
+      modifier: ModifierKey.None,
+      targets: { x: target },
+    })
+    const plot = await setup(interaction, {
+      scales: { x: overview, y: linearScale() },
+    })
+    const events = vi.fn()
+    plot.on('brush', events)
+    expect(interaction.selection.get()?.scales.x).toEqual([1080.25, 1280.25])
+    pointer(plot, 'pointerdown', 300, 100, resizeHandle(plot, 'e'))
+    pointer(plot, 'pointermove', 350, 100)
+    await frame()
+    pointer(plot, 'pointermove', 400, 100)
+    pointer(plot, 'pointerup', 400, 100)
+    expect(target.domain.get()).toEqual([1080.25, 1380.25])
+    expect(target.following.get()).toBe(false)
+    expect(overview.domain.get()).toEqual([1000.25, 1460.25])
+    expect(events).toHaveBeenCalledTimes(3)
+    target.domain.set([1100.25, 1300.25])
+    await frame()
+    expect(interaction.selection.get()?.scales.x).toEqual([1100.25, 1300.25])
+    expect(events).toHaveBeenCalledTimes(3)
+    pointer(plot, 'pointerdown', 200, 100)
+    target.domain.set([1150.25, 1350.25])
+    await frame()
+    pointer(plot, 'pointerup', 450, 100)
+    expect(target.domain.get()).toEqual([1150.25, 1350.25])
+    expect(events).toHaveBeenCalledTimes(3)
+    target.domain.set([1200.25, 1400.25])
+    interaction.setSelection(undefined)
+    await frame()
+    expect(interaction.selection.get()).toBeUndefined()
+    expect(target.domain.get()).toEqual([1200.25, 1400.25])
+    target.domain.set([1100.25, 1300.25])
+    await frame()
+    expect(interaction.selection.get()?.scales.x).toEqual([1100.25, 1300.25])
+    plot.update({ plugins: [] })
+    const selection = interaction.selection.get()
+    target.domain.set([1000.25, 1200.25])
+    await frame()
+    expect(interaction.selection.get()).toBe(selection)
+    plot.update({ plugins: [interaction] })
+    await frame()
+    expect(interaction.selection.get()?.scales.x).toEqual([1000.25, 1200.25])
+  })
+
+  test('rebinds targets and supports automatic direction and two-axis mappings', async () => {
+    const first = linearScale({ domain: [80, 280] })
+    const second = linearScale({ domain: [130, 330] })
+    const vertical = linearScale({ domain: [50, 150] })
+    const interaction = brush({
+      mode: 'auto',
+      persistent: true,
+      targets: { x: first },
+    })
+    const plot = await setup(interaction)
+    expect(interaction.selection.get()?.mode).toBe('x')
+    interaction.update({ targets: { x: second, y: vertical } })
+    await frame()
+    expect(interaction.selection.get()).toEqual({
+      mode: 'xy',
+      scales: { x: [130, 330], y: [50, 150] },
+    })
+    first.domain.set([0, 100])
+    await frame()
+    expect(interaction.selection.get()?.scales.x).toEqual([130, 330])
+    expect(() => plot.update({ scales: { x: second } })).toThrow(/independent/)
+    plot.destroy()
+    const selection = interaction.selection.get()
+    second.domain.set([0, 100])
+    await frame()
+    expect(interaction.selection.get()).toBe(selection)
+  })
+
   test.each([false, true])(
     'continues a fractional-time drag through equal selection and scale echoes (shared: %s)',
     async (shared) => {

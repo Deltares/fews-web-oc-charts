@@ -1,6 +1,7 @@
 import '../shared/v5.css'
 import {
   axis,
+  alignGroup,
   batch,
   brush,
   brushEvent,
@@ -10,7 +11,6 @@ import {
   linearScale,
   ModifierKey,
   pan,
-  subscribe,
   timeScale,
   zoom,
   type BrushMode,
@@ -42,7 +42,9 @@ const values = Float64Array.from(
 const t = timeScale({ domain: [start + 12 * hour, start + 36 * hour], timeZone: 'UTC' })
 const q = linearScale({ domain: [0, 100] })
 const interaction = brush({ mode: 'auto' })
+const alignment = alignGroup()
 const plot = createPlot(host, {
+  align: alignment,
   title: 'Select hourly observations',
   scales: { t, q },
   axes: [
@@ -62,9 +64,14 @@ const plot = createPlot(host, {
   ],
   plugins: [interaction, zoom({ mode: 'x', wheel: 'x', reset: 'full' }), pan({ mode: 'x' })],
 })
-const navigator = brush({ mode: 'x', persistent: true, modifier: ModifierKey.None })
-navigator.setSelection({ mode: 'x', scales: { t: t.domain.get() } })
+const navigator = brush({
+  mode: 'x',
+  persistent: true,
+  modifier: ModifierKey.None,
+  targets: { t },
+})
 const overview = createPlot(overviewHost, {
+  align: alignment,
   height: 170,
   scales: {
     t: timeScale({ domain: [start, start + 48 * hour], timeZone: 'UTC' }),
@@ -77,19 +84,6 @@ const overview = createPlot(overviewHost, {
   plugins: [navigator],
 })
 const events = new AbortController()
-let overviewDomain = t.domain.get()
-function subscribeNavigator() {
-  return subscribe(
-    t.domain,
-    (domain, previous) => {
-      if (previous !== undefined && domain !== overviewDomain) {
-        navigator.setSelection({ mode: 'x', scales: { t: domain } })
-      }
-    },
-    { immediate: true, signal: events.signal },
-  )
-}
-let stopNavigatorSync = subscribeNavigator()
 const toIso = (range: readonly (number | string)[] | undefined) =>
   range?.map((value) => new Date(Number(value)).toISOString()) ?? null
 const domainsEffect = effect(() => {
@@ -168,14 +162,11 @@ plot.element.addEventListener(
   events,
 )
 function clearReadout() {
-  // Reset the subscription baseline so the pending reset does not restore the cleared brush.
-  stopNavigatorSync()
   batch(() => {
     t.domain.set([start, start + 48 * hour])
     q.domain.set([0, 100])
   })
   navigator.setSelection(undefined)
-  stopNavigatorSync = subscribeNavigator()
   snapshot.textContent = 'No selection yet.'
   updateStatus()
 }
@@ -185,11 +176,7 @@ updateStatus()
 
 overview.element.addEventListener(
   brushEvent,
-  (event) => {
-    const selection = (event as CustomEvent<BrushSelection>).detail
-    plot.scales.t.scale.domain.set(selection.scales.t)
-    // Do not echo rounded time domains back into the brush during its active gesture.
-    overviewDomain = t.domain.get()
+  () => {
     status.textContent = 'Overview selection updated the main chart time domain.'
   },
   events,

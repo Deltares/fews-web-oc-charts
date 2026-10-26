@@ -3,7 +3,8 @@ import {
   type OptionPatch,
   type OptionStateSnapshot,
 } from '../../../core/options.js'
-import { optionSignal, reactive } from '../../../core/runtime.js'
+import { batch, optionSignal, reactive } from '../../../core/runtime.js'
+import { isScaleHandle, type ScaleHandle } from '../../../scales/scale.js'
 import type { ReadonlySignal } from '../../../core/reactive.js'
 import { validateKeys } from '../../../core/validation.js'
 import { ModifierKey } from '../../../Utils/modifierKey.js'
@@ -14,7 +15,10 @@ import {
   type SharedSelection,
   type SelectionScaleContext,
 } from '../../../sync/shared-selection.js'
-import { validateSelection } from '../../../sync/selection-validation.js'
+import {
+  validateBrushScaleSelection,
+  validateSelection,
+} from '../../../sync/selection-validation.js'
 export { validateBrushScaleSelection } from '../../../sync/selection-validation.js'
 
 export type BrushMode = 'x' | 'y' | 'xy' | 'auto'
@@ -25,6 +29,12 @@ export interface BrushOptions {
   modifier: ModifierKey
   persistent: boolean
   selection?: SharedSelection
+  /** Overview scale name to independent detail scale. Requires persistent: true. */
+  targets?: Readonly<Record<string, ScaleHandle>>
+}
+
+export type BrushConfig = Omit<OptionPatch<BrushOptions>, 'targets'> & {
+  targets?: Readonly<Record<string, ScaleHandle>>
 }
 
 export interface BrushSelection {
@@ -36,7 +46,7 @@ export interface BrushSelection {
 export interface BrushHandle {
   readonly options: ReadonlySignal<OptionStateSnapshot<BrushOptions>>
   readonly selection: ReadonlySignal<BrushSelection | undefined>
-  update(patch: OptionPatch<BrushOptions>): void
+  update(patch: BrushConfig): void
   /** Sets a persistent selection without emitting a user brush event; undefined clears it. */
   setSelection(selection: BrushSelection | undefined): void
 }
@@ -45,9 +55,16 @@ export const brushEvent = 'brush'
 
 const handles = new WeakSet<object>()
 const validators = new WeakMap<BrushHandle, Set<(selection: BrushSelection) => void>>()
-const optionKeys = ['mode', 'modifier', 'persistent', 'selection']
+const optionKeys = ['mode', 'modifier', 'persistent', 'selection', 'targets']
 const selectionContexts = new WeakMap<BrushHandle, Set<SelectionScaleContext>>()
 const contextVersions = new WeakMap<BrushHandle, () => void>()
+const selectionWrites = new WeakMap<BrushHandle, Set<() => void>>()
+
+export function onBrushSelectionSet(handle: BrushHandle, listener: () => void) {
+  const listeners = selectionWrites.get(handle)!
+  listeners.add(listener)
+  return () => listeners.delete(listener)
+}
 
 export function connectBrushSelection(handle: BrushHandle, context: SelectionScaleContext) {
   const contexts = selectionContexts.get(handle)!
@@ -61,11 +78,44 @@ export function connectBrushSelection(handle: BrushHandle, context: SelectionSca
 }
 
 export function validateSharedBrushContext(handle: BrushHandle, candidate: SelectionScaleContext) {
+  validateBrushTargets(handle.options.get().resolved, candidate)
   if (!handle.options.get().resolved.selection) return
   const peers = [...(selectionContexts.get(handle) ?? [])].filter(
     (context) => candidate.owner === undefined || context.owner !== candidate.owner,
   )
   assertMatchingContexts(peers, candidate)
+}
+
+export function equalBrushTargets(a: BrushOptions['targets'], b: BrushOptions['targets']) {
+  if (!a || !b) return a === b
+  const names = Object.keys(a)
+  return names.length === Object.keys(b).length && names.every((name) => a[name] === b[name])
+}
+
+export function validateBrushTargets(
+  options: Readonly<BrushOptions>,
+  context: SelectionScaleContext,
+) {
+  for (const [name, target] of Object.entries(options.targets ?? {})) {
+    const source = Object.hasOwn(context.scales, name) ? context.scales[name] : undefined
+    if (!source) throw new Error(`brush.targets references missing overview scale "${name}".`)
+    if (Object.values(context.scales).includes(target)) {
+      throw new Error('brush.targets must use independent detail scales, not overview scales.')
+    }
+    if (source.kind !== target.kind) {
+      throw new Error(`brush.targets.${name} must match the overview scale kind.`)
+    }
+    if (options.mode !== 'auto' && !options.mode.includes(context.direction(name))) {
+      throw new Error(`brush.targets.${name} does not match mode ${options.mode}.`)
+    }
+    validateSelection(
+      {
+        mode: context.direction(name) === 'x' ? 'x' : 'y',
+        scales: { [name]: target.domain.get() },
+      },
+      'auto',
+    )
+  }
 }
 
 function assertMatchingContexts(
@@ -118,18 +168,19 @@ function equalSelection(a: BrushSelection | undefined, b: BrushSelection | undef
   )
 }
 
-export function brush(initial: OptionPatch<BrushOptions> = {}): BrushHandle {
+export function brush(initial: BrushConfig = {}): BrushHandle {
   validateKeys(initial, optionKeys, 'brush')
   const selection = reactive.signal<BrushSelection | undefined>(undefined, equalSelection)
   const consumers = new Set<(selection: BrushSelection) => void>()
   const contexts = new Set<SelectionScaleContext>()
   const state = createOptionState<BrushOptions>(initial, {
-    isAtomicReference: isSharedSelection,
+    isAtomicReference: (value) => isSharedSelection(value) || isScaleHandle(value),
     defaults: () => ({
       mode: 'xy',
       modifier: ModifierKey.Shift,
       persistent: false,
       selection: undefined,
+      targets: undefined,
     }),
     validate(options) {
       if (!['x', 'y', 'xy', 'auto'].includes(options.mode)) {
@@ -140,6 +191,28 @@ export function brush(initial: OptionPatch<BrushOptions> = {}): BrushHandle {
       }
       if (typeof options.persistent !== 'boolean') {
         throw new Error('brush.persistent must be boolean.')
+      }
+      if (options.targets !== undefined) {
+        if (
+          !options.targets ||
+          typeof options.targets !== 'object' ||
+          Array.isArray(options.targets) ||
+          !Object.keys(options.targets).length
+        ) {
+          throw new TypeError('brush.targets must be a non-empty named scale map.')
+        }
+        if (!options.persistent) throw new Error('brush.targets requires persistent: true.')
+        if (options.selection)
+          throw new Error('brush.targets cannot be combined with brush.selection.')
+        const targets = new Set<ScaleHandle>()
+        for (const [name, target] of Object.entries(options.targets)) {
+          if (!name || !target || !isScaleHandle(target) || target.kind === 'band') {
+            throw new TypeError(`brush.targets.${name} requires a continuous scale handle.`)
+          }
+          if (targets.has(target)) throw new Error('brush.targets must use distinct detail scales.')
+          targets.add(target)
+        }
+        for (const context of contexts) validateBrushTargets(options, context)
       }
       if (options.selection !== undefined) {
         if (
@@ -187,7 +260,7 @@ export function brush(initial: OptionPatch<BrushOptions> = {}): BrushHandle {
       },
       equalSelection,
     ),
-    update(patch: OptionPatch<BrushOptions>) {
+    update(patch: BrushConfig) {
       validateKeys(patch, optionKeys, 'brush')
       const previous = state.getSnapshot().resolved
       if (state.update(patch)) {
@@ -195,7 +268,8 @@ export function brush(initial: OptionPatch<BrushOptions> = {}): BrushHandle {
         if (
           next.mode !== previous.mode ||
           !next.persistent ||
-          next.selection !== previous.selection
+          next.selection !== previous.selection ||
+          !equalBrushTargets(next.targets, previous.targets)
         )
           selection.set(undefined)
         optionState.publish()
@@ -206,11 +280,24 @@ export function brush(initial: OptionPatch<BrushOptions> = {}): BrushHandle {
       if (value === undefined) {
         if (config.selection) config.selection.setSelection(undefined)
         selection.set(undefined)
+        reactive.untracked(() => {
+          for (const listener of selectionWrites.get(handle)!) listener()
+        })
         return
       }
       if (!config.persistent) throw new Error('brush.setSelection requires persistent: true.')
       validateSelection(value, config.mode)
       for (const validate of consumers) validate(value)
+      for (const [name, target] of Object.entries(config.targets ?? {})) {
+        const range = value.scales[name]
+        if (range) {
+          validateBrushScaleSelection(
+            { mode: value.mode, scales: { [name]: range } },
+            { [name]: target },
+            () => (value.mode === 'y' ? 'y' : 'x'),
+          )
+        }
+      }
       if (config.selection) {
         const context = contexts.values().next().value
         if (!context)
@@ -220,19 +307,37 @@ export function brush(initial: OptionPatch<BrushOptions> = {}): BrushHandle {
         config.selection.setSelection(shareLocalSelection(value, context))
         return
       }
-      const ranges = Object.entries(value.scales)
-      selection.set(
-        Object.freeze({
-          mode: value.mode,
-          scales: Object.freeze(
-            Object.fromEntries(ranges.map(([name, range]) => [name, Object.freeze([...range])])),
-          ),
-        }),
-      )
+      batch(() => {
+        for (const [name, target] of Object.entries(config.targets ?? {})) {
+          const range = value.scales[name]
+          const domain = target.domain.get()
+          if (range && (range.length !== domain.length || range.some((v, i) => v !== domain[i]))) {
+            target.domain.set(range)
+          }
+        }
+        const ranges = Object.entries(value.scales)
+        selection.set(
+          Object.freeze({
+            mode: value.mode,
+            scales: Object.freeze(
+              Object.fromEntries(
+                ranges.map(([name, range]) => [
+                  name,
+                  Object.freeze([...(config.targets?.[name]?.domain.get() ?? range)]),
+                ]),
+              ),
+            ),
+          }),
+        )
+        reactive.untracked(() => {
+          for (const listener of selectionWrites.get(handle)!) listener()
+        })
+      })
     },
   })
   handles.add(handle)
   validators.set(handle, consumers)
+  selectionWrites.set(handle, new Set())
   selectionContexts.set(handle, contexts)
   contextVersions.set(handle, () => contextVersion.update((version) => version + 1))
   return handle

@@ -8,11 +8,13 @@ import {
   validateBrushSelections,
   connectBrushSelection,
   validateSharedBrushContext,
+  equalBrushTargets,
   type BrushHandle,
   type BrushOptions,
   type BrushSelection,
   type BrushSelectionMode,
 } from './brush.js'
+import { connectBrushTargets } from './brush-targets.js'
 import { svgElement } from '../../rendering/svg.js'
 import {
   brushHandleNames as handleNames,
@@ -42,13 +44,14 @@ interface Gesture {
 }
 
 function installBrush(handle: BrushHandle, context: PlotContext) {
-  const disconnectSelection = connectBrushSelection(handle, {
+  const selectionContext = {
     owner: context.owner,
     get scales() {
       return context.options.get().resolved.scales
     },
-    direction: (name) => context.direction(name),
-  })
+    direction: (name: string) => context.direction(name),
+  }
+  const disconnectSelection = connectBrushSelection(handle, selectionContext)
   const layer = svgElement('g', { 'data-layer': 'brush', 'pointer-events': 'none' })
   const selection = svgElement('rect', {
     'data-brush-selection': '',
@@ -163,7 +166,7 @@ function installBrush(handle: BrushHandle, context: PlotContext) {
     const detail = selectionFor(gesture.bounds, gesture.mode, context)
     if (!detail) return
     if (gesture.config.persistent) {
-      handle.setSelection(detail)
+      withSource('brush', () => handle.setSelection(detail))
       lastPublished = handle.selection.get()
     }
     withSource('brush', () =>
@@ -182,6 +185,7 @@ function installBrush(handle: BrushHandle, context: PlotContext) {
       config.modifier !== gesture.config.modifier ||
       config.persistent !== gesture.config.persistent ||
       config.selection !== gesture.config.selection ||
+      !equalBrushTargets(config.targets, gesture.config.targets) ||
       handle.selection.get() !== lastPublished
     ) {
       finish()
@@ -235,6 +239,8 @@ function installBrush(handle: BrushHandle, context: PlotContext) {
     )
   })
 
+  const stopTargets = context.scope.run(() => connectBrushTargets(handle, selectionContext))
+
   context.scope.run(() =>
     reactive.effect(() => {
       if (context.suspended.get()) return
@@ -253,6 +259,7 @@ function installBrush(handle: BrushHandle, context: PlotContext) {
           config.modifier !== active.config.modifier ||
           config.persistent !== active.config.persistent ||
           config.selection !== active.config.selection ||
+          !equalBrushTargets(config.targets, active.config.targets) ||
           stored !== lastPublished)
       )
         finish()
@@ -324,6 +331,7 @@ function installBrush(handle: BrushHandle, context: PlotContext) {
     destroy() {
       finish()
       stopValidation()
+      stopTargets()
       disconnectSelection()
       layer.remove()
     },
