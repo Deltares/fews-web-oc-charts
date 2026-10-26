@@ -103,7 +103,6 @@ export function markColor(
   hit: MarkHit,
   tokens: ThemeTokens,
   role: 'mark' | 'text' = 'mark',
-  background = tokens.background,
 ) {
   const resolve = (color: string | undefined) =>
     resolveMarkColor(
@@ -113,7 +112,6 @@ export function markColor(
           : 'var(--fews-chart-accent, currentColor)'),
       tokens,
       role,
-      background,
     )
   if ('layerId' in hit && (isBarMark(mark) || isStackedAreaMark(mark))) {
     const options = mark.options.get().resolved

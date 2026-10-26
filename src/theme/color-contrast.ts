@@ -6,22 +6,9 @@ export type ColorContrast = 'none' | 'auto'
 type Channels = readonly [number, number, number]
 const contexts = new WeakMap<ThemeTokens, Element>()
 const caches = new WeakMap<ThemeTokens, Map<string, string>>()
-const tooltipThemes = new WeakMap<ThemeTokens, ThemeTokens>()
 
 export function registerContrastTheme(tokens: ThemeTokens, element: Element) {
   contexts.set(tokens, element)
-}
-
-export function tooltipColorTheme(tokens: ThemeTokens): ThemeTokens {
-  if (tokens.colorContrast !== 'auto') return tokens
-  let theme = tooltipThemes.get(tokens)
-  if (!theme) {
-    theme = Object.freeze({ ...tokens, background: tokens.tooltipBackground })
-    const element = contexts.get(tokens)
-    if (element) contexts.set(theme, element)
-    tooltipThemes.set(tokens, theme)
-  }
-  return theme
 }
 
 function linear(value: number) {
@@ -173,7 +160,6 @@ export function resolveMarkColor(
   color: string,
   tokens: ThemeTokens,
   role: 'mark' | 'text' = 'mark',
-  background = tokens.background,
 ): string {
   if (
     tokens.colorContrast !== 'auto' ||
@@ -186,12 +172,12 @@ export function resolveMarkColor(
     cache = new Map()
     caches.set(tokens, cache)
   }
-  const key = JSON.stringify([color, role, background])
+  const key = JSON.stringify([color, role])
   let result = cache.get(key)
   if (result === undefined) {
     result = improveColorContrast(
       resolvedColor(color, tokens),
-      resolvedColor(background, tokens),
+      resolvedColor(tokens.tooltipBackground, tokens),
       role === 'text' ? 4.5 : 3,
     )
     cache.set(key, result)

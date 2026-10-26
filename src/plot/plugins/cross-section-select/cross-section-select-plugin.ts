@@ -301,12 +301,7 @@ function installCrossSectionSelect(handle: CrossSectionSelectHandle, context: Pl
           'dominant-baseline': 'central',
           'font-family': theme.fontFamily,
           'font-size': theme.fontSize,
-          fill: resolveMarkColor(
-            point.mark.stroke ?? accent(theme),
-            theme,
-            'text',
-            theme.tooltipBackground,
-          ),
+          fill: resolveMarkColor(point.mark.stroke ?? accent(theme), theme, 'text'),
           'data-cross-section-label': point.id ?? '',
         })
         text.textContent = point.value

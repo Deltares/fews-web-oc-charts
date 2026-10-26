@@ -22,7 +22,7 @@ import {
   tooltip,
   type Plot,
 } from '../../src/index.js'
-import { resolveMarkColor, tooltipColorTheme } from '../../src/theme/color-contrast.js'
+import { resolveMarkColor } from '../../src/theme/color-contrast.js'
 
 const plots: Plot[] = []
 const hosts: HTMLElement[] = []
@@ -83,7 +83,7 @@ describe('contrast-aware plot colors', () => {
     const check = () => {
       const theme = plot.theme.get()
       const stroke = resolveMarkColor('#111', theme)
-      const label = resolveMarkColor('#111', theme, 'text', theme.tooltipBackground)
+      const label = resolveMarkColor('#111', theme, 'text')
       expect(path.getAttribute('stroke')).toBe(stroke)
       expect(path.getAttribute('d')).toBe(geometry)
       const symbol = legendSymbolPrimitives(plot.legend.entries.get()[0].symbol)
@@ -102,9 +102,7 @@ describe('contrast-aware plot colors', () => {
       expect(getComputedStyle(node.querySelector('[data-tooltip-label]')!).color).toBe(
         rgb(label).formatRgb(),
       )
-      expect(node.querySelector('[data-tooltip-symbol] line')?.getAttribute('stroke')).toBe(
-        resolveMarkColor('#111', tooltipColorTheme(theme)),
-      )
+      expect(node.querySelector('[data-tooltip-symbol] line')?.getAttribute('stroke')).toBe(stroke)
       expect(mark.stroke).toBe('#111')
       expect(mark.markers?.fill).toBe('#222')
     }
@@ -160,9 +158,15 @@ describe('contrast-aware plot colors', () => {
         resolveMarkColor('oklch(25% 0.08 240)', plot.theme.get()),
       ),
     )
+    const originalStroke = path.getAttribute('stroke')
     element.style.setProperty('--fews-chart-background', '#fafafa')
     await vi.waitFor(() => expect(plot.theme.get().background).toBe('#fafafa'))
     await frame()
+    expect(path.getAttribute('stroke')).toBe(originalStroke)
+    element.style.setProperty('--fews-chart-tooltip-background', '#fafafa')
+    await vi.waitFor(() => expect(plot.theme.get().tooltipBackground).toBe('#fafafa'))
+    await frame()
+    expect(path.getAttribute('stroke')).not.toBe(originalStroke)
     expect(path.getAttribute('stroke')).toBe(
       resolveMarkColor('oklch(25% 0.08 240)', plot.theme.get()),
     )
