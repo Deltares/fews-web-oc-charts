@@ -112,7 +112,7 @@ export function sharedSelection(): SharedSelection {
 export interface SelectionScaleContext {
   readonly owner?: symbol
   readonly scales: Readonly<Record<string, ScaleHandle>>
-  direction(name: string): string
+  direction(this: void, name: string): string
 }
 
 export function localSharedSelection(

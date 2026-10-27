@@ -40,7 +40,6 @@ const symbolTypes = {
 } as const
 
 export function markerSymbolPath(shape: MarkerSymbol, area: number): string {
-  const radius = Math.sqrt(area / Math.PI)
   if (shape === 'rectangle') {
     const halfWidth = Math.sqrt(area / 2)
     const halfHeight = Math.sqrt(area / 8)

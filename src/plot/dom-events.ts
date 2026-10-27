@@ -11,6 +11,8 @@ export interface PlotDomEventMap {
 }
 
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   interface HTMLElementEventMap extends PlotDomEventMap {}
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   interface SVGElementEventMap extends HTMLElementEventMap {}
 }

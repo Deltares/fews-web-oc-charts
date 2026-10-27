@@ -47,8 +47,8 @@ export interface EnsembleStatistic {
   /** Probability in [0, 1] for quantiles, threshold for exceedance. */
   readonly parameter: number | undefined
   readonly length: number
-  at(index: number): number
-  extent(window?: readonly [number, number]): readonly [number, number] | undefined
+  at(this: void, index: number): number
+  extent(this: void, window?: readonly [number, number]): readonly [number, number] | undefined
 }
 
 export interface EnsembleStore {
@@ -61,8 +61,12 @@ export interface EnsembleStore {
   /** Index of the member with this id, or -1. */
   memberIndex(id: string): number
   /** Extent over all members; `window` filters on x. */
-  extent(axis: 'x' | 'y', window?: readonly [number, number]): readonly [number, number] | undefined
-  xAt(index: number): number
+  extent(
+    this: void,
+    axis: 'x' | 'y',
+    window?: readonly [number, number],
+  ): readonly [number, number] | undefined
+  xAt(this: void, index: number): number
   valueAt(member: number, index: number): number
   /** Probability in [0, 1]; 0 and 1 give the min/max envelope. */
   quantile(probability: number): EnsembleStatistic
@@ -272,7 +276,6 @@ export function createEnsemble(
   const derivedLimitBytes = 16 * 1024 * 1024
   const derivedLimitEntries = 32
   const derived = new Map<string, DerivedColumn>()
-  let derivedBytes = 0
   let sortedSteps = 0
   const lodCacheLimitBytes = 4 * 1024 * 1024
   const lodCacheLimitEntries = 256
@@ -418,7 +421,9 @@ export function createEnsemble(
     window?: readonly [number, number],
   ): readonly [number, number] | undefined {
     if (extentIndexDirty) rebuildExtentIndex()
-    let [first, end] = rowRange(window)
+    const range = rowRange(window)
+    const end = range[1]
+    let first = range[0]
     let low = Infinity
     let high = -Infinity
     const addRow = (physical: number) => {

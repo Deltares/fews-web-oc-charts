@@ -262,7 +262,6 @@ function areaHits(
   const options = mark.options.get().resolved
   if (!options.visible || mark.data.length === 0) return []
   const xScale = scales[mark.x]
-  const yScale = scales[mark.y]
   const layout = stackedAreaEndpoints(mark)
   const paths = stackedAreaPaths(mark, scales)
   const pathsByLayer = new Map(paths.map((path) => [path.layer.id, path]))

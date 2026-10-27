@@ -196,7 +196,7 @@ export const bandDefinition: MarkDefinition<BandMark> = {
       opacity: mark.opacity,
     }),
   track(mark) {
-    mark.xValues
+    void mark.xValues
     isStaticMarkVisible(mark)
   },
   validateUpdates: (mark, context) =>

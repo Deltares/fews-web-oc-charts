@@ -517,7 +517,7 @@ function createScale(kind: ScaleKind, initial: OptionPatch<ScaleOptions>) {
       if (changed) optionState.publish()
       if (changed || followChanged || previousOverride !== followOverride.get()) {
         // Reading the computed version records the source after follow state has settled.
-        domain.version
+        void domain.version
         recordScaleSource(handle, domain.version)
       }
     },
