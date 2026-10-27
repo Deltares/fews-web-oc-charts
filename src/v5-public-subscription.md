@@ -122,27 +122,31 @@ Event details:
 
 ```ts
 export type DomainChangeSource =
-  | 'zoom' | 'wheel' | 'pan' | 'brush' | 'reset'   // user interaction via built-in plugins
-  | 'autoscale'                                     // data/visibility-driven domain
-  | 'api'                                           // scale.update / domain.set / setConfig by the app
+  | 'zoom'
+  | 'wheel'
+  | 'pan'
+  | 'brush'
+  | 'reset' // user interaction via built-in plugins
+  | 'autoscale' // data/visibility-driven domain
+  | 'api' // scale.update / domain.set / setConfig by the app
 
 export interface DomainChangeDetail {
-  readonly scale: string                       // binding name in this plot ('t', 'y2', …)
-  readonly handle: ScaleHandle                 // to detect shared scales across plots
-  readonly domain: readonly ScaleValue[]       // effective domain (= scale.domain.get())
+  readonly scale: string // binding name in this plot ('t', 'y2', …)
+  readonly handle: ScaleHandle // to detect shared scales across plots
+  readonly domain: readonly ScaleValue[] // effective domain (= scale.domain.get())
   readonly previous: readonly ScaleValue[] | undefined
-  readonly explicit: boolean                   // options.explicit.domain !== undefined
+  readonly explicit: boolean // options.explicit.domain !== undefined
   readonly source: DomainChangeSource
 }
 
 export interface LayoutChangeDetail {
   readonly size: Readonly<Size>
-  readonly regions: PlotLayout                 // includes plot region and margins
+  readonly regions: PlotLayout // includes plot region and margins
   readonly previous: PlotLayout | undefined
 }
 
 export interface LegendChangeDetail {
-  readonly entries: readonly LegendEntry[]     // same frozen array as plot.legend.entries.get()
+  readonly entries: readonly LegendEntry[] // same frozen array as plot.legend.entries.get()
 }
 ```
 
@@ -209,6 +213,7 @@ signature:
 ## 5. Tests (vitest, `test/Plot/` and `test/core/`)
 
 Core `subscribe`:
+
 - Called once per frame after multiple `set`s; receives latest and previous delivered values.
 - `batch` with 3 signal writes → one call per subscriber, consistent state.
 - No call when the value is set to an equal value (domain compared by value).
@@ -221,6 +226,7 @@ Core `subscribe`:
 - Passing a non-signal throws `TypeError`.
 
 Plot events:
+
 - `domainchange` with `source` `'zoom'`, `'wheel'`, `'pan'`, `'reset'`, `'api'` and
   `'autoscale'` (after a data `append` with `autoscale: 'data'`); `explicit` is correct.
 - Shared time scale over 2 plots: each plot fires once; `handle` is identical;
