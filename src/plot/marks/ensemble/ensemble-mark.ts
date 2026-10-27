@@ -89,6 +89,14 @@ function partSymbol(
   return { type: 'line', ...styles[part] }
 }
 
+export function ensemblePartSymbol(
+  options: Readonly<EnsembleOptions>,
+  tokens: ThemeTokens,
+  part: EnsemblePart,
+): SymbolPrimitiveSpec {
+  return partSymbol(part, resolveEnsembleStyles(options, tokens))
+}
+
 /** Configured parts overlaid in drawing order; used by tooltips and the legend heading. */
 export function ensembleSymbol(
   options: Readonly<EnsembleOptions>,
@@ -415,10 +423,27 @@ function ensembleHighlight(
   hit: MarkHit,
   scales: Readonly<Record<string, ScaleBinding>>,
   color: string,
+  tokens: ThemeTokens,
 ): readonly HighlightShape[] {
-  if (!isEnsembleHit(hit) || !Number.isFinite(hit.px) || !Number.isFinite(hit.py)) return []
+  if (!isEnsembleHit(hit) || !Number.isFinite(hit.px)) return []
+  // Like v4, every drawn part is marked at the hovered step: a dot on each line and
+  // ticks on the bounds of each band; the nearest member is traced in full.
+  const styles = resolveEnsembleStyles(mark.options.get().resolved, tokens)
+  const yScale = scales[mark.y]
+  const tick = (y: number) => `M${hit.px - 5},${y}h10`
+  const shapes: HighlightShape[] = []
+  for (const part of hit.parts) {
+    if (part.part === 'spread') {
+      const d = tick(yScale.project(part.lower!)) + tick(yScale.project(part.upper!))
+      shapes.push({ type: 'path', d, stroke: styles.spread.fill })
+    } else {
+      const cy = yScale.project(part.value!)
+      if (Number.isFinite(cy))
+        shapes.push({ type: 'circle', cx: hit.px, cy, r: 3, fill: styles[part.part].stroke })
+    }
+  }
+  if (!hit.member || !Number.isFinite(hit.py)) return shapes
   const dot: HighlightShape = { type: 'circle', cx: hit.px, cy: hit.py, r: 3, fill: color }
-  if (!hit.member) return [dot]
   const store = mark.data
   const member = hit.member.index
   const xScale = scales[mark.x]
@@ -437,7 +462,7 @@ function ensembleHighlight(
       ? store.memberLod(member, [Number(domain[0]), Number(domain[1])], width)
       : undefined,
   )
-  return [{ type: 'path', d: path.d, stroke: color }, dot]
+  return [{ type: 'path', d: path.d, stroke: color }, ...shapes, dot]
 }
 
 function addExtent(add: (value: number) => void, extent: Window | undefined) {
@@ -478,7 +503,8 @@ export const ensembleDefinition: MarkDefinition<EnsembleMark> = {
   name: 'ensemble',
   is: isEnsembleMark,
   hits: (mark, { scales, point, axis, plot }) => ensembleHits(mark, scales, point, axis, plot),
-  highlight: (mark, hit, { scales, color }) => ensembleHighlight(mark, hit, scales, color),
+  highlight: (mark, hit, { scales, color, tokens }) =>
+    ensembleHighlight(mark, hit, scales, color, tokens),
   legend: ensembleLegend,
   validate: (mark, context) => validateScales(mark.options.get().resolved, context),
   extents(mark, context) {

@@ -150,13 +150,16 @@ describe('ensemble inspection', () => {
     const rows = [...document.querySelectorAll('[data-tooltip-entry]')].map(
       (row) => row.textContent,
     )
-    expect(rows).toHaveLength(1)
+    // A heading with the nearest member, then one row per drawn part and the exceedance.
+    expect(rows).toHaveLength(4)
     expect(rows[0]).toContain('fc')
     expect(rows[0]).toContain('Member C: 10')
-    expect(rows[0]).toContain('p0: 2')
-    expect(rows[0]).toContain('median: 6')
-    expect(rows[0]).toContain('p100: 10')
-    expect(rows[0]).toContain('P(>4): 67%')
+    expect(rows[1]).toContain('100%')
+    expect(rows[1]).toContain('2–10')
+    expect(rows[2]).toContain('Median')
+    expect(rows[2]).toContain('6')
+    expect(rows[3]).toContain('P(>4)')
+    expect(rows[3]).toContain('67%')
   })
 
   test('highlights the hovered member line and point', async () => {
@@ -178,7 +181,29 @@ describe('ensemble inspection', () => {
     const median = [
       ...current.element.querySelectorAll('[data-layer="highlight"] [data-highlight]'),
     ]
+    // Every drawn part is marked at the step, even without a nearest member.
     expect(median.map((shape) => shape.tagName)).toEqual(['circle'])
+  })
+
+  test('marks band bounds and statistic lines at the hovered step', async () => {
+    const mark = ensemble(data(), {
+      x: 'x',
+      y: 'y',
+      members: false,
+      spread: { bands: [[0, 100]] },
+      median: {},
+    })
+    const { current, move } = await setup(mark, [highlight({ marks: [mark], axis: 'xy' })])
+    await move(10, 6.4)
+    const shapes = [
+      ...current.element.querySelectorAll('[data-layer="highlight"] [data-highlight]'),
+    ]
+    const { x, y } = current.scales
+    const px = x.project(10)
+    expect(shapes.find((shape) => shape.tagName === 'path')!.getAttribute('d')).toBe(
+      `M${px - 5},${y.project(2)}h10M${px - 5},${y.project(10)}h10`,
+    )
+    expect(shapes.filter((shape) => shape.tagName === 'circle')).toHaveLength(1)
   })
 
   test('validates the exceedance option', () => {

@@ -16,6 +16,18 @@ export interface EnsembleHitStatistic {
   readonly value: number
 }
 
+/** One drawn statistic or the control member at the inspected step. */
+export interface EnsembleHitPart {
+  readonly part: 'spread' | 'median' | 'mean' | 'control'
+  /** `90%`, `Median`, `Mean` or the control member's label. */
+  readonly label: string
+  /** Value of a line part; undefined for spread bands. */
+  readonly value: number | undefined
+  /** Band bounds; undefined for line parts. */
+  readonly lower: number | undefined
+  readonly upper: number | undefined
+}
+
 /** Inspection of one ensemble time step. */
 export interface EnsembleHit {
   readonly index: number
@@ -27,6 +39,8 @@ export interface EnsembleHit {
   readonly distance: number
   /** Nearest drawn member (or the control member) when that line is nearest. */
   readonly member: EnsembleMember | undefined
+  /** Every drawn band, statistic line and control member with a finite value at this step. */
+  readonly parts: readonly EnsembleHitPart[]
   /** Finite drawn statistics at this step: quantiles ascending, then the mean. */
   readonly statistics: readonly EnsembleHitStatistic[]
   readonly exceedance: Readonly<{ threshold: number; probability: number }> | undefined
@@ -58,6 +72,11 @@ function nearestStep(mark: EnsembleMark, xScale: ScaleBinding, px: number) {
     }
   }
   return best
+}
+
+/** `90%` for a central band, otherwise the percentile range. */
+export function bandLabel(low: number, high: number) {
+  return low + high === 100 ? `${high - low}%` : `${low}–${high}%`
 }
 
 function percentileLabel(probability: number) {
@@ -97,6 +116,24 @@ export function ensembleHits(
     reported.push({ label: 'mean', probability: undefined, value: statistics.mean.at(index) })
   }
 
+  const parts: EnsembleHitPart[] = []
+  for (const [low, high, lowStatistic, highStatistic] of statistics.bands) {
+    const lower = lowStatistic.at(index)
+    const upper = highStatistic.at(index)
+    if (Number.isFinite(lower) && Number.isFinite(upper))
+      parts.push({ part: 'spread', label: bandLabel(low, high), value: undefined, lower, upper })
+  }
+  const linePart = (part: 'median' | 'mean' | 'control', label: string, value: number) => {
+    if (Number.isFinite(value))
+      parts.push({ part, label, value, lower: undefined, upper: undefined })
+  }
+  if (statistics.median) linePart('median', 'Median', statistics.median.at(index))
+  if (statistics.mean) linePart('mean', 'Mean', statistics.mean.at(index))
+  if (options.control) {
+    const member = controlMemberIndex(store, options.control.member)
+    linePart('control', store.members[member].label, store.valueAt(member, index))
+  }
+
   // The hit's y is the drawn line nearest the pointer: a member, the control or a statistic.
   const lines: { value: number; member: number | undefined }[] = []
   for (let member = 0; member < drawnMemberCount(options, store); member += 1) {
@@ -132,6 +169,7 @@ export function ensembleHits(
       py: nearest.py,
       distance: axis === 'x' ? Math.abs(dx) : axis === 'y' ? Math.abs(dy) : Math.hypot(dx, dy),
       member: nearest.member === undefined ? undefined : store.members[nearest.member],
+      parts: Object.freeze(parts),
       statistics: Object.freeze(reported.filter(({ value }) => Number.isFinite(value))),
       exceedance:
         threshold === undefined
