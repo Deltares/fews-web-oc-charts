@@ -1,4 +1,4 @@
-import { quantileSorted } from 'd3'
+import { quantileSorted as quantileR7 } from 'd3'
 import { describe, expect, test } from 'vitest'
 import {
   createEnsemble,
@@ -11,14 +11,27 @@ import { ensembleStorageDiagnostics } from '../../src/data-store/ensemble.js'
 const column = (statistic: EnsembleStatistic) =>
   Array.from({ length: statistic.length }, (_, index) => statistic.at(index))
 
-function referenceQuantile(store: EnsembleStore, probability: number) {
+/** Hyndman & Fan type 6 written from the definition: Q(p) interpolates at rank p(n + 1). */
+function quantileR6(sorted: number[], probability: number) {
+  const rank = probability * (sorted.length + 1)
+  if (rank <= 1) return sorted[0]
+  if (rank >= sorted.length) return sorted[sorted.length - 1]
+  const below = Math.floor(rank)
+  return sorted[below - 1] + (rank - below) * (sorted[below] - sorted[below - 1])
+}
+
+function referenceQuantile(
+  store: EnsembleStore,
+  probability: number,
+  quantile: (sorted: number[], probability: number) => number | undefined = quantileR6,
+) {
   return Array.from({ length: store.length }, (_, index) => {
     const valid = Array.from({ length: store.memberCount }, (_, member) =>
       store.valueAt(member, index),
     )
       .filter(Number.isFinite)
       .sort((a, b) => a - b)
-    return valid.length ? quantileSorted(valid, probability)! : NaN
+    return valid.length ? quantile(valid, probability)! : NaN
   })
 }
 
@@ -33,33 +46,56 @@ function rows(from: number, to: number, memberCount = 5) {
 }
 
 describe('ensemble statistics', () => {
-  test('quantiles, mean and exceedance ignore missing members and give NaN when all are missing', () => {
-    const store = createEnsemble({
-      x: [1, 2, 3],
-      members: [
-        [1, NaN, 5],
-        [3, NaN, NaN],
-        [2, NaN, 9],
-      ],
-    })
+  const missing = {
+    x: [1, 2, 3],
+    members: [
+      [1, NaN, 5],
+      [3, NaN, NaN],
+      [2, NaN, 9],
+    ],
+  }
+
+  test('quantiles default to R-6 and ignore missing members', () => {
+    const store = createEnsemble(missing)
+    expect(store.quantileMethod).toBe('r6')
     expect(column(store.quantile(0.5))).toEqual([2, NaN, 7])
+    // Rank p(n + 1) is clamped to the smallest and largest valid member.
     expect(column(store.quantile(0))).toEqual([1, NaN, 5])
     expect(column(store.quantile(1))).toEqual([3, NaN, 9])
-    expect(column(store.quantile(0.25))).toEqual([1.5, NaN, 6])
+    expect(column(store.quantile(0.25))).toEqual([1, NaN, 5])
+    expect(column(store.quantile(0.75))).toEqual([3, NaN, 9])
     expect(column(store.mean())).toEqual([2, NaN, 7])
     expect(column(store.exceedance(2))).toEqual([1 / 3, NaN, 1])
     expect(store.quantile(0.5).extent()).toEqual([2, 7])
     expect(store.quantile(0.5).extent([2, 2])).toBeUndefined()
   })
 
-  test('matches a reference quantile for every requested probability', () => {
-    const store = createEnsemble(rows(0, 300))
-    const probabilities = [0, 0.05, 0.25, 0.5, 0.75, 0.95, 1]
-    store.quantiles(probabilities).forEach((statistic, position) => {
-      expect(statistic.parameter).toBe(probabilities[position])
-      expect(column(statistic)).toEqual(referenceQuantile(store, probabilities[position]))
-    })
+  test('R-7 is available and interpolates at rank 1 + (n - 1)p', () => {
+    const store = createEnsemble(missing, { quantileMethod: 'r7' })
+    expect(store.quantileMethod).toBe('r7')
+    expect(column(store.quantile(0.5))).toEqual([2, NaN, 7])
+    expect(column(store.quantile(0.25))).toEqual([1.5, NaN, 6])
   })
+
+  test('rejects an unknown quantile method', () => {
+    expect(() => createEnsemble(missing, { quantileMethod: 'r8' as never })).toThrow(/r6 or r7/)
+  })
+
+  for (const [method, quantile] of [
+    ['r6', quantileR6],
+    ['r7', quantileR7],
+  ] as const) {
+    test(`matches a ${method} reference quantile for every requested probability`, () => {
+      const store = createEnsemble(rows(0, 300), { quantileMethod: method })
+      const probabilities = [0, 0.05, 0.25, 0.5, 0.75, 0.95, 1]
+      store.quantiles(probabilities).forEach((statistic, position) => {
+        expect(statistic.parameter).toBe(probabilities[position])
+        expect(column(statistic)).toEqual(
+          referenceQuantile(store, probabilities[position], quantile),
+        )
+      })
+    })
+  }
 
   test('sorts each time step once for all cached quantiles, median and p50 share a column', () => {
     const store = createEnsemble(rows(0, 100))
