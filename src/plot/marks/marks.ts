@@ -1,5 +1,6 @@
 import { bandDefinition } from './band/band-mark.js'
 import { barDefinition } from './bar/bar-mark.js'
+import { ensembleDefinition } from './ensemble/ensemble-mark.js'
 import { arrowsDefinition, directionDefinition } from './vector/vector-mark.js'
 import { histogramDefinition } from './histogram/histogram-mark.js'
 import { heatmapDefinition } from './heatmap/heatmap-mark.js'
@@ -19,6 +20,7 @@ const markDefinitions = [
   histogramDefinition,
   heatmapDefinition,
   stackedAreaDefinition,
+  ensembleDefinition,
   ruleDefinition,
   textDefinition,
   arrowsDefinition,

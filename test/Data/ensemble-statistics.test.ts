@@ -1,6 +1,11 @@
 import { quantileSorted } from 'd3'
 import { describe, expect, test } from 'vitest'
-import { createEnsemble, type EnsembleStatistic, type EnsembleStore } from '../../src/index.js'
+import {
+  createEnsemble,
+  createSeries,
+  type EnsembleStatistic,
+  type EnsembleStore,
+} from '../../src/index.js'
 import { ensembleStorageDiagnostics } from '../../src/data-store/ensemble.js'
 
 const column = (statistic: EnsembleStatistic) =>
@@ -157,5 +162,33 @@ describe('ensemble statistics', () => {
     expect(ensembleStorageDiagnostics(store).sortedSteps).toBe(steps)
     // Generous bound for CI noise; the plan's 50 ms target covers the full initial render.
     expect(elapsed).toBeLessThan(250)
+  })
+
+  test('decimates members like the series store, keeping gaps and boundary neighbours', () => {
+    const steps = 5_000
+    const x = Float64Array.from({ length: steps }, (_, index) => index)
+    const y = Float64Array.from({ length: steps }, (_, index) =>
+      index % 997 === 0 ? NaN : Math.sin(index * 0.05) * (index % 7),
+    )
+    const ensembleStore = createEnsemble(
+      { x, members: [y, y.map((value) => -value)] },
+      { precision: 'float64' },
+    )
+    const series = createSeries({ x, y })
+    for (const [window, width] of [
+      [[0, steps - 1], 100],
+      [[1200.5, 3100], 37],
+      [[400, 400], 5],
+    ] as const) {
+      expect([...ensembleStore.memberLod(0, window, width)]).toEqual([...series.lod(window, width)])
+    }
+    const lod = ensembleStore.memberLod(1, [0, steps - 1], 100)
+    expect(ensembleStore.memberLod(1, [0, steps - 1], 100).length).toBe(lod.length)
+    expect(() => ensembleStore.memberLod(2, [0, 1], 10)).toThrow(/member 2/)
+    expect(() => ensembleStore.memberLod(0, [0, Infinity], 10)).toThrow(/finite/)
+    expect(() => ensembleStore.memberLod(0, [0, 1], 0)).toThrow(/width/)
+    ensembleStore.append({ x: [steps], members: [[1e6], [-1e6]] })
+    const updated = [...ensembleStore.memberLod(0, [0, steps], 100)]
+    expect(updated.at(-1)).toBe(steps)
   })
 })
