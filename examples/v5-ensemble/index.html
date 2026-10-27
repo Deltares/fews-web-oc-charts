@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>v5: ensemble</title>
+  </head>
+  <body>
+    <nav aria-label="Examples">
+      <a href="/">All examples</a>
+      <a href="../v5-legend/">Legend</a>
+    </nav>
+    <h1>v5: ensemble</h1>
+    <p>
+      A 51-member forecast stored once in an ensemble store. The mark draws percentile spread bands,
+      the median and mean, a control member and the individual members. Hover to inspect the nearest
+      member and its statistics; use the legend to toggle each part.
+    </p>
+    <fieldset class="controls">
+      <legend>Ensemble options</legend>
+      <label for="renderer">
+        Member renderer
+        <select id="renderer">
+          <option value="svg">SVG</option>
+          <option value="canvas">Canvas</option>
+        </select>
+      </label>
+      <label for="max-members">
+        Members drawn
+        <input id="max-members" type="range" min="0" max="51" value="51" />
+      </label>
+      <label for="control">
+        <input id="control" type="checkbox" />
+        Control member
+      </label>
+      <label for="threshold">
+        Exceedance threshold
+        <input id="threshold" type="number" value="60" step="5" />
+      </label>
+    </fieldset>
+    <figure>
+      <div id="chart" class="plot-host"></div>
+      <h2>Exceedance probability</h2>
+      <div id="exceedance" class="plot-host"></div>
+      <figcaption>
+        The lower plot shares the time scale and shows the fraction of members above the threshold.
+        Spread bands show the 5–95% and 25–75% percentiles. The tooltip reports the probability that
+        members exceed the threshold.
+      </figcaption>
+    </figure>
+    <pre><code>const store = createEnsemble({ x: times, members })
+const fc = ensemble(store, {
+  x: 't', y: 'q', label: 'Forecast',
+  spread: { bands: [[5, 95], [25, 75]] },
+  median: {}, mean: false, control: { member: 0 },
+  members: { opacity: 0.25 },
+  exceedance: { threshold: 60 },
+})
+createPlot(host, { scales, axes, marks: [fc], plugins: [guide, tooltip({ marks: [fc] }), highlight({ marks: [fc] }), legend()] })</code></pre>
+    <script type="module" src="./v5-ensemble.ts"></script>
+  </body>
+</html>
