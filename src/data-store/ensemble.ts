@@ -1,3 +1,4 @@
+import { quantileSorted } from 'd3'
 import { reactive } from '../core/runtime.js'
 import { validateKeys } from '../core/validation.js'
 import type { SeriesChange } from './series.js'
@@ -37,6 +38,19 @@ export interface EnsembleStoreOptions {
 
 export type EnsembleChange = SeriesChange
 
+/**
+ * Live, store-owned statistic over the non-missing members at each time step;
+ * `NaN` where no member is valid. Reads recompute lazily after mutations.
+ */
+export interface EnsembleStatistic {
+  readonly kind: 'quantile' | 'mean' | 'exceedance'
+  /** Probability in [0, 1] for quantiles, threshold for exceedance. */
+  readonly parameter: number | undefined
+  readonly length: number
+  at(index: number): number
+  extent(window?: readonly [number, number]): readonly [number, number] | undefined
+}
+
 export interface EnsembleStore {
   readonly length: number
   readonly capacity: number
@@ -50,6 +64,12 @@ export interface EnsembleStore {
   extent(axis: 'x' | 'y', window?: readonly [number, number]): readonly [number, number] | undefined
   xAt(index: number): number
   valueAt(member: number, index: number): number
+  /** Probability in [0, 1]; 0 and 1 give the min/max envelope. */
+  quantile(probability: number): EnsembleStatistic
+  quantiles(probabilities: readonly number[]): readonly EnsembleStatistic[]
+  mean(): EnsembleStatistic
+  /** Fraction of valid members strictly above `threshold`. */
+  exceedance(threshold: number): EnsembleStatistic
   append(rows: EnsembleInput): void
   prepend(rows: EnsembleInput): void
   upsert(input: { from: number; to: number; rows: EnsembleInput }): void
@@ -65,12 +85,30 @@ interface EnsembleColumns {
   readonly memberCount: number
 }
 
+/** Derived column indexed by physical slot, sharing the store's ring layout. */
+interface DerivedColumn {
+  readonly kind: EnsembleStatistic['kind']
+  readonly parameter: number | undefined
+  data: Float64Array
+  /** Layout generation and pushed-row serial the column is complete for. */
+  generation: number
+  serial: number
+  evicted: boolean
+}
+
 const stores = new WeakSet<object>()
 export const isEnsembleStore = (value: object): value is EnsembleStore => stores.has(value)
 
 const diagnostics = new WeakMap<
   object,
-  () => { canonicalBytes: number; summaryBlocks: number; summaryRows: number }
+  () => {
+    canonicalBytes: number
+    summaryBlocks: number
+    summaryRows: number
+    derivedColumns: number
+    derivedBytes: number
+    sortedSteps: number
+  }
 >()
 
 export function ensembleStorageDiagnostics(store: EnsembleStore) {
@@ -226,6 +264,15 @@ export function createEnsemble(
   > = []
   let extentIndexDirty = true
   let summaryRows = 0
+  // Appends advance `serial`; reallocation and rebuilds advance `generation`.
+  let generation = 0
+  let serial = 0
+  const derivedLimitBytes = 16 * 1024 * 1024
+  const derivedLimitEntries = 32
+  const derived = new Map<string, DerivedColumn>()
+  let derivedBytes = 0
+  let sortedSteps = 0
+  const scratch = new Float64Array(memberCount)
 
   function slot(index: number) {
     if (!Number.isInteger(index) || index < 0 || index >= count) {
@@ -257,6 +304,7 @@ export function createEnsemble(
     values = nextValues
     head = 0
     extentIndexDirty = true
+    generation += 1
   }
 
   function push(columns: EnsembleColumns) {
@@ -285,6 +333,7 @@ export function createEnsemble(
         values[member * x.length + physical] = columns.values[member * columns.length + step]
       }
       count += 1
+      serial += 1
       touchedBlocks.add(Math.floor(physical / extentBlockSize))
     }
     if (count && maxAge !== undefined) {
@@ -336,32 +385,34 @@ export function createEnsemble(
     return xMin <= xMax ? Object.freeze({ xMin, xMax, yMin, yMax }) : undefined
   }
 
+  /** Half-open logical row range with x inside the closed window. */
+  function rowRange(window?: readonly [number, number]): [number, number] {
+    if (!window) return [0, count]
+    const low = Math.min(window[0], window[1])
+    const high = Math.max(window[0], window[1])
+    let left = 0
+    let right = count
+    while (left < right) {
+      const middle = Math.floor((left + right) / 2)
+      if (xAt(middle) < low) left = middle + 1
+      else right = middle
+    }
+    const first = left
+    right = count
+    while (left < right) {
+      const middle = Math.floor((left + right) / 2)
+      if (xAt(middle) <= high) left = middle + 1
+      else right = middle
+    }
+    return [first, left]
+  }
+
   function extent(
     axis: 'x' | 'y',
     window?: readonly [number, number],
   ): readonly [number, number] | undefined {
     if (extentIndexDirty) rebuildExtentIndex()
-    let first = 0
-    let end = count
-    if (window) {
-      const low = Math.min(window[0], window[1])
-      const high = Math.max(window[0], window[1])
-      let left = 0
-      let right = count
-      while (left < right) {
-        const middle = Math.floor((left + right) / 2)
-        if (xAt(middle) < low) left = middle + 1
-        else right = middle
-      }
-      first = left
-      right = count
-      while (left < right) {
-        const middle = Math.floor((left + right) / 2)
-        if (xAt(middle) <= high) left = middle + 1
-        else right = middle
-      }
-      end = left
-    }
+    let [first, end] = rowRange(window)
     let low = Infinity
     let high = -Infinity
     const addRow = (physical: number) => {
@@ -397,6 +448,134 @@ export function createEnsemble(
       first += available
     }
     return low <= high ? Object.freeze([low, high]) : undefined
+  }
+
+  const isFresh = (column: DerivedColumn) =>
+    !column.evicted && column.generation === generation && column.serial === serial
+
+  /** First logical row the column must (re)compute. */
+  function staleFrom(column: DerivedColumn) {
+    if (isFresh(column)) return count
+    if (column.generation !== generation || column.data.length !== x.length) {
+      if (column.data.length !== x.length) column.data = new Float64Array(x.length)
+      return 0
+    }
+    return Math.max(0, count - (serial - column.serial))
+  }
+
+  /** Copies the valid members at a physical slot into scratch; returns their count. */
+  function gather(physical: number) {
+    let valid = 0
+    for (let member = 0; member < memberCount; member += 1) {
+      const value = values[member * x.length + physical]
+      if (Number.isFinite(value)) scratch[valid++] = value
+    }
+    return valid
+  }
+
+  function refresh(target: DerivedColumn) {
+    // All cached quantiles share one sort per time step.
+    const group =
+      target.kind === 'quantile'
+        ? [...derived.values()].filter((column) => column.kind === 'quantile')
+        : [target]
+    const starts = group.map(staleFrom)
+    for (let index = Math.min(...starts); index < count; index += 1) {
+      const physical = (head + index) % x.length
+      const valid = gather(physical)
+      if (target.kind === 'quantile') {
+        // d3 types require an array; quantileSorted only uses indexed access.
+        const sorted = scratch.subarray(0, valid).sort() as unknown as number[]
+        sortedSteps += 1
+        for (let position = 0; position < group.length; position += 1) {
+          if (index < starts[position]) continue
+          group[position].data[physical] = valid
+            ? quantileSorted(sorted, group[position].parameter!)!
+            : NaN
+        }
+      } else if (target.kind === 'mean') {
+        let sum = 0
+        for (let member = 0; member < valid; member += 1) sum += scratch[member]
+        target.data[physical] = valid ? sum / valid : NaN
+      } else {
+        let above = 0
+        for (let member = 0; member < valid; member += 1) {
+          if (scratch[member] > target.parameter!) above += 1
+        }
+        target.data[physical] = valid ? above / valid : NaN
+      }
+    }
+    for (const column of group) {
+      column.generation = generation
+      column.serial = serial
+    }
+  }
+
+  function column(kind: DerivedColumn['kind'], parameter: number | undefined) {
+    const key = `${kind}:${parameter ?? ''}`
+    let entry = derived.get(key)
+    if (entry) derived.delete(key)
+    else {
+      entry = {
+        kind,
+        parameter,
+        data: new Float64Array(x.length),
+        generation: -1,
+        serial: -1,
+        evicted: false,
+      }
+    }
+    derived.set(key, entry)
+    let bytes = 0
+    for (const cached of derived.values()) bytes += cached.data.byteLength
+    while ((bytes > derivedLimitBytes || derived.size > derivedLimitEntries) && derived.size > 1) {
+      const [oldestKey, oldest] = derived.entries().next().value!
+      derived.delete(oldestKey)
+      bytes -= oldest.data.byteLength
+      oldest.evicted = true
+      oldest.data = new Float64Array(0)
+    }
+    return entry
+  }
+
+  function statistic(kind: DerivedColumn['kind'], parameter?: number): EnsembleStatistic {
+    let entry = column(kind, parameter)
+    const data = () => {
+      if (entry.evicted) entry = column(kind, parameter)
+      if (!isFresh(entry)) refresh(entry)
+      return entry.data
+    }
+    return Object.freeze({
+      kind,
+      parameter,
+      get length() {
+        return count
+      },
+      at(index: number) {
+        const physical = slot(index)
+        return data()[physical]
+      },
+      extent(window?: readonly [number, number]) {
+        const current = data()
+        const [first, end] = rowRange(window)
+        let low = Infinity
+        let high = -Infinity
+        for (let index = first; index < end; index += 1) {
+          const value = current[(head + index) % x.length]
+          if (!Number.isFinite(value)) continue
+          low = Math.min(low, value)
+          high = Math.max(high, value)
+        }
+        return low <= high ? Object.freeze([low, high] as const) : undefined
+      },
+    })
+  }
+
+  function quantile(probability: number) {
+    if (typeof probability !== 'number' || !(probability >= 0 && probability <= 1)) {
+      throw new RangeError('ensemble.quantile probability must be within [0, 1].')
+    }
+    return statistic('quantile', probability === 0 ? 0 : probability)
   }
 
   function publish(
@@ -481,6 +660,7 @@ export function createEnsemble(
       count = 0
       reserve(Math.min(maxPoints, length))
       extentIndexDirty = true
+      generation += 1
       evicted = push({ x: nextX, values: nextValues, length, memberCount })
     }
     const operation = bounds ? 'upsert' : mode
@@ -518,6 +698,20 @@ export function createEnsemble(
     extent,
     xAt,
     valueAt,
+    quantile,
+    quantiles: (probabilities: readonly number[]) => {
+      if (!Array.isArray(probabilities)) {
+        throw new TypeError('ensemble.quantiles requires an array of probabilities.')
+      }
+      return Object.freeze(probabilities.map(quantile))
+    },
+    mean: () => statistic('mean'),
+    exceedance(threshold: number) {
+      if (typeof threshold !== 'number' || !Number.isFinite(threshold)) {
+        throw new RangeError('ensemble.exceedance threshold must be finite.')
+      }
+      return statistic('exceedance', threshold === 0 ? 0 : threshold)
+    },
     append: (rows: EnsembleInput) => mutate(rows, 'append'),
     prepend: (rows: EnsembleInput) => mutate(rows, 'prepend'),
     replace: (rows: EnsembleInput) => mutate(rows, 'replace'),
@@ -532,6 +726,7 @@ export function createEnsemble(
       count = 0
       extentBlocks = []
       extentIndexDirty = true
+      generation += 1
       publish(from, to, {
         operation: 'clear',
         previousLength,
@@ -549,6 +744,9 @@ export function createEnsemble(
     canonicalBytes: x.byteLength + values.byteLength,
     summaryBlocks: extentBlocks.length,
     summaryRows,
+    derivedColumns: derived.size,
+    derivedBytes: [...derived.values()].reduce((sum, column) => sum + column.data.byteLength, 0),
+    sortedSteps,
   }))
   return store
 }

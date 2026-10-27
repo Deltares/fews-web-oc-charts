@@ -179,6 +179,7 @@ export type {
   EnsembleStoreOptions,
   EnsembleStore,
   EnsembleChange,
+  EnsembleStatistic,
 } from './data-store/ensemble.js'
 export { createGrid } from './data-store/grid.js'
 export type { GridInput, GridView, GridStore } from './data-store/grid.js'
