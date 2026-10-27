@@ -68,6 +68,7 @@ const forecast = ensemble(store, {
   exceedance: { threshold: Number(thresholdOption.value) },
 })
 const exceedanceColor = '#e0509a'
+const exceedanceWidth = 1.5
 
 function thresholdRule(value: number) {
   return rule({
@@ -76,7 +77,7 @@ function thresholdRule(value: number) {
     scale: 'q',
     value,
     stroke: exceedanceColor,
-    strokeWidth: 1.5,
+    strokeWidth: exceedanceWidth,
   })
 }
 
@@ -112,7 +113,7 @@ function exceedanceMark(threshold: number) {
     xValues: times,
     yValues: Float64Array.from({ length: store.length }, (_, index) => probability.at(index)),
     stroke: exceedanceColor,
-    strokeWidth: 2,
+    strokeWidth: exceedanceWidth,
   })
 }
 
