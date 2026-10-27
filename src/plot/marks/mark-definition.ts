@@ -10,8 +10,9 @@ import type { SymbolSpec } from '../plugins/legend/legend.js'
 import type { PointHit } from '../interaction/point-hit-testing.js'
 import type { CompositeHit } from '../interaction/composite-hit-testing.js'
 import type { HeatmapHit } from '../interaction/heatmap-hit-testing.js'
+import type { EnsembleHit } from '../interaction/ensemble-hit-testing.js'
 
-export type MarkHit = PointHit | CompositeHit | HeatmapHit
+export type MarkHit = PointHit | CompositeHit | HeatmapHit | EnsembleHit
 
 export interface MarkHitContext {
   readonly scales: Readonly<Record<string, ScaleBinding>>
