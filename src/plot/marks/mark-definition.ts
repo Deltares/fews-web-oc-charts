@@ -47,6 +47,7 @@ export interface MarkHighlightContext {
   readonly scales: Readonly<Record<string, ScaleBinding>>
   /** Resolved color of the hovered datum. */
   readonly color: string
+  readonly tokens: ThemeTokens
 }
 
 export interface MarkLegendLayer {

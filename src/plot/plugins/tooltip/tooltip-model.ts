@@ -18,7 +18,7 @@ import type { PlotPointer } from '../../interaction/pointer-hub.js'
 import { isHistogramMark } from '../../marks/histogram/histogram.js'
 import { isHeatmapMark } from '../../marks/heatmap/heatmap.js'
 import { isEnsembleMark } from '../../marks/ensemble/ensemble.js'
-import { ensembleSymbol } from '../../marks/ensemble/ensemble-mark.js'
+import { ensemblePartSymbol, ensembleSymbol } from '../../marks/ensemble/ensemble-mark.js'
 import { isEnsembleHit } from '../../interaction/ensemble-hit-testing.js'
 import { isHeatmapHit, isHoverMark, markColor, selectHoverHits } from '../hover-hits.js'
 import { markDefinition } from '../../marks/marks.js'
@@ -120,6 +120,43 @@ function tooltipFormatter(
   }
 }
 
+/** One row per drawn band, statistic and control member, styled like its legend layer. */
+function ensemblePartEntries(
+  { mark, hit }: TooltipHitEntry,
+  context: TooltipContext,
+  options: Readonly<TooltipOptions>,
+): TooltipEntry[] {
+  if (!isEnsembleMark(mark) || !isEnsembleHit(hit)) return []
+  const format = tooltipFormatter(mark, hit, context, options)
+  const tokens = context.theme.get()
+  const ensembleOptions = mark.options.get().resolved
+  const entries: TooltipEntry[] = hit.parts.map((part) => {
+    const details =
+      part.part === 'spread'
+        ? format.range(part.lower!, part.upper!, 'y', options.digits)
+        : format.value(part.value!, 'y', options.digits)
+    return {
+      label: part.label,
+      color: tokens.tooltipColor,
+      details: ` · ${details}`,
+      accessibleLabel: `${part.label} · ${details}`,
+      symbol: ensemblePartSymbol(ensembleOptions, tokens, part.part),
+    }
+  })
+  if (hit.exceedance && Number.isFinite(hit.exceedance.probability)) {
+    const label = `P(>${format.value(hit.exceedance.threshold, 'y', options.digits)})`
+    const probability = `${Math.round(hit.exceedance.probability * 100)}%`
+    entries.push({
+      label,
+      color: tokens.tooltipColor,
+      details: ` · ${probability}`,
+      accessibleLabel: `${label} · ${probability}`,
+      symbol: { type: 'line', stroke: tokens.foreground, strokeDasharray: '2 2' },
+    })
+  }
+  return entries
+}
+
 function tooltipEntry(
   { mark, hit, index }: TooltipHitEntry,
   context: TooltipContext,
@@ -158,14 +195,6 @@ function tooltipEntry(
     const details = [
       ...(showX ? [coordinate('x', format.value(hit.x, 'x'))] : []),
       ...(showY && hit.member ? [`${hit.member.label}: ${format.value(hit.y, 'y', values)}`] : []),
-      ...hit.statistics.map(
-        (statistic) => `${statistic.label}: ${format.value(statistic.value, 'y', values)}`,
-      ),
-      ...(hit.exceedance && Number.isFinite(hit.exceedance.probability)
-        ? [
-            `P(>${format.value(hit.exceedance.threshold, 'y', values)}): ${Math.round(hit.exceedance.probability * 100)}%`,
-          ]
-        : []),
     ]
     return {
       label: name,
@@ -244,7 +273,10 @@ export function computeTooltipModel(
     inspection,
     hits: selected,
   } = selectHoverHits(options, context, state, pathContext)
-  const entries = selected.map((item) => tooltipEntry(item, context, options, inspection))
+  const entries = selected.flatMap((item) => [
+    tooltipEntry(item, context, options, inspection),
+    ...ensemblePartEntries(item, context, options),
+  ])
   return {
     point,
     position: options.position,
