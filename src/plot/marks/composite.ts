@@ -6,6 +6,8 @@ export interface CompositeStyle {
   readonly opacity?: number
   readonly stroke?: string
   readonly strokeWidth?: number
+  /** Canvas stroke alpha; internal to stroke-only canvas layers such as ensemble members. */
+  readonly strokeOpacity?: number
 }
 
 export interface CompositeLayer extends StackLayer, CompositeStyle {

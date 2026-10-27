@@ -67,7 +67,7 @@ export function styleCompositeCanvas(
   try {
     const styles = new Map<
       string,
-      { fill: string; stroke: string; opacity: number; width: number }
+      { fill: string; stroke: string; opacity: number; width: number; strokeOpacity: number }
     >()
     for (const [id, layer] of layers) {
       const style = resolveCompositeStyle(layer, options, tokens)
@@ -79,19 +79,20 @@ export function styleCompositeCanvas(
         stroke: computed.stroke,
         opacity: style.opacity,
         width: style.strokeWidth,
+        strokeOpacity: layer.strokeOpacity ?? options.strokeOpacity ?? 1,
       })
     }
     for (const shape of surface.shapes) {
       const style = styles.get(shape.layerId)
       if (!style) throw new Error('Missing composite layer for canvas geometry.')
-      const { fill, stroke, opacity, width } = style
+      const { fill, stroke, opacity, width, strokeOpacity } = style
       if (fill !== 'none') {
         context.globalAlpha = opacity
         context.fillStyle = fill
         context.fill(shape.path)
       }
       if (stroke !== 'none' && width > 0) {
-        context.globalAlpha = 1
+        context.globalAlpha = strokeOpacity
         context.strokeStyle = stroke
         context.lineWidth = width
         context.stroke(shape.path)

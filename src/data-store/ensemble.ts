@@ -1,7 +1,7 @@
 import { quantileSorted } from 'd3'
 import { reactive } from '../core/runtime.js'
 import { validateKeys } from '../core/validation.js'
-import type { SeriesChange } from './series.js'
+import type { SeriesChange, SeriesLod } from './series.js'
 
 export interface EnsembleMatrix {
   readonly memberCount: number
@@ -67,6 +67,8 @@ export interface EnsembleStore {
   /** Probability in [0, 1]; 0 and 1 give the min/max envelope. */
   quantile(probability: number): EnsembleStatistic
   quantiles(probabilities: readonly number[]): readonly EnsembleStatistic[]
+  /** M4 decimation of one member: logical row indices for `width` pixel columns. */
+  memberLod(member: number, window: readonly [number, number], width: number): SeriesLod
   mean(): EnsembleStatistic
   /** Fraction of valid members strictly above `threshold`. */
   exceedance(threshold: number): EnsembleStatistic
@@ -272,6 +274,10 @@ export function createEnsemble(
   const derived = new Map<string, DerivedColumn>()
   let derivedBytes = 0
   let sortedSteps = 0
+  const lodCacheLimitBytes = 4 * 1024 * 1024
+  const lodCacheLimitEntries = 256
+  const lodCache = new Map<string, Uint32Array>()
+  let lodCacheByteLength = 0
   const scratch = new Float64Array(memberCount)
 
   function slot(index: number) {
@@ -578,11 +584,120 @@ export function createEnsemble(
     return statistic('quantile', probability === 0 ? 0 : probability)
   }
 
+  function memberLod(member: number, window: readonly [number, number], width: number): SeriesLod {
+    if (!Number.isInteger(member) || member < 0 || member >= memberCount) {
+      throw new RangeError(`ensemble member ${member} is outside the store.`)
+    }
+    const start = Math.min(window[0], window[1])
+    const end = Math.max(window[0], window[1])
+    if (!Number.isFinite(start) || !Number.isFinite(end)) {
+      throw new RangeError('ensemble.memberLod window must have finite bounds.')
+    }
+    if (!Number.isSafeInteger(width) || width < 1) {
+      throw new RangeError('ensemble.memberLod width must be a positive safe integer.')
+    }
+    const key = `${version.get()}:${member}:${start}:${end}:${width}`
+    let indices = lodCache.get(key)
+    if (indices) {
+      lodCache.delete(key)
+    } else {
+      const [first, after] = rowRange([start, end])
+      const from = Math.max(0, first - 1)
+      const to = Math.min(count, after + 1)
+      const row = member * x.length
+      const selected: number[] = []
+      const select = (index: number) => {
+        if (selected[selected.length - 1] !== index) selected.push(index)
+      }
+      let bucket = -1
+      let bucketFirst = -1
+      let minimum = -1
+      let maximum = -1
+      let minimumValue = 0
+      let maximumValue = 0
+      let last = -1
+      let previousWasMissing = false
+      // First and last bound the bucket; min/max are emitted in index order between them.
+      const flush = () => {
+        if (bucketFirst < 0) return
+        select(bucketFirst)
+        select(Math.min(minimum, maximum))
+        select(Math.max(minimum, maximum))
+        select(last)
+        bucketFirst = -1
+      }
+      let physical = (head + from) % x.length
+      for (let index = from; index < to; index += 1) {
+        const value = values[row + physical]
+        const xValue = x[physical]
+        physical += 1
+        if (physical === x.length) physical = 0
+        if (!Number.isFinite(value)) {
+          flush()
+          if (!previousWasMissing) selected.push(index)
+          previousWasMissing = true
+          continue
+        }
+        const pixel =
+          start === end
+            ? Math.floor(width / 2)
+            : Math.max(
+                0,
+                Math.min(width - 1, Math.floor(((xValue - start) / (end - start)) * width)),
+              )
+        if (bucketFirst < 0 || pixel !== bucket) {
+          flush()
+          bucketFirst = index
+          minimum = index
+          maximum = index
+          minimumValue = value
+          maximumValue = value
+          bucket = pixel
+        } else if (value < minimumValue) {
+          minimum = index
+          minimumValue = value
+        } else if (value > maximumValue) {
+          maximum = index
+          maximumValue = value
+        }
+        last = index
+        previousWasMissing = false
+      }
+      flush()
+      indices = Uint32Array.from(selected)
+      lodCacheByteLength += indices.byteLength
+      while (
+        (lodCacheByteLength > lodCacheLimitBytes || lodCache.size >= lodCacheLimitEntries) &&
+        lodCache.size
+      ) {
+        const [oldestKey, oldest] = lodCache.entries().next().value!
+        lodCache.delete(oldestKey)
+        lodCacheByteLength -= oldest.byteLength
+      }
+    }
+    lodCache.set(key, indices)
+    const result = indices
+    return {
+      length: result.length,
+      at(index: number) {
+        if (!Number.isInteger(index) || index < 0 || index >= result.length) {
+          throw new RangeError(`ensemble LOD index ${index} is outside the result.`)
+        }
+        return result[index]
+      },
+      *[Symbol.iterator]() {
+        yield* result
+      },
+    }
+  }
+
   function publish(
     from: number,
     to: number,
     details: Omit<EnsembleChange, 'version' | 'from' | 'to'>,
   ) {
+    lodCache.clear()
+    lodCacheByteLength = 0
     change = Object.freeze({ version: version.get() + 1, from, to, ...details })
     version.update((value) => value + 1)
   }
@@ -698,6 +813,7 @@ export function createEnsemble(
     extent,
     xAt,
     valueAt,
+    memberLod,
     quantile,
     quantiles: (probabilities: readonly number[]) => {
       if (!Array.isArray(probabilities)) {
