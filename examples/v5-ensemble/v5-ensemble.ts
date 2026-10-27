@@ -82,7 +82,7 @@ function thresholdRule(value: number) {
 }
 
 const sharedTime = timeScale({ domain: [times[0], times[times.length - 1]], timeZone: 'UTC' })
-const MARGINS = { left: 80, right: 24, top: 12, bottom: 16 }
+const MARGINS = { left: 80, right: 24, top: 40, bottom: 16 }
 const guide = crosshair({ mode: 'x', labels: { x: 't' } })
 let threshold = thresholdRule(Number(thresholdOption.value))
 const plot = createPlot(required('#chart'), {
@@ -118,10 +118,9 @@ function exceedanceMark(threshold: number) {
 }
 
 let exceedance = exceedanceMark(Number(thresholdOption.value))
-const exceedanceGuide = crosshair({ mode: 'x', labels: { x: 't' } })
 const exceedanceTooltip = tooltip({
   marks: [exceedance],
-  crosshair: exceedanceGuide,
+  crosshair: guide,
   showX: false,
   digits: 2,
 })
@@ -135,8 +134,59 @@ const exceedancePlot = createPlot(required('#exceedance'), {
     axis('p', { style: 'classic', position: 'left', label: 'P(exceed)', grid: true }),
   ],
   marks: [exceedance],
-  plugins: [exceedanceGuide, exceedanceTooltip],
+  plugins: [guide, exceedanceTooltip],
 })
+
+// Both plots share the time scale, so a pointer time in one is projected into the other.
+// That shows the crosshair and tooltip in both plots at once.
+const plots = [plot, exceedancePlot]
+let relaying = false
+
+function relayPointer(source: (typeof plots)[number], event: PointerEvent) {
+  if (relaying || !event.isPrimary) return
+  const rect = source.element.getBoundingClientRect()
+  const size = source.size.get()
+  if (rect.width <= 0 || rect.height <= 0 || !size.width || !size.height) return
+  const svgX = ((event.clientX - rect.left) / rect.width) * size.width
+  const svgY = ((event.clientY - rect.top) / rect.height) * size.height
+  const region = source.regions.get().plot
+  const inside =
+    svgX >= region.x &&
+    svgX <= region.x + region.width &&
+    svgY >= region.y &&
+    svgY <= region.y + region.height
+
+  relaying = true
+  try {
+    for (const target of plots) {
+      if (target === source) continue
+      if (event.type === 'pointerleave' || !inside) {
+        target.element.dispatchEvent(new PointerEvent('pointerleave', { isPrimary: true }))
+        continue
+      }
+      const targetRect = target.element.getBoundingClientRect()
+      const targetSize = target.size.get()
+      if (targetRect.width <= 0 || targetRect.height <= 0 || !targetSize.width) continue
+      const targetRegion = target.regions.get().plot
+      const targetX = target.scales.t.project(source.scales.t.invert(svgX))
+      const targetY = targetRegion.y + targetRegion.height / 2
+      target.element.dispatchEvent(
+        new PointerEvent('pointermove', {
+          clientX: targetRect.left + (targetX / targetSize.width) * targetRect.width,
+          clientY: targetRect.top + (targetY / targetSize.height) * targetRect.height,
+          isPrimary: true,
+        }),
+      )
+    }
+  } finally {
+    relaying = false
+  }
+}
+
+for (const subplot of plots) {
+  subplot.element.addEventListener('pointermove', (event) => relayPointer(subplot, event), events)
+  subplot.element.addEventListener('pointerleave', (event) => relayPointer(subplot, event), events)
+}
 
 rendererOption.addEventListener(
   'change',
