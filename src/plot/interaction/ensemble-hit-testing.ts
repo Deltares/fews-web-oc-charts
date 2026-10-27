@@ -2,7 +2,11 @@ import type { EnsembleMember } from '../../data-store/ensemble.js'
 import type { Region } from '../../layout/layout.js'
 import type { ScaleBinding } from '../../scales/scale.js'
 import { controlMemberIndex, type EnsembleMark } from '../marks/ensemble/ensemble.js'
-import { drawnMemberCount, ensembleStatistics } from '../marks/ensemble/ensemble-parts.js'
+import {
+  drawnMemberCount,
+  ensembleStatistics,
+  visibleParts,
+} from '../marks/ensemble/ensemble-parts.js'
 
 export interface EnsembleHitStatistic {
   /** `p5`, `median`, `mean`, … */
@@ -67,7 +71,7 @@ export function ensembleHits(
   axis: 'x' | 'y' | 'xy',
   plot: Readonly<Region>,
 ): readonly EnsembleHit[] {
-  const options = mark.options.get().resolved
+  const options = visibleParts(mark.options.get().resolved)
   const store = mark.data
   const _version = store.version
   const xScale = scales[mark.x]

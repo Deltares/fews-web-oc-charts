@@ -21,6 +21,7 @@ import {
   type HighlightShape,
   type MarkDefinition,
   type MarkHit,
+  type MarkLegend,
   type MarkRenderContext,
   type MarkRenderer,
   type MarkValidationContext,
@@ -33,7 +34,15 @@ import {
   type EnsembleMark,
   type EnsembleOptions,
 } from './ensemble.js'
-import { drawnMemberCount, ensembleStatistics, spreadBands } from './ensemble-parts.js'
+import {
+  drawnMemberCount,
+  ensembleParts,
+  ensembleStatistics,
+  isPartVisible,
+  spreadBands,
+  visibleParts,
+  type EnsemblePart,
+} from './ensemble-parts.js'
 
 type Window = readonly [number, number]
 
@@ -64,26 +73,69 @@ export function resolveEnsembleStyles(options: Readonly<EnsembleOptions>, tokens
   }
 }
 
-/** Spread band, member line and median, in drawing order; used by tooltips and legends. */
+function partSymbol(
+  part: EnsemblePart,
+  styles: ReturnType<typeof resolveEnsembleStyles>,
+): SymbolPrimitiveSpec {
+  if (part === 'spread') return { type: 'area', ...styles.spread }
+  if (part === 'members') {
+    return {
+      type: 'line',
+      stroke: styles.members.stroke,
+      strokeWidth: styles.members.strokeWidth,
+      opacity: styles.members.opacity,
+    }
+  }
+  return { type: 'line', ...styles[part] }
+}
+
+/** Configured parts overlaid in drawing order; used by tooltips and the legend heading. */
 export function ensembleSymbol(
   options: Readonly<EnsembleOptions>,
   tokens: ThemeTokens,
 ): SymbolSpec {
   const styles = resolveEnsembleStyles(options, tokens)
-  const parts: SymbolPrimitiveSpec[] = []
-  if (options.spread) parts.push({ type: 'area', ...styles.spread })
-  if (options.members) {
-    parts.push({
-      type: 'line',
-      stroke: styles.members.stroke,
-      strokeWidth: styles.members.strokeWidth,
-      opacity: styles.members.opacity,
-    })
+  const parts = drawOrder.filter((part) => options[part] !== false)
+  return { type: 'composite', parts: parts.map((part) => partSymbol(part, styles)) }
+}
+
+const drawOrder: readonly EnsemblePart[] = ['spread', 'members', 'mean', 'median', 'control']
+
+function partLabel(part: EnsemblePart, options: Readonly<EnsembleOptions>, store: EnsembleStore) {
+  if (part === 'spread') {
+    const bands = spreadBands(options)
+    return bands.length === 1 ? `${bands[0][0]}–${bands[0][1]}%` : 'Spread'
   }
-  for (const part of ['mean', 'median', 'control'] as const) {
-    if (options[part]) parts.push({ type: 'line', ...styles[part] })
+  if (part === 'control' && options.control)
+    return store.members[controlMemberIndex(store, options.control.member)].label
+  return part[0].toUpperCase() + part.slice(1)
+}
+
+function ensembleLegend(mark: EnsembleMark, tokens: ThemeTokens): MarkLegend {
+  const options = mark.options.get().resolved
+  const styles = resolveEnsembleStyles(options, tokens)
+  const configured = ensembleParts.filter((part) => options[part] !== false)
+  const resolved = () => mark.options.get().resolved
+  const visibility = (visible: boolean, parts: readonly EnsemblePart[]) =>
+    Object.fromEntries(parts.map((part) => [part, { visible }]))
+  return {
+    label: options.label,
+    group: options.legendGroup,
+    symbol: ensembleSymbol(options, tokens),
+    visible: () => mark.visible,
+    setVisible: (visible) => mark.update({ visible, ...visibility(visible, configured) }),
+    layers: configured.map((part) => ({
+      id: part,
+      label: partLabel(part, options, mark.data),
+      symbol: partSymbol(part, styles),
+      visible: () => isPartVisible(resolved(), part),
+      setVisible(visible) {
+        // Showing one part of a hidden mark must not bring back its other parts.
+        const others = mark.visible ? {} : visibility(false, configured)
+        mark.update({ visible: true, ...others, [part]: { visible } })
+      },
+    })),
   }
-  return { type: 'composite', parts }
 }
 
 type Project = (value: number) => number
@@ -268,7 +320,7 @@ function createEnsembleRenderer(): MarkRenderer<EnsembleMark> {
       layer.append(group)
     },
     geometry(mark: EnsembleMark, context: MarkRenderContext) {
-      const options = mark.options.get().resolved
+      const options = visibleParts(mark.options.get().resolved)
       const xScale = context.scales[mark.x]
       const yScale = context.scales[mark.y]
       const key = [
@@ -318,7 +370,7 @@ function createEnsembleRenderer(): MarkRenderer<EnsembleMark> {
     },
     style(mark: EnsembleMark, tokens: ThemeTokens) {
       if (!styleKey.changed([mark, mark.options.version, tokens])) return
-      const options = mark.options.get().resolved
+      const options = visibleParts(mark.options.get().resolved)
       const styles = resolveEnsembleStyles(options, tokens)
       const memberStyle: CompositeStyle = {
         fill: 'none',
@@ -427,9 +479,10 @@ export const ensembleDefinition: MarkDefinition<EnsembleMark> = {
   is: isEnsembleMark,
   hits: (mark, { scales, point, axis, plot }) => ensembleHits(mark, scales, point, axis, plot),
   highlight: (mark, hit, { scales, color }) => ensembleHighlight(mark, hit, scales, color),
+  legend: ensembleLegend,
   validate: (mark, context) => validateScales(mark.options.get().resolved, context),
   extents(mark, context) {
-    const options = mark.options.get().resolved
+    const options = visibleParts(mark.options.get().resolved)
     if (!options.visible) return
     const store = mark.data
     const _version = store.version

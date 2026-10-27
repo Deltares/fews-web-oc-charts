@@ -1975,7 +1975,7 @@ Additional acceptance checks for the ownership contract:
 | 2. Marks                      | `series` (line+markers+area), band, single/grouped/stacked `bar` with named side-by-side stacks, `stackedArea` with named independent stacks, shared columnar stack layout and stack-safe LOD (3.6.1), histogram, rule, text, heatmap, arrows/direction, progress; SVG first, canvas opt-in | All static examples ported; grouped-bar, stacked-bar, named-stack comparison and stacked-area fixtures pass on SVG/canvas, with exact per-stack layout/extent/gap tests                                                                           |
 | 3. Interaction                | Pointer hub, zoom, pan, brush, crosshair, tooltip, headless legend model and built-in legend renderer; composite-layer hit tests, tooltips and visibility                                                                                                                                   | mouseover/zoom/panning/brush examples ported; external legend commands work without legend DOM; composite toggles restack/autoscale correctly                                                                                                     |
 | 4. Sync & live                | Shared scale/pointer/selection/clock, follow mode, append/retention, IntersectionObserver pause; incremental aligned-table stack updates; typed domain events via `subscribe()` and `plot.on()` (implemented)                                                                               | Complete: all steps implemented; production live-stream acceptance, Phase 4 browser suites and pan parity passed locally in Chromium (see checkpoints below) |
-| 5. Ensembles                  | Ensemble store, quantile cache, members/spread/median rendering, ensemble tooltip/legend                                                                                                                                                                                                    | 50×10k benchmark meets target                                                                                                                                                                                                                     |
+| 5. Ensembles                  | Ensemble store, quantile cache, members/spread/median rendering, ensemble tooltip/legend                                                                                                                                                                                                    | Implemented (see the Phase 5 checkpoint below); the 50×10k canvas initial render measured ~46 ms locally, not yet CI-enforced |
 | 6. Domain plugins             | Warning levels, alert lines, current time, DST indicator (on new `time/`), level select, cross-section select, data field, Beaufort, colour bar, polar wind/current roses                                                                                                                   | Feature parity checklist complete                                                                                                                                                                                                                 |
 | 7. Web Component              | `<fews-chart>` with `el.config`, plot-level attributes, `sync-group` registry, events, Shadow DOM theming, typings, slotted/external legend facade and symbol helper                                                                                                                        | All examples also runnable via `<fews-chart>`; works in Vue app without adapter; config/attribute-removal and custom-legend parity tests pass                                                                                                     |
 | 8. Adoption                   | Vue component/composables and scoped/custom legends (3.15), docs site from examples, migration guide, FEWS Web OC integration behind a flag; `5.0.0-beta`                                                                                                                                   | FEWS Web OC runs on v5 behind a flag; Vue custom-legend and lifecycle acceptance tests pass                                                                                                                                                       |
@@ -2906,6 +2906,77 @@ checkpoints), so the headless runs were repeated locally (2026-10-25, Chromium
   shared-scale synchronization passed.
 
 Phase 4 is complete. No Phase 2 pixel baselines were changed.
+
+### Phase 5 Ensembles checkpoint
+
+**Status: implemented on 2026-10-27. The ensemble store, quantile cache, mark, tooltip,
+highlight and legend are in place, with Vitest browser suites passing locally in
+Chromium. The 50×10k target is met with the canvas renderer in local measurements; it
+is not yet a CI-enforced benchmark.**
+
+**Store (`data-store/ensemble.ts`).** `createEnsemble({ x, members }, options)` accepts
+one column per member or a row-major `{ memberCount, values }` matrix. It copies once
+into a members × capacity ring (Float32 by default, about 2 MB for 50 × 10k), with the
+series store's mutation, retention and `change` semantics (`EnsembleChange =
+SeriesChange`) and atomic rollback. Member metadata has stable, unique ids. A 128-step
+block index gives windowed extents over all members. `memberLod(member, window,
+width)` is M4 decimation with the same output as `series.lod`, in a bounded LRU cache
+(256 entries / 4 MiB) that is cleared on mutation. The member count is fixed for the
+lifetime of a store.
+
+**Derived columns.** `quantile(p)`, `quantiles([...])`, `mean()` and
+`exceedance(threshold)` return live, store-owned statistics (`at`, `extent`). They are
+cached as columns sharing the ring layout, so an append without reallocation only
+computes new rows. Capacity growth, `prepend`/`upsert`/`replace` and `clear` recompute
+fully. Each step gathers the valid members into a reused scratch buffer and sorts once
+for all cached quantiles (`d3.quantileSorted`). Median and p50 share one column, and
+all-missing steps give `NaN`. The cache is bounded (32 columns / 16 MiB, LRU); evicted
+handles recompute on their next read. Quantiles are only batched when they are
+registered before the first read, so the mark requests all drawn quantiles in one
+`quantiles()` call (`ensembleStatistics`).
+
+**Mark (`plot/marks/ensemble/`).** `ensemble(store, options)` draws spread bands,
+members, mean, median and a control member inside one `g[data-mark="ensemble"]`.
+Display parts are top-level `false | Options` keys like `series()`, rather than nested
+under `show` as in the 3.7 sketch. `spread` takes `{ bands }` instead of a bare array.
+Each part accepts `visible`, so legend toggles keep its options. `renderer: 'canvas'`
+moves members onto one composite canvas with one stroke per member (the composite
+canvas gained an internal `strokeOpacity`); statistics stay SVG. Linear and time scales
+are projected through precomputed D3 bimap arithmetic instead of per-vertex `project`
+calls. Autoscale covers visible parts only, honouring `members.max`.
+
+**Inspection.** A hit is the nearest step by x pixel and the nearest drawn line at that
+step (member, control, statistic or band edge; a member wins ties). It carries the
+drawn statistics (quantiles ascending, then the mean) and the optional exceedance
+probability. The tooltip shows one row per ensemble, for example
+`fc · 10 · Member C: 10 · p5: 2 · median: 6 · p95: 10 · P(>4): 67%`. `highlight()`
+draws the hovered member's full, decimated line plus a point; this replaces the
+`highlightOnHover` option of the sketch. `exceedance` takes a numeric threshold; named
+warning-level thresholds follow in Phase 6.
+
+**Legend.** Configured parts become layers with ids `<mark>::layer:<part>`, labels
+`Members`, `5–95%` (single band) or `Spread`, `Median`, `Mean` and the control
+member's label. Each has its own `SymbolSpec`, and the heading overlays all parts. The
+composite legend rules apply: mixed heading state, heading toggles all parts, showing
+one part of a hidden mark shows only that part, isolate/show-all, a flat list for
+unlabelled marks and collapse for single-part marks.
+
+**Performance (local, Vitest browser mode, Chromium, macOS, Apple M2 Pro).** For a
+fresh 50 × 10k store with default spread bands and median, `createPlot` plus one
+animation frame takes about 46 ms with `renderer: 'canvas'` and about 82 ms with SVG
+members. Before the batching and projection fixes it took about 89 ms and 132 ms. On
+their own, quantiles take about 11 ms, member decimation about 9 ms and canvas paths
+about 8 ms. The in-repository test uses a 1 s smoke bound; a pinned-runner benchmark
+remains to be added to the §6 suite.
+
+**Not yet covered.** `crosshair({ snap })` does not accept ensembles, and the Web
+Component/Vue ensemble examples belong to Phases 7 and 8.
+
+**Verification (2026-10-27).** `npx vitest run`: 76 files, 791 tests passed, 1
+skipped, including `test/Data/ensemble-store.test.ts`,
+`test/Data/ensemble-statistics.test.ts`, `test/Plot/ensemble-mark.test.ts`,
+`test/Plot/ensemble-interaction.test.ts` and `test/Plot/ensemble-legend.test.ts`.
+`tsc -p tsconfig.build.json` passes. No Phase 2 pixel baselines were changed.
 
 ## 8. Additional improvements to consider
 

@@ -189,6 +189,7 @@ export type {
   EnsembleSpreadOptions,
   EnsembleControlOptions,
   EnsembleExceedanceOptions,
+  EnsemblePartVisibility,
 } from './plot/marks/ensemble/ensemble.js'
 export { createGrid } from './data-store/grid.js'
 export type { GridInput, GridView, GridStore } from './data-store/grid.js'

@@ -117,6 +117,15 @@ describe('ensemble inspection', () => {
     expect(last.distance).toBe(0)
   })
 
+  test('omits hidden parts from hits', async () => {
+    const mark = ensemble(data(), { x: 'x', y: 'y', median: {}, mean: {} })
+    const { current } = await setup(mark, [])
+    mark.update({ members: { visible: false }, median: { visible: false } })
+    const [hit] = hits(current, mark, 10, 2, 'xy')
+    expect(hit.member).toBeUndefined()
+    expect(hit.statistics.map(({ label }) => label)).toEqual(['mean'])
+  })
+
   test('reports no hits for hidden marks and steps outside the plot', async () => {
     const mark = ensemble(data(), { x: 'x', y: 'y' })
     const { current } = await setup(mark, [])
