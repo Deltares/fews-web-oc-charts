@@ -37,7 +37,7 @@ export interface BandMark {
   readonly label: string | undefined
   readonly legendGroup: string | undefined
   readonly visible: boolean
-  update(patch: BandUpdate): void
+  update(this: void, patch: BandUpdate): void
 }
 
 /** Updates data, appearance, scale bindings and legend options without changing identity. */

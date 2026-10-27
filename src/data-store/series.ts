@@ -36,7 +36,7 @@ export interface SeriesChange {
 
 export interface SeriesLod extends Iterable<number> {
   readonly length: number
-  at(index: number): number
+  at(this: void, index: number): number
 }
 
 interface CachedSeriesLod {
@@ -50,6 +50,7 @@ export interface SeriesStore<Rows = SeriesInput> {
   readonly version: number
   readonly change: SeriesChange | undefined
   extent(
+    this: void,
     axis: 'x' | 'y',
     window?: readonly [number, number],
     windowAxis?: 'x' | 'y',
@@ -57,8 +58,8 @@ export interface SeriesStore<Rows = SeriesInput> {
   lod(window: readonly [number, number], width: number): SeriesLod
   readonly lodCacheEntries: number
   readonly lodCacheByteLength: number
-  xAt(index: number): number
-  yAt(index: number): number
+  xAt(this: void, index: number): number
+  yAt(this: void, index: number): number
   append(rows: Rows): void
   prepend(rows: Rows): void
   upsert(input: { from: number; to: number; rows: Rows }): void

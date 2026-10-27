@@ -9,13 +9,18 @@ import { optionSignal } from '../../../core/runtime.js'
 import { validateKeys } from '../../../core/validation.js'
 import { isEnsembleStore, type EnsembleStore } from '../../../data-store/ensemble.js'
 
-export interface EnsembleLineOptions {
+/** Parts keep their options while hidden, so the legend can toggle them. */
+export interface EnsemblePartVisibility {
+  visible?: boolean
+}
+
+export interface EnsembleLineOptions extends EnsemblePartVisibility {
   stroke?: string
   width?: number
   strokeDasharray?: string
 }
 
-export interface EnsembleMembersOptions {
+export interface EnsembleMembersOptions extends EnsemblePartVisibility {
   stroke?: string
   width?: number
   /** Stroke opacity of each member line. */
@@ -24,7 +29,7 @@ export interface EnsembleMembersOptions {
   max?: number
 }
 
-export interface EnsembleSpreadOptions {
+export interface EnsembleSpreadOptions extends EnsemblePartVisibility {
   /** Nested percentile bands, e.g. `[[5, 95], [25, 75]]`. */
   bands?: readonly (readonly [number, number])[]
   fill?: string
@@ -104,12 +109,14 @@ export function validateEnsembleUpdates(
   return () => entries.delete(validate)
 }
 
-function validatePart(value: unknown, name: string, allowed: readonly string[]) {
+function validatePart(value: unknown, name: string, allowed: readonly string[], toggleable = true) {
   if (value === false) return false
   if (!value || typeof value !== 'object' || Array.isArray(value))
     throw new TypeError(`ensemble.${name} must be false or options.`)
-  validateKeys(value, allowed, `ensemble.${name}`)
+  validateKeys(value, toggleable ? [...allowed, 'visible'] : allowed, `ensemble.${name}`)
   const part = value as Record<string, unknown>
+  if (part.visible !== undefined && typeof part.visible !== 'boolean')
+    throw new TypeError(`ensemble.${name}.visible must be boolean.`)
   for (const key of ['stroke', 'fill', 'strokeDasharray']) {
     if (part[key] !== undefined && (typeof part[key] !== 'string' || !part[key]))
       throw new TypeError(`ensemble.${name}.${key} must be a non-empty string.`)
@@ -167,7 +174,7 @@ function validateOptions(options: Readonly<EnsembleOptions>, data: EnsembleStore
   if (validatePart(options.control, 'control', [...lineKeys, 'member'])) {
     controlMemberIndex(data, (options.control as EnsembleControlOptions).member)
   }
-  if (validatePart(options.exceedance, 'exceedance', ['threshold'])) {
+  if (validatePart(options.exceedance, 'exceedance', ['threshold'], false)) {
     const threshold = (options.exceedance as EnsembleExceedanceOptions).threshold
     if (typeof threshold !== 'number' || !Number.isFinite(threshold))
       throw new RangeError('ensemble.exceedance.threshold must be finite.')

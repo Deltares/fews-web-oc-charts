@@ -18,7 +18,7 @@ interface PointerCoordinates {
   readonly region: Readonly<Region>
   readonly scales: Readonly<Record<string, ScaleBinding>>
   readonly skew?: number
-  direction(name: string): Orientation
+  direction(this: void, name: string): Orientation
 }
 
 export interface CoordinateAdapter {

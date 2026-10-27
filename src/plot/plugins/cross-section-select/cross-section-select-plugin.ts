@@ -25,7 +25,7 @@ import { accent } from '../../marks/mark-definition.js'
 interface CrossSectionValidationContext {
   readonly marks: readonly object[]
   scaleKind(name: string): ScaleKind | undefined
-  direction(name: string): string
+  direction(this: void, name: string): string
 }
 
 function selectedMarks(
@@ -84,7 +84,7 @@ function pointFor(
   if (isSeriesMark(mark)) {
     mark.options.get()
     if (!mark.visible) return undefined
-    mark.data.version
+    void mark.data.version
   }
   const xScale = context.scales[mark.x]
   const yScale = context.scales[mark.y]

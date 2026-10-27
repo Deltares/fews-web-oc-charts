@@ -1,6 +1,29 @@
 import type { EnsembleStore } from '../../../data-store/ensemble.js'
 import { defaultSpreadBands, type EnsembleOptions } from './ensemble.js'
 
+export const ensembleParts = ['members', 'spread', 'median', 'mean', 'control'] as const
+export type EnsemblePart = (typeof ensembleParts)[number]
+
+export function isPartVisible(options: Readonly<EnsembleOptions>, part: EnsemblePart) {
+  const current = options[part]
+  return current !== false && current.visible !== false
+}
+
+const shown = new WeakMap<Readonly<EnsembleOptions>, Readonly<EnsembleOptions>>()
+
+/** Options with hidden parts replaced by `false`, for rendering, autoscale and inspection. */
+export function visibleParts(options: Readonly<EnsembleOptions>): Readonly<EnsembleOptions> {
+  let result = shown.get(options)
+  if (!result) {
+    result = { ...options }
+    for (const part of ensembleParts) {
+      if (!isPartVisible(options, part)) result = { ...result, [part]: false }
+    }
+    shown.set(options, result)
+  }
+  return result
+}
+
 /** Members drawn by the mark, honouring `members.max`. */
 export function drawnMemberCount(options: Readonly<EnsembleOptions>, store: EnsembleStore) {
   if (!options.members) return 0

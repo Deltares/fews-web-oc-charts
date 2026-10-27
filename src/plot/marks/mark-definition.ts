@@ -19,7 +19,7 @@ export interface MarkHitContext {
   readonly point: { readonly x: number; readonly y: number }
   readonly axis: 'x' | 'y' | 'xy'
   readonly plot: Readonly<Region>
-  pathContext(): CanvasRenderingContext2D | undefined
+  pathContext(this: void): CanvasRenderingContext2D | undefined
 }
 
 /** Pixel-space shape drawn over a hovered datum; strokes default to `currentColor`. */
@@ -55,7 +55,7 @@ export interface MarkLegendLayer {
   readonly stack?: string
   readonly symbol: SymbolSpec
   visible(): boolean
-  setVisible(visible: boolean): void
+  setVisible(this: void, visible: boolean): void
 }
 
 export interface MarkLegend {
@@ -65,7 +65,7 @@ export interface MarkLegend {
   readonly symbol: SymbolSpec
   readonly layers?: readonly MarkLegendLayer[]
   visible(): boolean
-  setVisible(visible: boolean): void
+  setVisible(this: void, visible: boolean): void
 }
 
 export type CoordinateSystem = 'cartesian' | 'polar' | 'skewT'
@@ -74,7 +74,7 @@ export type Orientation = 'x' | 'y' | 'angular' | 'radial'
 export interface MarkValidationContext {
   readonly coordinateSystem: CoordinateSystem
   readonly scales: Readonly<Record<string, ScaleHandle>>
-  direction(scale: string): Orientation
+  direction(this: void, scale: string): Orientation
 }
 
 export interface MarkRenderContext {
@@ -83,14 +83,14 @@ export interface MarkRenderContext {
   readonly coordinateSystem: CoordinateSystem
   readonly scales: Readonly<Record<string, ScaleBinding>>
   readonly plot: Readonly<Region>
-  direction(scale: string): Orientation
+  direction(this: void, scale: string): Orientation
 }
 
 export interface MarkExtentContext {
   readonly scale: string
   readonly scales: Readonly<Record<string, ScaleHandle>>
   readonly mode: 'data' | 'visible'
-  add(value: ScaleValue): void
+  add(this: void, value: ScaleValue): void
 }
 
 /**

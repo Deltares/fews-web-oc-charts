@@ -23,7 +23,7 @@ import {
   type CompositeLayer,
 } from '../composite.js'
 
-export interface BarLayer extends CompositeLayer {}
+export type BarLayer = CompositeLayer
 export interface BarOptions {
   text?: {
     format: (value: number, layerId: string, row: number) => string

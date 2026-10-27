@@ -23,7 +23,7 @@ import {
   type CompositeLayer,
 } from '../composite.js'
 
-export interface StackedAreaLayer extends CompositeLayer {}
+export type StackedAreaLayer = CompositeLayer
 
 export interface StackedAreaOptions {
   renderer: 'svg' | 'canvas'

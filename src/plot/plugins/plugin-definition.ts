@@ -36,7 +36,7 @@ export interface PlotContext {
   /** Owned by the installed plugin and disposed when it is removed. */
   readonly scope: ReactiveScope
   inspectCrosshair(handle: CrosshairHandle): CrosshairInspection
-  direction(name: string): Orientation
+  direction(this: void, name: string): Orientation
   locate(event: { readonly clientX: number; readonly clientY: number }): PlotPosition | undefined
   /** Registers a gesture handler that is released automatically with the plugin. */
   on<K extends GestureType>(type: K, handler: GestureHandler<K>): () => void
@@ -48,7 +48,7 @@ export interface PluginValidationContext {
   readonly plugins: readonly object[]
   readonly marks: readonly object[]
   readonly scales: Readonly<Record<string, ScaleHandle>>
-  direction(name: string): Orientation
+  direction(this: void, name: string): Orientation
 }
 
 export interface InstalledPlugin {

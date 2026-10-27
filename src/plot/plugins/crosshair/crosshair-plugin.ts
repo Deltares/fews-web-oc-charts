@@ -50,7 +50,7 @@ function validateLabels(
   options: Readonly<CrosshairOptions>,
   context: {
     readonly scales: Readonly<Record<string, unknown>>
-    direction(name: string): Orientation
+    direction(this: void, name: string): Orientation
   },
 ) {
   for (const axis of ['x', 'y'] as const) {
