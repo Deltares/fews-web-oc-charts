@@ -1,0 +1,12 @@
+#chart {
+  height: 440px;
+}
+
+figure h2 {
+  margin: 12px 0 0;
+  font-size: 1rem;
+}
+
+#exceedance {
+  height: 200px;
+}
