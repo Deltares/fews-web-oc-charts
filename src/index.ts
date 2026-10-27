@@ -169,6 +169,16 @@ export type {
   HistogramOptions,
   HistogramBin,
 } from './plot/marks/histogram/histogram.js'
+export { createEnsemble } from './data-store/ensemble.js'
+export type {
+  EnsembleInput,
+  EnsembleMatrix,
+  EnsembleMember,
+  EnsembleMemberMetadata,
+  EnsembleStoreOptions,
+  EnsembleStore,
+  EnsembleChange,
+} from './data-store/ensemble.js'
 export { createGrid } from './data-store/grid.js'
 export type { GridInput, GridView, GridStore } from './data-store/grid.js'
 export { heatmap } from './plot/marks/heatmap/heatmap.js'
