@@ -1,4 +1,4 @@
-import { quantileSorted } from 'd3'
+import { quantileSorted as quantileR7 } from 'd3'
 import { reactive } from '../core/runtime.js'
 import { validateKeys } from '../core/validation.js'
 import type { SeriesChange, SeriesLod } from './series.js'
@@ -26,6 +26,28 @@ export interface EnsembleMember {
   readonly label: string
 }
 
+/**
+ * Sample quantile definition, numbered as in Hyndman & Fan (1996), "Sample quantiles in
+ * statistical packages", The American Statistician 50(4), 361–365.
+ *
+ * - `r6`: rank `p(n + 1)` (1-based), the Weibull plotting position recommended by the
+ *   NIST/SEMATECH e-Handbook of Statistical Methods and used by Excel's `PERCENTILE.EXC`.
+ *   Ranks outside `[1, n]` are clamped to the smallest and largest member.
+ * - `r7`: rank `1 + (n - 1)p`, the default of d3, NumPy, R and Excel's `PERCENTILE.INC`.
+ */
+export type EnsembleQuantileMethod = 'r6' | 'r7'
+
+/** R-6 quantile of ascending `sorted` values; `p` is in [0, 1]. */
+function quantileR6(sorted: ArrayLike<number>, p: number) {
+  const n = sorted.length
+  if (!n) return undefined
+  const rank = p * (n + 1)
+  if (rank <= 1) return sorted[0]
+  if (rank >= n) return sorted[n - 1]
+  const lower = Math.floor(rank)
+  return sorted[lower - 1] + (rank - lower) * (sorted[lower] - sorted[lower - 1])
+}
+
 export interface EnsembleStoreOptions {
   capacity?: number
   maxPoints?: number
@@ -34,6 +56,8 @@ export interface EnsembleStoreOptions {
   precision?: 'float64' | 'float32'
   /** One entry per member; ids default to the member index. */
   metadata?: readonly EnsembleMemberMetadata[]
+  /** Quantile definition (Hyndman & Fan numbering); defaults to `r6`. */
+  quantileMethod?: EnsembleQuantileMethod
 }
 
 export type EnsembleChange = SeriesChange
@@ -52,6 +76,7 @@ export interface EnsembleStatistic {
 }
 
 export interface EnsembleStore {
+  readonly quantileMethod: EnsembleQuantileMethod
   readonly length: number
   readonly capacity: number
   readonly memberCount: number
@@ -233,7 +258,11 @@ export function createEnsemble(
   input: EnsembleInput,
   options: EnsembleStoreOptions = {},
 ): EnsembleStore {
-  validateKeys(options, ['capacity', 'maxPoints', 'maxAge', 'precision', 'metadata'], 'ensemble')
+  validateKeys(
+    options,
+    ['capacity', 'maxPoints', 'maxAge', 'precision', 'metadata', 'quantileMethod'],
+    'ensemble',
+  )
   for (const key of ['capacity', 'maxPoints'] as const) {
     const value = options[key]
     if (value !== undefined && (!Number.isSafeInteger(value) || value < 1)) {
@@ -243,6 +272,11 @@ export function createEnsemble(
   if (options.maxAge !== undefined && (!Number.isFinite(options.maxAge) || options.maxAge < 0)) {
     throw new RangeError('ensemble.maxAge must be a nonnegative finite number.')
   }
+  const quantileMethod = options.quantileMethod ?? 'r6'
+  if (quantileMethod !== 'r6' && quantileMethod !== 'r7') {
+    throw new Error('ensemble.quantileMethod must be r6 or r7.')
+  }
+  const quantileSorted = quantileMethod === 'r6' ? quantileR6 : quantileR7
   const precision = options.precision === undefined ? 'float32' : options.precision
   if (precision !== 'float32' && precision !== 'float64') {
     throw new Error('ensemble.precision must be float32 or float64.')
@@ -495,7 +529,7 @@ export function createEnsemble(
       const physical = (head + index) % x.length
       const valid = gather(physical)
       if (target.kind === 'quantile') {
-        // d3 types require an array; quantileSorted only uses indexed access.
+        // d3 types require an array; both quantile functions only use indexed access.
         const sorted = scratch.subarray(0, valid).sort() as unknown as number[]
         sortedSteps += 1
         for (let position = 0; position < group.length; position += 1) {
@@ -799,6 +833,7 @@ export function createEnsemble(
 
   push(initial)
   const store: EnsembleStore = Object.freeze({
+    quantileMethod,
     get length() {
       return count
     },

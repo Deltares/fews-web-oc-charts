@@ -2929,7 +2929,10 @@ lifetime of a store.
 cached as columns sharing the ring layout, so an append without reallocation only
 computes new rows. Capacity growth, `prepend`/`upsert`/`replace` and `clear` recompute
 fully. Each step gathers the valid members into a reused scratch buffer and sorts once
-for all cached quantiles (`d3.quantileSorted`). Median and p50 share one column, and
+for all cached quantiles. The definition is the `quantileMethod` store option, numbered as in
+Hyndman & Fan (1996), _Sample quantiles in statistical packages_, The American Statistician
+50(4): `'r6'` (default; rank `p(n + 1)`, the NIST/SEMATECH recommendation, clamped to the
+smallest and largest valid member) or `'r7'` (`d3.quantileSorted`; rank `1 + (n - 1)p`). Median and p50 share one column, and
 all-missing steps give `NaN`. The cache is bounded (32 columns / 16 MiB, LRU); evicted
 handles recompute on their next read. Quantiles are only batched when they are
 registered before the first read, so the mark requests all drawn quantiles in one
