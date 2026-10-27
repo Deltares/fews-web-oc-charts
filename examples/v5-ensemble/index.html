@@ -35,12 +35,11 @@
       </label>
       <label for="threshold">
         Exceedance threshold
-        <input id="threshold" type="number" value="60" step="5" />
+        <input id="threshold" type="number" value="100" step="5" />
       </label>
     </fieldset>
     <figure>
       <div id="chart" class="plot-host"></div>
-      <h2>Exceedance probability</h2>
       <div id="exceedance" class="plot-host"></div>
       <figcaption>
         The lower plot shares the time scale and shows the fraction of members above the threshold.
@@ -54,7 +53,7 @@ const fc = ensemble(store, {
   spread: { bands: [[5, 95], [25, 75]] },
   median: {}, mean: false, control: { member: 0 },
   members: { opacity: 0.25 },
-  exceedance: { threshold: 60 },
+  exceedance: { threshold: 100 },
 })
 createPlot(host, { scales, axes, marks: [fc], plugins: [guide, tooltip({ marks: [fc] }), highlight({ marks: [fc] }), legend()] })</code></pre>
     <script type="module" src="./v5-ensemble.ts"></script>
