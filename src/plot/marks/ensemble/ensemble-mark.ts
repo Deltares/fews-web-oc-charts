@@ -10,58 +10,32 @@ import {
   type CanvasShape,
 } from '../../rendering/render-composite-canvas.js'
 import type { CompositeStyle } from '../composite.js'
+import type { SymbolPrimitiveSpec, SymbolSpec } from '../../plugins/legend/legend.js'
+import { ensembleHits, isEnsembleHit } from '../../interaction/ensemble-hit-testing.js'
 import {
   accent,
   createKeyCache,
   extentWindow,
   scaleKey,
   setMarkId,
+  type HighlightShape,
   type MarkDefinition,
+  type MarkHit,
   type MarkRenderContext,
   type MarkRenderer,
   type MarkValidationContext,
 } from '../mark-definition.js'
 import {
   controlMemberIndex,
-  defaultSpreadBands,
   isEnsembleMark,
   validateEnsembleUpdates,
   type EnsembleLineOptions,
   type EnsembleMark,
   type EnsembleOptions,
 } from './ensemble.js'
+import { drawnMemberCount, ensembleStatistics, spreadBands } from './ensemble-parts.js'
 
 type Window = readonly [number, number]
-
-/** Members drawn by the mark, honouring `members.max`. */
-export function drawnMemberCount(options: Readonly<EnsembleOptions>, store: EnsembleStore) {
-  if (!options.members) return 0
-  return Math.min(store.memberCount, options.members.max ?? store.memberCount)
-}
-
-export function spreadBands(options: Readonly<EnsembleOptions>) {
-  return options.spread ? (options.spread.bands ?? defaultSpreadBands) : []
-}
-
-/**
- * Requests every quantile the mark draws in one call: the store refreshes all cached
- * quantiles in one sort pass, but only those registered before the first read.
- */
-export function ensembleStatistics(options: Readonly<EnsembleOptions>, store: EnsembleStore) {
-  const bands = spreadBands(options)
-  const quantiles = store.quantiles([
-    ...bands.flatMap(([low, high]) => [low / 100, high / 100]),
-    ...(options.median ? [0.5] : []),
-  ])
-  return {
-    bands: bands.map(
-      ([low, high], position) =>
-        [low, high, quantiles[position * 2], quantiles[position * 2 + 1]] as const,
-    ),
-    median: options.median ? quantiles.at(-1) : undefined,
-    mean: options.mean ? store.mean() : undefined,
-  }
-}
 
 export function resolveEnsembleStyles(options: Readonly<EnsembleOptions>, tokens: ThemeTokens) {
   const line = (part: false | EnsembleLineOptions, stroke: string, width: number) => ({
@@ -88,6 +62,28 @@ export function resolveEnsembleStyles(options: Readonly<EnsembleOptions>, tokens
     },
     control: line(options.control, accent(tokens), 2),
   }
+}
+
+/** Spread band, member line and median, in drawing order; used by tooltips and legends. */
+export function ensembleSymbol(
+  options: Readonly<EnsembleOptions>,
+  tokens: ThemeTokens,
+): SymbolSpec {
+  const styles = resolveEnsembleStyles(options, tokens)
+  const parts: SymbolPrimitiveSpec[] = []
+  if (options.spread) parts.push({ type: 'area', ...styles.spread })
+  if (options.members) {
+    parts.push({
+      type: 'line',
+      stroke: styles.members.stroke,
+      strokeWidth: styles.members.strokeWidth,
+      opacity: styles.members.opacity,
+    })
+  }
+  for (const part of ['mean', 'median', 'control'] as const) {
+    if (options[part]) parts.push({ type: 'line', ...styles[part] })
+  }
+  return { type: 'composite', parts }
 }
 
 type Project = (value: number) => number
@@ -362,6 +358,36 @@ function createEnsembleRenderer(): MarkRenderer<EnsembleMark> {
   }
 }
 
+function ensembleHighlight(
+  mark: EnsembleMark,
+  hit: MarkHit,
+  scales: Readonly<Record<string, ScaleBinding>>,
+  color: string,
+): readonly HighlightShape[] {
+  if (!isEnsembleHit(hit) || !Number.isFinite(hit.px) || !Number.isFinite(hit.py)) return []
+  const dot: HighlightShape = { type: 'circle', cx: hit.px, cy: hit.py, r: 3, fill: color }
+  if (!hit.member) return [dot]
+  const store = mark.data
+  const member = hit.member.index
+  const xScale = scales[mark.x]
+  const domain = xScale.scale.domain.get()
+  const range = xScale.range.get()
+  const width = Math.max(1, Math.floor(Math.abs(range[1] - range[0])))
+  const path = svgPath()
+  traceLine(
+    path,
+    store.length,
+    store.xAt,
+    (index) => store.valueAt(member, index),
+    projector(xScale),
+    projector(scales[mark.y]),
+    store.length > width * 4
+      ? store.memberLod(member, [Number(domain[0]), Number(domain[1])], width)
+      : undefined,
+  )
+  return [{ type: 'path', d: path.d, stroke: color }, dot]
+}
+
 function addExtent(add: (value: number) => void, extent: Window | undefined) {
   if (!extent) return
   add(extent[0])
@@ -399,6 +425,8 @@ function validateScales(options: Readonly<EnsembleOptions>, context: MarkValidat
 export const ensembleDefinition: MarkDefinition<EnsembleMark> = {
   name: 'ensemble',
   is: isEnsembleMark,
+  hits: (mark, { scales, point, axis, plot }) => ensembleHits(mark, scales, point, axis, plot),
+  highlight: (mark, hit, { scales, color }) => ensembleHighlight(mark, hit, scales, color),
   validate: (mark, context) => validateScales(mark.options.get().resolved, context),
   extents(mark, context) {
     const options = mark.options.get().resolved

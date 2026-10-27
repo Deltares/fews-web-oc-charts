@@ -37,6 +37,11 @@ export interface EnsembleControlOptions extends EnsembleLineOptions {
   member: number | string
 }
 
+export interface EnsembleExceedanceOptions {
+  /** Inspection reports the fraction of valid members strictly above this value. */
+  threshold: number
+}
+
 export interface EnsembleOptions {
   id?: string
   x: string
@@ -52,6 +57,7 @@ export interface EnsembleOptions {
   median: false | EnsembleLineOptions
   mean: false | EnsembleLineOptions
   control: false | EnsembleControlOptions
+  exceedance: false | EnsembleExceedanceOptions
 }
 
 export interface EnsembleMark {
@@ -82,6 +88,7 @@ const keys = [
   'median',
   'mean',
   'control',
+  'exceedance',
 ]
 const handles = new WeakSet<object>()
 const validators = new WeakMap<EnsembleMark, Set<(options: Readonly<EnsembleOptions>) => void>>()
@@ -160,6 +167,11 @@ function validateOptions(options: Readonly<EnsembleOptions>, data: EnsembleStore
   if (validatePart(options.control, 'control', [...lineKeys, 'member'])) {
     controlMemberIndex(data, (options.control as EnsembleControlOptions).member)
   }
+  if (validatePart(options.exceedance, 'exceedance', ['threshold'])) {
+    const threshold = (options.exceedance as EnsembleExceedanceOptions).threshold
+    if (typeof threshold !== 'number' || !Number.isFinite(threshold))
+      throw new RangeError('ensemble.exceedance.threshold must be finite.')
+  }
 }
 
 export function ensemble(data: EnsembleStore, initial: OptionPatch<EnsembleOptions>): EnsembleMark {
@@ -179,6 +191,7 @@ export function ensemble(data: EnsembleStore, initial: OptionPatch<EnsembleOptio
       median: false,
       mean: false,
       control: false,
+      exceedance: false,
     }),
     validate(options) {
       validateOptions(options, data)

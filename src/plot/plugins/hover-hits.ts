@@ -10,6 +10,8 @@ import { isBarMark, type BarMark } from '../marks/bar/bar.js'
 import { isStackedAreaMark, type StackedAreaMark } from '../marks/stacked-area/stacked-area.js'
 import { isHistogramMark, type HistogramMark } from '../marks/histogram/histogram.js'
 import { isHeatmapMark, type HeatmapMark } from '../marks/heatmap/heatmap.js'
+import { isEnsembleMark, type EnsembleMark } from '../marks/ensemble/ensemble.js'
+import { isEnsembleHit } from '../interaction/ensemble-hit-testing.js'
 import { markDefinition } from '../marks/marks.js'
 import type { MarkHit } from '../marks/mark-definition.js'
 import type { ThemeTokens } from '../../theme/theme.js'
@@ -17,7 +19,7 @@ import { resolveMarkColor } from '../../theme/color-contrast.js'
 
 /** Marks that can be inspected by pointer plugins such as tooltip() and highlight(). */
 export type HoverMark =
-  LineMark | SeriesMark | BarMark | StackedAreaMark | HistogramMark | HeatmapMark
+  LineMark | SeriesMark | BarMark | StackedAreaMark | HistogramMark | HeatmapMark | EnsembleMark
 
 export interface HoverHit {
   readonly mark: HoverMark
@@ -39,7 +41,8 @@ export function isHoverMark(mark: object): mark is HoverMark {
     isBarMark(mark) ||
     isStackedAreaMark(mark) ||
     isHistogramMark(mark) ||
-    isHeatmapMark(mark)
+    isHeatmapMark(mark) ||
+    isEnsembleMark(mark)
   )
 }
 
@@ -126,6 +129,11 @@ export function markColor(
   }
   if (isHeatmapMark(mark) && isHeatmapHit(hit)) {
     return mark.options.get().resolved.color.map(hit.value)
+  }
+  if (isEnsembleMark(mark)) {
+    const options = mark.options.get().resolved
+    const part = isEnsembleHit(hit) && hit.member !== undefined ? options.members : options.median
+    return resolve(part ? part.stroke : undefined)
   }
   return resolve(undefined)
 }

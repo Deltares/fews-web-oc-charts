@@ -17,6 +17,9 @@ import type { Region } from '../../../layout/layout.js'
 import type { PlotPointer } from '../../interaction/pointer-hub.js'
 import { isHistogramMark } from '../../marks/histogram/histogram.js'
 import { isHeatmapMark } from '../../marks/heatmap/heatmap.js'
+import { isEnsembleMark } from '../../marks/ensemble/ensemble.js'
+import { ensembleSymbol } from '../../marks/ensemble/ensemble-mark.js'
+import { isEnsembleHit } from '../../interaction/ensemble-hit-testing.js'
 import { isHeatmapHit, isHoverMark, markColor, selectHoverHits } from '../hover-hits.js'
 import { markDefinition } from '../../marks/marks.js'
 import type { MarkHit, MarkLegend } from '../../marks/mark-definition.js'
@@ -55,6 +58,7 @@ function label(mark: TooltipMark, index: number, legend: MarkLegend | undefined)
   if (isSeriesMark(mark)) return mark.id || `Series ${index + 1}`
   if (isBarMark(mark) || isStackedAreaMark(mark)) return mark.id || `Mark ${index + 1}`
   if (isHistogramMark(mark)) return mark.id || `Histogram ${index + 1}`
+  if (isEnsembleMark(mark)) return mark.id || `Ensemble ${index + 1}`
   return mark.id || mark.y
 }
 
@@ -147,6 +151,28 @@ function tooltipEntry(
         type: 'bar',
         fill: heatmapOptions.color.map(hit.value),
       },
+    }
+  }
+  if (isEnsembleMark(mark) && isEnsembleHit(hit)) {
+    const values = options.digits
+    const details = [
+      ...(showX ? [coordinate('x', format.value(hit.x, 'x'))] : []),
+      ...(showY && hit.member ? [`${hit.member.label}: ${format.value(hit.y, 'y', values)}`] : []),
+      ...hit.statistics.map(
+        (statistic) => `${statistic.label}: ${format.value(statistic.value, 'y', values)}`,
+      ),
+      ...(hit.exceedance && Number.isFinite(hit.exceedance.probability)
+        ? [
+            `P(>${format.value(hit.exceedance.threshold, 'y', values)}): ${Math.round(hit.exceedance.probability * 100)}%`,
+          ]
+        : []),
+    ]
+    return {
+      label: name,
+      color: markColor(mark, hit, tokens, 'text'),
+      details: details.length ? ` · ${details.join(' · ')}` : '',
+      accessibleLabel: [name, ...details].join(' · '),
+      symbol: legend?.symbol ?? ensembleSymbol(mark.options.get().resolved, tokens),
     }
   }
   const pointMark = isLineMark(mark) || isSeriesMark(mark)

@@ -13,13 +13,14 @@ import { isBarMark, type BarMark } from '../../marks/bar/bar.js'
 import { isStackedAreaMark, type StackedAreaMark } from '../../marks/stacked-area/stacked-area.js'
 import { isHistogramMark, type HistogramMark } from '../../marks/histogram/histogram.js'
 import { isHeatmapMark, type HeatmapMark } from '../../marks/heatmap/heatmap.js'
+import { isEnsembleMark, type EnsembleMark } from '../../marks/ensemble/ensemble.js'
 import type { MarkHit } from '../../marks/mark-definition.js'
 import type { ScaleValue } from '../../../scales/scale.js'
 
 export type TooltipAxis = 'x' | 'y' | 'xy'
 export type TooltipPlacementPosition = 'bottom' | 'left' | 'right' | 'top'
 export type TooltipMark =
-  LineMark | SeriesMark | BarMark | StackedAreaMark | HistogramMark | HeatmapMark
+  LineMark | SeriesMark | BarMark | StackedAreaMark | HistogramMark | HeatmapMark | EnsembleMark
 
 export interface TooltipFormatContext {
   readonly mark: TooltipMark
@@ -100,11 +101,12 @@ function validateMarks(marks: readonly TooltipMark[] | undefined) {
           !isBarMark(mark) &&
           !isStackedAreaMark(mark) &&
           !isHistogramMark(mark) &&
-          !isHeatmapMark(mark)),
+          !isHeatmapMark(mark) &&
+          !isEnsembleMark(mark)),
     )
   ) {
     throw new TypeError(
-      'tooltip.marks must contain line(), series(), bar(), stackedArea(), histogram() or heatmap() marks.',
+      'tooltip.marks must contain line(), series(), bar(), stackedArea(), histogram(), heatmap() or ensemble() marks.',
     )
   }
   if (new Set(marks).size !== marks.length) {
@@ -137,6 +139,7 @@ export function tooltip(initial: OptionPatch<TooltipOptions> = {}): TooltipHandl
       isStackedAreaMark(value) ||
       isHistogramMark(value) ||
       isHeatmapMark(value) ||
+      isEnsembleMark(value) ||
       isCrosshairHandle(value),
     defaults: () => ({
       axis: 'x',
