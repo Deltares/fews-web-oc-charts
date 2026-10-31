@@ -2303,9 +2303,12 @@ same root-group sections: a small gap with a divider spanning the column separat
 a single column is taller than the chart.
 
 Plugins are installed by a plugin host that reconciles `plot.plugins` by handle
-identity. Each built-in plugin registers a `PluginDefinition` (`is`, `validate`,
-`install`) in `src/plot/plugins/plugins.ts` and receives a read-only `PlotContext` with
-its own reactive scope. Gesture handlers it registers through the plot's single
+identity. Each built-in plugin has a `PluginDefinition` (`is`, `validate`, `install`);
+its public factory attaches the definition to the handle with `registerPlugin`
+(`src/plot/plugins/plugins.ts`), and mark factories do the same with `registerMark`
+(`src/plot/marks/marks.ts`). The registries import no definitions, so an application
+bundles only the marks and plugins it creates. An installed plugin receives a read-only
+`PlotContext` with its own reactive scope. Gesture handlers it registers through the plot's single
 pointer hub are released automatically on removal or plot destruction.
 
 Tooltip hit collection, selection, formatting and accessible text are computed in

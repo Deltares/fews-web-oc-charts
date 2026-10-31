@@ -1,6 +1,7 @@
+import { registerMark } from '../marks.js'
 import type { ThemeTokens } from '../../../theme/theme.js'
 import { resolveMarkColor } from '../../../theme/color-contrast.js'
-import { isRuleMark, type RuleMark } from './rule.js'
+import { isRuleMark, type RuleMark, rule as createRuleMark, type RuleOptions } from './rule.js'
 import { svgElement } from '../../axes/render-axes.js'
 import {
   accent,
@@ -75,4 +76,8 @@ export const ruleDefinition: MarkDefinition<RuleMark> = {
   extents() {},
   createRenderer: createRuleRenderer,
   track: (mark) => isStaticMarkVisible(mark),
+}
+
+export function rule(options: RuleOptions): RuleMark {
+  return registerMark(createRuleMark(options), ruleDefinition)
 }

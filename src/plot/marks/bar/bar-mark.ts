@@ -1,3 +1,6 @@
+import { registerMark } from '../marks.js'
+import type { TableStore } from '../../../data-store/table.js'
+import type { OptionPatch } from '../../../core/options.js'
 import type { ThemeTokens } from '../../../theme/theme.js'
 import {
   barEndpoints,
@@ -6,6 +9,8 @@ import {
   validateBarScales,
   validateBarUpdates,
   type BarMark,
+  bar as createBarMark,
+  type BarOptions,
 } from './bar.js'
 import { barExtent } from './bar-geometry.js'
 import { renderBars, styleBars } from './render-bars.js'
@@ -119,4 +124,8 @@ export const barDefinition: MarkDefinition<BarMark> = {
         throw new Error('Bar scale directions do not match its orientation.')
       }
     }),
+}
+
+export function bar(data: TableStore, initial: OptionPatch<BarOptions>): BarMark {
+  return registerMark(createBarMark(data, initial), barDefinition)
 }

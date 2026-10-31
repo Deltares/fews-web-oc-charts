@@ -1,3 +1,6 @@
+import { registerMark } from '../marks.js'
+import type { TableStore } from '../../../data-store/table.js'
+import type { OptionPatch } from '../../../core/options.js'
 import type { ThemeTokens } from '../../../theme/theme.js'
 import {
   isStackedAreaMark,
@@ -5,6 +8,8 @@ import {
   validateStackedAreaScales,
   validateStackedAreaUpdates,
   type StackedAreaMark,
+  stackedArea as createStackedAreaMark,
+  type StackedAreaOptions,
 } from './stacked-area.js'
 import { renderStackedAreas, stackedAreaExtent, styleStackedAreas } from './render-stacked-areas.js'
 import { clearCompositeCanvas } from '../../rendering/render-composite-canvas.js'
@@ -105,4 +110,11 @@ export const stackedAreaDefinition: MarkDefinition<StackedAreaMark> = {
       validateStackedAreaScales(candidate, scales)
       validateDirections(candidate.scales, direction)
     }),
+}
+
+export function stackedArea(
+  data: TableStore,
+  initial: OptionPatch<StackedAreaOptions>,
+): StackedAreaMark {
+  return registerMark(createStackedAreaMark(data, initial), stackedAreaDefinition)
 }

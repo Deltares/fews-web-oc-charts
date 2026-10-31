@@ -1,3 +1,5 @@
+import { registerPlugin } from '../plugins.js'
+import type { OptionPatch } from '../../../core/options.js'
 import { reactive } from '../../../core/runtime.js'
 import { svgElement } from '../../rendering/svg.js'
 import { markDefinition } from '../../marks/marks.js'
@@ -10,6 +12,7 @@ import {
   type HighlightHandle,
   type HighlightMark,
   type HighlightOptions,
+  highlight as createHighlightHandle,
 } from './highlight.js'
 
 let nextHighlightId = 0
@@ -159,4 +162,9 @@ export const highlightDefinition: PluginDefinition<HighlightHandle> = {
     validateCrosshair(handle.options.get().resolved, context.plugins)
   },
   install: installHighlight,
+}
+
+/** Draws a marker over the hovered datum of each inspected mark. */
+export function highlight(initial: OptionPatch<HighlightOptions> = {}): HighlightHandle {
+  return registerPlugin(createHighlightHandle(initial), highlightDefinition)
 }

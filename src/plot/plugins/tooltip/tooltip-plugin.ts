@@ -1,3 +1,5 @@
+import { registerPlugin } from '../plugins.js'
+import type { OptionPatch } from '../../../core/options.js'
 import { reactive } from '../../../core/runtime.js'
 import type { PluginDefinition, PlotContext } from '../plugin-definition.js'
 import {
@@ -7,6 +9,7 @@ import {
   type TooltipMark,
   type TooltipPlacementPosition,
   type TooltipOptions,
+  tooltip as createTooltipHandle,
 } from './tooltip.js'
 import { TooltipPosition } from '../../../Tooltip/tooltip.js'
 import { calculateTooltipPlacement } from '../../../Utils/tooltipPlacement.js'
@@ -220,4 +223,8 @@ export const tooltipDefinition: PluginDefinition<TooltipHandle> = {
     validateCrosshair(handle.options.get().resolved, context.plugins)
   },
   install: installTooltip,
+}
+
+export function tooltip(initial: OptionPatch<TooltipOptions> = {}): TooltipHandle {
+  return registerPlugin(createTooltipHandle(initial), tooltipDefinition)
 }

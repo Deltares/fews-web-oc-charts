@@ -1,9 +1,17 @@
+import { registerPlugin } from '../plugins.js'
+import type { OptionPatch } from '../../../core/options.js'
 import type { ScaleBinding } from '../../../scales/scale.js'
 import { reactive, withSource } from '../../../core/runtime.js'
 import { matchesModifierKey } from '../../../Utils/modifierKey.js'
 import { isBrushHandle } from '../brush/brush.js'
 import type { PlotContext, PluginDefinition } from '../plugin-definition.js'
-import { isPanHandle, type PanHandle, type PanMode } from './pan.js'
+import {
+  isPanHandle,
+  type PanHandle,
+  type PanMode,
+  pan as createPanHandle,
+  type PanOptions,
+} from './pan.js'
 import { isValidScaleDomain } from '../../scales/scale-domain.js'
 
 type Axis = 'x' | 'y'
@@ -152,4 +160,8 @@ export const panDefinition: PluginDefinition<PanHandle> = {
     }
   },
   install: installPan,
+}
+
+export function pan(initial: OptionPatch<PanOptions> = {}): PanHandle {
+  return registerPlugin(createPanHandle(initial), panDefinition)
 }

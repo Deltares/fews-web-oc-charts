@@ -1,7 +1,13 @@
+import { registerMark } from '../marks.js'
 import { arc } from 'd3-shape'
 import type { ThemeTokens } from '../../../theme/theme.js'
 import { resolveMarkColor } from '../../../theme/color-contrast.js'
-import { isProgressMark, type ProgressMark } from './progress.js'
+import {
+  isProgressMark,
+  type ProgressMark,
+  progress as createProgressMark,
+  type ProgressOptions,
+} from './progress.js'
 import {
   accent,
   createKeyCache,
@@ -143,4 +149,8 @@ export const progressDefinition: MarkDefinition<ProgressMark> = {
     progressExtents(mark, context)
   },
   createRenderer: createProgressRenderer,
+}
+
+export function progress(options: ProgressOptions): ProgressMark {
+  return registerMark(createProgressMark(options), progressDefinition)
 }

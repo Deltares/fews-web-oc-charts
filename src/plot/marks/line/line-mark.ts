@@ -1,7 +1,22 @@
+import type { SeriesStore } from '../../../data-store/series.js'
+import type { OptionPatch } from '../../../core/options.js'
+import { registerMark } from '../marks.js'
 import type { ThemeTokens } from '../../../theme/theme.js'
 import { projectSkewTPoint } from '../../coordinates/skew-t-geometry.js'
-import { isLineMark, validateLineValuesForScale, type LineMark } from './line.js'
-import { isSeriesMark, validateSeriesUpdates, type SeriesMark } from './series.js'
+import {
+  isLineMark,
+  validateLineValuesForScale,
+  type LineMark,
+  line as createLineMark,
+  type LineOptions,
+} from './line.js'
+import {
+  isSeriesMark,
+  validateSeriesUpdates,
+  type SeriesMark,
+  series as createSeriesMark,
+  type SeriesOptions,
+} from './series.js'
 import { svgElement } from '../../axes/render-axes.js'
 import {
   createKeyCache,
@@ -473,4 +488,15 @@ export const seriesDefinition: MarkDefinition<SeriesMark> = {
   },
   validateUpdates: (mark, context) =>
     validateSeriesUpdates(mark, (candidate) => validateLineLike(candidate, context(), true)),
+}
+
+export function line(options: LineOptions): LineMark {
+  return registerMark(createLineMark(options), lineDefinition)
+}
+
+export function series(
+  data: SeriesStore<unknown>,
+  initial: OptionPatch<SeriesOptions>,
+): SeriesMark {
+  return registerMark(createSeriesMark(data, initial), seriesDefinition)
 }

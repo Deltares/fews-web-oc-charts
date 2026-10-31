@@ -1,3 +1,5 @@
+import { registerMark } from '../marks.js'
+import type { OptionPatch } from '../../../core/options.js'
 import type { EnsembleStatistic, EnsembleStore } from '../../../data-store/ensemble.js'
 import type { ScaleBinding } from '../../../scales/scale.js'
 import type { ThemeTokens } from '../../../theme/theme.js'
@@ -33,6 +35,7 @@ import {
   type EnsembleLineOptions,
   type EnsembleMark,
   type EnsembleOptions,
+  ensemble as createEnsembleMark,
 } from './ensemble.js'
 import {
   drawnMemberCount,
@@ -546,4 +549,8 @@ export const ensembleDefinition: MarkDefinition<EnsembleMark> = {
   },
   validateUpdates: (mark, context) =>
     validateEnsembleUpdates(mark, (candidate) => validateScales(candidate, context())),
+}
+
+export function ensemble(data: EnsembleStore, initial: OptionPatch<EnsembleOptions>): EnsembleMark {
+  return registerMark(createEnsembleMark(data, initial), ensembleDefinition)
 }

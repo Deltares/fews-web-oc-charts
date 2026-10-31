@@ -3,38 +3,56 @@ import { reactive } from '../../core/runtime.js'
 import type { CrosshairHandle } from './crosshair/crosshair.js'
 import { inspectCrosshair, type CrosshairInspection } from '../interaction/inspection.js'
 import type { PlotContext, PluginDefinition, PluginValidationContext } from './plugin-definition.js'
-import { panDefinition } from './pan/pan-plugin.js'
-import { brushDefinition } from './brush/brush-plugin.js'
-import { zoomDefinition } from './zoom/zoom-plugin.js'
-import { crosshairDefinition } from './crosshair/crosshair-plugin.js'
-import { tooltipDefinition } from './tooltip/tooltip-plugin.js'
-import { highlightDefinition } from './highlight/highlight-plugin.js'
-import { legendDefinition } from './legend/legend-plugin.js'
-import { crossSectionSelectDefinition } from './cross-section-select/cross-section-select-plugin.js'
+import type { PanHandle } from './pan/pan.js'
+import type { BrushHandle } from './brush/brush.js'
+import type { ZoomHandle } from './zoom/zoom.js'
+import type { TooltipHandle } from './tooltip/tooltip.js'
+import type { HighlightHandle } from './highlight/highlight.js'
+import type { LegendHandle } from './legend/legend-plugin.js'
+import type { CrossSectionSelectHandle } from './cross-section-select/cross-section-select.js'
 
-/** Registering a definition here is all that is needed to make a plugin installable. */
-const pluginDefinitions = [
-  zoomDefinition,
-  panDefinition,
-  brushDefinition,
-  crosshairDefinition,
-  tooltipDefinition,
-  highlightDefinition,
-  legendDefinition,
-  crossSectionSelectDefinition,
-] as const
+export type PlotPlugin =
+  | ZoomHandle
+  | PanHandle
+  | BrushHandle
+  | CrosshairHandle
+  | TooltipHandle
+  | HighlightHandle
+  | LegendHandle
+  | CrossSectionSelectHandle
 
-type PluginOf<D> = D extends PluginDefinition<infer H> ? H : never
+const pluginNames = [
+  'zoom',
+  'pan',
+  'brush',
+  'crosshair',
+  'tooltip',
+  'highlight',
+  'legend',
+  'crossSectionSelect',
+]
 
-export type PlotPlugin = PluginOf<(typeof pluginDefinitions)[number]>
+const names = pluginNames.map((name) => `${name}()`)
+const supportedPlugins = `${names.slice(0, -1).join(', ')} or ${names.at(-1)}`
 
-const names = pluginDefinitions.map(({ name }) => `${name}()`)
-const supportedPlugins =
-  names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} or ${names.at(-1)}`
+/**
+ * Definitions are attached to handles by the public plugin factories, so a plot bundles
+ * only the plugins an application creates.
+ */
+const definitions = new WeakMap<object, PluginDefinition<PlotPlugin>>()
+
+/** Makes a plugin handle installable; called by each public plugin factory. */
+export function registerPlugin<H extends PlotPlugin>(
+  handle: H,
+  definition: PluginDefinition<H>,
+): H {
+  definitions.set(handle, definition as unknown as PluginDefinition<PlotPlugin>)
+  return handle
+}
 
 function findPluginDefinition(value: unknown): PluginDefinition<PlotPlugin> | undefined {
   if (!value || typeof value !== 'object') return undefined
-  return pluginDefinitions.find((definition) => definition.is(value))
+  return definitions.get(value)
 }
 
 export function isPlotPlugin(value: object): value is PlotPlugin {

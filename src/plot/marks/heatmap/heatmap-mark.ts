@@ -1,6 +1,13 @@
-import { validateGridUpdates, type GridView } from '../../../data-store/grid.js'
+import { registerMark } from '../marks.js'
+import type { OptionPatch } from '../../../core/options.js'
+import { validateGridUpdates, type GridStore, type GridView } from '../../../data-store/grid.js'
 import type { ScaleHandle } from '../../../scales/scale.js'
-import { isHeatmapMark, type HeatmapMark } from './heatmap.js'
+import {
+  isHeatmapMark,
+  type HeatmapMark,
+  heatmap as createHeatmapMark,
+  type HeatmapOptions,
+} from './heatmap.js'
 import { heatmapHit } from '../../interaction/heatmap-hit-testing.js'
 import { heatmapHighlight } from '../highlight-shapes.js'
 import {
@@ -195,4 +202,11 @@ export const heatmapDefinition: MarkDefinition<HeatmapMark> = {
   validateUpdates: (mark, context) =>
     validateGridUpdates(mark.data, (view) => validateEdges(view, mark, context().scales)),
   createRenderer: createHeatmapRenderer,
+}
+
+export function heatmap(
+  data: GridStore,
+  initial: Pick<HeatmapOptions, 'scales' | 'color'> & OptionPatch<HeatmapOptions>,
+): HeatmapMark {
+  return registerMark(createHeatmapMark(data, initial), heatmapDefinition)
 }

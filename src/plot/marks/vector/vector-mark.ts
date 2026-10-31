@@ -1,3 +1,4 @@
+import { registerMark } from '../marks.js'
 import type { ThemeTokens } from '../../../theme/theme.js'
 import { resolveMarkColor } from '../../../theme/color-contrast.js'
 import {
@@ -13,8 +14,19 @@ import {
   type MarkValidationContext,
 } from '../mark-definition.js'
 import { applyStaticVisibility, isStaticMarkVisible, staticLegend } from '../static-legend.js'
-import { isArrowsMark, type ArrowsMark, type VectorValue } from './arrows.js'
-import { isDirectionMark, type DirectionMark } from './direction.js'
+import {
+  isArrowsMark,
+  type ArrowsMark,
+  type VectorValue,
+  arrows as createArrowsMark,
+  type ArrowsOptions,
+} from './arrows.js'
+import {
+  isDirectionMark,
+  type DirectionMark,
+  direction as createDirectionMark,
+  type DirectionOptions,
+} from './direction.js'
 import { projectPolarPoint } from '../../coordinates/polar-geometry.js'
 import { svgElement } from '../../axes/render-axes.js'
 
@@ -257,4 +269,12 @@ export const directionDefinition: MarkDefinition<DirectionMark> = {
   track: (mark) => isStaticMarkVisible(mark),
   extents: vectorExtents,
   createRenderer: () => createVectorRenderer<DirectionMark>('direction'),
+}
+
+export function arrows(options: ArrowsOptions): ArrowsMark {
+  return registerMark(createArrowsMark(options), arrowsDefinition)
+}
+
+export function direction(options: DirectionOptions): DirectionMark {
+  return registerMark(createDirectionMark(options), directionDefinition)
 }
