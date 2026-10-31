@@ -1,3 +1,4 @@
+import { registerMark } from '../marks.js'
 import type { ThemeTokens } from '../../../theme/theme.js'
 import { resolveMarkColor } from '../../../theme/color-contrast.js'
 import {
@@ -5,6 +6,8 @@ import {
   isValidTextCoordinate,
   validateTextValuesForScale,
   type TextMark,
+  text as createTextMark,
+  type TextOptions,
 } from './text.js'
 import { svgElement } from '../../axes/render-axes.js'
 import {
@@ -142,4 +145,8 @@ export const textDefinition: MarkDefinition<TextMark> = {
     }
   },
   createRenderer: createTextRenderer,
+}
+
+export function text(options: TextOptions): TextMark {
+  return registerMark(createTextMark(options), textDefinition)
 }

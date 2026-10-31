@@ -1,8 +1,15 @@
+import { registerPlugin } from '../plugins.js'
+import type { OptionPatch } from '../../../core/options.js'
 import { pauseScaleAutoscale, type ScaleHandle, type ScaleValue } from '../../../scales/scale.js'
 import { reactive, withSource } from '../../../core/runtime.js'
 import { matchesModifierKey } from '../../../Utils/modifierKey.js'
 import type { PlotContext, PluginDefinition } from '../plugin-definition.js'
-import { isZoomHandle, type ZoomHandle, type ZoomOptions } from './zoom.js'
+import {
+  isZoomHandle,
+  type ZoomHandle,
+  type ZoomOptions,
+  zoom as createZoomHandle,
+} from './zoom.js'
 import { isValidScaleDomain } from '../../scales/scale-domain.js'
 import { svgElement } from '../../rendering/svg.js'
 import { isBrushHandle } from '../brush/brush.js'
@@ -347,4 +354,8 @@ export const zoomDefinition: PluginDefinition<ZoomHandle> = {
     }
   },
   install: installZoom,
+}
+
+export function zoom(initial: OptionPatch<ZoomOptions> = {}): ZoomHandle {
+  return registerPlugin(createZoomHandle(initial), zoomDefinition)
 }

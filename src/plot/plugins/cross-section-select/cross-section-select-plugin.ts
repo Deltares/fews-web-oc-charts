@@ -1,3 +1,5 @@
+import { registerPlugin } from '../plugins.js'
+import type { OptionPatch } from '../../../core/options.js'
 import { precisionFixed } from 'd3-format'
 import { reactive } from '../../../core/runtime.js'
 import type { ScaleKind } from '../../../scales/scale.js'
@@ -13,6 +15,7 @@ import {
   type CrossSectionPoint,
   type CrossSectionSelectHandle,
   type CrossSectionSelectOptions,
+  crossSectionSelect as createCrossSectionSelectHandle,
 } from './cross-section-select.js'
 import { isLineMark } from '../../marks/line/line.js'
 import { isSeriesMark } from '../../marks/line/series.js'
@@ -477,4 +480,15 @@ export const crossSectionSelectDefinition: PluginDefinition<CrossSectionSelectHa
     })
   },
   install: installCrossSectionSelect,
+}
+
+export function crossSectionSelect(
+  initialValue: number,
+  callback?: (value: number) => void,
+  initial: OptionPatch<CrossSectionSelectOptions> = {},
+): CrossSectionSelectHandle {
+  return registerPlugin(
+    createCrossSectionSelectHandle(initialValue, callback, initial),
+    crossSectionSelectDefinition,
+  )
 }

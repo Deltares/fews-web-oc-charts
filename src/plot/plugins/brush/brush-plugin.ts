@@ -1,3 +1,4 @@
+import { registerPlugin } from '../plugins.js'
 import { reactive, withSource } from '../../../core/runtime.js'
 import { matchesModifierKey } from '../../../Utils/modifierKey.js'
 import type { PlotContext, PluginDefinition } from '../plugin-definition.js'
@@ -13,6 +14,8 @@ import {
   type BrushOptions,
   type BrushSelection,
   type BrushSelectionMode,
+  brush as createBrushHandle,
+  type BrushConfig,
 } from './brush.js'
 import { connectBrushTargets } from './brush-targets.js'
 import { svgElement } from '../../rendering/svg.js'
@@ -355,4 +358,8 @@ export const brushDefinition: PluginDefinition<BrushHandle> = {
     if (selection) validateBrushScaleSelection(selection, scales, (name) => context.direction(name))
   },
   install: installBrush,
+}
+
+export function brush(initial: BrushConfig = {}): BrushHandle {
+  return registerPlugin(createBrushHandle(initial), brushDefinition)
 }

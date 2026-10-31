@@ -25,9 +25,11 @@ export type {
   SkewTPlotConfig,
 } from './plot/create-plot.js'
 export type { PlotDomEventMap } from './plot/dom-events.js'
+export type { PlotMark } from './plot/marks/marks.js'
+export type { PlotPlugin } from './plot/plugins/plugins.js'
 export { axis } from './plot/axes/axis.js'
 export type { AxisHandle, AxisOptions, AxisSide } from './plot/axes/axis.js'
-export { zoom } from './plot/plugins/zoom/zoom.js'
+export { zoom } from './plot/plugins/zoom/zoom-plugin.js'
 export type {
   ZoomHandle,
   ZoomMode,
@@ -35,9 +37,10 @@ export type {
   ZoomResetMode,
   ZoomWheelMode,
 } from './plot/plugins/zoom/zoom.js'
-export { pan } from './plot/plugins/pan/pan.js'
+export { pan } from './plot/plugins/pan/pan-plugin.js'
 export type { PanHandle, PanMode, PanOptions } from './plot/plugins/pan/pan.js'
-export { brush, brushEvent } from './plot/plugins/brush/brush.js'
+export { brushEvent } from './plot/plugins/brush/brush.js'
+export { brush } from './plot/plugins/brush/brush-plugin.js'
 export type {
   BrushHandle,
   BrushMode,
@@ -46,7 +49,7 @@ export type {
   BrushSelection,
   BrushSelectionMode,
 } from './plot/plugins/brush/brush.js'
-export { crosshair } from './plot/plugins/crosshair/crosshair.js'
+export { crosshair } from './plot/plugins/crosshair/crosshair-plugin.js'
 export type {
   CrosshairHandle,
   CrosshairMode,
@@ -54,7 +57,7 @@ export type {
   CrosshairSnapAxis,
   CrosshairSnapOptions,
 } from './plot/plugins/crosshair/crosshair.js'
-export { crossSectionSelect } from './plot/plugins/cross-section-select/cross-section-select.js'
+export { crossSectionSelect } from './plot/plugins/cross-section-select/cross-section-select-plugin.js'
 export type {
   CrossSectionMark,
   CrossSectionMarkFilter,
@@ -62,7 +65,7 @@ export type {
   CrossSectionSelectHandle,
   CrossSectionSelectOptions,
 } from './plot/plugins/cross-section-select/cross-section-select.js'
-export { tooltip } from './plot/plugins/tooltip/tooltip.js'
+export { tooltip } from './plot/plugins/tooltip/tooltip-plugin.js'
 export type {
   TooltipAxis,
   TooltipHandle,
@@ -74,7 +77,7 @@ export type {
   TooltipRangeFormatter,
   TooltipPlacementPosition,
 } from './plot/plugins/tooltip/tooltip.js'
-export { highlight } from './plot/plugins/highlight/highlight.js'
+export { highlight } from './plot/plugins/highlight/highlight-plugin.js'
 export type {
   HighlightAxis,
   HighlightHandle,
@@ -98,20 +101,20 @@ export type {
   SymbolPrimitiveSpec,
   SymbolSpec,
 } from './plot/plugins/legend/legend.js'
-export { line } from './plot/marks/line/line.js'
-export { rule } from './plot/marks/rule/rule.js'
+export { line } from './plot/marks/line/line-mark.js'
+export { rule } from './plot/marks/rule/rule-mark.js'
 export type { RuleMark, RuleOptions } from './plot/marks/rule/rule.js'
 export type { StaticLegendOptions } from './plot/marks/static-legend.js'
-export { arrows } from './plot/marks/vector/arrows.js'
+export { arrows } from './plot/marks/vector/vector-mark.js'
 export type {
   ArrowsMark,
   ArrowsOptions,
   VectorValue,
   VectorValues,
 } from './plot/marks/vector/arrows.js'
-export { direction } from './plot/marks/vector/direction.js'
+export { direction } from './plot/marks/vector/vector-mark.js'
 export type { DirectionMark, DirectionOptions } from './plot/marks/vector/direction.js'
-export { progress } from './plot/marks/progress/progress.js'
+export { progress } from './plot/marks/progress/progress-mark.js'
 export type {
   ProgressAngleRange,
   ProgressAngleRanges,
@@ -120,7 +123,7 @@ export type {
   ProgressValue,
   ProgressValues,
 } from './plot/marks/progress/progress.js'
-export { text } from './plot/marks/text/text.js'
+export { text } from './plot/marks/text/text-mark.js'
 export type {
   TextAnchor,
   TextBaseline,
@@ -129,7 +132,7 @@ export type {
   TextValue,
   TextValues,
 } from './plot/marks/text/text.js'
-export { band, band as range } from './plot/marks/band/band.js'
+export { band, band as range } from './plot/marks/band/band-mark.js'
 export type {
   BandMark,
   BandOptions,
@@ -146,7 +149,7 @@ export type {
   SeriesChange,
   SeriesLod,
 } from './data-store/series.js'
-export { series } from './plot/marks/line/series.js'
+export { series } from './plot/marks/line/line-mark.js'
 export { createLegendSwatch, legendSymbolPrimitives } from './plot/plugins/legend/legend-swatch.js'
 export type {
   LegendSwatchOptions,
@@ -162,9 +165,9 @@ export type {
   TableValue,
   TableOptions,
 } from './data-store/table.js'
-export { bar } from './plot/marks/bar/bar.js'
+export { bar } from './plot/marks/bar/bar-mark.js'
 export type { BarMark, BarOptions, BarLayer } from './plot/marks/bar/bar.js'
-export { histogram } from './plot/marks/histogram/histogram.js'
+export { histogram } from './plot/marks/histogram/histogram-mark.js'
 export type {
   HistogramMark,
   HistogramOptions,
@@ -181,7 +184,7 @@ export type {
   EnsembleChange,
   EnsembleStatistic,
 } from './data-store/ensemble.js'
-export { ensemble } from './plot/marks/ensemble/ensemble.js'
+export { ensemble } from './plot/marks/ensemble/ensemble-mark.js'
 export type {
   EnsembleMark,
   EnsembleOptions,
@@ -194,11 +197,11 @@ export type {
 } from './plot/marks/ensemble/ensemble.js'
 export { createGrid } from './data-store/grid.js'
 export type { GridInput, GridView, GridStore } from './data-store/grid.js'
-export { heatmap } from './plot/marks/heatmap/heatmap.js'
+export { heatmap } from './plot/marks/heatmap/heatmap-mark.js'
 export type { HeatmapMark, HeatmapOptions } from './plot/marks/heatmap/heatmap.js'
 export { colorScale } from './scales/color.js'
 export type { ColorScale, ColorScaleOptions } from './scales/color.js'
-export { stackedArea } from './plot/marks/stacked-area/stacked-area.js'
+export { stackedArea } from './plot/marks/stacked-area/stacked-area-mark.js'
 export type {
   StackedAreaMark,
   StackedAreaOptions,

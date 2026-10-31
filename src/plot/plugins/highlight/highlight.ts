@@ -59,7 +59,6 @@ export function isHighlightHandle(value: object): value is HighlightHandle {
   return handles.has(value)
 }
 
-/** Draws a marker over the hovered datum of each inspected mark. */
 export function highlight(initial: OptionPatch<HighlightOptions> = {}): HighlightHandle {
   validateKeys(initial, optionKeys, 'highlight')
   const consumers = new Set<(options: Readonly<HighlightOptions>) => void>()

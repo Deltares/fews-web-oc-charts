@@ -1,3 +1,4 @@
+import { registerPlugin } from '../plugins.js'
 import {
   createOptionState,
   type OptionPatch,
@@ -68,7 +69,7 @@ export function legend(initial: OptionPatch<LegendOptions> = {}): LegendHandle {
     },
   })
   handles.add(handle)
-  return handle
+  return registerPlugin(handle, legendDefinition)
 }
 
 const itemHeight = 26

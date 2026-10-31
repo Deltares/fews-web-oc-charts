@@ -1,3 +1,4 @@
+import { registerMark } from '../marks.js'
 import {
   arc,
   area,
@@ -9,7 +10,14 @@ import {
 } from 'd3-shape'
 import type { ThemeTokens } from '../../../theme/theme.js'
 import { resolveMarkColor } from '../../../theme/color-contrast.js'
-import { isBandMark, validateBandUpdates, type BandMark, type BandRange } from './band.js'
+import {
+  isBandMark,
+  validateBandUpdates,
+  type BandMark,
+  type BandRange,
+  band as createBandMark,
+  type BandOptions,
+} from './band.js'
 import { svgElement } from '../../axes/render-axes.js'
 import {
   accent,
@@ -228,4 +236,8 @@ export const bandDefinition: MarkDefinition<BandMark> = {
     }
   },
   createRenderer: createBandRenderer,
+}
+
+export function band(options: BandOptions): BandMark {
+  return registerMark(createBandMark(options), bandDefinition)
 }

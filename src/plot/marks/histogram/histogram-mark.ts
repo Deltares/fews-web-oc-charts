@@ -1,9 +1,14 @@
+import { registerMark } from '../marks.js'
+import type { TableStore } from '../../../data-store/table.js'
+import type { OptionPatch } from '../../../core/options.js'
 import { barDefinition, createBarRenderer } from '../bar/bar-mark.js'
 import {
   histogramBar,
   isHistogramMark,
   validateHistogramUpdates,
   type HistogramMark,
+  histogram as createHistogramMark,
+  type HistogramOptions,
 } from './histogram.js'
 import type { MarkDefinition, MarkLegend } from '../mark-definition.js'
 import { compositeHits } from '../../interaction/composite-hit-testing.js'
@@ -56,4 +61,8 @@ export const histogramDefinition: MarkDefinition<HistogramMark> = {
   },
   validateUpdates: (mark, context) =>
     validateHistogramUpdates(mark, (candidate) => barDefinition.validate(candidate, context())),
+}
+
+export function histogram(data: TableStore, initial: OptionPatch<HistogramOptions>): HistogramMark {
+  return registerMark(createHistogramMark(data, initial), histogramDefinition)
 }

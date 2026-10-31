@@ -1,3 +1,5 @@
+import { registerPlugin } from '../plugins.js'
+import type { OptionPatch } from '../../../core/options.js'
 import { reactive } from '../../../core/runtime.js'
 import type { PluginDefinition, PlotContext } from '../plugin-definition.js'
 import {
@@ -6,6 +8,7 @@ import {
   type CrosshairHandle,
   type CrosshairSnapOptions,
   type CrosshairOptions,
+  crosshair as createCrosshairHandle,
 } from './crosshair.js'
 import type { ScaleHandle } from '../../../scales/scale.js'
 import type { Orientation } from '../../marks/mark-definition.js'
@@ -342,4 +345,8 @@ export const crosshairDefinition: PluginDefinition<CrosshairHandle> = {
     validateLabels(handle.options.get().resolved, context)
   },
   install: installCrosshair,
+}
+
+export function crosshair(initial: OptionPatch<CrosshairOptions> = {}): CrosshairHandle {
+  return registerPlugin(createCrosshairHandle(initial), crosshairDefinition)
 }
