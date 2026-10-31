@@ -1,5 +1,18 @@
 # FEWS Web OC Charts
 
+## Entry points
+
+The package root exports the v4 classes and the v5 API. Applications that use only
+v5 can import from `@deltares/fews-web-oc-charts/v5` instead:
+
+```ts
+import { createPlot, line, timeScale } from '@deltares/fews-web-oc-charts/v5'
+```
+
+Both entry points can be tree-shaken. The v5 entry also keeps the v4 type
+declarations out of type checking: it needs no `@types/d3`, `@types/luxon` or
+`csstype`, and it works with `moduleResolution: node16` and `nodenext`.
+
 ## Chart background
 
 Plots are transparent outside the plotting canvas, matching v4. By default,

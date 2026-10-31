@@ -7,7 +7,11 @@ const dependencies = Object.keys(pkg.dependencies)
 export default defineConfig({
   build: {
     lib: {
-      entry: resolveRelativePath('src/index.ts'),
+      // `index` is the v4 and v5 API; `v5` is the v5 API only.
+      entry: {
+        index: resolveRelativePath('src/index.ts'),
+        v5: resolveRelativePath('src/v5.ts'),
+      },
       // Only build ES module.
       formats: ['es'],
       name: 'fews-web-oc-charts',

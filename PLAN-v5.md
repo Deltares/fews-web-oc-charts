@@ -1891,6 +1891,7 @@ plot.destroy()
   current stable versions of Chromium, Firefox and WebKit in CI. No polyfills.
 - Entry points via `exports`: `.` (core), `./element` (Web Component), `./vue`,
   `./compat` (v4 API shim, last phase), `./style.css` (default theme tokens).
+  Until v4 is removed, `.` also exports the v4 classes and `./v5` exports the v5 API only.
 - Dependencies: d3 sub-packages only (`d3-scale`, `d3-shape`, `d3-axis`, `d3-array`,
   `d3-selection`, `d3-zoom`, `d3-brush`, `d3-quadtree`, `d3-interpolate`,
   `d3-scale-chromatic`, `d3-time`, `d3-format`). **Removed: `lodash-es`, `luxon`**
