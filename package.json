@@ -21,6 +21,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./v5": {
+      "types": "./dist/v5.d.ts",
+      "import": "./dist/v5.js"
     }
   },
   "engines": {
