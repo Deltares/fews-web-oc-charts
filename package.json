@@ -1,6 +1,6 @@
 {
   "name": "@deltares/fews-web-oc-charts",
-  "version": "4.7.2",
+  "version": "5.0.0-alpha.0",
   "description": "FEWS Chart Library",
   "license": "MIT",
   "private": false,
@@ -16,17 +16,22 @@
   "files": [
     "dist"
   ],
-  "module": "./dist/fews-web-oc-charts.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    "import": "./dist/fews-web-oc-charts.js",
-    "types": "./dist/index.d.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
   },
+  "sideEffects": false,
   "engines": {
     "node": ">=22.0.0"
   },
   "scripts": {
     "dev": "vite --config vite-examples.config.ts",
-    "build": "vite build --config vite-library.config.ts && tsc -p tsconfig.build.json",
+    "build": "rm -rf dist && vite build --config vite-library.config.ts && tsc -p tsconfig.build.json",
+    "prepack": "npm run build",
     "build-examples": "vite build --config vite-examples.config.ts",
     "lint": "npm run prettier",
     "prettier": "prettier . --check",
@@ -55,13 +60,9 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@types/d3": "^7.4.3",
-    "@types/lodash-es": "^4.17.12",
-    "@types/luxon": "^3.7.5",
     "@types/node": "^24.12.2",
     "@vitest/browser": "^5.0.0",
     "@vitest/browser-playwright": "^5.0.0",
-    "csstype": "^3.2.3",
     "eslint": "^10.8.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.6",
@@ -75,8 +76,20 @@
     "vitest": "^5.0.0"
   },
   "dependencies": {
+    "@types/d3": "^7.4.3",
+    "@types/lodash-es": "^4.17.12",
+    "@types/luxon": "^3.7.5",
+    "csstype": "^3.2.3",
     "d3": "^7.9.0",
+    "d3-array": "^3.2.4",
+    "d3-axis": "^3.0.0",
+    "d3-color": "^3.1.0",
+    "d3-format": "^3.1.2",
+    "d3-path": "^3.1.0",
+    "d3-quadtree": "^3.0.1",
     "d3-scale": "^4.0.2",
+    "d3-selection": "^3.0.0",
+    "d3-shape": "^3.2.0",
     "lodash-es": "^4.18.1",
     "luxon": "^3.7.2"
   },
@@ -95,6 +108,7 @@
   },
   "publishConfig": {
     "access": "public",
+    "tag": "next",
     "registry": "https://registry.npmjs.org"
   }
 }

@@ -1,4 +1,4 @@
-import { tickStep } from 'd3'
+import { tickStep } from 'd3-array'
 import type { AxisHandle } from './axis.js'
 import type { PlotLayout } from '../../layout/layout.js'
 import type { ScaleBinding } from '../../scales/scale.js'

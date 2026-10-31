@@ -7,7 +7,7 @@ import {
   symbolStar,
   symbolTriangle,
   symbolWye,
-} from 'd3'
+} from 'd3-shape'
 
 export type MarkerSymbol =
   | 'circle'

@@ -1,4 +1,4 @@
-import { area, curveLinear, curveStep } from 'd3'
+import { area, curveLinear, curveStep } from 'd3-shape'
 import type { TableView } from '../../../data-store/table.js'
 import type { ScaleBinding, ScaleValue } from '../../../scales/scale.js'
 import { stackedAreaEndpoints, type StackedAreaMark } from './stacked-area.js'

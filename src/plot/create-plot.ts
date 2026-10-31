@@ -33,7 +33,7 @@ import { isAxisHandle, validateAxisUpdates, type AxisHandle, type AxisSide } fro
 import { observeSize } from './resize.js'
 import { observeVisibility } from './visibility.js'
 import { svgElement, renderAxes, renderPolarAxes, axisTickLabels } from './axes/render-axes.js'
-import { arc } from 'd3'
+import { arc } from 'd3-shape'
 import { projectPolarPoint } from './coordinates/polar-geometry.js'
 import { watchCanvasPixelRatio } from './rendering/render-composite-canvas.js'
 import type { CoordinateSystem } from './marks/mark-definition.js'
