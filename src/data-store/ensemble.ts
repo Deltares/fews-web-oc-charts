@@ -1,4 +1,4 @@
-import { quantileSorted as quantileR7 } from 'd3'
+import { quantileSorted as quantileR7 } from 'd3-array'
 import { reactive } from '../core/runtime.js'
 import { validateKeys } from '../core/validation.js'
 import type { SeriesChange, SeriesLod } from './series.js'

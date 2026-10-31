@@ -1,4 +1,12 @@
-import { arc, area, curveLinear, curveBasis, curveStep, curveStepBefore, curveStepAfter } from 'd3'
+import {
+  arc,
+  area,
+  curveLinear,
+  curveBasis,
+  curveStep,
+  curveStepBefore,
+  curveStepAfter,
+} from 'd3-shape'
 import type { ThemeTokens } from '../../../theme/theme.js'
 import { resolveMarkColor } from '../../../theme/color-contrast.js'
 import { isBandMark, validateBandUpdates, type BandMark, type BandRange } from './band.js'

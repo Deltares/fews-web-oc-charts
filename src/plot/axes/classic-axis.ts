@@ -1,16 +1,8 @@
-import {
-  axisBottom,
-  axisLeft,
-  axisRight,
-  axisTop,
-  formatLocale,
-  scaleLinear,
-  scaleBand,
-  scaleUtc,
-  precisionFixed,
-  tickStep,
-  select,
-} from 'd3'
+import { axisBottom, axisLeft, axisRight, axisTop } from 'd3-axis'
+import { precisionFixed, formatLocale } from 'd3-format'
+import { scaleLinear, scaleBand, scaleUtc } from 'd3-scale'
+import { tickStep } from 'd3-array'
+import { select } from 'd3-selection'
 import type { AxisHandle } from './axis.js'
 import type { ScaleBinding, ScaleValue } from '../../scales/scale.js'
 import type { PlotLayout } from '../../layout/layout.js'
