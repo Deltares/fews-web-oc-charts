@@ -15,6 +15,7 @@ import {
   type DataPointXY,
   type MouseOverOptions,
 } from '@lib'
+import type { DataValue } from '@lib'
 import {
   ExampleEvent,
   generateExampleTimeSeriesData,
@@ -36,7 +37,7 @@ function createExampleChart<T extends Date | number>(
   mouseOverOptions?: MouseOverOptions,
 ): CartesianAxes {
   // Create new axes.
-  const container = document.getElementById(containerId)
+  const container = document.getElementById(containerId)!
 
   const axes = new CartesianAxes(container, null, null, {
     x: [
@@ -149,8 +150,8 @@ const mouseOverSelection = new MouseOver({ trace: ['example-1', 'example-3'] })
 axesSelection.accept(mouseOverSelection)
 
 // Add mouseover with custom number formatter that uses the extent, and custom text formatter for the label.
-const mouseOverTextFormatter = (data: number | number[] | any, precision: number) => {
-  const formattedValue = data.toFixed(precision)
+const mouseOverTextFormatter = (data: DataValue, precision: number) => {
+  const formattedValue = (data as number).toFixed(precision)
   return `Value: ${formattedValue} (Precision: ${precision})`
 }
 const axesFormatter = createExampleChart(
@@ -162,9 +163,9 @@ const axesFormatter = createExampleChart(
   { textFormatter: mouseOverTextFormatter },
 )
 
-const formatNumber = (value: number, extent: [number, number]) => {
+const formatNumber = (value: number, extent?: [number, number]) => {
   const formattedValue = value.toFixed(2)
-  const formattedExtent = extent.map((val) => val.toFixed(2))
+  const formattedExtent = (extent ?? []).map((val) => val.toFixed(2))
   return `Value: ${formattedValue} (Extent: ${formattedExtent.join('–')})`
 }
 const mouseOverExtent = new MouseOver({ numberFormatter: formatNumber })
@@ -178,7 +179,7 @@ const axesFormatterNoExtent = createExampleChart(
   AxisType.value,
   [-6, 12],
   [-3, 5],
-  { textFormatter: formatNumberNoExtent },
+  { textFormatter: (value) => formatNumberNoExtent(value as number) },
 )
 const mouseOverNoExtent = new MouseOver({ numberFormatter: formatNumberNoExtent })
 axesFormatterNoExtent.accept(mouseOverNoExtent)

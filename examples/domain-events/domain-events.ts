@@ -14,6 +14,7 @@ import {
   ChartLine,
   ZoomHandler,
 } from '@lib'
+import type { DomainChangeEvent } from '@lib'
 
 // Basic example with scalar values.
 const exampleData = [
@@ -44,23 +45,23 @@ const axesOption: CartesianAxesOptions = {
   ],
   automargin: true,
 }
-const container = document.getElementById('chart-container')
+const container = document.getElementById('chart-container')!
 const axes = new CartesianAxes(container, null, null, axesOption)
 const zoomHandler = new ZoomHandler()
 axes.accept(zoomHandler)
 
-const span = document.getElementById('event')
+const span = document.getElementById('event')!
 const domainToString = (domain: [number, number] | [Date, Date]) =>
   domain.map((value: number | Date) => value.toString()).join(', ')
-const callback = (event) => {
+const callback = (event: DomainChangeEvent) => {
   span.textContent = `old: ${domainToString(event.old)}; new: ${domainToString(event.new)}`
 }
 
-document.getElementById('add-listener').addEventListener('click', () => {
+document.getElementById('add-listener')!.addEventListener('click', () => {
   span.textContent = 'Added event listener'
   axes.addEventListener('update:x-domain', callback)
 })
-document.getElementById('remove-listener').addEventListener('click', () => {
+document.getElementById('remove-listener')!.addEventListener('click', () => {
   span.textContent = 'Removed event listener'
   axes.removeEventListener('update:x-domain', callback)
 })

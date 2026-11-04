@@ -16,7 +16,7 @@ import {
 import { addListenerByClassName } from '@shared'
 
 function setupVerticalDateTimeMouseover() {
-  const container = document.getElementById('chart-container-1')
+  const container = document.getElementById('chart-container-1')!
   const axisOptions: CartesianAxesOptions = {
     x: [
       {
@@ -102,7 +102,7 @@ function setupVerticalDateTimeMouseover() {
 }
 
 function setupVerticalProfileMouseover() {
-  const container = document.getElementById('chart-container-2')
+  const container = document.getElementById('chart-container-2')!
   const axisOptions: CartesianAxesOptions = {
     x: [
       {

@@ -18,6 +18,7 @@ import {
   WarningLevels,
   ZoomHandler,
 } from '@lib'
+import type { DataPoint } from '@lib'
 import { addListenerByClassName, addListenerById, percentile } from '@shared'
 import { EnsembleData } from '../data/types'
 
@@ -44,12 +45,12 @@ const marginAxisOptions = {
 }
 const axisOptions1: CartesianAxesOptions = {
   x: [xAxisOptions],
-  y: [{ ...yAxisOptions, ...{ defaultDomain: defaultYDomain1, resetZoom: ResetZoom.toggle } }],
+  y: [{ ...yAxisOptions, defaultDomain: defaultYDomain1, resetZoom: ResetZoom.toggle }],
   margin: marginAxisOptions,
 }
 const axisOptions2: CartesianAxesOptions = {
   x: [xAxisOptions],
-  y: [{ ...yAxisOptions, ...{ defaultDomain: defaultYDomain2 } }],
+  y: [{ ...yAxisOptions, defaultDomain: defaultYDomain2 }],
   margin: marginAxisOptions,
 }
 const axisOptions3: CartesianAxesOptions = {
@@ -57,14 +58,16 @@ const axisOptions3: CartesianAxesOptions = {
   y: [
     {
       ...yAxisOptions,
-      ...{ includeZero: true, defaultDomain: defaultYDomain3, resetZoom: ResetZoom.full },
+      includeZero: true,
+      defaultDomain: defaultYDomain3,
+      resetZoom: ResetZoom.full,
     },
   ],
   margin: marginAxisOptions,
 }
 const axisOptions4: CartesianAxesOptions = {
   x: [xAxisOptions],
-  y: [{ ...yAxisOptions, ...{ includeZero: true, defaultDomain: defaultYDomain4 } }],
+  y: [{ ...yAxisOptions, includeZero: true, defaultDomain: defaultYDomain4 }],
   margin: marginAxisOptions,
 }
 
@@ -109,36 +112,38 @@ const legendLabels = [
   },
 ]
 
-const container1 = document.getElementById('chart-waterlevel1')
+const container1 = document.getElementById('chart-waterlevel1')!
 const axis1 = new CartesianAxes(container1, null, null, axisOptions1)
-const legend1 = new Legend(legendLabels, document.getElementById('legend-waterlevel1'))
+const legend1 = new Legend(legendLabels, document.getElementById('legend-waterlevel1')!)
 
-const container2 = document.getElementById('chart-waterlevel2')
+const container2 = document.getElementById('chart-waterlevel2')!
 const axis2 = new CartesianAxes(container2, null, null, axisOptions2)
-const legend2 = new Legend(legendLabels, document.getElementById('legend-waterlevel2'))
+const legend2 = new Legend(legendLabels, document.getElementById('legend-waterlevel2')!)
 
-const container3 = document.getElementById('chart-waterlevel3')
+const container3 = document.getElementById('chart-waterlevel3')!
 const axis3 = new CartesianAxes(container3, null, null, axisOptions3)
-const legend3 = new Legend(legendLabels, document.getElementById('legend-waterlevel3'))
+const legend3 = new Legend(legendLabels, document.getElementById('legend-waterlevel3')!)
 
-const container4 = document.getElementById('chart-waterlevel4')
+const container4 = document.getElementById('chart-waterlevel4')!
 const axis4 = new CartesianAxes(container4, null, null, axisOptions4)
 const legend4 = new Legend(
   [legendLabels[2], legendLabels[3]],
-  document.getElementById('legend-waterlevel4'),
+  document.getElementById('legend-waterlevel4')!,
 )
 
-function getRoundedDate(minutes, d = new Date()) {
+function getRoundedDate(minutes: number, d = new Date()) {
   const ms = 1000 * 60 * minutes // convert minutes to ms
   const roundedDate = new Date(Math.round(d.getTime() / ms) * ms)
   return roundedDate
 }
 
 const refDate = getRoundedDate(10, new Date())
+type LevelEvent = { date: Date; value: number | null }
+
 const escalationLevels = [
   {
     id: 'laag',
-    events: [],
+    events: [] as LevelEvent[],
     levelStart: -220,
     levelEnd: -150,
     color: 'rgba(205, 133, 63,.5)',
@@ -146,7 +151,7 @@ const escalationLevels = [
   },
   {
     id: 'verhoogd',
-    events: [],
+    events: [] as LevelEvent[],
     levelStart: 80,
     levelEnd: 100,
     color: 'rgba(255, 215, 0,.5)',
@@ -154,7 +159,7 @@ const escalationLevels = [
   },
   {
     id: 'hoog',
-    events: [],
+    events: [] as LevelEvent[],
     levelStart: 120,
     levelEnd: 110,
     color: 'rgba(255, 150, 0,.5)',
@@ -162,7 +167,7 @@ const escalationLevels = [
   },
   {
     id: 'extreem',
-    events: [],
+    events: [] as LevelEvent[],
     levelStart: 200,
     levelEnd: 250,
     color: 'rgba(255, 0, 0,.5)',
@@ -205,19 +210,19 @@ axis4.accept(legend4)
 type Plot = typeof plot1
 
 function dataload(plot: Plot) {
-  d3.json('../data/ensemble.json')
-    .then(function (data: EnsembleData) {
+  ;(d3.json('../data/ensemble.json') as Promise<EnsembleData>)
+    .then(function (data) {
       // load data
       const nEnsemble = data.values[0].length
       const members = Array(nEnsemble)
-      const percentiles = [[], [], []]
+      const percentiles: DataPoint[][] = [[], [], []]
       const offset = plot.positiveData ? 150 : 0
 
       for (let s = 0; s < nEnsemble; s++) {
         members[s] = []
       }
       const medianTime = (data.times[0] + data.times[data.times.length - 1]) / 2
-      plot.escalations.forEach(function (el, i) {
+      plot.escalations.forEach(function (el) {
         el.events = []
       })
 
@@ -247,7 +252,7 @@ function dataload(plot: Plot) {
           [chartOptions.y.key]: [perc90[0] + offset, perc90[1] + offset],
         })
 
-        plot.escalations.forEach(function (el, i) {
+        plot.escalations.forEach(function (el) {
           let val = el.levelStart
           if (index > data.times.length / 2) {
             val = el.levelEnd
@@ -263,8 +268,8 @@ function dataload(plot: Plot) {
       const mouseOver = new MouseOver({ trace: ['control', 'median', 'percent90'] })
       const zoom = new ZoomHandler()
 
-      let plotMedian: ChartLine
-      let plotControl: ChartLine
+      let plotMedian: ChartLine | undefined
+      let plotControl: ChartLine | undefined
       if (!plot.onlyRanges) {
         plotMedian = new ChartLine(percentiles[0], {})
         plotControl = new ChartLine(members[0], {})
@@ -275,13 +280,13 @@ function dataload(plot: Plot) {
       plotPercentile90.addTo(plot.axis, chartOptions, 'percent90', '#perc90')
       plotPercentile50.addTo(plot.axis, chartOptions, 'percent50', '#perc50')
       if (!plot.onlyRanges) {
-        plotControl.addTo(plot.axis, chartOptions, 'control', '#control-line')
-        plotMedian.addTo(plot.axis, chartOptions, 'median', '#median-line')
+        plotControl?.addTo(plot.axis, chartOptions, 'control', '#control-line')
+        plotMedian?.addTo(plot.axis, chartOptions, 'median', '#median-line')
       }
 
       const escalationsVisitor = new WarningLevels(plot.escalations, {})
       plot.axis.accept(escalationsVisitor)
-      plot.escalations.forEach(function (el, i) {
+      plot.escalations.forEach(function (el) {
         const escLevel = new ChartLine(el.events, {
           curve: CurveType.StepAfter,
           y: { includeInAutoScale: false },

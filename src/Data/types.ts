@@ -1,4 +1,4 @@
-export type DataValue = number | Date | number[]
+export type DataValue = number | Date | string | number[] | Date[]
 
 export type DataPoint = {
   [key: string]: DataValue | null

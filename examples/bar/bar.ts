@@ -14,7 +14,7 @@ function createAxes(
   xAxisType: AxisType,
   domain?: [number, number],
 ): CartesianAxes {
-  const container = document.getElementById(containerId)
+  const container = document.getElementById(containerId)!
   return new CartesianAxes(container, null, null, {
     x: [{ type: xAxisType }],
     y: [{ type: AxisType.value, domain }],
@@ -128,7 +128,10 @@ const barGrouped = new ChartBar(exampleCategoricalData, {
   // If the `text` option is specified, a string is created with the `formatter`
   // function (which is required) and shown above each bar.
   text: {
-    formatter: (event: ExampleCategoricalEvent) => `${event.model}: ${event.value}`,
+    formatter: (d) => {
+      const event = d as ExampleCategoricalEvent
+      return `${event.model}: ${event.value}`
+    },
     attributes: { fill: 'black', 'text-anchor': 'middle' },
     dy: -5,
   },

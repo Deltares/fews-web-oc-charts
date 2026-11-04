@@ -1,9 +1,9 @@
-export interface ExampleEvent<T extends Date | number> {
+export type ExampleEvent<T extends Date | number> = {
   x: T
   y: number
 }
 
-export interface ExamplePolarEvent {
+export type ExamplePolarEvent = {
   angular: number
   radial: number
 }

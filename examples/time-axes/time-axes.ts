@@ -13,7 +13,7 @@ import {
 } from '@lib'
 import { addListenerByClassName } from '@shared'
 
-const container = document.getElementById('chart-container-1')
+const container = document.getElementById('chart-container-1')!
 const axisOptions: CartesianAxesOptions = {
   x: [
     {

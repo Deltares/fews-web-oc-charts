@@ -17,7 +17,8 @@
 
     "paths": {
       "@lib": ["./src"],
-      "@shared": ["./examples/shared"]
+      "@shared": ["./examples/shared"],
+      "@shared/*": ["./examples/shared/*"]
     }
   },
 

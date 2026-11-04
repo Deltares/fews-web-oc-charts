@@ -20,10 +20,11 @@ import {
   WarningLevels,
   ZoomHandler,
 } from '@lib'
+import type { DataPoint } from '@lib'
 import { addListenerByClassName, addListenerById, percentile } from '@shared'
 import { EnsembleData } from '../data/types'
 
-const container = document.getElementById('chart-container-1')
+const container = document.getElementById('chart-container-1')!
 const axis = new CartesianAxes(container, null, null, {
   x: [
     {
@@ -70,7 +71,7 @@ const legend = new Legend(
       label: '50% interval',
     },
   ],
-  document.getElementById('chart-legend-1'),
+  document.getElementById('chart-legend-1')!,
 )
 
 const currentTime = new CurrentTime({
@@ -107,8 +108,8 @@ const crossSectionSelect2 = new CrossSectionSelect(
   ['control'],
 )
 
-function formatTime(timestamp: Date) {
-  return dateFormatter(timestamp, 'yyyy-MM-dd HH:mm ZZZZ')
+function formatTime(timestamp: number | Date | { valueOf(): number }) {
+  return dateFormatter(new Date(timestamp.valueOf()), 'yyyy-MM-dd HH:mm ZZZZ')
 }
 crossSectionSelect1.format = formatTime
 crossSectionSelect2.format = formatTime
@@ -205,11 +206,11 @@ const zoom = new ZoomHandler()
 axis.accept(legend)
 
 function dataload() {
-  d3.json('../data/ensemble.json')
-    .then(function (data: EnsembleData) {
+  ;(d3.json('../data/ensemble.json') as Promise<EnsembleData>)
+    .then(function (data) {
       const nEnsemble = data.values[0].length
       const members = Array(nEnsemble)
-      const percentiles = [[], [], []]
+      const percentiles: DataPoint[][] = [[], [], []]
 
       for (let s = 0; s < nEnsemble; s++) {
         members[s] = []
@@ -360,11 +361,11 @@ setTimeout(dataload, 1000)
 addListenerById('button-move-left', 'click', () => moveLine(-10 * 60 * 1000))
 addListenerById('button-move-right', 'click', () => moveLine(10 * 60 * 1000))
 
-addListenerByClassName('my-legend-button', 'click', (event) => toggleChart(event.target))
+addListenerByClassName('my-legend-button', 'click', (event) => toggleChart(event.target!))
 
 function toggleChart(target: EventTarget) {
   const element = target as HTMLElement
-  const ids = element.getAttribute('data-id').split(',')
+  const ids = element.getAttribute('data-id')!.split(',')
   for (const id of ids) {
     toggleChartVisibility(axis, id)
   }
@@ -381,4 +382,4 @@ function moveLine(dx: number) {
 addListenerByClassName('theme-button', 'click', () =>
   document.documentElement.classList.toggle('dark'),
 )
-addListenerByClassName('legend-button', 'click', (event) => toggleChart(event.target))
+addListenerByClassName('legend-button', 'click', (event) => toggleChart(event.target!))

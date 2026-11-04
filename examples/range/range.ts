@@ -29,7 +29,7 @@ const exampleData = [
 ]
 
 // Create new axes with range chart.
-const container = document.getElementById('chart-container')
+const container = document.getElementById('chart-container')!
 const axes = new CartesianAxes(container, null, null, {
   x: [{ type: AxisType.value }],
   y: [{ type: AxisType.value }],

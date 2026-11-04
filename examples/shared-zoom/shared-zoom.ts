@@ -13,14 +13,15 @@ import {
   ZoomHandler,
   ZoomMode,
 } from '@lib'
+import type { DataPoint } from '@lib'
 import { addListenerByClassName } from '@shared'
 
-const containerZoom0 = document.getElementById('chart-container-0')
-const containerZoom1 = document.getElementById('chart-container-1')
-const containerZoom2 = document.getElementById('chart-container-2')
-const containerZoom3 = document.getElementById('chart-container-3')
-const containerZoom4 = document.getElementById('chart-container-4')
-const containerZoom5 = document.getElementById('chart-container-5')
+const containerZoom0 = document.getElementById('chart-container-0')!
+const containerZoom1 = document.getElementById('chart-container-1')!
+const containerZoom2 = document.getElementById('chart-container-2')!
+const containerZoom3 = document.getElementById('chart-container-3')!
+const containerZoom4 = document.getElementById('chart-container-4')!
+const containerZoom5 = document.getElementById('chart-container-5')!
 
 const axisOptions: CartesianAxesOptions = {
   x: [
@@ -66,7 +67,7 @@ const numDays1 = 1
 const frequency1 = 3
 const step1 = 0.01 // in days
 
-const data = []
+const data: DataPoint[] = []
 const startTime1 = startDate1.getTime()
 const numSteps1 = numDays1 / step1
 for (let i = 0; i < numSteps1; i++) {
@@ -82,7 +83,7 @@ const numDays2 = 3
 const frequency2 = 3
 const step2 = 0.01 // in days
 
-const data2 = []
+const data2: DataPoint[] = []
 const startTime2 = startDate2.getTime()
 
 const numSteps2 = numDays2 / step2

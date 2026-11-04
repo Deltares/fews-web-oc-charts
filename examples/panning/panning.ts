@@ -31,7 +31,7 @@ const axesOption: CartesianAxesOptions = {
   y: [{ type: AxisType.value }],
   automargin: true,
 }
-const container = document.getElementById('chart-container')
+const container = document.getElementById('chart-container')!
 const axes = new CartesianAxes(container, null, null, axesOption)
 
 const panHandler = new PanHandler({ changeHoveringCursor: false })
@@ -69,7 +69,7 @@ const axesOptionsTime: CartesianAxesOptions = {
   y: [{ type: AxisType.value }],
   automargin: true,
 }
-const containerTime = document.getElementById('chart-container-time')
+const containerTime = document.getElementById('chart-container-time')!
 const axesTime = new CartesianAxes(containerTime, null, null, axesOptionsTime)
 
 // The mouse button to pan with and the possible panning directions can be
@@ -90,8 +90,8 @@ axesTime.accept(panHandlerTime)
 const zoomHandlerTime = new ZoomHandler()
 axesTime.accept(zoomHandlerTime)
 
-document.getElementById('enable-button').addEventListener('click', () => panHandlerTime.enable())
-document.getElementById('disable-button').addEventListener('click', () => panHandlerTime.disable())
+document.getElementById('enable-button')!.addEventListener('click', () => panHandlerTime.enable())
+document.getElementById('disable-button')!.addEventListener('click', () => panHandlerTime.disable())
 
 const lineTime = new ChartLine(exampleDataTime, {})
 lineTime.addTo(

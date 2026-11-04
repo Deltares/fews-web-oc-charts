@@ -8,7 +8,7 @@ import { AxisType, CartesianAxes, ChartMarker } from '@lib'
 import { generateExampleTimeSeriesData } from '@shared'
 
 function createAxes(containerId: string): CartesianAxes {
-  const container = document.getElementById(containerId)
+  const container = document.getElementById(containerId)!
   return new CartesianAxes(container, null, null, {
     x: [{ type: AxisType.time }],
     y: [{ type: AxisType.value, domain: [-3, 5] }],

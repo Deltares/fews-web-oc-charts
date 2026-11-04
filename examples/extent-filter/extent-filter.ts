@@ -10,7 +10,7 @@ import { ExampleEvent, generateExampleTimeSeriesData } from '@shared'
 
 function createAxes(containerId: string): CartesianAxes {
   // Create new axes.
-  const container = document.getElementById(containerId)
+  const container = document.getElementById(containerId)!
   return new CartesianAxes(container, null, null, {
     x: [{ type: AxisType.time }],
     y: [{ type: AxisType.value }],

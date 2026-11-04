@@ -18,7 +18,7 @@ import {
 } from '@lib'
 import { addListenerById } from '@shared'
 
-interface DataEntry {
+type DataEntry = {
   t: Date
   y: number
 }
@@ -46,7 +46,7 @@ function onLoad() {
 
   // Create wind direction chart
   const defaultYDomain: [number, number] = [0, 360]
-  const chartContainer = document.getElementById('chart-wind-direction-time')
+  const chartContainer = document.getElementById('chart-wind-direction-time')!
   const windDirAxis = new CartesianAxes(chartContainer, null, null, {
     x: [
       {
@@ -74,12 +74,12 @@ function onLoad() {
   })
 
   // Create wind rose
-  const containerWindrose = document.getElementById('chart-wind-rose')
+  const containerWindrose = document.getElementById('chart-wind-rose')!
   const windRoseAxis = new PolarAxes(containerWindrose, null, null, {
     angular: {
       direction: Direction.CLOCKWISE,
       intercept: Math.PI / 2,
-      format: (value) => `${value}°`,
+      format: (value) => `${Number(value)}°`,
     },
     innerRadius: 0.5,
   })
@@ -108,13 +108,13 @@ function onLoad() {
     return [
       {
         x: [1, 0],
-        y: [data[input.value].y, data[input.value].y],
+        y: [data[Number(input.value)].y, data[Number(input.value)].y],
       },
     ]
   }
 
   const windDirObsChartArrow = new ChartArrow(cartesianDataToArrowData(windDirObservedData), {
-    transitionTime: null,
+    transitionTime: 0,
     symbol: { size: 64 },
     radial: { includeInTooltip: false },
     tooltip: { anchor: TooltipAnchor.Pointer },
@@ -127,7 +127,7 @@ function onLoad() {
   )
 
   const windDirModelChartArrow = new ChartArrow(cartesianDataToArrowData(windDirModelData), {
-    transitionTime: null,
+    transitionTime: 0,
     symbol: { size: 64 },
     radial: { includeInTooltip: false },
     tooltip: { anchor: TooltipAnchor.Pointer },
@@ -145,14 +145,14 @@ function onLoad() {
       { selector: 'winddirection', label: 'Windrichting meting' },
       { selector: 'winddirection-forecast', label: 'Windrichting model' },
     ],
-    document.getElementById('legend-wind-direction-time'),
+    document.getElementById('legend-wind-direction-time')!,
   )
   const legendWindRose = new Legend(
     [
       { selector: 'direction-measured', label: 'Windrichting meting' },
       { selector: 'direction-forecast', label: 'Windrichting verwachting' },
     ],
-    document.getElementById('legend-wind-rose'),
+    document.getElementById('legend-wind-rose')!,
   )
 
   const mouseOver = new MouseOver({ trace: ['winddirection', 'winddirection-forecast'] })

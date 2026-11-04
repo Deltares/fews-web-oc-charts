@@ -1,4 +1,3 @@
-// @ts-nocheck
 import '@lib/scss/wb-charts.scss'
 import '@shared/shared.css'
 import './windrose-wbviewer.css'
@@ -22,6 +21,8 @@ import {
   TooltipAnchor,
   ZoomHandler,
 } from '@lib'
+import type { ChartArrowData } from '@lib'
+import type { DataPoint } from '@lib'
 import { addListenerByClassName, addListenerById } from '@shared'
 
 import * as d3 from 'd3'
@@ -50,42 +51,42 @@ d3.timeFormatDefaultLocale({
   shortMonths: ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'],
 })
 
-let polarAxis
-let windSpeedAxis
-let windStootAxis
-let windTimeAxis
-let windDirectionTimeAxis
+let polarAxis: PolarAxes
+let windSpeedAxis: CartesianAxes
+let windStootAxis: CartesianAxes
+let windTimeAxis: CartesianAxes
+let windDirectionTimeAxis: CartesianAxes
 
-let windDirectionMeasurement
-let windDirectionForecast
-let windSpeedMeasurement
-let windSpeedForecast
-let windDirectionRange
-let windSpeedRange
-let windStootChart
-let polarText
-let polarText1
-let polarText2
-let windStootText
-let windAmplitudeText
-let legendWindTime
+let windDirectionMeasurement: ChartArrow
+let windDirectionForecast: ChartArrow
+let windSpeedMeasurement: ChartLine
+let windSpeedForecast: ChartLine
+let windDirectionRange: ChartRange
+let windSpeedRange: ChartRange
+let windStootChart: ChartLine
+let polarText: DataField
+let polarText1: DataField
+let polarText2: DataField
+let windStootText: DataField
+let windAmplitudeText: DataField
+let legendWindTime: Legend
 
-let beaufortVisitor
-let beaufortVisitor1
+let beaufortVisitor: BeaufortAxis
+let beaufortVisitor1: BeaufortAxis
 
-let windSpeedTimeM
-let windSpeedTimeF
-let windStootTimeM
-let windDirectionTimeM
-let windDirectionTimeF
+let windSpeedTimeM: ChartLine
+let windSpeedTimeF: ChartLine
+let windStootTimeM: ChartLine
+let windDirectionTimeM: ChartLine
+let windDirectionTimeF: ChartLine
 
-let timesdata
+let timesdata: number[][]
 
 addListenerById('slider-reset-button', 'click', () => resetTimeSlider(timesdata, true))
 
-const transitionTime = null
+const transitionTime = 0
 
-function resetTimeSlider(times, force) {
+function resetTimeSlider(times: number[][], force: boolean) {
   const sliderreset = document.getElementById('slider-reset') as HTMLInputElement
   if (!force && !sliderreset.checked) {
     return
@@ -94,7 +95,7 @@ function resetTimeSlider(times, force) {
   slider.max = (times.length - 1).toString()
   const now = Math.floor(Date.now() / 1000)
   let t = 0
-  for (t = 0; t < times.length; t++) {
+  for (; t < times.length; t++) {
     if (times[t][0] > now) {
       break
     }
@@ -111,7 +112,7 @@ function resetTimeSlider(times, force) {
   slider.dispatchEvent(new Event('change'))
 }
 
-function speedDataFormatter(d) {
+function speedDataFormatter(d: { x: number | null; y: number | null }[]) {
   if (!d[0] || d[0].x === null) {
     return '-' + 'm/s\t' + '-' + 'kt\t' + '-' + 'km/h'
   }
@@ -139,22 +140,22 @@ const degree = [
 ]
 
 function setupWindrose(
-  windRichtingMetingen,
-  windRichtingVerwachtingen,
-  windSnelheiMetingen,
-  windSnelheiVerwachtingen,
-  allWindSpreidingR,
-  allWindSpreidingV,
-  allWindStoot,
-  times,
+  windRichtingMetingen: ChartArrowData[][],
+  windRichtingVerwachtingen: ChartArrowData[][],
+  windSnelheiMetingen: DataPoint[][],
+  windSnelheiVerwachtingen: DataPoint[][],
+  allWindSpreidingR: DataPoint[][],
+  allWindSpreidingV: DataPoint[][],
+  allWindStoot: DataPoint[][],
+  times: number[],
 ) {
   // Wind rose chart
-  const containerWindrose = document.getElementById('chart-wind-rose')
+  const containerWindrose = document.getElementById('chart-wind-rose')!
   polarAxis = new PolarAxes(containerWindrose, null, null, {
     angular: {
       direction: Direction.CLOCKWISE,
       intercept: Math.PI / 2,
-      format: (value) => `${value}°`,
+      format: (value) => `${Number(value)}°`,
     },
     innerRadius: 0.5,
   })
@@ -177,19 +178,19 @@ function setupWindrose(
   })
   windDirectionRange.addTo(
     polarAxis,
-    { radial: { key: 'x' }, angular: { key: 'y' } },
+    { radial: { key: 'x', axisIndex: 0 }, angular: { key: 'y', axisIndex: 0 } },
     'direction-range',
     '#polar-range',
   )
   windDirectionMeasurement.addTo(
     polarAxis,
-    { radial: { key: 'x' }, angular: { key: 'y' } },
+    { radial: { key: 'x', axisIndex: 0 }, angular: { key: 'y', axisIndex: 0 } },
     'direction-measured',
     '#polar-line',
   )
   windDirectionForecast.addTo(
     polarAxis,
-    { radial: { key: 'x' }, angular: { key: 'y' } },
+    { radial: { key: 'x', axisIndex: 0 }, angular: { key: 'y', axisIndex: 0 } },
     'direction-forecast',
     '#polar-line-forecast',
   )
@@ -218,7 +219,7 @@ function setupWindrose(
       { selector: 'direction-measured', label: 'Windrichting meting' },
       { selector: 'direction-forecast', label: 'Windrichting verwachting' },
     ],
-    document.getElementById('legend-wind-rose'),
+    document.getElementById('legend-wind-rose')!,
   )
 
   // Wind speed chart
@@ -234,7 +235,7 @@ function setupWindrose(
     },
   })
 
-  const containerWindSpeed = document.getElementById('chart-wind-speed')
+  const containerWindSpeed = document.getElementById('chart-wind-speed')!
   windSpeedAxis = new CartesianAxes(containerWindSpeed, null, null, {
     transitionTime: transitionTime,
     x: [
@@ -302,7 +303,7 @@ function setupWindrose(
   )
 
   // Wind stoot chart
-  const containerWindstoot = document.getElementById('chart-wind-stoot')
+  const containerWindstoot = document.getElementById('chart-wind-stoot')!
   windStootAxis = new CartesianAxes(containerWindstoot, null, null, {
     transitionTime: transitionTime,
     x: [
@@ -323,7 +324,7 @@ function setupWindrose(
   windStootChart = new ChartLine(allWindStoot[0], {
     transitionTime: transitionTime,
     y: { includeInTooltip: false },
-    tooltip: { anchor: 'default' },
+    tooltip: {},
   })
   windStootChart.addTo(
     windStootAxis,
@@ -361,7 +362,7 @@ function setupWindrose(
     },
   })
 
-  const containerWindSpeedTime = document.getElementById('chart-wind-speed-time')
+  const containerWindSpeedTime = document.getElementById('chart-wind-speed-time')!
   windTimeAxis = new CartesianAxes(containerWindSpeedTime, null, null, {
     transitionTime: transitionTime,
     x: [{ type: AxisType.time, position: 'bottom', showGrid: true }],
@@ -432,10 +433,10 @@ function setupWindrose(
       { selector: 'wind', label: 'Windsnelheid meting' },
       { selector: 'wind-forecast', label: 'Windsnelheid verwachting' },
     ],
-    document.getElementById('legend-wind-speed-time'),
+    document.getElementById('legend-wind-speed-time')!,
   )
   // Time chart wind direction
-  const containerWindDirectionTme = document.getElementById('chart-wind-direction-time')
+  const containerWindDirectionTme = document.getElementById('chart-wind-direction-time')!
   windDirectionTimeAxis = new CartesianAxes(containerWindDirectionTme, null, null, {
     transitionTime: transitionTime,
     x: [{ type: AxisType.time, position: 'bottom', showGrid: true }],
@@ -486,7 +487,7 @@ function setupWindrose(
       { selector: 'winddirection', label: 'Windrichting meting' },
       { selector: 'winddirection-forecast', label: 'Windrichting verwachting' },
     ],
-    document.getElementById('legend-wind-direction-time'),
+    document.getElementById('legend-wind-direction-time')!,
   )
 
   // Draw
@@ -511,13 +512,17 @@ function setupWindrose(
   windDirectionTimeAxis.accept(new ZoomHandler())
   windDirectionTimeAxis.accept(new CurrentTime({ x: { axisIndex: 0 } }))
 
-  const sliderdt = document.getElementById('slider-datetime')
+  const sliderdt = document.getElementById('slider-datetime')!
   sliderdt.innerHTML = dateFormatter(new Date(times[0] * 1000), 'yyyy-MM-DD HH:mm ZZZZ', {
     timeZone: 'Europe/Amsterdam',
   })
 }
 
-function updateChartWindTime(windSpeedTimeSeriesM, windSpeedTimeSeriesF, windStootTimeSeriesM) {
+function updateChartWindTime(
+  windSpeedTimeSeriesM: DataPoint[],
+  windSpeedTimeSeriesF: DataPoint[],
+  windStootTimeSeriesM: DataPoint[],
+) {
   windSpeedTimeM.data = windSpeedTimeSeriesM
   windSpeedTimeF.data = windSpeedTimeSeriesF
   windStootTimeM.data = windStootTimeSeriesM
@@ -529,7 +534,10 @@ function updateChartWindTime(windSpeedTimeSeriesM, windSpeedTimeSeriesF, windSto
   windTimeAxis.accept(new CurrentTime({ x: { axisIndex: 0 } }))
 }
 
-function updateChartWindDirectionTime(windDirectionTimeSeriesM, windDirectionTimeSeriesF) {
+function updateChartWindDirectionTime(
+  windDirectionTimeSeriesM: DataPoint[],
+  windDirectionTimeSeriesF: DataPoint[],
+) {
   windDirectionTimeM.data = windDirectionTimeSeriesM
   windDirectionTimeF.data = windDirectionTimeSeriesF
   windDirectionTimeAxis.redraw({ x: { autoScale: true } })
@@ -543,17 +551,17 @@ function updateChartWindDirectionTime(windDirectionTimeSeriesM, windDirectionTim
 }
 
 function updateWindrose(
-  windRichtingMetingen,
-  windRichtingVerwachtingen,
-  windSnelheidMetingen,
-  windSnelheidVerwachtingen,
-  windSpreidingR,
-  windSpreidingV,
-  windStoot,
-  times,
+  windRichtingMetingen: ChartArrowData[][],
+  windRichtingVerwachtingen: ChartArrowData[][],
+  windSnelheidMetingen: DataPoint[][],
+  windSnelheidVerwachtingen: DataPoint[][],
+  windSpreidingR: DataPoint[][],
+  windSpreidingV: DataPoint[][],
+  windStoot: DataPoint[][],
+  times: number[],
 ) {
-  const updateCharts = function (event) {
-    const position = event.target.value
+  const updateCharts = function (event: Event) {
+    const position = Number((event.target as HTMLInputElement).value)
     windDirectionMeasurement.data = windRichtingMetingen[position]
     windDirectionForecast.data = windRichtingVerwachtingen[position]
     windSpeedMeasurement.data = windSnelheidMetingen[position]
@@ -566,12 +574,12 @@ function updateWindrose(
     windSpeedAxis.redraw({ x: { autoScale: true }, y: { autoScale: true } })
     windStootAxis.redraw({ x: { autoScale: true }, y: { autoScale: true } })
 
-    const sliderdt = document.getElementById('slider-datetime')
+    const sliderdt = document.getElementById('slider-datetime')!
     sliderdt.innerHTML = dateFormatter(new Date(times[position] * 1000), 'yyyy-MM-DD HH:mm ZZZZ', {
       timeZone: 'Europe/Amsterdam',
     })
   }
-  const input = document.getElementById('slider')
+  const input = document.getElementById('slider')!
   input.onchange = function (event) {
     updateCharts(event)
   }
@@ -624,20 +632,20 @@ function get_wind_data() {
           metingvalues[i][0] !== null || metingvalues[i][2] !== null || metingvalues[i][3] !== null
         timesdata.push([times[i], timedatapresent])
 
-        const metingRichtingData = {
+        const metingRichtingData: ChartArrowData = {
           x: [metingvalues[i][0] !== null ? 1 : 0, 0],
           y: [metingvalues[i][0], metingvalues[i][0]],
         }
         allWindRichtingMetingen.push([metingRichtingData])
 
-        const verwachtingRichtingData = {
+        const verwachtingRichtingData: ChartArrowData = {
           x: [verwachtingvalues[i][0] !== null ? 1 : 0, 0],
           y: [verwachtingvalues[i][1], verwachtingvalues[i][1]],
         }
         allWindRichtingVerwachtingen.push([verwachtingRichtingData])
 
-        const metingSnelheidData1 = {}
-        const metingSnelheidData2 = {}
+        const metingSnelheidData1: DataPoint = {}
+        const metingSnelheidData2: DataPoint = {}
         metingSnelheidData1.x = 0
         metingSnelheidData1.y =
           metingvalues[i][2] !== null ? Math.abs(0.1 * metingvalues[i][2]) : null // scale down by factor 10 for m/sec
@@ -645,23 +653,23 @@ function get_wind_data() {
         metingSnelheidData2.y = metingSnelheidData1.y
         allWindSnelheidMetingen.push([metingSnelheidData1, metingSnelheidData2])
 
-        const metingStootData1 = {}
-        const metingstootData2 = {}
+        const metingStootData1: DataPoint = {}
+        const metingstootData2: DataPoint = {}
         metingStootData1.x = 0
         metingStootData1.y = metingvalues[i][3] !== null ? Math.abs(0.1 * metingvalues[i][3]) : null // scale down by factor 10 for m/sec
         metingstootData2.x = metingvalues[i][3] !== null ? 1 : 0
         metingstootData2.y = metingStootData1.y
         allWindStoot.push([metingStootData1, metingstootData2])
 
-        const verwachtingSnelheidData1 = {}
-        const verwachtingSnelheidData2 = {}
+        const verwachtingSnelheidData1: DataPoint = {}
+        const verwachtingSnelheidData2: DataPoint = {}
         verwachtingSnelheidData1.x = 0
         verwachtingSnelheidData1.y = Math.abs(0.1 * verwachtingvalues[i][0]) // scale down by factor 10 for m/sec
         verwachtingSnelheidData2.x = verwachtingvalues[i][0] !== null ? 1 : 0
         verwachtingSnelheidData2.y = Math.abs(0.1 * verwachtingvalues[i][0]) // scale down by factor 10 for m/sec
         allWindSnelheidVerwachtingen.push([verwachtingSnelheidData1, verwachtingSnelheidData2])
 
-        const windSpreidingRData = {}
+        const windSpreidingRData: DataPoint = {}
         windSpreidingRData.x = [0, 1]
 
         if (spreidingvalues[i][3] < spreidingvalues[i][2]) {
@@ -675,7 +683,7 @@ function get_wind_data() {
         }
         allWindSpreidingR.push([windSpreidingRData])
 
-        const windSpreidingVData = {}
+        const windSpreidingVData: DataPoint = {}
         windSpreidingVData.x = [0, spreidingvalues[i][0] !== null ? 1 : 0]
         windSpreidingVData.y = [
           0.1 * Math.abs(spreidingvalues[i][0]),
@@ -711,7 +719,16 @@ function get_wind_data() {
     ],
   ]
 
-  setupWindrose(initRange, initRange, initRange, initRange, initRange, initRange, initScalar, [1])
+  setupWindrose(
+    initRange as unknown as ChartArrowData[][],
+    initRange as unknown as ChartArrowData[][],
+    initRange,
+    initRange,
+    initRange,
+    initRange,
+    initScalar,
+    [1],
+  )
   request.open('GET', '/examples/data/wind_data3.json', true)
   request.send()
 }
