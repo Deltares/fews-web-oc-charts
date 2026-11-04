@@ -35,6 +35,9 @@ export class ChartDirection extends ChartMarker {
     const xScale = axis.xScales[axisIndex.x.axisIndex]
     const yScale = axis.yScales[axisIndex.y.axisIndex]
 
+    this.highlight = this.selectHighlight(axis, 'circle')
+    this.highlight.select('circle').attr('r', 3).style('opacity', 0).style('stroke-width', '1px')
+
     const mappedData = this.mapDataCartesian(xScale.domain())
     let skip = 1
     const { skip: configuredSkip, size } = this.symbolOptions
