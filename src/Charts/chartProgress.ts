@@ -91,7 +91,12 @@ export class ChartProgress extends Chart {
         const angles = angleRange(d, tKey)
         const oldAngles = angleRange(old, tKey)
         const meanDifference = mean(oldAngles.map(Number)) - mean(angles.map(Number))
-        const offset = meanDifference > 180 ? -360 : meanDifference < -180 ? 360 : 0
+        let offset = 0
+        if (meanDifference > 180) {
+          offset = -360
+        } else if (meanDifference < -180) {
+          offset = 360
+        }
         const startAngles = offset === 0 ? oldAngles : oldAngles.map((x) => Number(x) + offset)
 
         const tInterpolate = d3.interpolateArray<(number | Date)[]>(startAngles, angles)
