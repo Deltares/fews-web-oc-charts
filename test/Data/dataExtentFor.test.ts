@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vite-plus/test'
 import { dataExtentFor } from '../../src/Data/dataExtentFor'
+import type { DataPoint } from '../../src/Data/types'
 
 describe('dataExtentFor', () => {
   test('scalar x valued data', () => {
@@ -99,7 +100,7 @@ describe('dataExtentFor with filter', () => {
         x: 1,
       },
     ]
-    const filter = (d) => d.x !== 999
+    const filter = (d: DataPoint) => d.x !== 999
     const extent = dataExtentFor(data, 'x', filter)
     expect(extent).toStrictEqual([-1, 1])
   })
@@ -134,7 +135,7 @@ describe('dataExtentFor with filter', () => {
         x: 999,
       },
     ]
-    const filter = (d) => d.x !== 999
+    const filter = (d: DataPoint) => d.x !== 999
     const extent = dataExtentFor(data, 'x', filter)
     expect(extent).toStrictEqual([undefined, undefined])
   })
@@ -154,7 +155,7 @@ describe('dataExtentFor with filter', () => {
         flag: 4,
       },
     ]
-    const filter = (d) => d.flag !== 4
+    const filter = (d: DataPoint) => d.flag !== 4
     const extent = dataExtentFor(data, 'x', filter)
     expect(extent).toStrictEqual([undefined, undefined])
   })
@@ -174,7 +175,7 @@ describe('dataExtentFor with filter', () => {
         x: [-1, 1],
       },
     ]
-    const filter = (d) => !d.x.includes(999)
+    const filter = (d: { x: number[] }) => !d.x.includes(999)
     const extent = dataExtentFor(data, 'x', filter)
     expect(extent).toStrictEqual([-1, 1])
   })
@@ -198,7 +199,7 @@ describe('dataExtentFor with filter', () => {
         flag: 0,
       },
     ]
-    const filter = (d) => d.flag !== 4
+    const filter = (d: DataPoint) => d.flag !== 4
     const extent = dataExtentFor(data, 'x', filter)
     expect(extent).toStrictEqual([-1, 1])
   })
@@ -222,7 +223,7 @@ describe('dataExtentFor with filter', () => {
         flag: 4,
       },
     ]
-    const filter = (d) => d.flag !== 4
+    const filter = (d: DataPoint) => d.flag !== 4
     const extent = dataExtentFor(data, 'x', filter)
     expect(extent).toStrictEqual([undefined, undefined])
   })
