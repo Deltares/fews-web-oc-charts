@@ -56,7 +56,7 @@ export class ChartMatrix extends Chart {
       .attr('shape-rendering', 'crispEdges')
       .attr('fill', (d) => {
         const value = d[colorKey]
-        return typeof value === 'number' || value instanceof Date ? colorMap(value) : 'none'
+        return value === null || value === undefined ? 'none' : colorMap(value as number | Date)
       })
     this.addTooltipHandlers(elements, axis, {
       expectedAnchor: TooltipAnchor.Top,

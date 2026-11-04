@@ -83,7 +83,7 @@ export class ChartBar extends Chart {
         // Without a color key, inherit the fill from the chart group style.
         if (colorKey === undefined) return null
         const value = d[colorKey]
-        return typeof value === 'number' || value instanceof Date ? colorMap(value) : 'none'
+        return value === null || value === undefined ? 'none' : colorMap(value as number | Date)
       })
 
     this.addTooltipHandlers(bar, axis, {
