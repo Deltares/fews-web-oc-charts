@@ -96,7 +96,7 @@ export class ChartRange extends Chart {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // oxlint-disable-next-line @typescript-eslint/no-unused-vars
   plotterPolar(axis: PolarAxes, axisIndex: AxisIndex) {
     const rKey = this.dataKeys.radial
     const tKey = this.dataKeys.angular

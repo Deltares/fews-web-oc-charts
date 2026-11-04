@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect } from 'vite-plus/test'
 import { getNiceDomain } from '../../src/Axes/getNiceDomain.js'
 describe('getNiceDomain', () => {
   it('should expand domain when data extent max exceeds default domain max', () => {

@@ -1,5 +1,5 @@
 import * as d3 from 'd3'
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vite-plus/test'
 import { CrossSectionSelect } from '../src/Visitors/crossSectionSelect'
 import {
   determineCrossSectionLabel,

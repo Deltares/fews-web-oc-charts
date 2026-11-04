@@ -1,5 +1,5 @@
-import { type ViteUserConfig, defineConfig } from 'vitest/config'
-import { playwright } from '@vitest/browser-playwright'
+import { type ViteUserConfig, defineConfig } from 'vite-plus'
+import { playwright } from 'vite-plus/test/browser-playwright'
 
 type TestConfig = NonNullable<ViteUserConfig['test']>
 type BrowserConfig = NonNullable<TestConfig['browser']>

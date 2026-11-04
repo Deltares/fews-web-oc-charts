@@ -52,7 +52,7 @@ export class ChartRule extends Chart {
     this.addTooltipHandlers(elements, axis)
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // oxlint-disable-next-line @typescript-eslint/no-unused-vars
   plotterPolar(axis: PolarAxes, dataKeys: AxisIndex) {
     console.error('plotterPolar is not implemented for ChartRule')
   }

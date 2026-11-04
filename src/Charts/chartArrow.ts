@@ -30,7 +30,9 @@ export class ChartArrow extends Chart {
   constructor(data: ChartArrowData[], options: ChartOptions) {
     // Assumes data to be of the format {this.dataKeys.radial: [number, number], this.dataKeys.angular: [number, number]}[]
     super(data, options)
-    this.options = defaultsDeep(this.options, this.options, { symbol: DefaultSymbolOptions })
+    this.options = defaultsDeep(this.options, this.options, {
+      symbol: DefaultSymbolOptions,
+    })
     this.symbolOptions = {
       id: 0,
       size: 10,
@@ -61,12 +63,12 @@ export class ChartArrow extends Chart {
     return html
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // oxlint-disable-next-line @typescript-eslint/no-unused-vars
   plotterCartesian(axis: CartesianAxes, axisIndex: CartesianAxesIndex) {
     throw new Error('plotterCartesian is not implemented for ChartArrow')
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // oxlint-disable-next-line @typescript-eslint/no-unused-vars
   plotterPolar(axis: PolarAxes, axisIndex: AxisIndex) {
     const rKey = this.dataKeys.radial
     const tKey = this.dataKeys.angular

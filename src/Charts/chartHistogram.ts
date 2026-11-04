@@ -73,7 +73,7 @@ export class ChartHistogram extends Chart {
     applyRectShape(elements.transition(t)).style('fill', getFill)
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // oxlint-disable-next-line @typescript-eslint/no-unused-vars
   plotterPolar(axis: PolarAxes, dataKeys: AxisIndex) {
     throw new Error('plotterPolar is not implemented for ChartHistogram')
   }

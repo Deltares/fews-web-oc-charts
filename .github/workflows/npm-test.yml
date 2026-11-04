@@ -7,11 +7,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-node@v6
+      - uses: voidzero-dev/setup-vp@v1.22.0
         with:
-          node-version: 24
-          cache: npm
-      - run: npm ci --ignore-scripts
+          node-version: '24'
+          cache: true
+          run-install: |
+            - args: ['--frozen-lockfile']
 
       - name: Run linter
         run: npm run lint
@@ -29,8 +30,7 @@ jobs:
           path: |
             ~/.cache/ms-playwright
           key: ${{ runner.os }}-${{ env.PLAYWRIGHT_VERSION }}
-      - run: npm ci --ignore-scripts
-      - run: npx playwright install --with-deps chromium firefox webkit
+      - run: npx playwright install --with-deps chromium
         if: steps.playwright-cache.outputs.cache-hit != 'true'
 
       - name: Run tests
