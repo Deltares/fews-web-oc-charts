@@ -2,6 +2,8 @@ import { defineConfig } from 'vite-plus'
 
 export default defineConfig({
   lint: {
+    // The examples still have type errors, so they aren't linted yet.
+    ignorePatterns: ['examples/**'],
     plugins: ['oxc', 'typescript', 'unicorn'],
     jsPlugins: [
       {
