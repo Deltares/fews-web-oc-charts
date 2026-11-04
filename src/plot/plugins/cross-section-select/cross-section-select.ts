@@ -16,6 +16,12 @@ export interface CrossSectionSelectOptions {
   x: string
   marks: CrossSectionMarkFilter
   draggable: boolean
+  /**
+   * How a mark's value at the selection is found. Off (the default): the first point at or after
+   * the selection, as for values that hold until their time. On: the point on the drawn line, and
+   * none outside the line's points or next to a missing value.
+   */
+  interpolate: boolean
   format?: (value: number) => string
 }
 
@@ -51,7 +57,7 @@ const handleCallbacks = new WeakMap<
   CrossSectionSelectHandle,
   ((value: number) => void) | undefined
 >()
-const optionKeys = ['x', 'marks', 'draggable', 'format']
+const optionKeys = ['x', 'marks', 'draggable', 'interpolate', 'format']
 
 export function isCrossSectionSelectHandle(value: object): value is CrossSectionSelectHandle {
   return handles.has(value)
@@ -96,7 +102,13 @@ export function crossSectionSelect(
   const value = reactive.signal(initialValue)
   const currentData = reactive.signal<readonly CrossSectionPoint[]>(Object.freeze([]))
   const state = createOptionState<CrossSectionSelectOptions>(initial, {
-    defaults: () => ({ x: 'x', marks: 'all', draggable: false, format: undefined }),
+    defaults: () => ({
+      x: 'x',
+      marks: 'all',
+      draggable: false,
+      interpolate: false,
+      format: undefined,
+    }),
     isAtomicReference: (value) => isLineMark(value) || isSeriesMark(value),
     validate(options) {
       if (typeof options.x !== 'string' || options.x.length === 0) {
@@ -105,6 +117,9 @@ export function crossSectionSelect(
       validateMarks(options.marks)
       if (typeof options.draggable !== 'boolean') {
         throw new TypeError('crossSectionSelect.draggable must be boolean.')
+      }
+      if (typeof options.interpolate !== 'boolean') {
+        throw new TypeError('crossSectionSelect.interpolate must be boolean.')
       }
       if (options.format !== undefined && typeof options.format !== 'function') {
         throw new TypeError('crossSectionSelect.format must be a function.')

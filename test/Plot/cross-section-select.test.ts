@@ -6,6 +6,7 @@ import {
   crosshair,
   linearScale,
   line,
+  logScale,
   ModifierKey,
   pan,
   brush,
@@ -334,6 +335,78 @@ describe('cross-section select plugin', () => {
     plot.update({ plugins: [] })
     await frame()
     expect(plot.element.querySelector('[data-layer="cross-section-select"]')).toBeNull()
+  })
+
+  describe('interpolate', () => {
+    const at = (interaction: ReturnType<typeof crossSectionSelect>) =>
+      interaction.currentData.get().map(({ id, data, value }) => [id, data, value])
+
+    test('samples each drawn line at the selection and places the marker on it', async () => {
+      const { plot, interaction } = await setup(
+        crossSectionSelect(2.5, undefined, { x: 't', interpolate: true }),
+      )
+      expect(at(interaction)).toEqual([
+        ['first', { x: 2.5, y: 11 }, '11.0'],
+        ['second', { x: 2.5, y: 21.75 }, '21.8'],
+      ])
+      const [first] = interaction.currentData.get()
+      expect(first.index).toBe(0)
+      expect(first.x).toBeCloseTo(plot.scales.t.project(2.5))
+      expect(first.y).toBeCloseTo(plot.scales.q.project(11))
+    })
+
+    test('keeps the point itself when the selection is on one', async () => {
+      const { interaction } = await setup(
+        crossSectionSelect(5, undefined, { x: 't', interpolate: true }),
+      )
+      expect(at(interaction)).toEqual([
+        ['first', { x: 5, y: 20 }, '20.0'],
+        ['second', { x: 5, y: 26 }, '26.0'],
+      ])
+      expect(interaction.currentData.get()[0].index).toBe(1)
+    })
+
+    test('has no point outside a line or next to a missing value', async () => {
+      const marks = [
+        line({ id: 'late', x: 't', y: 'q', xValues: [4, 8], yValues: [1, 2] }),
+        line({ id: 'early', x: 't', y: 'q', xValues: [0, 2], yValues: [1, 2] }),
+        line({ id: 'gap', x: 't', y: 'q', xValues: [0, 2, 4, 6], yValues: [1, NaN, 3, 4] }),
+        line({ id: 'after-gap', x: 't', y: 'q', xValues: [0, 2, 4, 6], yValues: [1, NaN, 3, 4] }),
+      ]
+      const { interaction } = await setup(
+        crossSectionSelect(3, undefined, { x: 't', interpolate: true, marks: marks.slice(0, 3) }),
+        { marks },
+      )
+      expect(at(interaction)).toEqual([])
+      interaction.setValue(5)
+      await frame()
+      expect(at(interaction).map(([id]) => id)).toEqual(['late', 'gap'])
+    })
+
+    test('follows a log scale, where the drawn line is straight between the logarithms', async () => {
+      const marks = [line({ id: 'log', x: 't', y: 'q', xValues: [0, 10], yValues: [1, 100] })]
+      const { plot, interaction } = await setup(
+        crossSectionSelect(5, undefined, { x: 't', interpolate: true }),
+        {
+          marks,
+          scales: { t: linearScale({ domain: [0, 10] }), q: logScale({ domain: [1, 100] }) },
+        },
+      )
+      const [point] = interaction.currentData.get()
+      expect(point.data.y).toBeCloseTo(10)
+      expect(point.y).toBeCloseTo(plot.scales.q.project(10))
+    })
+
+    test('is off by default, can change live and must be boolean', async () => {
+      const { interaction } = await setup(crossSectionSelect(2.5, undefined, { x: 't' }))
+      expect(at(interaction)[0]).toEqual(['first', { x: 5, y: 20 }, '20.0'])
+      interaction.update({ interpolate: true })
+      await frame()
+      expect(at(interaction)[0]).toEqual(['first', { x: 2.5, y: 11 }, '11.0'])
+      expect(() => interaction.update({ interpolate: 1 as unknown as boolean })).toThrow(
+        'interpolate must be boolean',
+      )
+    })
   })
 
   test('rejects invalid options and incompatible plot targets atomically', async () => {
