@@ -75,7 +75,13 @@ export class ChartArrow extends Chart {
     const arrowHeadSize = this.symbolOptions.size
 
     // Define functions that draw the arrow initially, and that translate the arrow to the correct position.
+    function hasValues(d: ChartArrowData) {
+      const values: (number | null)[] = [d[rKey][0], d[rKey][1], d[tKey][0], d[tKey][1]]
+      return values.every((value) => value !== null)
+    }
+
     function arrowGenerator(d: ChartArrowData) {
+      if (!hasValues(d)) return ''
       const radius1: number = axis.radialScale(d[rKey][0])
       const radius2: number = axis.radialScale(d[rKey][1])
       const theta1: number = axis.angularScale(d[tKey][0])
@@ -102,13 +108,13 @@ export class ChartArrow extends Chart {
       // Code only really uses d.
       return function (d: unknown, i: number, _a: unknown) {
         const points = d as ChartArrowData[]
-        if (p.length === 0) {
+        const current = points[i]
+        if (current === undefined || !hasValues(current)) {
           return function (_x: number) {
-            return 'translate()'
+            return ''
           }
         }
-        const old = p[i] ?? points[i]
-        const current = points[i]
+        const old = p[i] !== undefined && hasValues(p[i]) ? p[i] : current
         // ensure angles stay in range -180 to 180
         if (mean(old[tKey][0]) - mean(current[tKey][0]) > 180) {
           old[tKey][0] = old[tKey][0] - 360

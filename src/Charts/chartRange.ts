@@ -59,15 +59,21 @@ export class ChartRange extends Chart {
       selection: T,
     ): T =>
       selection
-        .attr('x', (d) => xScale(numericRange(d, xKey)[0]))
-        .attr('y', (d) => yScale(numericRange(d, yKey)[1]))
+        .attr('x', (d) => {
+          const [start, end] = numericRange(d, xKey)
+          return Math.min(xScale(start), xScale(end))
+        })
+        .attr('y', (d) => {
+          const [start, end] = numericRange(d, yKey)
+          return Math.min(yScale(start), yScale(end))
+        })
         .attr('width', (d) => {
-          const range = numericRange(d, xKey)
-          return xScale(range[1]) - xScale(range[0])
+          const [start, end] = numericRange(d, xKey)
+          return Math.abs(xScale(end) - xScale(start))
         })
         .attr('height', (d) => {
-          const range = numericRange(d, yKey)
-          return yScale(range[0]) - yScale(range[1])
+          const [start, end] = numericRange(d, yKey)
+          return Math.abs(yScale(end) - yScale(start))
         })
 
     // update + enter

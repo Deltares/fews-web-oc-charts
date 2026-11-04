@@ -661,8 +661,8 @@ function get_wind_data() {
   setupWindrose(
     initRange as unknown as ChartArrowData[][],
     initRange as unknown as ChartArrowData[][],
-    initRange,
-    initRange,
+    initScalar,
+    initScalar,
     initRange,
     initRange,
     initScalar,

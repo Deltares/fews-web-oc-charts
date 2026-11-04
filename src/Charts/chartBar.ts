@@ -155,8 +155,9 @@ export class ChartBar extends Chart {
       this.highlight.select('rect').style('opacity', 0)
       return
     }
-    const point = this.datum[index]
-    if (point === undefined) return
+    const datum = this.datum[index]
+    if (datum === undefined) return
+    const point = this.toPointXY(datum)
 
     this.highlight
       .select('rect')
@@ -168,10 +169,10 @@ export class ChartBar extends Chart {
 
     const element = this.group.select('rect')
     if (element.node() === null) {
-      return { point: point as DataPointXY, style: {} }
+      return { point, style: {} }
     } else {
       const color = window.getComputedStyle(element.node() as Element).getPropertyValue('fill')
-      return { point: point as DataPointXY, style: { color } }
+      return { point, style: { color } }
     }
   }
 }
