@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vite-plus/test'
 import { createPlot, linearScale, logScale, zoom } from '../../src/index.js'
 import { bindScale, registerScaleExtents } from '../../src/scales/scale.js'
 import { reactive } from '../../src/core/runtime.js'

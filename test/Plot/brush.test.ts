@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test, vi } from 'vitest'
+import { afterEach, describe, expect, test, vi } from 'vite-plus/test'
 import {
   axis,
   bandScale,
@@ -407,7 +407,7 @@ describe('persistent brush', () => {
     const plot = await setup(interaction)
     const mainTime: ScaleHandle = linearScale({ domain: [0, 460] })
     plot.element.addEventListener(brushEvent, (event) => {
-      mainTime.domain.set((event as CustomEvent<BrushSelection>).detail.scales.x)
+      mainTime.domain.set(event.detail.scales.x)
     })
     pointer(plot, 'pointerdown', 100, 100)
     pointer(plot, 'pointermove', 300, 150)

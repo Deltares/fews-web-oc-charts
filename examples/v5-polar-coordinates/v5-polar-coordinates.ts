@@ -35,8 +35,8 @@ const innerDistance = radialScale({ domain: [0, 100] })
 function makePlot(
   host: HTMLElement,
   title: string,
-  angle: ReturnType<typeof angular>,
-  radius: ReturnType<typeof radial>,
+  angle: ReturnType<typeof angularScale>,
+  radius: ReturnType<typeof radialScale>,
 ) {
   return createPolarPlot(host, {
     title,

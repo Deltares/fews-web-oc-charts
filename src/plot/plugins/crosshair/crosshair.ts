@@ -17,7 +17,12 @@ import { isSharedPointer, type SharedPointer } from '../../../sync/shared-pointe
 export type CrosshairMode = 'x' | 'y' | 'xy'
 export type CrosshairSnapAxis = 'x' | 'y' | 'xy'
 export type CrosshairSnapMark =
-  LineMark | SeriesMark | BarMark | StackedAreaMark | HistogramMark | HeatmapMark
+  | LineMark
+  | SeriesMark
+  | BarMark
+  | StackedAreaMark
+  | HistogramMark
+  | HeatmapMark
 
 export interface CrosshairSnapOptions {
   mark: CrosshairSnapMark

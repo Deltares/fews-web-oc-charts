@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from 'vitest'
+import { afterEach, describe, expect, test } from 'vite-plus/test'
 import { createPlot, linearScale, line, type Plot } from '../../src/index.js'
 
 const plots: Plot[] = []

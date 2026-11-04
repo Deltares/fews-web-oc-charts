@@ -38,7 +38,10 @@ export interface AutoscaleContext {
 }
 
 export type AutoscalePolicy =
-  'data' | 'visible' | 'fixed' | ((context: AutoscaleContext) => readonly ScaleValue[] | undefined)
+  | 'data'
+  | 'visible'
+  | 'fixed'
+  | ((context: AutoscaleContext) => readonly ScaleValue[] | undefined)
 
 export interface ScaleOptions<Domain extends readonly ScaleValue[] = readonly ScaleValue[]> {
   domain?: Domain

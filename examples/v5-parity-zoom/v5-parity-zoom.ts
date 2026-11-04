@@ -114,9 +114,9 @@ function updateOptions() {
   if (direction !== 'x' && direction !== 'y' && direction !== 'xy') {
     throw new Error(`Unknown zoom direction "${direction}".`)
   }
-  const modifierKey = Object.values(ModifierKey).find((key) => key === modifier.value)
+  const modifierKey = Object.values(ModifierKey).find((key) => String(key) === modifier.value)
   if (modifierKey === undefined) throw new Error(`Unknown modifier "${modifier.value}".`)
-  const resetPolicy = Object.values(ResetZoom).find((policy) => policy === resetMode.value)
+  const resetPolicy = Object.values(ResetZoom).find((policy) => String(policy) === resetMode.value)
   if (resetPolicy === undefined) throw new Error(`Unknown reset policy "${resetMode.value}".`)
 
   const wheelModes = { x: WheelMode.X, y: WheelMode.Y, xy: WheelMode.XY }

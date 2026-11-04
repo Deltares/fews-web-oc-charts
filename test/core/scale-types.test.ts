@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, expect, expectTypeOf, test, vi } from 'vitest'
+import { afterEach, beforeEach, expect, expectTypeOf, test, vi } from 'vite-plus/test'
 import {
   angularScale,
   bandScale,

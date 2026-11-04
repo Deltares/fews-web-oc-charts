@@ -1,4 +1,4 @@
-import { afterEach, expect, test } from 'vitest'
+import { afterEach, expect, test } from 'vite-plus/test'
 import { createSeries, timeScale } from '../../src/index.js'
 import { withSource } from '../../src/core/runtime.js'
 import { registerScaleExtents } from '../../src/scales/scale.js'
@@ -11,7 +11,7 @@ afterEach(() => {
 
 function connectData(scale: ReturnType<typeof timeScale>, store: ReturnType<typeof createSeries>) {
   const disconnect = registerScaleExtents(scale, () => {
-    store.version
+    void store.version
     return store.length ? [store.xAt(0), store.xAt(store.length - 1)] : undefined
   })
   cleanups.push(disconnect)

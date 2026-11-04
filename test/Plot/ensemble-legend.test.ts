@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from 'vitest'
+import { afterEach, describe, expect, test } from 'vite-plus/test'
 import {
   createEnsemble,
   createPlot,
@@ -101,7 +101,7 @@ describe('ensemble legend', () => {
     )
   })
 
-  test('the heading hides and shows all parts; showing one part of a hidden mark shows only it', async () => {
+  test('the heading hides and shows all parts; showing one part of a hidden mark shows only it', () => {
     const mark = labelled()
     const current = plot([mark])
     current.legend.toggle('fc')

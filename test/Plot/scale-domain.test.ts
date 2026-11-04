@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vite-plus/test'
 import type { ScaleKind } from '../../src/scales/scale.js'
 import { isValidScaleDomain } from '../../src/plot/scales/scale-domain.js'
 

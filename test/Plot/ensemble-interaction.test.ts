@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test, vi } from 'vitest'
+import { afterEach, describe, expect, test, vi } from 'vite-plus/test'
 import {
   createEnsemble,
   createPlot,
@@ -37,7 +37,10 @@ const data = () =>
     { metadata: [{ id: 'a', label: 'Member A' }, { id: 'b' }, { id: 'c', label: 'Member C' }] },
   )
 
-async function setup(mark: EnsembleMark, plugins: Parameters<typeof createPlot>[1]['plugins']) {
+async function setup(
+  mark: EnsembleMark,
+  plugins: NonNullable<Parameters<typeof createPlot>[1]>['plugins'],
+) {
   const host = document.createElement('div')
   document.body.append(host)
   hosts.push(host)
@@ -67,9 +70,7 @@ async function setup(mark: EnsembleMark, plugins: Parameters<typeof createPlot>[
 }
 
 function hits(current: Plot, mark: EnsembleMark, x: number, y: number, axis: 'x' | 'y' | 'xy') {
-  const scales = current.scales as unknown as Parameters<
-    NonNullable<typeof ensembleDefinition.hits>
-  >[1]['scales']
+  const scales = current.scales
   return ensembleDefinition.hits!(mark, {
     scales,
     point: { x: current.scales.x.project(x), y: current.scales.y.project(y) },

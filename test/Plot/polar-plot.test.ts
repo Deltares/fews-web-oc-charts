@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test, vi } from 'vitest'
+import { afterEach, describe, expect, test, vi } from 'vite-plus/test'
 import {
   angularScale,
   axis,
@@ -408,10 +408,10 @@ describe('createPolarPlot', () => {
         },
       }),
     ).toThrow(/exactly one angular scale/)
-    // @ts-expect-error Polar plots have no cartesian directions.
     expect(() =>
       plot(host(), {
         scales: { theta: angularScale(), distance: radialScale() },
+        // @ts-expect-error Polar plots have no cartesian directions.
         directions: { theta: 'x' },
       }),
     ).toThrow(/cartesian plot.directions/)

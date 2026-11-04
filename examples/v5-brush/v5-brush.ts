@@ -14,7 +14,6 @@ import {
   timeScale,
   zoom,
   type BrushMode,
-  type BrushSelection,
 } from '@lib'
 
 function required<T extends Element>(selector: string): T {
@@ -137,7 +136,7 @@ for (const control of [mode, modifier, applyZoom]) {
 plot.element.addEventListener(
   brushEvent,
   (event) => {
-    const selection = (event as CustomEvent<BrushSelection>).detail
+    const selection = event.detail
     if (applyZoom.checked) {
       batch(() => {
         if (selection.scales.t) plot.scales.t.scale.domain.set(selection.scales.t)

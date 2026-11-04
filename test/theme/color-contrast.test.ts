@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vite-plus/test'
 import { rgb } from 'd3-color'
 import { improveColorContrast, resolveMarkColor } from '../../src/theme/color-contrast.js'
 import type { ThemeTokens } from '../../src/theme/theme.js'

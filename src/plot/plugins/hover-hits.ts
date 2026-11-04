@@ -19,7 +19,13 @@ import { resolveMarkColor } from '../../theme/color-contrast.js'
 
 /** Marks that can be inspected by pointer plugins such as tooltip() and highlight(). */
 export type HoverMark =
-  LineMark | SeriesMark | BarMark | StackedAreaMark | HistogramMark | HeatmapMark | EnsembleMark
+  | LineMark
+  | SeriesMark
+  | BarMark
+  | StackedAreaMark
+  | HistogramMark
+  | HeatmapMark
+  | EnsembleMark
 
 export interface HoverHit {
   readonly mark: HoverMark

@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vite-plus/test'
 import { bandScale, linearScale } from '../../src/index.js'
 import { reactive } from '../../src/core/runtime.js'
 import { bindScale } from '../../src/scales/scale.js'

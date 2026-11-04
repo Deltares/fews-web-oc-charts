@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, expect, test, vi } from 'vitest'
+import { afterEach, beforeEach, expect, test, vi } from 'vite-plus/test'
 import { bandScale, brush, linearScale, sharedSelection, timeScale } from '../../src/index.js'
 import { connectBrushSelection } from '../../src/plot/plugins/brush/brush.js'
 import { reactive, sourceOf, withSource } from '../../src/core/runtime.js'

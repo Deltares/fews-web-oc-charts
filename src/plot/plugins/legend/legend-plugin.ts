@@ -14,7 +14,14 @@ import { svgElement } from '../../rendering/svg.js'
 import { createTextMeasurer } from '../../../layout/layout.js'
 
 export type LegendPosition =
-  'top' | 'bottom' | 'left' | 'right' | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
+  | 'top'
+  | 'bottom'
+  | 'left'
+  | 'right'
+  | 'top-left'
+  | 'top-right'
+  | 'bottom-left'
+  | 'bottom-right'
 
 export interface LegendOptions {
   position: LegendPosition

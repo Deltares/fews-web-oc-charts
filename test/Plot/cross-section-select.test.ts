@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test, vi } from 'vitest'
+import { afterEach, describe, expect, test, vi } from 'vite-plus/test'
 import {
   axis,
   createPlot,
@@ -338,7 +338,7 @@ describe('cross-section select plugin', () => {
 
   test('rejects invalid options and incompatible plot targets atomically', async () => {
     const interaction = crossSectionSelect(5, undefined, { x: 't' })
-    const { plot, first } = await setup(interaction)
+    const { first } = await setup(interaction)
     expect(() => interaction.setValue(Number.NaN)).toThrow('finite number')
     expect(() => interaction.update({ x: 'missing' })).toThrow('continuous x-direction scale')
     expect(() =>

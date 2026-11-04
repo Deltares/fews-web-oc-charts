@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vite-plus/test'
 import { createSeries, fromObjects, type SeriesStore } from '../../src/index.js'
 import { seriesStorageDiagnostics } from '../../src/data-store/series.js'
 
@@ -292,9 +292,7 @@ describe('columnar series stores', () => {
         x: store.xAt(index),
         y: store.yAt(index),
       }))
-        .filter(
-          ({ x: xValue, y: yValue }) => Number.isFinite(yValue) && yValue >= low && yValue <= high,
-        )
+        .filter(({ y: yValue }) => Number.isFinite(yValue) && yValue >= low && yValue <= high)
         .map(({ x: value }) => value)
       const expected = values.length ? [Math.min(...values), Math.max(...values)] : undefined
       expect(store.extent('x', window, 'y')).toEqual(expected)

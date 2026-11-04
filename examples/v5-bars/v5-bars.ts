@@ -67,7 +67,7 @@ function layers(named: boolean, observedOnly: boolean) {
 
 const plots: Plot[] = []
 const marks: { mark: BarMark; named: boolean; observedOnly: boolean }[] = []
-const timeScales: ReturnType<typeof time>[] = []
+const timeScales: ReturnType<typeof timeScale>[] = []
 for (const [id, layout, named, horizontal] of [
   ['grouped', 'grouped', false, false],
   ['stacked', 'stacked', false, false],

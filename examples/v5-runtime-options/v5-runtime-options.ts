@@ -72,7 +72,9 @@ let plot = createPlot(host, config())
 const describe = (message: string) => {
   status.textContent = message
   const { explicit, resolved } = plot.options.get()
-  const summarize = (options: typeof explicit) => ({
+  const summarize = (
+    options: Pick<typeof explicit, 'title' | 'margins' | 'theme' | 'scales' | 'axes'>,
+  ) => ({
     title: options.title,
     margins: options.margins,
     theme: options.theme,

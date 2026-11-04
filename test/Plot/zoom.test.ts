@@ -1,4 +1,4 @@
-import { afterEach, expect, test } from 'vitest'
+import { afterEach, expect, test } from 'vite-plus/test'
 import {
   createPlot,
   bandScale,
@@ -303,8 +303,8 @@ test.each([
   'automatic box zoom selects the $expected axis for a $direction drag',
   async ({ start, end, expected }) => {
     const { plot, x, y } = await dragSetup('auto')
-    pointer(plot, 'pointerdown', ...start)
-    pointer(plot, 'pointerup', ...end)
+    pointer(plot, 'pointerdown', start[0], start[1])
+    pointer(plot, 'pointerup', end[0], end[1])
     await frame()
     expect(x.domain.get()).toEqual(
       expected.includes('x') ? [expect.closeTo(80, 10), expect.closeTo(280, 10)] : [0, 360],

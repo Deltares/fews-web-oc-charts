@@ -20,7 +20,13 @@ import type { ScaleValue } from '../../../scales/scale.js'
 export type TooltipAxis = 'x' | 'y' | 'xy'
 export type TooltipPlacementPosition = 'bottom' | 'left' | 'right' | 'top'
 export type TooltipMark =
-  LineMark | SeriesMark | BarMark | StackedAreaMark | HistogramMark | HeatmapMark | EnsembleMark
+  | LineMark
+  | SeriesMark
+  | BarMark
+  | StackedAreaMark
+  | HistogramMark
+  | HeatmapMark
+  | EnsembleMark
 
 export interface TooltipFormatContext {
   readonly mark: TooltipMark

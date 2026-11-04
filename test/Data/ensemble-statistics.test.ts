@@ -1,5 +1,5 @@
 import { quantileSorted as quantileR7 } from 'd3'
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vite-plus/test'
 import {
   createEnsemble,
   createSeries,

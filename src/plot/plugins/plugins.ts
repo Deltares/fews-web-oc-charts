@@ -46,7 +46,7 @@ export function registerPlugin<H extends PlotPlugin>(
   handle: H,
   definition: PluginDefinition<H>,
 ): H {
-  definitions.set(handle, definition as unknown as PluginDefinition<PlotPlugin>)
+  definitions.set(handle, definition)
   return handle
 }
 

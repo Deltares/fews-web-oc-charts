@@ -55,7 +55,7 @@ const definitions = new WeakMap<object, MarkDefinition<PlotMark>>()
 
 /** Makes a mark handle plottable; called by each public mark factory. */
 export function registerMark<M extends PlotMark>(mark: M, definition: MarkDefinition<M>): M {
-  definitions.set(mark, definition as unknown as MarkDefinition<PlotMark>)
+  definitions.set(mark, definition)
   return mark
 }
 

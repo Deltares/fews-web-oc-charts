@@ -6,11 +6,11 @@ jobs:
   spike:
     runs-on: ubuntu-24.04
     container:
-      image: mcr.microsoft.com/playwright:v1.62.0-noble
+      image: mcr.microsoft.com/playwright:v1.64.1-noble
     steps:
       - uses: actions/checkout@v5
       - run: npm ci --ignore-scripts
-      - run: npx vitest run test/Spike
+      - run: npx vp test run test/Spike
       - name: Renderer microbenchmark
         id: renderer-benchmark
         run: npm run spike:benchmark

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from 'vitest'
+import { afterEach, describe, expect, test } from 'vite-plus/test'
 import {
   angularScale,
   band,
@@ -187,7 +187,7 @@ describe('band marks', () => {
     expect(group.getAttribute('display')).toBe('none')
     mark.update({ label: 'New forecast', legendGroup: 'Forecasts', visible: undefined })
     await frame()
-    const entry = plot.legend.entries.get()[0]!
+    const entry = plot.legend.entries.get()[0]
     expect(entry.label).toBe('Forecasts')
     expect(entry.children[0]).toMatchObject({ label: 'New forecast', visibility: 'visible' })
     expect(group.hasAttribute('display')).toBe(false)

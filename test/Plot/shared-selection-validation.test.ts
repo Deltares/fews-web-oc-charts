@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from 'vitest'
+import { afterEach, describe, expect, test } from 'vite-plus/test'
 import { brush, createPlot, linearScale, sharedSelection, type Plot } from '../../src/index.js'
 import { reactive } from '../../src/core/runtime.js'
 

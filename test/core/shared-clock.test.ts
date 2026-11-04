@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vite-plus/test'
 import { subscribe } from '../../src/core/runtime.js'
 import { sharedClock, type SharedClock } from '../../src/sync/shared-clock.js'
 

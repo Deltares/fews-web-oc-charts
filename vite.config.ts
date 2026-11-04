@@ -135,6 +135,16 @@ export default defineConfig({
     },
     overrides: [
       {
+        // These run in Node and drive pages in a browser.
+        files: ['scripts/**'],
+        env: { browser: true, node: true },
+      },
+      {
+        // Asserting on a method with expect() doesn't call it.
+        files: ['test/**'],
+        rules: { 'typescript/unbound-method': 'off' },
+      },
+      {
         files: ['**/*.ts', '**/*.tsx', '**/*.mts', '**/*.cts'],
         rules: {
           'constructor-super': 'off',

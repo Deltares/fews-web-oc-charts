@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vite-plus/test'
 import { bandScale, bar, createTable, linearScale } from '../../src/index.js'
 import { reactive } from '../../src/core/runtime.js'
 import { compositeHits } from '../../src/plot/interaction/composite-hit-testing.js'

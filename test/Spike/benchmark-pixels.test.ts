@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vite-plus/test'
 import { changedPixelRatio } from '../../scripts/benchmark-pixels.js'
 
 describe('benchmark RGBA comparison', () => {

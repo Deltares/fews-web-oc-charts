@@ -26,7 +26,7 @@ const speeds = [8, 10, 9, 13, 15, 11, 8, 6, 7, 12, 14, 10]
 const cartesian = createPlot(required('#cartesian'), {
   title: 'Wind direction and speed',
   scales: {
-    time: timeScale({ domain: [times[0]!, times.at(-1)!], timeZone: 'UTC' }),
+    time: timeScale({ domain: [times[0], times.at(-1)!], timeZone: 'UTC' }),
     speed: linearScale({ domain: [0, 20], includeZero: true }),
   },
   axes: [

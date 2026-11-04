@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vite-plus/test'
 import { reactive, subscribe } from '../../src/core/runtime.js'
 import { bandScale, linearScale, logScale, timeScale } from '../../src/scales/scale.js'
 import {

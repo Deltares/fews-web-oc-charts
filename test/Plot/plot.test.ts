@@ -1,4 +1,5 @@
-import { afterEach, describe, expect, test, vi } from 'vitest'
+import { afterEach, describe, expect, test, vi } from 'vite-plus/test'
+import { ModifierKey } from '../../src/Utils/modifierKey'
 import {
   createPlot,
   alignGroup,
@@ -510,7 +511,7 @@ describe('createPlot named scales', () => {
   test('zooms selected Cartesian domains at the pointer and resets to initial domains', async () => {
     const x = linearScale({ domain: [0, 100] })
     const y = linearScale({ domain: [0, 100] })
-    const interaction = zoom({ mode: 'x', wheel: 'x', modifier: 'ctrl' })
+    const interaction = zoom({ mode: 'x', wheel: 'x', modifier: ModifierKey.Ctrl })
     const current = plot(host(), {
       width: 500,
       height: 300,
@@ -717,13 +718,13 @@ describe('createPlot named scales', () => {
       height: 300,
       directions: { x: 'x', y: 'y' },
       scales: { x, y },
-      plugins: [interaction, pan({ mode: 'x', modifier: 'shift' })],
+      plugins: [interaction, pan({ mode: 'x', modifier: ModifierKey.Shift })],
     })
     await frame()
     vi.spyOn(current.element, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 500, 300))
     let result: BrushSelection | undefined
     current.element.addEventListener(brushEvent, (event) => {
-      result = (event as CustomEvent<BrushSelection>).detail
+      result = event.detail
     })
     const pointer = (type: string, clientX: number, clientY: number, shiftKey = true) =>
       new PointerEvent(type, {
@@ -780,7 +781,7 @@ describe('createPlot named scales', () => {
           x: linearScale({ domain: [0, 100] }),
           y: linearScale({ domain: [0, 100] }),
         },
-        plugins: [brush({ mode, modifier: 'none' })],
+        plugins: [brush({ mode, modifier: ModifierKey.None })],
       })
       await frame()
       vi.spyOn(current.element, 'getBoundingClientRect').mockReturnValue(
@@ -818,7 +819,7 @@ describe('createPlot named scales', () => {
 
   test('brush selection includes band categories intersecting the selected interval', async () => {
     const categories = bandScale({ domain: ['a', 'b', 'c'] })
-    const interaction = brush({ mode: 'x', modifier: 'none' })
+    const interaction = brush({ mode: 'x', modifier: ModifierKey.None })
     const current = plot(host(), {
       width: 500,
       height: 300,
@@ -830,7 +831,7 @@ describe('createPlot named scales', () => {
     vi.spyOn(current.element, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 500, 300))
     let result: BrushSelection | undefined
     current.element.addEventListener(brushEvent, (event) => {
-      result = (event as CustomEvent<BrushSelection>).detail
+      result = event.detail
     })
     const center = (value: string) =>
       current.scales.category.project(value) + current.scales.category.bandwidth / 2
@@ -852,7 +853,7 @@ describe('createPlot named scales', () => {
 
   test('requires configured modifiers and releases pan listeners when removed', async () => {
     const x = linearScale({ domain: [0, 100] })
-    const interaction = pan({ mode: 'x', modifier: 'ctrl' })
+    const interaction = pan({ mode: 'x', modifier: ModifierKey.Ctrl })
     const current = plot(host(), {
       width: 500,
       height: 300,

@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vite-plus/test'
 import { createEnsemble, type EnsembleStore } from '../../src/index.js'
 import { ensembleStorageDiagnostics, isEnsembleStore } from '../../src/data-store/ensemble.js'
 

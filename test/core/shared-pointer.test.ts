@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vite-plus/test'
 import { reactive } from '../../src/core/runtime.js'
 import { bandScale, bindScale, linearScale } from '../../src/scales/scale.js'
 import { crosshair } from '../../src/plot/plugins/crosshair/crosshair.js'

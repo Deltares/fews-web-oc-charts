@@ -94,14 +94,14 @@ async function waitForStablePlot(page, selector) {
   })
 }
 
-async function screenshotPixels(page, selector) {
+function screenshotPixels(page, selector) {
   return page.locator(`${selector} svg.fews-chart`).screenshot({
     animations: 'disabled',
     caret: 'hide',
   })
 }
 
-async function comparePixels(page, expectedPng, actualPng) {
+function comparePixels(page, expectedPng, actualPng) {
   return page.evaluate(
     async ({ expected, actual, channelDelta }) => {
       const decode = async (bytes) => {
@@ -235,6 +235,7 @@ try {
           if (error.code !== 'ENOENT') throw error
           throw new Error(
             `Missing ${browserName} visual baseline for ${fixture.name}; run VISUAL_BROWSERS=${browserName} npm run test:visual:update and review the generated fixtures.`,
+            { cause: error },
           )
         }
 

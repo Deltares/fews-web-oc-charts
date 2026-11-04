@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest'
+import { expect, test } from 'vite-plus/test'
 import { alignGroup } from '../../src/index.js'
 import { connectAlignGroup } from '../../src/layout/align-group.js'
 

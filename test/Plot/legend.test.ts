@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test, vi } from 'vitest'
+import { afterEach, describe, expect, test, vi } from 'vite-plus/test'
 import {
   createPlot,
   createSeries,
@@ -805,7 +805,7 @@ describe('headless legend model', () => {
     })
     const [entry] = current.legend.entries.get()
     const group = entry.children[0]
-    const [low, high] = group.children
+    const [low] = group.children
 
     current.legend.setVisible(low.id, false)
     expect(columns.options.get().resolved.layers?.map((layer) => layer.visible)).toEqual([

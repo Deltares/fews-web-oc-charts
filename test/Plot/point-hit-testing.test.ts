@@ -1,4 +1,4 @@
-import { describe, expect, test, vi } from 'vitest'
+import { describe, expect, test, vi } from 'vite-plus/test'
 import { createSeries, linearScale, series } from '../../src/index.js'
 import { reactive } from '../../src/core/runtime.js'
 import { nearestPoint } from '../../src/plot/interaction/point-hit-testing.js'

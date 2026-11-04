@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vite-plus/test'
 import { createColumnarSeries } from '../../src/spike/data/columnar-series.js'
 
 describe('phase 0 columnar series', () => {

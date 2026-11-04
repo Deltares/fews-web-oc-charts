@@ -129,7 +129,8 @@ if (implementation === 'v4') {
   })
   path = renderer.path
   let drag:
-    { id: number; origin: number; delta: number; applied: number; domain: Domain } | undefined
+    | { id: number; origin: number; delta: number; applied: number; domain: Domain }
+    | undefined
   const scheduler = createFrameScheduler((layers) => {
     if (layers & DirtyLayer.marks) {
       renderer.render({ domain: domain.get() })

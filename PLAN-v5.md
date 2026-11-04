@@ -301,9 +301,9 @@ This contract is a **phase-0 acceptance requirement**, not a later optimisation.
   never pixel ranges or mutable D3 scale instances. Autoscale combines eligible extents
   from live bindings in one shared computation; binding removal updates that union.
 - Autoscale policy per scale: `'data' | 'visible' (extent within other-axis window) |
-'fixed' | fn`, plus `nice`, `includeZero`, `symmetric`, `defaultDomain`, `padding`.
+  'fixed' | fn`, plus `nice`, `includeZero`, `symmetric`, `defaultDomain`, `padding`.
 - Axes are views on scales: `axis('q', { position: 'left', label, unit, grid, format,
-tickCount, labelAngle })`. Multiple axes on the same side stack automatically.
+  tickCount, labelAngle })`. Multiple axes on the same side stack automatically.
 - Time axis: `Intl`-based multi-level ticks (e.g. hour row + day row), locale/timezone per
   axis, no global `d3.formatDefaultLocale` (number formatting via `d3.formatLocale`
   instance per plot).
@@ -725,7 +725,7 @@ calling `drawLegendSymbol`, or maintaining a second list of visible series.
   model and commands. It contains metadata/references only, never copies of columns,
   DOM nodes or per-point data.
 - Each immutable entry snapshot has `{ id, markId, label, symbol, visibility, disabled,
-children }`. `visibility` is `'visible' | 'hidden' | 'mixed'`; `children` is an ordered
+  children }`. `visibility` is `'visible' | 'hidden' | 'mixed'`; `children` is an ordered
   readonly list for ensemble parts or composite bar/area stacks/layers/groups,
   including recursive named-stack hierarchies (3.6.1). IDs remain stable on rename, reorder, style
   changes and config reconciliation; duplicate IDs are rejected. Labels are plain text.
@@ -1158,7 +1158,7 @@ this component. The Web Component remains a separate framework-neutral alternati
   Imperative handle updates are supported; reapplying a new config follows the
   documented replacement rules rather than a hidden controlled/uncontrolled merge.
 - **Vue-owned legend**: a scoped `#legend` slot receives `{ entries, toggle, setVisible,
-isolate, showAll }` from the core model. Supplying the slot selects external legend
+  isolate, showAll }` from the core model. Supplying the slot selects external legend
   rendering and suppresses the built-in renderer, including any configured legend
   plugin, without changing visibility state or mutating caller config. With no slot,
   preserve the configured built-in legend behaviour; do not install a legend implicitly.
@@ -1612,7 +1612,7 @@ observed.update({ line: { stroke: undefined }, markers: false })
 
 - [Text demo](./examples/v5-text/index.html) places labels at aligned x/y coordinates.
 - `text({ x, y, xValues, yValues, textValues, dx?, dy?, angle?, fill?, fontFamily?,
-fontSize?, fontWeight?, textAnchor?, dominantBaseline?, id? })` renders one SVG text
+  fontSize?, fontWeight?, textAnchor?, dominantBaseline?, id? })` renders one SVG text
   element for each non-gap coordinate/label tuple. Linear, time and band cartesian
   scales are supported. Text coordinates contribute to autoscale extents; labels with
   missing coordinates or values are skipped. IDs preserve mark and label DOM identity
@@ -2031,7 +2031,7 @@ v5 plot/mark APIs, not v4 chart instances or copied reference SVG DOM.
 - Bands support Cartesian `linear`, `basis`, `step`, `step-before`, and
   `step-after` curves for equal x endpoints, plus `shapeRendering`.
 - Bars support formatted SVG label overlays through `text.format(value, layerId,
-row)`, with optional `dx`, `dy`, and `fill`, for SVG and canvas bars.
+  row)`, with optional `dx`, `dy`, and `fill`, for SVG and canvas bars.
 - Band scales support independent `paddingInner` and `paddingOuter`, falling back
   to the existing `padding` value when unspecified.
 
@@ -2902,8 +2902,8 @@ checkpoints), so the headless runs were repeated locally (2026-10-25, Chromium
 - `npm run test:live:stream` passed all seven phases (1280×1200 @ 1x, detail moved
   off-screen by shrinking the height) within the budgets above.
 - `npx vitest run test/Plot/visibility.test.ts test/Plot/plot.test.ts
-test/Plot/public-events.test.ts test/Plot/shared-pointer.test.ts
-test/Plot/shared-selection.test.ts test/Plot/follow.test.ts`: 6 files, 82 tests
+  test/Plot/public-events.test.ts test/Plot/shared-pointer.test.ts
+  test/Plot/shared-selection.test.ts test/Plot/follow.test.ts`: 6 files, 82 tests
   passed (follow 3, public events 4, visibility 7, shared selection 8, shared
   pointer 12, plot 48).
 - `npm run test:interaction:pan`: direction, modifier, button, enable/disable and

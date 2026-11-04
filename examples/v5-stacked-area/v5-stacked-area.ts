@@ -65,7 +65,7 @@ function layers(named: boolean) {
 }
 const plots: Plot[] = []
 const marks: { mark: StackedAreaMark; named: boolean }[] = []
-const timeScales: ReturnType<typeof time>[] = []
+const timeScales: ReturnType<typeof timeScale>[] = []
 for (const named of [false, true]) {
   const id = named ? 'named' : 'implicit'
   const t = timeScale({ timeZone: 'UTC' })

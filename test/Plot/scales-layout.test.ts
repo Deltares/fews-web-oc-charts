@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vite-plus/test'
 import {
   linearScale,
   timeScale,
@@ -53,7 +53,7 @@ describe('named scale domain state', () => {
     const automatic = timeScale()
     const following = timeScale({ follow: { window: 100.5, lead: 20.125 } })
     const extent = () => {
-      data.version
+      void data.version
       return data.extent('x')
     }
     const disconnectAutomatic = registerScaleExtents(automatic, extent)

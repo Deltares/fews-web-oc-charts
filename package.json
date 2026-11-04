@@ -32,7 +32,7 @@
   },
   "scripts": {
     "dev": "vp dev --config vite-examples.config.ts",
-    "build": "vp build --config vite-library.config.ts && tsc -p tsconfig.build.json",
+    "build": "rm -rf dist && vp build --config vite-library.config.ts && tsc -p tsconfig.build.json",
     "build-examples": "vp build --config vite-examples.config.ts",
     "lint": "vp lint",
     "format": "vp fmt .",

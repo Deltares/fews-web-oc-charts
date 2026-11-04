@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vite-plus/test'
 import { createFrameScheduler, DirtyLayer } from '../../src/spike/core/frame-scheduler.js'
 import { createReactiveCore } from '../../src/spike/core/reactive.js'
 

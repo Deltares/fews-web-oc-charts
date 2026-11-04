@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vite-plus/test'
 import { bar, createTable, stackedArea } from '../../src/index.js'
 import { tableStorageDiagnostics } from '../../src/data-store/table.js'
 
