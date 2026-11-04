@@ -79,6 +79,8 @@ function normalizeSvg(markup) {
 
 async function waitForStablePlot(page, selector) {
   await page.locator(`${selector} svg.fews-chart`).waitFor({ state: 'visible' })
+  // Plots outside the viewport are suspended and don't render until they scroll into view.
+  await page.locator(`${selector} svg.fews-chart`).scrollIntoViewIfNeeded()
   await page.waitForFunction((hostSelector) => {
     const svg = document.querySelector(`${hostSelector} svg.fews-chart`)
     const axes = svg?.querySelector('[data-layer="axes"]')
