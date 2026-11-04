@@ -7,7 +7,7 @@ import { TooltipAnchor } from '../Tooltip/tooltip.js'
 import type { DataPoint } from '../Data/types.js'
 
 export class ChartMatrix extends Chart {
-  static readonly GROUP_CLASS: 'chart-matrix'
+  static readonly GROUP_CLASS = 'chart-matrix'
 
   plotterCartesian(axis: CartesianAxes, axisIndex: CartesianAxesIndex) {
     const xKey = this.dataKeys.x

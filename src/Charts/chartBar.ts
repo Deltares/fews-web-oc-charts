@@ -7,7 +7,7 @@ import type { DataPoint, DataPointXY } from '../Data/types.js'
 import type { SvgPropertiesHyphen } from 'csstype'
 
 export class ChartBar extends Chart {
-  static readonly GROUP_CLASS: 'chart-bar'
+  static readonly GROUP_CLASS = 'chart-bar'
   private _xRect!: (data: DataPoint, index: number) => number
   private _widthRect!: (data: DataPoint, index: number) => number
 
