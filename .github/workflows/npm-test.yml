@@ -13,8 +13,8 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
 
-      - name: Run linter
-        run: npm run lint
+      - name: Check formatting, lint and types
+        run: npx vp check
 
       - name: Get installed Playwright version
         id: playwright-version
