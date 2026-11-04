@@ -5,9 +5,10 @@ import './chart-text.css'
 import '@shared/theme-button'
 
 import { type AxisIndex, AxisType, CartesianAxes, ChartLine, ChartText } from '@lib'
+import { TextPosition } from '@lib'
 import { generateExampleTimeSeriesData } from '@shared'
 
-const container = document.getElementById('chart-container')
+const container = document.getElementById('chart-container')!
 const axes = new CartesianAxes(container, null, null, {
   x: [{ type: AxisType.time }],
   y: [{ type: AxisType.value, domain: [-1.5, 1.5] }],
@@ -59,13 +60,12 @@ textAlongLine.addTo(axes, axisIndexWithLabels, 'text-along-line', {})
 // Add text along the bottom of the chart.
 const textAlongBottom = new ChartText(exampleDataWithLabels, {
   text: {
-    position: 'bottom',
+    position: TextPosition.Bottom,
     attributes: {
       // Position the text relative to the bottom of the chart with <text> CSS
       // properties.
       dy: '-0.5em',
       'text-anchor': 'middle',
-      'dominant-baseline': 'bottom',
     },
   },
 })

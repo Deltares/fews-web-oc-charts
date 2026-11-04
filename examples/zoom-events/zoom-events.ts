@@ -8,7 +8,7 @@ import { AxisType, CartesianAxes, ChartLine, WheelMode, ZoomHandler } from '@lib
 import { generateExampleTimeSeriesData } from '@shared'
 
 function updateStatus(status: string): void {
-  const statusElement = document.getElementById('status')
+  const statusElement = document.getElementById('status')!
   statusElement.textContent = status
 }
 
@@ -18,7 +18,7 @@ const exampleData = generateExampleTimeSeriesData(
   100,
 )
 
-const container = document.getElementById('chart-container')
+const container = document.getElementById('chart-container')!
 const axes = new CartesianAxes(container, null, null, {
   x: [{ type: AxisType.time }],
   y: [{ type: AxisType.value, defaultDomain: [-1.5, 1.5] }],

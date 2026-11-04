@@ -46,7 +46,7 @@ const dateFormat = () =>
     hour12: false,
   }).format()
 
-const container1 = document.getElementById('chart-1')
+const container1 = document.getElementById('chart-1')!
 const polarAxis1 = new PolarAxes(container1, null, null, {
   angular: {
     direction: -1,
@@ -64,7 +64,7 @@ const polarAxis1 = new PolarAxes(container1, null, null, {
   innerRadius: 0.5,
 })
 
-const container2 = document.getElementById('chart-2')
+const container2 = document.getElementById('chart-2')!
 const polarAxis2 = new PolarAxes(container2, null, null, {
   angular: {
     direction: -1,

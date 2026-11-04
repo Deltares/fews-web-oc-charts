@@ -12,7 +12,7 @@ import { generateExamplePolarData } from '@shared'
 const exampleData = generateExamplePolarData([0, 10], [0, 2], 100)
 
 // Create polar axes with a line with markers.
-const container = document.getElementById('chart-container')
+const container = document.getElementById('chart-container')!
 const axes = new PolarAxes(container, null, null, {
   angular: {
     // The default domain is [0, 360], but can be set otherwise.

@@ -11,15 +11,15 @@ import * as d3 from 'd3'
 import { ColourBar } from '@lib'
 
 function getColourBarGroup(containerId: string): SVGGElement {
-  const container = document.getElementById(containerId)
-  const svg = container.querySelector('svg')
-  return svg.querySelector('g')
+  const container = document.getElementById(containerId)!
+  const svg = container.querySelector('svg')!
+  return svg.querySelector('g')!
 }
 
 function createColourBarGroup(
   containerId: string,
   isHorizontal: boolean = true,
-): d3.Selection<SVGGElement, unknown, SVGSVGElement, unknown> {
+): d3.Selection<SVGGElement, unknown, HTMLElement, any> {
   const group = d3
     .select(`#${containerId}`)
     .append('svg')

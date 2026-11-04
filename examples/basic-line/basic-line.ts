@@ -37,7 +37,7 @@ const axesOption: CartesianAxesOptions = {
   ],
   automargin: true,
 }
-const container = document.getElementById('chart-container')
+const container = document.getElementById('chart-container')!
 const axes = new CartesianAxes(container, null, null, axesOption)
 
 // Create new chart line instance.
@@ -93,7 +93,7 @@ const axesOptionsTime: CartesianAxesOptions = {
   ],
   automargin: true,
 }
-const containerTime = document.getElementById('chart-container-time')
+const containerTime = document.getElementById('chart-container-time')!
 const axesTime = new CartesianAxes(containerTime, null, null, axesOptionsTime)
 
 const lineTime = new ChartLine(exampleDataTime, {})

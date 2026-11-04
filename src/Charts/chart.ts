@@ -25,7 +25,7 @@ interface ChartOptionItem {
 interface ColorOptionItem {
   scale?: d3.ScaleContinuousNumeric<number, number>
   range?: string[]
-  map?: (value: number | Date) => string
+  map?: (value: any) => string
 }
 
 export interface SymbolOptions {
@@ -37,7 +37,7 @@ export interface SymbolOptions {
 export interface TextOptions {
   dx?: number
   dy?: number
-  attributes?: SvgPropertiesHyphen
+  attributes?: SvgPropertiesHyphen & { dx?: string | number; dy?: string | number }
   angle?: number
   position?: TextPosition
   formatter?: (d: unknown) => string
@@ -262,7 +262,7 @@ export abstract class Chart {
     const formatNumber = d3.format(s.toString())
 
     if (Array.isArray(data)) {
-      const labels = [...data].sort((a, b) => a - b).map((value) => formatNumber(value))
+      const labels = [...data].sort((a, b) => +a - +b).map((value) => formatNumber(+value))
       return labels.join('–')
     } else if (typeof data === 'number') {
       return formatNumber(data)

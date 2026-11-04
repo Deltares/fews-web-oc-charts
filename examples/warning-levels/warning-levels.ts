@@ -9,7 +9,7 @@ import { type ExampleEvent, generateExampleTimeSeriesData } from '@shared'
 
 function createLineChart(containerId: string, exampleData: ExampleEvent<Date>[]): CartesianAxes {
   // Create new axes.
-  const container = document.getElementById(containerId)
+  const container = document.getElementById(containerId)!
   const axes = new CartesianAxes(container, null, null, {
     x: [{ type: AxisType.time }],
     y: [{ type: AxisType.value, domain: [-3, 5] }],

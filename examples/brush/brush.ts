@@ -32,7 +32,7 @@ function createAxes(
     y: [{ type: AxisType.value, showAxis }],
     automargin: true,
   }
-  const container = document.getElementById(containerId)
+  const container = document.getElementById(containerId)!
   const axes = new CartesianAxes(container, null, null, axesOptions)
 
   const line = new ChartLine(data, {})
@@ -77,7 +77,7 @@ const axes2 = createAxes('chart-container-mini', exampleData1, dataDomain, false
 const brushHandler = new BrushHandler({
   brushMode: BrushMode.X,
   domain: { x: domain },
-  labelFormatter: (date: Date) => date.toLocaleString(),
+  labelFormatter: (value) => value.toLocaleString(),
 })
 
 axes2.accept(brushHandler)

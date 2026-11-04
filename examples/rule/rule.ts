@@ -18,10 +18,11 @@ import {
   WarningLevels,
   ZoomHandler,
 } from '@lib'
+import type { DataPoint } from '@lib'
 import { addListenerByClassName, percentile, toggleChart } from '@shared'
 import { EnsembleData } from '../data/types'
 
-const container = document.getElementById('chart-container-1')
+const container = document.getElementById('chart-container-1')!
 const axis = new CartesianAxes(container, null, null, {
   x: [
     {
@@ -62,7 +63,7 @@ const legend = new Legend(
       label: '90% interval',
     },
   ],
-  document.getElementById('chart-legend-1'),
+  document.getElementById('chart-legend-1')!,
 )
 
 const currentTime = new CurrentTime({
@@ -166,11 +167,11 @@ const zoom = new ZoomHandler()
 axis.accept(legend)
 
 function dataload() {
-  d3.json('../data/ensemble.json')
-    .then(function (data: EnsembleData) {
+  ;(d3.json('../data/ensemble.json') as Promise<EnsembleData>)
+    .then(function (data) {
       const nEnsemble = data.values[0].length
       const members = Array(nEnsemble)
-      const percentiles = [[], [], []]
+      const percentiles: DataPoint[][] = [[], [], []]
 
       for (let s = 0; s < nEnsemble; s++) {
         members[s] = []

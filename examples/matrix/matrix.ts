@@ -9,7 +9,7 @@ import exampleDataComplete from './example-data.json'
 import { AxisType, CartesianAxes, ChartMatrix, TooltipAnchor } from '@lib'
 import { generateExampleTimeSeriesData } from '@shared'
 
-interface ExampleMatrixData {
+type ExampleMatrixData = {
   i: number
   j: number
   value: number | null
@@ -30,7 +30,7 @@ function generateExampleMatrix(
 }
 
 function createMatrixAxes(containerId: string, xAxisType: AxisType): CartesianAxes {
-  const container = document.getElementById(containerId)
+  const container = document.getElementById(containerId)!
   return new CartesianAxes(container, null, null, {
     x: [{ type: xAxisType }],
     y: [{ type: AxisType.band }],

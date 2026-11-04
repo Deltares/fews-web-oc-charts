@@ -8,7 +8,7 @@ import { AlertLines, AxisType, CartesianAxes, ChartLine } from '@lib'
 import { generateExampleTimeSeriesData } from '@shared'
 
 // Create new axes.
-const container = document.getElementById('chart-container')
+const container = document.getElementById('chart-container')!
 const axes = new CartesianAxes(container, null, null, {
   x: [{ type: AxisType.time }],
   y: [{ type: AxisType.value }],

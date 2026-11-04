@@ -9,7 +9,7 @@ import * as d3 from 'd3'
 import { type AxisIndex, ChartRange, PolarAxes } from '@lib'
 
 function createAxes(containerId: string): PolarAxes {
-  const container = document.getElementById(containerId)
+  const container = document.getElementById(containerId)!
   return new PolarAxes(container, null, null, {
     angular: {}, // Uses default [0, 360] domain
     radial: {},

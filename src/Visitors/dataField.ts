@@ -7,7 +7,7 @@ export interface UnitOptions {
   unit?: string
   factor?: number
   precision?: string
-  scale?: (x: number) => string
+  scale?: (x: number) => string | number
 }
 
 export interface ValueFieldOptions {
@@ -25,7 +25,7 @@ export interface DataFieldOptions {
 }
 
 export class DataField implements Visitor {
-  private readonly container: d3.Selection<SVGElement, unknown, SVGElement, unknown>
+  private readonly container: d3.Selection<any, unknown, any, unknown>
   private group: any
   private readonly options: DataFieldOptions
   private axis!: Axes
@@ -37,7 +37,7 @@ export class DataField implements Visitor {
   private clickCount = 0
 
   constructor(
-    container: d3.Selection<SVGElement, unknown, SVGElement, unknown>,
+    container: d3.Selection<any, unknown, any, unknown>,
     options: DataFieldOptions,
     formatter?: any,
   ) {
@@ -138,7 +138,7 @@ export class DataField implements Visitor {
         return d3Format(value * units.factor)
       }
       if (units?.scale !== undefined) {
-        return units.scale(value)
+        return String(units.scale(value))
       }
       return value
     }

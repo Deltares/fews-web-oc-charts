@@ -17,7 +17,7 @@ function createAxes(
     y: [{ type: AxisType.value }],
     automargin: true,
   }
-  const container = document.getElementById(containerId)
+  const container = document.getElementById(containerId)!
   const axes = new CartesianAxes(container, null, null, axesOptions)
 
   const line = new ChartLine(data, {})

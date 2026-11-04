@@ -1,4 +1,3 @@
-// @ts-nocheck
 import '@lib/scss/wb-charts.scss'
 import '@shared/shared.css'
 import './wind-current-roses.css'
@@ -15,6 +14,8 @@ import {
   scaleWindCategories,
   TooltipAnchor,
 } from '@lib'
+import type { ChartArrowData } from '@lib'
+import type { DataPoint } from '@lib'
 import { addListenerByClassName } from '@shared'
 
 const styleForecast = {
@@ -37,16 +38,16 @@ const styleRange = {
   stroke: 'none',
 }
 
-let polarAxisWind1
-let polarAxisWind2
-let windSpeedMeasurement
-let windSpeedForecast
-let windDirectionRange
-let datafieldWindDirection
-let datafieldWindSpeed
-let datafieldWindStoot
+let polarAxisWind1: PolarAxes
+let polarAxisWind2: PolarAxes
+let windSpeedMeasurement: ChartLine
+let windSpeedForecast: ChartLine
+let windDirectionRange: ChartRange
+let datafieldWindDirection: DataField
+let datafieldWindSpeed: DataField
+let datafieldWindStoot: DataField
 
-let transitionTime = null
+const transitionTime = 0
 
 const unitsSpeedWind = [
   { unit: ' m/s', factor: 1.0 },
@@ -85,32 +86,32 @@ const crossCurrentSpeedForecast = 0.412 // m/s
 function setupCurrentRose() {
   // Current rose charts
   // Create two charts, with different intersects and direction
-  const containerCurrentrose1 = document.getElementById('chart-current-rose1')
+  const containerCurrentrose1 = document.getElementById('chart-current-rose1')!
   const polarAxisCurrent1 = new PolarAxes(containerCurrentrose1, null, null, {
     angular: {
       direction: Direction.CLOCKWISE,
       intercept: Math.PI / 2,
-      format: (value) => `${value}°`,
+      format: (value) => `${Number(value)}°`,
     },
     innerRadius: 0.5,
   })
 
-  const containerCurrentrose2 = document.getElementById('chart-current-rose2')
+  const containerCurrentrose2 = document.getElementById('chart-current-rose2')!
   const polarAxisCurrent2 = new PolarAxes(containerCurrentrose2, null, null, {
     angular: {
       direction: Direction.ANTICLOCKWISE,
       intercept: 0,
-      format: (value) => `${value}°`,
+      format: (value) => `${Number(value)}°`,
     },
     innerRadius: 0.5,
   })
 
-  const containerCurrentrose3 = document.getElementById('chart-current-rose3')
+  const containerCurrentrose3 = document.getElementById('chart-current-rose3')!
   const polarAxisCurrent3 = new PolarAxes(containerCurrentrose3, null, null, {
     angular: {
       direction: Direction.ANTICLOCKWISE,
       intercept: Math.PI / 3,
-      format: (value) => `${value}°`,
+      format: (value) => `${Number(value)}°`,
     },
     innerRadius: 0.5,
   })
@@ -148,14 +149,17 @@ function setupCurrentRose() {
     )
 
     // Arrows
-    let yDirectionMeasurement = [currentDirectionMeasurement, currentDirectionMeasurement]
+    let yDirectionMeasurement: [number | null, number | null] = [
+      currentDirectionMeasurement,
+      currentDirectionMeasurement,
+    ]
     if (index === 2) {
       // One chart with 'null' as values, to test arrow and data field
       yDirectionMeasurement = [null, null]
     }
 
     const CurrentDirectionArrowMeasurement = new ChartArrow(
-      [{ x: [0, 1], y: yDirectionMeasurement }],
+      [{ x: [0, 1], y: yDirectionMeasurement as [number, number] }],
       {
         transitionTime: transitionTime,
         symbol: { size: arrowSize },
@@ -175,37 +179,37 @@ function setupCurrentRose() {
 
     CurrentSpeedMeasurement.addTo(
       polarAxisCurrent,
-      { radial: { key: 'x' }, angular: { key: 'y' } },
+      { radial: { key: 'x', axisIndex: 0 }, angular: { key: 'y', axisIndex: 0 } },
       `current-measured-${index}`,
       styleMeasurement,
     )
     CurrentSpeedForecast.addTo(
       polarAxisCurrent,
-      { radial: { key: 'x' }, angular: { key: 'y' } },
+      { radial: { key: 'x', axisIndex: 0 }, angular: { key: 'y', axisIndex: 0 } },
       `current-forecast-${index}`,
       styleForecast,
     )
     CrossCurrentSpeedMeasurement.addTo(
       polarAxisCurrent,
-      { radial: { key: 'x' }, angular: { key: 'y' } },
+      { radial: { key: 'x', axisIndex: 0 }, angular: { key: 'y', axisIndex: 0 } },
       `cross-current-measured-${index}`,
       styleMeasurement,
     )
     CrossCurrentSpeedForecast.addTo(
       polarAxisCurrent,
-      { radial: { key: 'x' }, angular: { key: 'y' } },
+      { radial: { key: 'x', axisIndex: 0 }, angular: { key: 'y', axisIndex: 0 } },
       `cross-current-forecast-${index}`,
       styleForecast,
     )
     CurrentDirectionArrowMeasurement.addTo(
       polarAxisCurrent,
-      { radial: { key: 'x' }, angular: { key: 'y' } },
+      { radial: { key: 'x', axisIndex: 0 }, angular: { key: 'y', axisIndex: 0 } },
       `current-direction-measurement-arrow-${index}`,
       styleMeasurement,
     )
     CurrentDirectionArrowForecast.addTo(
       polarAxisCurrent,
-      { radial: { key: 'x' }, angular: { key: 'y' } },
+      { radial: { key: 'x', axisIndex: 0 }, angular: { key: 'y', axisIndex: 0 } },
       `current-direction-forecast-arrow-${index}`,
       styleForecast,
     )
@@ -242,31 +246,31 @@ function setupCurrentRose() {
 }
 
 function setupWindRose(
-  windRichtingMetingen,
-  windRichtingVerwachtingen,
-  windSnelheidMetingen,
-  windSnelheidVerwachtingen,
-  windStoot,
-  allWindSpreidingR,
+  windRichtingMetingen: ChartArrowData[][],
+  windRichtingVerwachtingen: ChartArrowData[][],
+  windSnelheidMetingen: DataPoint[][],
+  windSnelheidVerwachtingen: DataPoint[][],
+  windStoot: DataPoint[][],
+  allWindSpreidingR: DataPoint[][],
 ) {
   // Wind rose charts
   // Create two charts, with different intersects and direction
-  const containerWindrose1 = document.getElementById('chart-wind-rose1')
+  const containerWindrose1 = document.getElementById('chart-wind-rose1')!
   polarAxisWind1 = new PolarAxes(containerWindrose1, null, null, {
     angular: {
       direction: Direction.CLOCKWISE,
       intercept: Math.PI / 2,
-      format: (value) => `${value}°`,
+      format: (value) => `${Number(value)}°`,
     },
     innerRadius: 0.5,
   })
 
-  const containerWindrose2 = document.getElementById('chart-wind-rose2')
+  const containerWindrose2 = document.getElementById('chart-wind-rose2')!
   polarAxisWind2 = new PolarAxes(containerWindrose2, null, null, {
     angular: {
       direction: Direction.ANTICLOCKWISE,
       intercept: Math.PI,
-      format: (value) => `${value}°`,
+      format: (value) => `${Number(value)}°`,
     },
     innerRadius: 0.5,
   })
@@ -277,7 +281,7 @@ function setupWindRose(
     windDirectionRange = new ChartRange(allWindSpreidingR[position], {
       transitionTime: transitionTime,
       radial: { includeInTooltip: false },
-      tooltip: { anchor: 'center' },
+      tooltip: { anchor: TooltipAnchor.Center },
     })
 
     // Invisible lines used for datafields
@@ -299,37 +303,37 @@ function setupWindRose(
 
     windDirectionRange.addTo(
       polarAxisWind,
-      { radial: { key: 'x' }, angular: { key: 'y' } },
+      { radial: { key: 'x', axisIndex: 0 }, angular: { key: 'y', axisIndex: 0 } },
       'wind-direction-range',
       styleRange,
     )
     windSpeedMeasurement.addTo(
       polarAxisWind,
-      { radial: { key: 'x' }, angular: { key: 'y' } },
+      { radial: { key: 'x', axisIndex: 0 }, angular: { key: 'y', axisIndex: 0 } },
       'wind-measured',
       styleMeasurement,
     )
     windSpeedForecast.addTo(
       polarAxisWind,
-      { radial: { key: 'x' }, angular: { key: 'y' } },
+      { radial: { key: 'x', axisIndex: 0 }, angular: { key: 'y', axisIndex: 0 } },
       'wind-forecast',
       styleForecast,
     )
     windSurge.addTo(
       polarAxisWind,
-      { radial: { key: 'x' }, angular: { key: 'y' } },
+      { radial: { key: 'x', axisIndex: 0 }, angular: { key: 'y', axisIndex: 0 } },
       'windstoot',
       styleSurge,
     )
     windDirectionArrowMeasurement.addTo(
       polarAxisWind,
-      { radial: { key: 'x' }, angular: { key: 'y' } },
+      { radial: { key: 'x', axisIndex: 0 }, angular: { key: 'y', axisIndex: 0 } },
       'wind-direction-measurement-arrow',
       styleMeasurement,
     )
     windDirectionArrowForecast.addTo(
       polarAxisWind,
-      { radial: { key: 'x' }, angular: { key: 'y' } },
+      { radial: { key: 'x', axisIndex: 0 }, angular: { key: 'y', axisIndex: 0 } },
       'wind-direction-forecast-arrow',
       styleForecast,
     )
@@ -413,20 +417,20 @@ function get_wind_data() {
           metingvalues[i][0] !== null || metingvalues[i][2] !== null || metingvalues[i][3] !== null
         timesdata.push([times[i], timedatapresent])
 
-        const metingRichtingData = {
+        const metingRichtingData: ChartArrowData = {
           x: [metingvalues[i][0] !== null ? 1 : 0, 0],
           y: [metingvalues[i][0], metingvalues[i][0]],
         }
         allWindRichtingMetingen.push([metingRichtingData])
 
-        const verwachtingRichtingData = {
+        const verwachtingRichtingData: ChartArrowData = {
           x: [verwachtingvalues[i][0] !== null ? 1 : 0, 0],
           y: [verwachtingvalues[i][1], verwachtingvalues[i][1]],
         }
         allWindRichtingVerwachtingen.push([verwachtingRichtingData])
 
-        const metingSnelheidData1 = {}
-        const metingSnelheidData2 = {}
+        const metingSnelheidData1: DataPoint = {}
+        const metingSnelheidData2: DataPoint = {}
         metingSnelheidData1.x = 0
         metingSnelheidData1.y =
           metingvalues[i][2] !== null ? Math.abs(0.1 * metingvalues[i][2]) : null // scale down by factor 10 for m/sec
@@ -434,23 +438,23 @@ function get_wind_data() {
         metingSnelheidData2.y = metingSnelheidData1.y
         allWindSnelheidMetingen.push([metingSnelheidData1, metingSnelheidData2])
 
-        const metingStootData1 = {}
-        const metingstootData2 = {}
+        const metingStootData1: DataPoint = {}
+        const metingstootData2: DataPoint = {}
         metingStootData1.x = 0
         metingStootData1.y = metingvalues[i][3] !== null ? Math.abs(0.1 * metingvalues[i][3]) : null // scale down by factor 10 for m/sec
         metingstootData2.x = 0 // line should be invisible
         metingstootData2.y = metingStootData1.y
         allWindStoot.push([metingStootData1, metingstootData2])
 
-        const verwachtingSnelheidData1 = {}
-        const verwachtingSnelheidData2 = {}
+        const verwachtingSnelheidData1: DataPoint = {}
+        const verwachtingSnelheidData2: DataPoint = {}
         verwachtingSnelheidData1.x = 0
         verwachtingSnelheidData1.y = Math.abs(0.1 * verwachtingvalues[i][0]) // scale down by factor 10 for m/sec
         verwachtingSnelheidData2.x = 0 // line should be invisible
         verwachtingSnelheidData2.y = Math.abs(0.1 * verwachtingvalues[i][0]) // scale down by factor 10 for m/sec
         allWindSnelheidVerwachtingen.push([verwachtingSnelheidData1, verwachtingSnelheidData2])
 
-        const windSpreidingRData = {}
+        const windSpreidingRData: DataPoint = {}
         windSpreidingRData.x = [0, 1]
 
         if (spreidingvalues[i][3] < spreidingvalues[i][2]) {
@@ -464,7 +468,7 @@ function get_wind_data() {
         }
         allWindSpreidingR.push([windSpreidingRData])
 
-        const windSpreidingVData = {}
+        const windSpreidingVData: DataPoint = {}
         windSpreidingVData.x = [0, spreidingvalues[i][0] !== null ? 1 : 0]
         windSpreidingVData.y = [
           0.1 * Math.abs(spreidingvalues[i][0]),

@@ -8,7 +8,7 @@ import { AxisType, CartesianAxes, ChartLine, ModifierKey, WheelMode, ZoomHandler
 import { type ExampleEvent, generateExampleTimeSeriesData } from '@shared'
 
 function createChart(containerId: string, exampleData: ExampleEvent<Date>[]): CartesianAxes {
-  const container = document.getElementById(containerId)
+  const container = document.getElementById(containerId)!
   const axes = new CartesianAxes(container, null, null, {
     x: [{ type: AxisType.time }],
     y: [{ type: AxisType.value, defaultDomain: [-1.5, 1.5] }],

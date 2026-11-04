@@ -26,7 +26,7 @@ function randomSpectrum(a: number) {
   return spectrum
 }
 // set constants
-const container1 = document.getElementById('chart-container-1')
+const container1 = document.getElementById('chart-container-1')!
 const polarAxis = new PolarAxes(container1, null, null, {
   angular: {
     direction: Direction.CLOCKWISE,
@@ -124,7 +124,7 @@ plot.addTo(polarAxis, {
     key: 'v',
   },
 })
-const container2 = document.getElementById('chart-container-2')
+const container2 = document.getElementById('chart-container-2')!
 const axis = new CartesianAxes(container2, null, null, {
   x: [
     {
@@ -178,8 +178,8 @@ const updateCharts = function () {
   plot.data = polarData[count % 2]
   polarAxis.redraw()
 }
-const input = document.getElementById('slider')
-input.onchange = function (event) {
+const input = document.getElementById('slider')!
+input.onchange = function () {
   updateCharts()
 }
 

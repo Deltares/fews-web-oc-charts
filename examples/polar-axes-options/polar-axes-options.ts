@@ -15,7 +15,7 @@ const createPolarAxesExample = (
   range: [number, number],
   intercept: number,
 ): void => {
-  const container1 = document.getElementById(rowContainerId)
+  const container1 = document.getElementById(rowContainerId)!
   const axes = new PolarAxes(container1, null, null, {
     angular: {
       direction,

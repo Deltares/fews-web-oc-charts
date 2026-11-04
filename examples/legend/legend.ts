@@ -8,7 +8,7 @@ import { AxisIndex, AxisType, CartesianAxes, ChartArea, ChartLine, ChartMarker, 
 import { generateExampleTimeSeriesData } from '@shared'
 
 // Create new axes.
-const container = document.getElementById('chart-container')
+const container = document.getElementById('chart-container')!
 const axes = new CartesianAxes(container, null, null, {
   x: [{ type: AxisType.time }],
   y: [{ type: AxisType.value, domain: [-3, 5] }],
@@ -60,7 +60,7 @@ markers.addTo(axes, axisIndex, 'example-markers', {
 axes.redraw({ x: { autoScale: true }, y: { autoScale: true } })
 
 // Add legend; it will be placed in the specified container element.
-const legendContainer = document.getElementById('legend-container')
+const legendContainer = document.getElementById('legend-container')!
 const legendLabels = [
   {
     selector: 'example-line-solid',

@@ -10,7 +10,7 @@ export function addListenerById<K extends keyof HTMLElementEventMap>(
   listenerFunction: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
   options?: boolean | AddEventListenerOptions,
 ): void {
-  const element = document.getElementById(id)
+  const element = document.getElementById(id)!
 
   if (element) {
     element.addEventListener(eventType, listenerFunction as EventListener, options)
