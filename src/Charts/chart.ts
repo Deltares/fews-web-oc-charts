@@ -566,16 +566,22 @@ export abstract class Chart {
     this.highlight
       .select('circle')
       .attr('transform', () => {
-        return `translate(${xScale(point.x as number)}, ${yScale(point.y as number)})`
+        const { x, y } = this.toPointXY(point)
+        return `translate(${xScale(x as number)}, ${yScale(y as number)})`
       })
       .style('opacity', 1)
       .style('fill', color ?? '')
 
     if (color === null) {
-      return { point: point as DataPointXY, style: {} }
+      return { point: this.toPointXY(point), style: {} }
     } else {
-      return { point: point as DataPointXY, style: { color } }
+      return { point: this.toPointXY(point), style: { color } }
     }
+  }
+
+  /** Sets `x` and `y` from the configured data keys, which may have other names. */
+  protected toPointXY(point: DataPoint): DataPointXY {
+    return { ...point, x: point[this.dataKeys.x], y: point[this.dataKeys.y] }
   }
 
   protected selectOrAppend<E extends Element>(
