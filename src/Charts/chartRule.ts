@@ -4,6 +4,10 @@ import { CartesianAxes, CartesianAxesIndex } from '../Axes/cartesianAxes.js'
 import { PolarAxes } from '../Axes/polarAxes.js'
 import type { AxisIndex } from '../Axes/axes.js'
 
+function isNumberOrDate(value: unknown): value is number | Date {
+  return typeof value === 'number' || value instanceof Date
+}
+
 export class ChartRule extends Chart {
   plotterCartesian(axis: CartesianAxes, axisIndex: CartesianAxesIndex) {
     const xKey = this.dataKeys.x
@@ -22,12 +26,12 @@ export class ChartRule extends Chart {
       if (
         !Array.isArray(value) ||
         value.length < 2 ||
-        typeof value[0] !== 'number' ||
-        typeof value[1] !== 'number'
+        !isNumberOrDate(value[0]) ||
+        !isNumberOrDate(value[1])
       ) {
-        throw new Error('ChartRule requires y data to be a numeric range')
+        throw new Error('ChartRule requires y data to be a range of numbers or dates')
       }
-      return [value[0], value[1]]
+      return [Number(value[0]), Number(value[1])]
     }
 
     this.group = this.selectGroup(axis, 'chart-marker')

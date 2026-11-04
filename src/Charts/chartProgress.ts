@@ -5,6 +5,8 @@ import type { DataPoint } from '../Data/types.js'
 import type { AxisIndex } from '../Axes/axes.js'
 import type { CartesianAxesIndex } from '../Axes/cartesianAxes.js'
 
+type AngleRange = [number | Date, number | Date]
+
 function mean(x: number[] | number): number {
   if (Array.isArray(x)) {
     return d3.mean(x) ?? 0
@@ -12,23 +14,17 @@ function mean(x: number[] | number): number {
   return x
 }
 
-function numericValue(data: DataPoint, key: string): number {
-  const value = data[key]
-  if (typeof value === 'number') return value
-  throw new Error(`Expected ${key} to contain a number`)
-}
-
-function numericRange(data: DataPoint, key: string): [number, number] {
-  const value = data[key]
+function angleRange(data: DataPoint, key: string): AngleRange {
+  const value = data[key] as AngleRange
   if (
     Array.isArray(value) &&
     value.length >= 2 &&
-    typeof value[0] === 'number' &&
-    typeof value[1] === 'number'
+    (typeof value[0] === 'number' || value[0] instanceof Date) &&
+    (typeof value[1] === 'number' || value[1] instanceof Date)
   ) {
     return [value[0], value[1]]
   }
-  throw new Error(`Expected ${key} to contain a numeric range`)
+  throw new Error(`Expected ${key} to contain a range of numbers or dates`)
 }
 
 export class ChartProgress extends Chart {
@@ -54,10 +50,10 @@ export class ChartProgress extends Chart {
 
     const arcGenerator = d3
       .arc<DataPoint>()
-      .innerRadius((d) => scale(numericValue(d, rKey)))
-      .outerRadius((d) => scale(numericValue(d, rKey)) + scale.bandwidth())
-      .startAngle((d) => axis.angularScale(numericRange(d, tKey)[0]))
-      .endAngle((d) => axis.angularScale(numericRange(d, tKey)[1]))
+      .innerRadius((d) => scale(d[rKey]))
+      .outerRadius((d) => scale(d[rKey]) + scale.bandwidth())
+      .startAngle((d) => axis.angularScale(angleRange(d, tKey)[0]))
+      .endAngle((d) => axis.angularScale(angleRange(d, tKey)[1]))
       .cornerRadius(scale.bandwidth() / 8)
 
     this.group = this.selectGroup(axis, 'chart-range')
@@ -76,8 +72,10 @@ export class ChartProgress extends Chart {
     const update = elements.transition(t).call(arcTween, this.previousData)
 
     if (colorKey) {
-      const getColor = (d: DataPoint) =>
-        colorMap[numericValue(d, colorKey) % colorMap.length] ?? colorMap[0]
+      const getColor = (d: DataPoint) => {
+        const value = d[colorKey]
+        return typeof value === 'number' ? (colorMap[value % colorMap.length] ?? colorMap[0]) : null
+      }
       enter.style('fill', getColor).style('stroke', getColor)
       update.style('fill', getColor).style('stroke', getColor)
     }
@@ -90,20 +88,22 @@ export class ChartProgress extends Chart {
     ) {
       transition.attrTween('d', (d: DataPoint, i: number) => {
         const old = p[i] ?? d
-        const oldAngles = numericRange(old, tKey)
-        const angles = numericRange(d, tKey)
-        if (mean(oldAngles) - mean(angles) > 180) {
-          oldAngles[0] -= 360
-          oldAngles[1] -= 360
-        } else if (mean(oldAngles) - mean(angles) < -180) {
-          oldAngles[0] += 360
-          oldAngles[1] += 360
-        }
+        const angles = angleRange(d, tKey)
+        const oldAngles = angleRange(old, tKey)
+        const meanDifference = mean(oldAngles.map(Number)) - mean(angles.map(Number))
+        const offset = meanDifference > 180 ? -360 : meanDifference < -180 ? 360 : 0
+        const startAngles = offset === 0 ? oldAngles : oldAngles.map((x) => Number(x) + offset)
 
-        const tInterpolate = d3.interpolateArray(oldAngles, angles)
-        const rInterpolate = d3.interpolate(numericValue(old, rKey), numericValue(d, rKey))
+        const tInterpolate = d3.interpolateArray<(number | Date)[]>(startAngles, angles)
+        const oldRadial = old[rKey]
+        const radial = d[rKey]
+        // The radial axis is a band scale, so only numeric keys can be interpolated.
+        const rInterpolate =
+          typeof oldRadial === 'number' && typeof radial === 'number'
+            ? d3.interpolateNumber(oldRadial, radial)
+            : () => radial
         return (x: number) => {
-          d[tKey] = tInterpolate(x)
+          d[tKey] = tInterpolate(x) as DataPoint[string]
           d[rKey] = rInterpolate(x)
           return arcGenerator(d) ?? ''
         }

@@ -17,7 +17,7 @@ export class ChartText extends Chart {
     const yKey = this.dataKeys.y
     const valueKey = this.dataKeys.value ?? ''
 
-    if (!xKey || !yKey || !valueKey) {
+    if (!xKey || !valueKey) {
       return
     }
 

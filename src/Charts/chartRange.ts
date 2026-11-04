@@ -12,17 +12,22 @@ function mean(x: number[] | number): number {
   return x
 }
 
+function isNumberOrDate(value: unknown): value is number | Date {
+  return typeof value === 'number' || value instanceof Date
+}
+
 function numericRange(data: DataPoint, key: string): [number, number] {
   const value = data[key]
   if (
     Array.isArray(value) &&
     value.length >= 2 &&
-    typeof value[0] === 'number' &&
-    typeof value[1] === 'number'
+    isNumberOrDate(value[0]) &&
+    isNumberOrDate(value[1])
   ) {
-    return [value[0], value[1]]
+    // Scales and interpolators treat a date and its timestamp the same.
+    return [Number(value[0]), Number(value[1])]
   }
-  throw new Error(`Expected ${key} to contain a numeric range`)
+  throw new Error(`Expected ${key} to contain a range of numbers or dates`)
 }
 
 export class ChartRange extends Chart {
