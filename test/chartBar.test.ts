@@ -19,7 +19,8 @@ describe('ChartBar', () => {
     const data = [0, 1, 2, 3].map((i) => ({ x: new Date(Date.UTC(2025, 0, 1, i)), y: i + 1 }))
     new ChartBar(data, {}).addTo(axes, axisIndex, 'bars', { fill: 'rgb(0, 0, 255)' })
     axes.redraw({ x: { autoScale: true }, y: { autoScale: true } })
-    return [...container.querySelectorAll<SVGRectElement>('[data-chart-id="bars"] rect')]
+    const chartGroup = axes.chartGroup.node()!
+    return [...chartGroup.querySelectorAll<SVGRectElement>('[data-chart-id="bars"] rect')]
   }
 
   test('inherits the style fill when no color key is configured', () => {
@@ -41,6 +42,7 @@ describe('ChartBar', () => {
 
     expect(rects.length).toBeGreaterThan(0)
     for (const rect of rects) {
+      expect(rect.hasAttribute('fill')).toBe(true)
       expect(rect.getAttribute('fill')).not.toBe('none')
     }
   })
