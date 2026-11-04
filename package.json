@@ -22,43 +22,32 @@
     "types": "./dist/index.d.ts"
   },
   "engines": {
-    "node": ">=22.0.0"
+    "node": "^22.18.0 || ^24.11.0 || >=26.0.0"
   },
   "scripts": {
-    "dev": "vite --config vite-examples.config.ts",
-    "build": "vite build --config vite-library.config.ts && tsc -p tsconfig.build.json",
-    "build-examples": "vite build --config vite-examples.config.ts",
-    "lint": "npm run prettier",
-    "prettier": "prettier . --check",
-    "format": "prettier .  --write",
-    "test": "vitest",
-    "test:all-browsers": "vitest run --mode all-browsers",
+    "dev": "vp dev --config vite-examples.config.ts",
+    "build": "vp build --config vite-library.config.ts && tsc -p tsconfig.build.json",
+    "build-examples": "vp build --config vite-examples.config.ts",
+    "lint": "vp fmt . --check",
+    "format": "vp fmt .",
+    "test": "vp test",
+    "test:all-browsers": "vp test run --mode all-browsers",
     "sonar": "sonar-scanner -Dsonar.host.url=$SONAR_URL -Dsonar.login=$SONAR_TOKEN -Dsonar.projectKey=$SONAR_KEY -Dsonar.projectName='Delft-FEWS Web OC Charts'"
   },
-  "prettier": {
-    "semi": false,
-    "singleQuote": true
-  },
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
     "@types/d3": "^7.4.3",
     "@types/lodash-es": "^4.17.12",
     "@types/luxon": "^3.7.6",
     "@types/node": "^24.19.2",
-    "@vitest/browser": "^5.0.5",
-    "@vitest/browser-playwright": "^5.0.5",
+    "@vitest/browser-playwright": "5.0.5",
     "csstype": "^3.2.3",
-    "eslint": "^10.13.0",
-    "eslint-config-prettier": "^10.1.8",
-    "eslint-plugin-prettier": "^5.5.7",
     "playwright": "^1.64.1",
-    "prettier": "^3.9.10",
     "sass-embedded": "^1.106.1",
     "tslib": "^2.8.1",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.72.1",
-    "vite": "^8.3.5",
-    "vitest": "^5.0.5"
+    "vite": "npm:@voidzero-dev/vite-plus-core@1.4.0",
+    "vite-plus": "1.4.0",
+    "vitest": "5.0.5"
   },
   "dependencies": {
     "d3": "^7.9.0",
@@ -67,9 +56,6 @@
   },
   "optionalDependencies": {
     "sass-embedded-linux-x64": "*"
-  },
-  "volta": {
-    "node": "22.13.1"
   },
   "repository": {
     "type": "git",
@@ -81,5 +67,9 @@
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org"
+  },
+  "overrides": {
+    "vite": "npm:@voidzero-dev/vite-plus-core@1.4.0",
+    "vitest": "5.0.5"
   }
 }

@@ -78,7 +78,7 @@ export class ChartDirection extends ChartMarker {
       })
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // oxlint-disable-next-line @typescript-eslint/no-unused-vars
   plotterPolar(axis: PolarAxes, dataKeys: AxisIndex) {
     this.group = this.selectGroup(axis, 'chart-marker')
     const rKey = this.dataKeys.radial

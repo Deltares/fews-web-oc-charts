@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vite-plus/test'
 import { TooltipPosition } from '../../src/Tooltip/tooltip.js'
 import { calculateTooltipPlacement } from '../../src/Utils/tooltipPlacement.js'
 

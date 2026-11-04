@@ -34,12 +34,12 @@ function numericRange(data: DataPoint, key: string): [number, number] {
 export class ChartProgress extends Chart {
   private previousData: DataPoint[] = []
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // oxlint-disable-next-line @typescript-eslint/no-unused-vars
   plotterCartesian(axis: CartesianAxes, dataKeys: CartesianAxesIndex) {
     throw new Error('Not implemented')
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // oxlint-disable-next-line @typescript-eslint/no-unused-vars
   plotterPolar(axis: PolarAxes, dataKeys: AxisIndex) {
     const tKey = this.dataKeys.angular
     const rKey = this.dataKeys.radial

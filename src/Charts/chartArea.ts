@@ -93,7 +93,7 @@ export class ChartArea extends Chart {
     this.group.select('path').datum(this.data.slice(i0, i1)).join('path').attr('d', areaGenerator)
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // oxlint-disable-next-line @typescript-eslint/no-unused-vars
   plotterPolar(axis: PolarAxes, dataKeys: AxisIndex) {
     console.error('plotterPolar is not implemented for ChartArea')
   }

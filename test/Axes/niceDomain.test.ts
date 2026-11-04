@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vite-plus/test'
 import { niceDomain } from '../../src/Axes/niceDomain.js'
 import { AxisType } from '../../src/Axis/axisType.js'
 

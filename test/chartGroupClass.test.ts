@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from 'vitest'
+import { afterEach, describe, expect, test } from 'vite-plus/test'
 import { AxisType, CartesianAxes, ChartBar, ChartMatrix } from '../src'
 
 describe('chart group class', () => {
@@ -10,12 +10,18 @@ describe('chart group class', () => {
     const container = document.createElement('div')
     document.body.append(container)
     containers.push(container)
-    return new CartesianAxes(container, 400, 200, { x: [{ type }], y: [{ type }] })
+    return new CartesianAxes(container, 400, 200, {
+      x: [{ type }],
+      y: [{ type }],
+    })
   }
 
   function drawBar(style: string) {
     const axes = createAxes(AxisType.time)
-    const data = [0, 1, 2, 3].map((i) => ({ x: new Date(Date.UTC(2025, 0, 1, i)), y: i + 1 }))
+    const data = [0, 1, 2, 3].map((i) => ({
+      x: new Date(Date.UTC(2025, 0, 1, i)),
+      y: i + 1,
+    }))
     new ChartBar(data, {}).addTo(
       axes,
       { x: { key: 'x', axisIndex: 0 }, y: { key: 'y', axisIndex: 0 } },
@@ -31,7 +37,11 @@ describe('chart group class', () => {
     const data = [0, 1].map((x) => ({ x, y: 0, color: 1 }))
     new ChartMatrix(data, {}).addTo(
       axes,
-      { x: { key: 'x', axisIndex: 0 }, y: { key: 'y', axisIndex: 0 }, color: { key: 'color' } },
+      {
+        x: { key: 'x', axisIndex: 0 },
+        y: { key: 'y', axisIndex: 0 },
+        color: { key: 'color' },
+      },
       'chart',
       style,
     )
