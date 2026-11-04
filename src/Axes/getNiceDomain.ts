@@ -1,5 +1,5 @@
 interface DomainOptions {
-  defaultDomain: [number | undefined, number | undefined]
+  defaultDomain: [number | undefined, number | undefined] | undefined
   dataExtent: [number, number]
   bufferRatio?: number
 }
