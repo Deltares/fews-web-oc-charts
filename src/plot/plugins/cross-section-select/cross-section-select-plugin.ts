@@ -79,10 +79,35 @@ function marksForRender(
   return selectedMarks(options, marks)
 }
 
+/**
+ * The point on a mark's drawn line at `value`, between `high` and the point before it: a straight
+ * line on screen, so the same fraction of the way along x and along y, also on a log scale.
+ */
+function interpolated(
+  value: number,
+  high: number,
+  xAt: (index: number) => unknown,
+  yAt: (index: number) => unknown,
+  xProject: (value: number) => number,
+  logY: boolean,
+): { index: number; xValue: number; yValue: unknown } | undefined {
+  const [x1, y1] = [xAt(high), yAt(high)]
+  if (x1 === value) return { index: high, xValue: value, yValue: y1 }
+  if (high === 0) return undefined
+  const [x0, y0] = [xAt(high - 1), yAt(high - 1)]
+  if (typeof x0 !== 'number' || typeof x1 !== 'number') return undefined
+  if (typeof y0 !== 'number' || typeof y1 !== 'number') return undefined
+  const [p0, p1] = [xProject(x0), xProject(x1)]
+  const fraction = p1 === p0 ? 0 : (xProject(value) - p0) / (p1 - p0)
+  const yValue = logY ? y0 * (y1 / y0) ** fraction : y0 + (y1 - y0) * fraction
+  return { index: high - 1, xValue: value, yValue }
+}
+
 function pointFor(
   mark: CrossSectionMark,
   value: number,
   context: PlotContext,
+  interpolate: boolean,
 ): CrossSectionPoint | undefined {
   if (isSeriesMark(mark)) {
     mark.options.get()
@@ -103,23 +128,33 @@ function pointFor(
     if (typeof x !== 'number' || x < value) low = middle + 1
     else high = middle
   }
-  if (low >= length) low = length - 1
-  if (low < 0) return undefined
-
-  let index = low
-  let yValue = yAt(index)
-  if (typeof yValue !== 'number' || !Number.isFinite(yValue)) {
-    for (let candidate = index - 1; candidate >= 0; candidate -= 1) {
-      const previous = yAt(candidate)
-      if (typeof previous === 'number' && Number.isFinite(previous)) {
-        index = candidate
-        yValue = previous
-        break
+  let index: number
+  let xValue: unknown
+  let yValue: unknown
+  if (interpolate) {
+    if (low >= length) return undefined
+    const logY = yScale.scale.kind === 'log'
+    const point = interpolated(value, low, xAt, yAt, (x) => xScale.project(x), logY)
+    if (!point) return undefined
+    ;({ index, xValue, yValue } = point)
+  } else {
+    if (low >= length) low = length - 1
+    if (low < 0) return undefined
+    index = low
+    yValue = yAt(index)
+    if (typeof yValue !== 'number' || !Number.isFinite(yValue)) {
+      for (let candidate = index - 1; candidate >= 0; candidate -= 1) {
+        const previous = yAt(candidate)
+        if (typeof previous === 'number' && Number.isFinite(previous)) {
+          index = candidate
+          yValue = previous
+          break
+        }
       }
     }
+    xValue = xAt(index)
   }
   if (typeof yValue !== 'number' || !Number.isFinite(yValue)) return undefined
-  const xValue = xAt(index)
   if (typeof xValue !== 'number') return undefined
   if (xScale.scale.kind === 'log' && xValue <= 0) return undefined
   if (yScale.scale.kind === 'log' && yValue <= 0) return undefined
@@ -221,7 +256,7 @@ function installCrossSectionSelect(handle: CrossSectionSelectHandle, context: Pl
     const x = xBinding.project(value)
     const marks = marksForRender(options, context.options.get().resolved.marks)
     const entries = marks
-      .map((mark, index) => ({ point: pointFor(mark, value, context), index }))
+      .map((mark, index) => ({ point: pointFor(mark, value, context, options.interpolate), index }))
       .filter((entry): entry is { point: CrossSectionPoint; index: number } => !!entry.point)
     const points = entries.map(({ point }) => point)
     publishCrossSectionData(handle, Object.freeze(points))
