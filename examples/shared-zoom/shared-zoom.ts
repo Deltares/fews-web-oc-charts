@@ -11,9 +11,8 @@ import {
   MouseOver,
   WheelMode,
   ZoomHandler,
+  ZoomMode,
 } from '@lib'
-// The package root exports the v5 type of this name.
-import { ZoomMode } from '@lib/Visitors/zoomHandler.js'
 import type { DataPoint } from '@lib'
 import { addListenerByClassName } from '@shared'
 

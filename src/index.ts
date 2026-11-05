@@ -8,13 +8,9 @@ export * from './Tooltip/index.js'
 export * from './Data/index.js'
 export type { DataPoint, DataValue } from './Data/types.js'
 export * from './v5.js'
-// These names exist in v4 and v5; the root has always exported the v5 types.
-export type {
-  AxisOptions,
-  BrushMode,
-  ScaleOptions,
-  TextOptions,
-  TooltipOptions,
-  ZoomMode,
-  ZoomOptions,
-} from './v5.js'
+// These names exist in v4 and v5. The root keeps the v4 meaning; ./v5 has the v5 one.
+export { BrushMode } from './Visitors/brushHandler.js'
+export { ZoomMode } from './Visitors/zoomHandler.js'
+export type { AxisOptions } from './Axis/axisOptions.js'
+export type { ScaleOptions, ZoomOptions } from './Scale/scaleOptions.js'
+export type { TextOptions, TooltipOptions } from './Charts/chart.js'

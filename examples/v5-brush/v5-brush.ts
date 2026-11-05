@@ -13,8 +13,8 @@ import {
   pan,
   timeScale,
   zoom,
-  type BrushMode,
 } from '@lib'
+import type { BrushMode } from '@lib/v5.js'
 
 function required<T extends Element>(selector: string): T {
   const element = document.querySelector<T>(selector)

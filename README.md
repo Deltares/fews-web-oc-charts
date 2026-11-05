@@ -9,6 +9,10 @@ v5 can import from `@deltares/fews-web-oc-charts/v5` instead:
 import { createPlot, line, timeScale } from '@deltares/fews-web-oc-charts/v5'
 ```
 
+Seven names exist in both APIs: `BrushMode`, `ZoomMode`, `AxisOptions`, `ScaleOptions`,
+`TextOptions`, `TooltipOptions` and `ZoomOptions`. The package root keeps their v4 meaning, so
+import the v5 meaning from `./v5`.
+
 Both entry points can be tree-shaken. The v5 entry also keeps the v4 type
 declarations out of type checking: it needs no `@types/d3`, `@types/luxon` or
 `csstype`, and it works with `moduleResolution: node16` and `nodenext`.

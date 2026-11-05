@@ -18,9 +18,8 @@ import {
   PanningDirection,
   MouseButton,
   WheelMode,
+  BrushMode,
 } from '@lib'
-// The package root exports the v5 type of this name.
-import { BrushMode } from '@lib/Visitors/brushHandler.js'
 
 function createAxes(
   containerId: string,
