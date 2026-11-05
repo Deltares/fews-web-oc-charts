@@ -163,7 +163,13 @@ try {
 
   for (const browserName of requestedBrowsers) {
     const browserType = browserTypes[browserName]
-    const browser = await browserType.launch({ headless: true, timeout: 30_000 })
+    const browser = await browserType.launch({
+      headless: true,
+      timeout: 30_000,
+      // A live canvas makes Chromium paint overlapping text in greyscale, and its <image> baseline
+      // doesn't, so subpixel text would differ on platforms that use it.
+      args: browserName === 'chromium' ? ['--disable-lcd-text'] : [],
+    })
     try {
       const page = await browser.newPage({ viewport, deviceScaleFactor: 1 })
       await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' })
