@@ -21,7 +21,6 @@ export type ScaleDomain<K extends ScaleKind = ScaleKind> = ScaleKind extends K
     ? readonly string[]
     : NumericDomain
 export type ScaleRange = readonly [number, number]
-export type PixelRange = ScaleRange
 export type PolarDirection = 'clockwise' | 'anticlockwise'
 export type FollowDuration = number | string
 
@@ -108,6 +107,18 @@ type ExtentSource = (mode: 'data' | 'visible') => readonly ScaleValue[] | undefi
 const extentSources = new WeakMap<ScaleHandle, (source: ExtentSource) => () => void>()
 const dataDomains = new WeakMap<ScaleHandle, () => readonly ScaleValue[]>()
 const autoscalePauses = new WeakMap<ScaleHandle, () => void>()
+
+function defaultDomainFor(kind: ScaleKind): ScaleOptions['defaultDomain'] {
+  if (kind === 'band') return []
+  if (kind === 'degrees' || kind === 'angular') return [0, 360]
+  return kind === 'log' ? [1, 10] : [0, 1]
+}
+
+function niceDomain(kind: ScaleKind, domain: number[]) {
+  if (kind === 'time') return scaleUtc().domain(domain).nice().domain().map(Number)
+  const scale = kind === 'log' ? scaleLog() : scaleLinear()
+  return scale.domain(domain).nice().domain().map(Number)
+}
 
 export function pauseScaleAutoscale(scale: ScaleHandle): void {
   const pause = autoscalePauses.get(scale)
@@ -281,14 +292,7 @@ function createScale(kind: ScaleKind, initial: OptionPatch<ScaleOptions>) {
     resolveDomain(options)
   }
   const defaults = (): ScaleOptions => ({
-    defaultDomain:
-      kind === 'band'
-        ? []
-        : kind === 'degrees' || kind === 'angular'
-          ? [0, 360]
-          : kind === 'log'
-            ? [1, 10]
-            : [0, 1],
+    defaultDomain: defaultDomainFor(kind),
     autoscale: kind === 'degrees' || kind === 'angular' ? 'fixed' : 'data',
     reverse: false,
     nice: false,
@@ -353,13 +357,7 @@ function createScale(kind: ScaleKind, initial: OptionPatch<ScaleOptions>) {
     }
     let result = [low, high]
     if (config.nice) {
-      const numeric =
-        kind === 'time'
-          ? scaleUtc().domain(result)
-          : kind === 'log'
-            ? scaleLog().domain(result)
-            : scaleLinear().domain(result)
-      result = numeric.nice().domain().map(Number)
+      result = niceDomain(kind, result)
     }
     if (
       result.some(
@@ -521,7 +519,6 @@ function createScale(kind: ScaleKind, initial: OptionPatch<ScaleOptions>) {
       if (changed) optionState.publish()
       if (changed || followChanged || previousOverride !== followOverride.get()) {
         // Reading the computed version records the source after follow state has settled.
-        void domain.version
         recordScaleSource(handle, domain.version)
       }
     },

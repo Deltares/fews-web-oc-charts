@@ -8,17 +8,16 @@ export const DirtyLayer = {
   style: 1 << 6,
 } as const
 
-export type DirtyLayers = number
 export type FrameCallback = (callback: FrameRequestCallback) => number
 
 export interface FrameScheduler {
-  invalidate(layers: DirtyLayers): void
+  invalidate(layers: number): void
   enqueueEffect(effect: () => void): void
   dispose(): void
 }
 
 export function createFrameScheduler(
-  draw: (layers: DirtyLayers) => void,
+  draw: (layers: number) => void,
   requestFrame: FrameCallback = (callback) => requestAnimationFrame(callback),
   onError: (error: unknown) => void = (error) => console.error('Frame scheduler error:', error),
 ): FrameScheduler {
@@ -27,6 +26,14 @@ export function createFrameScheduler(
   let flushing = false
   let disposed = false
   const effects = new Set<() => void>()
+
+  function reportError(error: unknown) {
+    try {
+      onError(error)
+    } catch (reportingError) {
+      console.error('Frame scheduler error handler failed:', reportingError, error)
+    }
+  }
 
   function schedule() {
     if (framePending || flushing || disposed) return
@@ -39,14 +46,6 @@ export function createFrameScheduler(
       const currentEffects = [...effects]
       effects.clear()
       let nextEffect = 0
-      function reportError(error: unknown) {
-        try {
-          onError(error)
-        } catch (reportingError) {
-          console.error('Frame scheduler error handler failed:', reportingError, error)
-        }
-      }
-
       try {
         while (nextEffect < currentEffects.length) {
           const effect = currentEffects[nextEffect]

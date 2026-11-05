@@ -17,6 +17,7 @@ import { svgElement } from '../../axes/render-axes.js'
 import {
   createKeyCache,
   extentWindow,
+  scaleCoordinate,
   scaleKey,
   setMarkId,
   type MarkDefinition,
@@ -94,7 +95,7 @@ export const stackedAreaDefinition: MarkDefinition<StackedAreaMark> = {
     validateDirections(mark, direction)
   },
   extents(mark, context) {
-    const coordinate = mark.x === context.scale ? 'x' : mark.y === context.scale ? 'y' : undefined
+    const coordinate = scaleCoordinate(mark, context.scale)
     if (!coordinate) return
     const window = extentWindow(context, coordinate === 'x' ? mark.y : mark.x)
     stackedAreaExtent(mark, coordinate, window)?.forEach(context.add)

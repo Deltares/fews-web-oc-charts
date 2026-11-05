@@ -80,12 +80,20 @@ function coordinateDigits(
 function coordinatesForAxis(
   axis: InspectionAxis,
   options: CrosshairOptions,
-  visible: boolean,
-  layers: readonly CrosshairLayerGuide[],
   context: Omit<PlotContext, 'scope' | 'inspectCrosshair'>,
-  hit: MarkHit | undefined,
-  resolved: { readonly x: number; readonly y: number },
-  axes: string,
+  {
+    visible,
+    layers,
+    hit,
+    resolved,
+    axes,
+  }: {
+    readonly visible: boolean
+    readonly layers: readonly CrosshairLayerGuide[]
+    readonly hit: MarkHit | undefined
+    readonly resolved: { readonly x: number; readonly y: number }
+    readonly axes: string
+  },
 ) {
   if (!visible) return []
   const scaleName = options.labels?.[axis]
@@ -219,7 +227,7 @@ export function inspectCrosshair(
   const resolved = hit ? { x: hit.px, y: hit.py } : point
   if (hit && options.pointer) axes = options.mode
   const coordinates = (['x', 'y'] as const).flatMap((axis) =>
-    coordinatesForAxis(axis, options, visible, layers, context, hit, resolved, axes),
+    coordinatesForAxis(axis, options, context, { visible, layers, hit, resolved, axes }),
   )
   return { point: resolved, visible, hit, hits, layers, options, coordinates, axes }
 }

@@ -169,7 +169,8 @@ export function createPointerHub(context: PointerHubContext): PointerHub {
       if (!handlers) {
         const registered = new Set<(event: Event) => void>()
         const listener = (event: Event) => {
-          for (const registeredHandler of [...registered]) registeredHandler(event)
+          const handlers = [...registered]
+          for (const registeredHandler of handlers) registeredHandler(event)
         }
         handlers = registered
         gestures.set(type, registered)
@@ -189,7 +190,8 @@ export function createPointerHub(context: PointerHubContext): PointerHub {
       for (const [type, listener] of Object.entries(pointerListeners)) {
         element.removeEventListener(type as keyof typeof pointerListeners, listener)
       }
-      for (const type of [...gestures.keys()]) detachGesture(type)
+      const types = [...gestures.keys()]
+      for (const type of types) detachGesture(type)
       if (frame !== undefined) cancelAnimationFrame(frame)
       frame = undefined
       pending = undefined

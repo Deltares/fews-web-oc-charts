@@ -1,5 +1,5 @@
 import { createOptionState, type OptionPatch, type OptionStateSnapshot } from '../core/options.js'
-import { DirtyLayer, type DirtyLayers } from '../core/frame-scheduler.js'
+import { DirtyLayer } from '../core/frame-scheduler.js'
 import {
   reactive,
   invalidate,
@@ -318,9 +318,9 @@ function createPlotInternal(
   let manuallyPaused = false
   let visible = false
   const suspended = reactive.signal(true)
-  let deferredDirty: DirtyLayers = 0
+  let deferredDirty: number = 0
 
-  function requestRender(dirty: DirtyLayers) {
+  function requestRender(dirty: number) {
     if (destroyed) return
     deferredDirty |= dirty
     if (!reactive.untracked(() => suspended.get())) invalidate(render, deferredDirty)
@@ -417,7 +417,8 @@ function createPlotInternal(
   let previousLegendEntries = reactive.untracked(() => legend.entries.get())
 
   function notifyPlotListeners<K extends keyof PlotEventMap>(type: K, detail: PlotEventMap[K]) {
-    for (const listener of [...(plotListeners.get(type) ?? [])]) {
+    const listeners = [...(plotListeners.get(type) ?? [])]
+    for (const listener of listeners) {
       try {
         listener(detail)
       } catch (error) {
@@ -479,7 +480,7 @@ function createPlotInternal(
             explicit,
             source:
               sourceOf(binding.scale) ??
-              (binding.scale.following.get() ? 'autoscale' : explicit ? 'api' : 'autoscale'),
+              (!binding.scale.following.get() && explicit ? 'api' : 'autoscale'),
           })
           previous = domain
           dispatchPlotEvent('domainchange', detail)
@@ -717,20 +718,21 @@ function createPlotInternal(
     )
     const aligned = alignment?.group.bounds.get()
     const baseMargins = current.axisLayout === 'inset' ? insetMargins : margins
-    const nextRegions = aligned
-      ? layout(
-          actualSize,
-          current.axisLayout === 'inset' ? [] : measures,
-          {
-            ...baseMargins,
-            left: baseMargins.left + Math.max(0, aligned.left - naturalRegions.margins.left),
-            right:
-              baseMargins.right +
-              Math.max(0, actualSize.width - naturalRegions.margins.right - aligned.right),
-          },
-          current.title ? tokens.fontSize * 2 : 0,
-        )
-      : naturalRegions
+    let nextRegions = naturalRegions
+    if (aligned) {
+      nextRegions = layout(
+        actualSize,
+        current.axisLayout === 'inset' ? [] : measures,
+        {
+          ...baseMargins,
+          left: baseMargins.left + Math.max(0, aligned.left - naturalRegions.margins.left),
+          right:
+            baseMargins.right +
+            Math.max(0, actualSize.width - naturalRegions.margins.right - aligned.right),
+        },
+        current.title ? tokens.fontSize * 2 : 0,
+      )
+    }
     if (
       !identicalLayout(
         reactive.untracked(() => regions.get()),
@@ -822,7 +824,7 @@ function createPlotInternal(
     adjustInsetMargins(current, tokens)
   }
 
-  function render(dirty: DirtyLayers) {
+  function render(dirty: number) {
     if (destroyed) return
     deferredDirty |= dirty
     if (suspended.get()) return
@@ -1027,7 +1029,8 @@ function createPlotInternal(
     destroy() {
       if (destroyed) return
       destroyed = true
-      for (const unsubscribe of [...ownedSubscriptions]) unsubscribe()
+      const subscriptions = [...ownedSubscriptions]
+      for (const unsubscribe of subscriptions) unsubscribe()
       alignment?.member.dispose()
       alignment = undefined
       stopVisibility()

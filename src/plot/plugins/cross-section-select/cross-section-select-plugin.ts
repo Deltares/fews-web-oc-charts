@@ -1,7 +1,7 @@
 import { registerPlugin } from '../plugins.js'
 import type { OptionPatch } from '../../../core/options.js'
 import { precisionFixed } from 'd3-format'
-import { reactive } from '../../../core/runtime.js'
+import { reactive, track } from '../../../core/runtime.js'
 import type { ScaleKind } from '../../../scales/scale.js'
 import { resolveLineStyles } from '../../marks/mark-styles.js'
 import type { PluginDefinition, PlotContext } from '../plugin-definition.js'
@@ -112,7 +112,7 @@ function pointFor(
   if (isSeriesMark(mark)) {
     mark.options.get()
     if (!mark.visible) return undefined
-    void mark.data.version
+    track(mark.data.version)
   }
   const xScale = context.scales[mark.x]
   const yScale = context.scales[mark.y]
@@ -136,7 +136,9 @@ function pointFor(
     const logY = yScale.scale.kind === 'log'
     const point = interpolated(value, low, xAt, yAt, (x) => xScale.project(x), logY)
     if (!point) return undefined
-    ;({ index, xValue, yValue } = point)
+    index = point.index
+    xValue = point.xValue
+    yValue = point.yValue
   } else {
     if (low >= length) low = length - 1
     if (low < 0) return undefined

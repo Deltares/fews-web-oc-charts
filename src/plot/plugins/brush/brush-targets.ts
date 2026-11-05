@@ -27,14 +27,9 @@ export function connectBrushTargets(handle: BrushHandle, context: SelectionScale
     previous = next
     if (!targets.length) return
     const directions = new Set(targets.map(([name]) => context.direction(name)))
-    const mode =
-      config.mode === 'auto'
-        ? directions.size === 2
-          ? 'xy'
-          : directions.has('x')
-            ? 'x'
-            : 'y'
-        : config.mode
+    const singleDirection = directions.has('x') ? 'x' : 'y'
+    const automaticMode = directions.size === 2 ? 'xy' : singleDirection
+    const mode = config.mode === 'auto' ? automaticMode : config.mode
     reactive.untracked(() =>
       handle.setSelection({
         mode,

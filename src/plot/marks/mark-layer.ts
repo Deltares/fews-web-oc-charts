@@ -1,4 +1,4 @@
-import { DirtyLayer, type DirtyLayers } from '../../core/frame-scheduler.js'
+import { DirtyLayer } from '../../core/frame-scheduler.js'
 import { reactive } from '../../core/runtime.js'
 import type { ReactiveScope, ReadonlySignal } from '../../core/reactive.js'
 import type { PlotLayout } from '../../layout/layout.js'
@@ -30,7 +30,7 @@ export interface MarkLayer {
   reconcile(current: PlotOptions): void
   invalidateAll(): void
   /** Mounts the current marks and repaints those affected by the dirty layers. */
-  render(dirty: DirtyLayers, current: PlotOptions, tokens: ThemeTokens): void
+  render(dirty: number, current: PlotOptions, tokens: ThemeTokens): void
   dispose(): void
 }
 

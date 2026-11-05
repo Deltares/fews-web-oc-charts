@@ -24,6 +24,11 @@ export interface SharedSelection {
 const handles = new WeakSet<object>()
 export const isSharedSelection = (value: object): value is SharedSelection => handles.has(value)
 
+function selectionMode(hasX: boolean, hasY: boolean): 'x' | 'y' | 'xy' | undefined {
+  if (hasX) return hasY ? 'xy' : 'x'
+  return hasY ? 'y' : undefined
+}
+
 export function sharedSelection(): SharedSelection {
   const state = reactive.signal<SharedSelectionValue | undefined>(
     undefined,
@@ -131,13 +136,7 @@ export function localSharedSelection(
     scales[name] = entry.range
     axes.add(axis)
   }
-  const selectedMode = axes.has('x')
-    ? axes.has('y')
-      ? 'xy'
-      : 'x'
-    : axes.has('y')
-      ? 'y'
-      : undefined
+  const selectedMode = selectionMode(axes.has('x'), axes.has('y'))
   if (!selectedMode) return undefined
   return Object.freeze({ mode: selectedMode, scales: Object.freeze(scales) })
 }
@@ -166,5 +165,5 @@ export function shareLocalSelection(
   }
   const hasX = ranges.some((entry) => entry.axis === 'x')
   const hasY = ranges.some((entry) => entry.axis === 'y')
-  return { mode: hasX ? (hasY ? 'xy' : 'x') : 'y', ranges }
+  return { mode: selectionMode(hasX, hasY) ?? 'y', ranges }
 }

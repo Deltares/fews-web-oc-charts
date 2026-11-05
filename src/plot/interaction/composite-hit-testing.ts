@@ -145,23 +145,10 @@ function barHits(
   )
   const before = index.values[valueIndex - 1]
   const after = index.values[valueIndex]
-  const rectangle =
-    !before ||
-    (after &&
-      Math.abs(
-        (axis === 'x' ? after.x + after.width / 2 : after.y + after.height / 2) - coordinate,
-      ) <
-        Math.abs(
-          (axis === 'x' ? before.x + before.width / 2 : before.y + before.height / 2) - coordinate,
-        ))
-      ? after
-      : before
-  const center = rectangle
-    ? axis === 'x'
-      ? rectangle.x + rectangle.width / 2
-      : rectangle.y + rectangle.height / 2
-    : 0
-  return rectangle ? [barHit(mark, rectangle, Math.abs(center - coordinate), index)] : []
+  const distance = (item: { x: number; y: number; width: number; height: number }) =>
+    Math.abs((axis === 'x' ? item.x + item.width / 2 : item.y + item.height / 2) - coordinate)
+  const rectangle = !before || (after && distance(after) < distance(before)) ? after : before
+  return rectangle ? [barHit(mark, rectangle, distance(rectangle), index)] : []
 }
 
 function barIndex(

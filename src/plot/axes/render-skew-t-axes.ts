@@ -54,7 +54,8 @@ export function renderSkewTAxes(
         tickStep(low, high, options.tickCount),
         tickStep(minimum, maximum, options.tickCount * 2),
       )
-      if (!(step > 0)) throw new Error('Skew-T temperature domain must have a nonzero span.')
+      if (Number.isNaN(step) || step <= 0)
+        throw new Error('Skew-T temperature domain must have a nonzero span.')
       const first = Math.ceil(minimum / step)
       const last = Math.floor(maximum / step)
       for (let index = first; index <= last; index += 1) {

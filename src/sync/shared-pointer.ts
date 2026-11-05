@@ -4,8 +4,10 @@ import { validateKeys } from '../core/validation.js'
 import type { ScaleBinding, ScaleHandle, ScaleValue } from '../scales/scale.js'
 import type { Region } from '../layout/layout.js'
 
+export type SharedPointerAxis = 'x' | 'y' | 'xy'
+
 export interface SharedPointerOptions {
-  by?: 'x' | 'y' | 'xy'
+  by?: SharedPointerAxis
 }
 
 export interface SharedPointerValue {
@@ -38,7 +40,7 @@ export function isSharedPointer(value: object): value is SharedPointer {
 /** Share domain coordinates, never a plot's pixels or inside flag. */
 export function sharedPointer(options: SharedPointerOptions = {}): SharedPointer {
   validateKeys(options, ['by'], 'sharedPointer')
-  const by = options.by === undefined ? 'x' : options.by
+  const { by = 'x' } = options
   if (!['x', 'y', 'xy'].includes(by)) {
     throw new Error('sharedPointer.by must be x, y or xy.')
   }

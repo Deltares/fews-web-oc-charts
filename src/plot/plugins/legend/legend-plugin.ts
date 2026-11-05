@@ -37,6 +37,8 @@ export interface LegendHandle {
 const handles = new WeakSet<object>()
 const optionKeys = ['position', 'showGroups']
 
+const visibilityOpacity: Readonly<Record<string, number>> = { hidden: 0.5, mixed: 0.75 }
+
 export function isLegendHandle(value: object): value is LegendHandle {
   return handles.has(value)
 }
@@ -259,7 +261,7 @@ function appendEntry(
     'aria-disabled': String(entry.disabled),
     tabindex: entry.disabled ? -1 : 0,
     transform: `translate(${x} ${y})`,
-    opacity: entry.visibility === 'hidden' ? 0.5 : entry.visibility === 'mixed' ? 0.75 : 1,
+    opacity: visibilityOpacity[entry.visibility] ?? 1,
     cursor: entry.disabled ? 'default' : 'pointer',
   })
   group.append(
@@ -374,16 +376,9 @@ function installLegend(handle: LegendHandle, context: PlotContext) {
     wrapper.style.height = options.height === undefined ? '100%' : `${options.height}px`
     const horizontal = position === 'left' || position === 'right'
     const first = position === 'top' || position === 'left'
-    wrapper.style.gridTemplateColumns = horizontal
-      ? first
-        ? 'auto minmax(0, 1fr)'
-        : 'minmax(0, 1fr) auto'
-      : 'minmax(0, 1fr)'
-    wrapper.style.gridTemplateRows = horizontal
-      ? 'minmax(0, 1fr)'
-      : first
-        ? 'auto minmax(0, 1fr)'
-        : 'minmax(0, 1fr) auto'
+    const docked = first ? 'auto minmax(0, 1fr)' : 'minmax(0, 1fr) auto'
+    wrapper.style.gridTemplateColumns = horizontal ? docked : 'minmax(0, 1fr)'
+    wrapper.style.gridTemplateRows = horizontal ? 'minmax(0, 1fr)' : docked
     if (layer.parentNode !== external) external.append(layer)
     if (!releaseViewport) {
       context.element.before(wrapper)
@@ -433,12 +428,10 @@ function installLegend(handle: LegendHandle, context: PlotContext) {
     )
     // Left/right docks use the overlay layout inside a box spanning the full chart height,
     // margins included, wrapping into columns only when one column does not fit.
+    const columnHeight = overlay ? Infinity : Math.max(itemHeight, height - verticalPadding * 2)
     const placements = horizontal
       ? sectionPlacements(items, horizontalColumns)
-      : columnPlacements(
-          items,
-          overlay ? Infinity : Math.max(itemHeight, height - verticalPadding * 2),
-        )
+      : columnPlacements(items, columnHeight)
     const columns = horizontal
       ? horizontalColumns
       : Math.max(1, ...placements.map((placement) => placement.column + 1))

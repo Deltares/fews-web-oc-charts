@@ -32,6 +32,7 @@ import {
   type BrushBounds as Bounds,
   type BrushHandleName as HandleName,
 } from './brush-selection.js'
+import { dragMode } from '../../interaction/gesture-modes.js'
 
 const minMove = 25
 const handleSize = 6
@@ -44,6 +45,12 @@ interface Gesture {
   startY: number
   origin: Bounds
   bounds: Bounds
+}
+
+function resizeCursor(handle: string) {
+  if (handle === 'e' || handle === 'w') return 'ew-resize'
+  if (handle === 'n' || handle === 's') return 'ns-resize'
+  return handle === 'nw' || handle === 'se' ? 'nwse-resize' : 'nesw-resize'
 }
 
 function installBrush(handle: BrushHandle, context: PlotContext) {
@@ -71,14 +78,7 @@ function installBrush(handle: BrushHandle, context: PlotContext) {
         fill: 'currentColor',
         display: 'none',
       })
-      node.style.cursor =
-        name === 'e' || name === 'w'
-          ? 'ew-resize'
-          : name === 'n' || name === 's'
-            ? 'ns-resize'
-            : name === 'nw' || name === 'se'
-              ? 'nwse-resize'
-              : 'nesw-resize'
+      node.style.cursor = resizeCursor(name)
       return [name, node] as const
     }),
   )
@@ -98,13 +98,13 @@ function installBrush(handle: BrushHandle, context: PlotContext) {
     if (context.suspended.get()) return
     selection.setAttribute('display', 'none')
     for (const node of handles.values()) node.setAttribute('display', 'none')
-    layer.removeAttribute('data-mode')
+    delete layer.dataset.mode
   }
 
   function render(bounds: Bounds, mode: BrushSelectionMode, persistent: boolean) {
     if (context.suspended.get()) return
     hide()
-    layer.setAttribute('data-mode', mode)
+    layer.dataset.mode = mode
     const region = regionBounds()
     const x0 = mode === 'y' ? region.x0 : bounds.x0
     const x1 = mode === 'y' ? region.x1 : bounds.x1
@@ -133,16 +133,12 @@ function installBrush(handle: BrushHandle, context: PlotContext) {
       const guideBottom = clamp(guideY + minMove, y0, y1)
       const width = vertical ? guideRight - guideLeft : handleSize
       const height = horizontal ? guideBottom - guideTop : handleSize
-      const centerX = name.includes('w')
-        ? x0
-        : name.includes('e')
-          ? x1
-          : (guideLeft + guideRight) / 2
-      const centerY = name.includes('n')
-        ? y0
-        : name.includes('s')
-          ? y1
-          : (guideTop + guideBottom) / 2
+      let centerX = (guideLeft + guideRight) / 2
+      if (name.includes('w')) centerX = x0
+      else if (name.includes('e')) centerX = x1
+      let centerY = (guideTop + guideBottom) / 2
+      if (name.includes('n')) centerY = y0
+      else if (name.includes('s')) centerY = y1
       for (const [attribute, value] of Object.entries({
         x: centerX - width / 2,
         y: centerY - height / 2,
@@ -203,14 +199,7 @@ function installBrush(handle: BrushHandle, context: PlotContext) {
     const dy = y - gesture.startY
     if (gesture.kind === 'new') {
       if (gesture.config.mode === 'auto') {
-        gesture.mode =
-          Math.abs(dx) <= minMove && Math.abs(dy) <= minMove
-            ? undefined
-            : Math.abs(dy) <= minMove
-              ? 'x'
-              : Math.abs(dx) <= minMove
-                ? 'y'
-                : 'xy'
+        gesture.mode = dragMode(Math.abs(dx), Math.abs(dy), minMove)
       }
       gesture.bounds = orderedBounds(gesture.startX, gesture.startY, x, y)
     } else if (gesture.kind === 'move') {
@@ -288,9 +277,10 @@ function installBrush(handle: BrushHandle, context: PlotContext) {
     const stored = handle.selection.get()
     const previous =
       config.persistent && stored ? projectSelection(stored, regionBounds(), context) : undefined
-    const kind = previous && resize ? resize : previous && target === selection ? 'move' : 'new'
-    const mode =
-      kind !== 'new' && stored ? stored.mode : config.mode === 'auto' ? undefined : config.mode
+    const moveOrNew = previous && target === selection ? 'move' : 'new'
+    const kind = previous && resize ? resize : moveOrNew
+    const configuredMode = config.mode === 'auto' ? undefined : config.mode
+    const mode = kind !== 'new' && stored ? stored.mode : configuredMode
     if ((!position.inside && kind === 'new') || selectedScales(context, mode ?? 'xy').length === 0)
       return
     const origin =

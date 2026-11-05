@@ -277,7 +277,7 @@ export function createEnsemble(
     throw new Error('ensemble.quantileMethod must be r6 or r7.')
   }
   const quantileSorted = quantileMethod === 'r6' ? quantileR6 : quantileR7
-  const precision = options.precision === undefined ? 'float32' : options.precision
+  const { precision = 'float32' } = options
   if (precision !== 'float32' && precision !== 'float64') {
     throw new Error('ensemble.precision must be float32 or float64.')
   }
@@ -646,7 +646,7 @@ export function createEnsemble(
       const row = member * x.length
       const selected: number[] = []
       const select = (index: number) => {
-        if (selected[selected.length - 1] !== index) selected.push(index)
+        if (selected.at(-1) !== index) selected.push(index)
       }
       let bucket = -1
       let bucketFirst = -1

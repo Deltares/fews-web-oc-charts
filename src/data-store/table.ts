@@ -411,7 +411,8 @@ export function createTable(initial: TableInput, options: TableOptions = {}): Ta
         : undefined,
     )
     const operation = bounds ? 'upsert' : (operationOverride ?? mode)
-    const replaced = bounds ? after - before : mode === 'replace' ? previousLength : 0
+    const replacedAll = mode === 'replace' ? previousLength : 0
+    const replaced = bounds ? after - before : replacedAll
     const evicted = start
     const firstCurrent = previousLength ? current.valueAt(x, 0) : undefined
     const lastCurrent = previousLength ? current.valueAt(x, previousLength - 1) : undefined

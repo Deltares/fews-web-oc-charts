@@ -29,15 +29,15 @@ function epoch(value: number | Date): number {
 
 export function sharedClock(options: SharedClockOptions = {}): SharedClock {
   validateKeys(options, ['initial', 'now', 'interval'], 'sharedClock')
-  const now = options.now === undefined ? Date.now : options.now
+  const { now = Date.now, interval = 1000 } = options
   if (typeof now !== 'function') throw new TypeError('sharedClock.now must be a function.')
-  const interval = options.interval === undefined ? 1000 : options.interval
   if (!Number.isSafeInteger(interval) || interval < 1 || interval > 2_147_483_647) {
     throw new RangeError(
       'sharedClock.interval must be an integer from 1 to 2147483647 milliseconds.',
     )
   }
-  const time = reactive.signal(epoch(options.initial === undefined ? now() : options.initial))
+  const { initial = now() } = options
+  const time = reactive.signal(epoch(initial))
   const running = reactive.signal(false)
   let timer: ReturnType<typeof setInterval> | undefined
   let destroyed = false

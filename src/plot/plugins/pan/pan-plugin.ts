@@ -13,6 +13,7 @@ import {
   type PanOptions,
 } from './pan.js'
 import { isValidScaleDomain } from '../../scales/scale-domain.js'
+import { touchActionFor } from '../../interaction/gesture-modes.js'
 
 type Axis = 'x' | 'y'
 
@@ -31,7 +32,7 @@ function installPan(handle: PanHandle, context: PlotContext) {
 
   function updateTouchAction(mode: PanMode) {
     if (context.suspended.get()) return
-    appliedTouchAction = mode === 'x' ? 'pan-y' : mode === 'y' ? 'pan-x' : 'none'
+    appliedTouchAction = touchActionFor(mode)
     context.element.style.setProperty('touch-action', appliedTouchAction)
   }
 

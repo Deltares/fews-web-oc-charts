@@ -111,7 +111,7 @@ export function createReactiveCore(
   }
 
   class Scope implements ReactiveScope {
-    private cleanups: (() => void)[] = []
+    private readonly cleanups: (() => void)[] = []
     private readonly children = new Set<Scope>()
     private isDisposed = false
     private readonly parent: Scope | undefined
@@ -152,7 +152,8 @@ export function createReactiveCore(
       if (this.isDisposed) return
       this.isDisposed = true
       this.parent?.children.delete(this)
-      for (const child of [...this.children]) safelyRun(() => child.dispose())
+      const children = [...this.children]
+      for (const child of children) safelyRun(() => child.dispose())
       this.children.clear()
       for (const cleanup of this.cleanups.splice(0).reverse()) safelyRun(cleanup)
       activeScopes -= 1
@@ -204,7 +205,8 @@ export function createReactiveCore(
   }
 
   function notify(cell: Cell<unknown>) {
-    for (const subscriber of [...cell.subscribers]) subscriber.invalidate()
+    const subscribers = [...cell.subscribers]
+    for (const subscriber of subscribers) subscriber.invalidate()
     scheduleEffects()
   }
 
@@ -305,7 +307,8 @@ export function createReactiveCore(
         disposed = true
         for (const dependency of observer.dependencies) dependency.subscribers.delete(observer)
         observer.dependencies.clear()
-        for (const subscriber of [...cell.subscribers]) subscriber.invalidate()
+        const subscribers = [...cell.subscribers]
+        for (const subscriber of subscribers) subscriber.invalidate()
         cell.subscribers.clear()
         scheduleEffects()
         activeComputeds -= 1

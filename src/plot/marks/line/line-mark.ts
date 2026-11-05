@@ -97,12 +97,9 @@ function lineExtents(mark: LineLikeMark, context: MarkExtentContext) {
     const _version = store.version
   }
   if (store) {
+    const opposite = coordinate === 'x' ? 'y' : 'x'
     const values = window
-      ? store.extent(
-          coordinate,
-          [Number(window[0]), Number(window[1])],
-          coordinate === 'x' ? 'y' : 'x',
-        )
+      ? store.extent(coordinate, [Number(window[0]), Number(window[1])], opposite)
       : store.extent(coordinate)
     const eligible = values !== undefined
     if (values) {
@@ -311,12 +308,20 @@ function createLineRenderer(): MarkRenderer<LineLikeMark> {
         const sounding = skewT
           ? projectSkewTPoint(xScale, yScale, Number(xValue), Number(yValue), context.skew!)
           : undefined
-        const x = round(
-          sounding ? sounding.x : polar ? radius * Math.sin(angle) : xScale.project(xValue),
-        )
-        const y = round(
-          sounding ? sounding.y : polar ? -radius * Math.cos(angle) : yScale.project(yValue),
-        )
+        let unroundedX: number
+        let unroundedY: number
+        if (sounding) {
+          unroundedX = sounding.x
+          unroundedY = sounding.y
+        } else if (polar) {
+          unroundedX = radius * Math.sin(angle)
+          unroundedY = -radius * Math.cos(angle)
+        } else {
+          unroundedX = xScale.project(xValue)
+          unroundedY = yScale.project(yValue)
+        }
+        const x = round(unroundedX)
+        const y = round(unroundedY)
         data += `${drawingSegment ? 'L' : 'M'}${x},${y}`
         if (mark.area) {
           if (drawingSegment) {

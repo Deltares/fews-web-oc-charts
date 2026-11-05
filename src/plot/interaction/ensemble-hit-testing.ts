@@ -7,6 +7,7 @@ import {
   ensembleStatistics,
   visibleParts,
 } from '../marks/ensemble/ensemble-parts.js'
+import { axisDistance } from './point-hit-testing.js'
 
 export interface EnsembleHitStatistic {
   /** `p5`, `median`, `mean`, … */
@@ -169,7 +170,7 @@ export function ensembleHits(
       y: nearest.value,
       px,
       py: nearest.py,
-      distance: axis === 'x' ? Math.abs(dx) : axis === 'y' ? Math.abs(dy) : Math.hypot(dx, dy),
+      distance: axisDistance(axis, dx, dy),
       member: nearest.member === undefined ? undefined : store.members[nearest.member],
       parts: Object.freeze(parts),
       statistics: Object.freeze(reported.filter(({ value }) => Number.isFinite(value))),

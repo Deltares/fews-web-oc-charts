@@ -20,6 +20,14 @@ export interface LodIndices extends Iterable<number> {
   at(index: number): number
 }
 
+function windowFraction(
+  window: { readonly reverse?: boolean; readonly start: number; readonly end: number },
+  x: number,
+) {
+  const elapsed = window.reverse ? window.end - x : x - window.start
+  return elapsed / (window.end - window.start)
+}
+
 function validateColumns(x: ArrayLike<number>, y: ArrayLike<number>) {
   if (x.length !== y.length) {
     throw new RangeError(`Column lengths differ: x has ${x.length}, y has ${y.length}.`)
@@ -213,7 +221,7 @@ export class ColumnarSeries {
       if (first < 0) return
       const selected = [first, minimum, maximum, last].sort((left, right) => left - right)
       for (const index of selected) {
-        if (indices[indices.length - 1] !== index) indices.push(index)
+        if (indices.at(-1) !== index) indices.push(index)
       }
       first = -1
       minimum = -1
@@ -226,7 +234,7 @@ export class ColumnarSeries {
       const yValue = this.yAt(index)
       if (!Number.isFinite(yValue)) {
         flushRun()
-        if (!previousWasMissing && indices[indices.length - 1] !== index) indices.push(index)
+        if (!previousWasMissing && indices.at(-1) !== index) indices.push(index)
         previousWasMissing = true
         continue
       }
@@ -237,14 +245,7 @@ export class ColumnarSeries {
           ? Math.floor(window.width / 2)
           : Math.max(
               0,
-              Math.min(
-                window.width - 1,
-                Math.floor(
-                  (window.reverse
-                    ? (window.end - xValue) / (window.end - window.start)
-                    : (xValue - window.start) / (window.end - window.start)) * window.width,
-                ),
-              ),
+              Math.min(window.width - 1, Math.floor(windowFraction(window, xValue) * window.width)),
             )
       if (!inRun || pixel !== bucket) {
         flushRun()

@@ -19,6 +19,12 @@ import { createLegendSwatch } from '../legend/legend-swatch.js'
 
 let nextTooltipId = 0
 
+const tooltipTransforms: Partial<Record<TooltipPosition, string>> = {
+  [TooltipPosition.Top]: 'translate(-50%, calc(-100% - 6px))',
+  [TooltipPosition.Bottom]: 'translate(-50%, 6px)',
+  [TooltipPosition.Left]: 'translate(calc(-100% - 6px), -50%)',
+}
+
 function positionTooltip(
   element: HTMLDivElement,
   context: PlotContext,
@@ -53,14 +59,7 @@ function positionTooltip(
   })
   element.style.left = `${position.x}px`
   element.style.top = `${position.y}px`
-  element.style.transform =
-    position.position === TooltipPosition.Top
-      ? 'translate(-50%, calc(-100% - 6px))'
-      : position.position === TooltipPosition.Bottom
-        ? 'translate(-50%, 6px)'
-        : position.position === TooltipPosition.Left
-          ? 'translate(calc(-100% - 6px), -50%)'
-          : 'translate(6px, -50%)'
+  element.style.transform = tooltipTransforms[position.position] ?? 'translate(6px, -50%)'
   positionTooltipArrow(element, position, clientX / scaleX, clientY / scaleY)
 }
 

@@ -57,17 +57,11 @@ export function layout(
     const horizontal = position === 'top' || position === 'bottom'
     const offset = offsets[position]
     offsets[position] += thickness
+    const sideX = position === 'left' ? plot.x - offset - thickness : plot.x + plot.width + offset
+    const sideY = position === 'top' ? plot.y - offset - thickness : plot.y + plot.height + offset
     return Object.freeze({
-      x: horizontal
-        ? plot.x
-        : position === 'left'
-          ? plot.x - offset - thickness
-          : plot.x + plot.width + offset,
-      y: !horizontal
-        ? plot.y
-        : position === 'top'
-          ? plot.y - offset - thickness
-          : plot.y + plot.height + offset,
+      x: horizontal ? plot.x : sideX,
+      y: horizontal ? sideY : plot.y,
       width: horizontal ? plot.width : thickness,
       height: horizontal ? thickness : plot.height,
     })

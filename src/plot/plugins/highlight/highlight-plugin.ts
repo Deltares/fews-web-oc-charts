@@ -98,7 +98,7 @@ function installHighlight(handle: HighlightHandle, context: PlotContext) {
             }) ?? []
           ).map((shape) => {
             const node = shapeElement(shape)
-            node.setAttribute('data-highlight', markDefinition(mark).name)
+            node.dataset.highlight = markDefinition(mark).name
             return node
           }),
         )

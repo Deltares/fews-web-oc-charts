@@ -14,6 +14,7 @@ import {
   accent,
   createKeyCache,
   extentWindow,
+  scaleCoordinate,
   scaleKey,
   setMarkId,
   withinWindow,
@@ -125,7 +126,7 @@ export const textDefinition: MarkDefinition<TextMark> = {
   track: (mark) => isStaticMarkVisible(mark),
   extents(mark, context) {
     if (!isStaticMarkVisible(mark)) return
-    const coordinate = mark.x === context.scale ? 'x' : mark.y === context.scale ? 'y' : undefined
+    const coordinate = scaleCoordinate(mark, context.scale)
     if (!coordinate) return
     const window = extentWindow(context, coordinate === 'x' ? mark.y : mark.x)
     for (let index = 0; index < mark.textValues.length; index += 1) {

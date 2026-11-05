@@ -30,6 +30,7 @@ import {
   type MarkRenderer,
 } from '../mark-definition.js'
 import { applyStaticVisibility, isStaticMarkVisible, staticLegend } from '../static-legend.js'
+import { track } from '../../../core/runtime.js'
 
 function polarRangePath(
   xRange: BandRange,
@@ -212,7 +213,7 @@ export const bandDefinition: MarkDefinition<BandMark> = {
       opacity: mark.opacity,
     }),
   track(mark) {
-    void mark.xValues
+    track(mark.xValues)
     isStaticMarkVisible(mark)
   },
   validateUpdates: (mark, context) =>

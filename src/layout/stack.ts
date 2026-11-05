@@ -95,16 +95,20 @@ export function validateStackUpdate(
   }
 }
 
+interface StackBuffers {
+  readonly lower: Float64Array
+  readonly upper: Float64Array
+  readonly positive: Float64Array
+  readonly negative: Float64Array
+  readonly gap: Uint8Array
+}
+
 /** Top-level so accessors retain only their buffers, not the caller's data or previous layout. */
 function blockEndpoints(
   layer: StackLayer,
   slot: number,
   length: number,
-  lower: Float64Array,
-  upper: Float64Array,
-  positive: Float64Array,
-  negative: Float64Array,
-  gap: Uint8Array,
+  { lower, upper, positive, negative, gap }: StackBuffers,
 ): StackEndpoints {
   function check(row: number) {
     if (!Number.isInteger(row) || row < 0 || row >= length)
@@ -213,7 +217,7 @@ function computeStackBlock(
       }
       endpoints.set(
         layer.id,
-        blockEndpoints(layer, slot, length, lower, upper, positive, negative, gap),
+        blockEndpoints(layer, slot, length, { lower, upper, positive, negative, gap }),
       )
     }
   })
@@ -374,6 +378,38 @@ export function stackCacheDiagnostics(data: TableStore) {
   return Object.freeze({ entries: current?.entries.size ?? 0, bytes: current?.bytes ?? 0 })
 }
 
+function extendStackLayout(
+  data: TableStore,
+  options: StackLayoutOptions,
+  previousLayout: StackLayout,
+  change: NonNullable<TableStore['change']>,
+) {
+  const afterSplice = Math.max(0, change.spliceFrom + change.inputLength - change.evicted)
+  const copies =
+    change.operation === 'append'
+      ? undefined
+      : [
+          {
+            from: 0,
+            to: Math.max(0, change.spliceFrom - change.evicted),
+            previousFrom: change.evicted,
+          },
+          {
+            from: afterSplice,
+            to: data.length,
+            previousFrom: afterSplice + change.evicted + change.replaced - change.inputLength,
+          },
+        ]
+  return computeStackLayout(
+    data,
+    options,
+    previousLayout,
+    Math.max(0, change.previousLength - change.evicted),
+    Math.min(change.previousLength, change.evicted),
+    copies,
+  )
+}
+
 export function stackLayout(data: TableStore, options: StackLayoutOptions): StackLayout {
   const version = data.version
   let current = cache.get(data)
@@ -407,38 +443,13 @@ export function stackLayout(data: TableStore, options: StackLayoutOptions): Stac
   }
   const change = data.change
   const canExtend =
-    previous !== undefined &&
-    previous.version === version - 1 &&
+    previous?.version === version - 1 &&
     change !== undefined &&
     ['append', 'prepend', 'upsert'].includes(change.operation) &&
     change.version === version &&
     previous.layout.layers.length === options.layers.length
   const result = canExtend
-    ? computeStackLayout(
-        data,
-        options,
-        previous.layout,
-        Math.max(0, change.previousLength - change.evicted),
-        Math.min(change.previousLength, change.evicted),
-        change.operation === 'append'
-          ? undefined
-          : [
-              {
-                from: 0,
-                to: Math.max(0, change.spliceFrom - change.evicted),
-                previousFrom: change.evicted,
-              },
-              {
-                from: Math.max(0, change.spliceFrom + change.inputLength - change.evicted),
-                to: data.length,
-                previousFrom:
-                  Math.max(0, change.spliceFrom + change.inputLength - change.evicted) +
-                  change.evicted +
-                  change.replaced -
-                  change.inputLength,
-              },
-            ],
-      )
+    ? extendStackLayout(data, options, previous.layout, change)
     : computeStackLayout(data, options)
   if (result.bytes <= maxBytes) {
     if (previous) {

@@ -105,13 +105,15 @@ function normalizeBand(options: BandOptions, previous?: Omit<BandMark, 'update'>
   }
   validateScaleNames(options)
   validateStaticLegendOptions(options, 'band')
+  const previousX = previous?.xValues
+  const previousY = previous?.yValues
   const xValues =
-    previous && options.xValues === previous.xValues
-      ? previous.xValues
+    previousX !== undefined && options.xValues === previousX
+      ? previousX
       : copyNumericRanges(options.xValues, 'band', 'xValues')
   const yValues =
-    previous && options.yValues === previous.yValues
-      ? previous.yValues
+    previousY !== undefined && options.yValues === previousY
+      ? previousY
       : copyNumericRanges(options.yValues, 'band', 'yValues')
   if (xValues.length !== yValues.length) {
     throw new Error('band.xValues and band.yValues must have equal lengths.')

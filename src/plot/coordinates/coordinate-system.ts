@@ -72,7 +72,9 @@ function skewTDirection(
 ): Orientation {
   const axes = options.axes.filter((axis) => axis.scale === name)
   const scale = options.scales[name]
-  const orientation = scale.kind === 'linear' ? 'x' : scale.kind === 'log' ? 'y' : undefined
+  let orientation: 'x' | 'y' | undefined
+  if (scale.kind === 'linear') orientation = 'x'
+  else if (scale.kind === 'log') orientation = 'y'
   if (!orientation)
     throw new Error('Skew-T plots require linear temperature and log pressure scales.')
   if (
@@ -94,8 +96,7 @@ function polarDirection(
 ): Orientation {
   const axes = options.axes.filter((axis) => axis.scale === name)
   const scale = options.scales[name]
-  const orientation =
-    scale.kind === 'angular' ? 'angular' : scale.kind === 'radial' ? 'radial' : undefined
+  const orientation = scale.kind === 'angular' || scale.kind === 'radial' ? scale.kind : undefined
   if (!orientation) throw new Error(`Polar plots require angular or radial scales ("${name}").`)
   if (axes.some((axis) => axisPosition(axis, candidate, position) !== orientation)) {
     throw new Error(`Polar scale "${name}" requires an axis in the ${orientation} direction.`)

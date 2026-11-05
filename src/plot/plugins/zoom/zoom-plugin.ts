@@ -15,6 +15,7 @@ import { svgElement } from '../../rendering/svg.js'
 import { isBrushHandle } from '../brush/brush.js'
 import { clamp, orderedBounds } from '../brush/brush-selection.js'
 import { isPanHandle } from '../pan/pan.js'
+import { dragMode, touchActionFor } from '../../interaction/gesture-modes.js'
 
 const autoModeThreshold = 25
 type ZoomSelectionMode = Exclude<ZoomOptions['mode'], 'auto'>
@@ -91,7 +92,7 @@ function installZoom(handle: ZoomHandle, context: PlotContext) {
       const plugins = context.options.get().resolved.plugins
       if (active) finish()
       if (suspended || plugins.some(isPanHandle)) return
-      appliedTouchAction = config.mode === 'x' ? 'pan-y' : config.mode === 'y' ? 'pan-x' : 'none'
+      appliedTouchAction = touchActionFor(config.mode)
       context.element.style.setProperty('touch-action', appliedTouchAction)
     }),
   )
@@ -130,14 +131,7 @@ function installZoom(handle: ZoomHandle, context: PlotContext) {
     const dx = bounds.x1 - bounds.x0
     const dy = bounds.y1 - bounds.y0
     if (active.config.mode === 'auto') {
-      active.mode =
-        dx <= autoModeThreshold && dy <= autoModeThreshold
-          ? undefined
-          : dy <= autoModeThreshold
-            ? 'x'
-            : dx <= autoModeThreshold
-              ? 'y'
-              : 'xy'
+      active.mode = dragMode(dx, dy, autoModeThreshold)
     }
     const mode = active.mode
     if (!mode) {
@@ -169,9 +163,11 @@ function installZoom(handle: ZoomHandle, context: PlotContext) {
       const guideEnd = horizontal
         ? clamp(active.y + autoModeThreshold, y, y + height)
         : clamp(active.x + autoModeThreshold, x, x + width)
+      const edgeX = name === 'w' ? x : x + width
+      const edgeY = name === 'n' ? y : y + height
       for (const [attribute, value] of Object.entries({
-        x: horizontal ? (name === 'w' ? x : x + width) - 3 : guideStart,
-        y: horizontal ? guideStart : (name === 'n' ? y : y + height) - 3,
+        x: horizontal ? edgeX - 3 : guideStart,
+        y: horizontal ? guideStart : edgeY - 3,
         width: horizontal ? 6 : guideEnd - guideStart,
         height: horizontal ? guideEnd - guideStart : 6,
       })) {

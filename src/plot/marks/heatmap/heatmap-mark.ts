@@ -13,6 +13,7 @@ import { heatmapHighlight } from '../highlight-shapes.js'
 import {
   createKeyCache,
   extentWindow,
+  scaleCoordinate,
   scaleKey,
   setMarkId,
   type MarkDefinition,
@@ -182,7 +183,7 @@ export const heatmapDefinition: MarkDefinition<HeatmapMark> = {
   },
   extents(mark, context) {
     if (!mark.options.get().resolved.visible) return
-    const coordinate = context.scale === mark.x ? 'x' : context.scale === mark.y ? 'y' : undefined
+    const coordinate = scaleCoordinate(mark, context.scale)
     if (!coordinate) return
     const grid = mark.data.snapshot()
     if (!grid.columns || !grid.rows) return

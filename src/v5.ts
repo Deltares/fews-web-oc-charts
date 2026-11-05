@@ -241,7 +241,7 @@ export type {
   RadialScaleOptions,
   ScaleValue,
   ScaleRange,
-  PixelRange,
+  ScaleRange as PixelRange,
   ScaleKind,
   ContinuousScaleKind,
   NumericDomain,

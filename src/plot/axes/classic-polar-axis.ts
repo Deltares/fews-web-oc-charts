@@ -89,12 +89,9 @@ export function renderClassicPolarAxes(
     )
     const tick = svgElement('g', { transform: `rotate(${degrees(sign * angle)})` })
     const northClockwise = ((degrees(Math.PI / 2 - intercept + sign * angle) % 360) + 360) % 360
-    const anchor =
-      northClockwise > 0 && northClockwise < 180
-        ? 'start'
-        : northClockwise > 180 && northClockwise < 360
-          ? 'end'
-          : 'middle'
+    let anchor = 'middle'
+    if (northClockwise > 0 && northClockwise < 180) anchor = 'start'
+    else if (northClockwise > 180 && northClockwise < 360) anchor = 'end'
     tick.append(
       svgElement('line', {
         x1: outerRadius,

@@ -153,7 +153,7 @@ export function renderStackedAreas(
   const options = mark.options.get().resolved
   if (options.renderer === 'svg') clearCompositeCanvas(group)
   const existing = new Map(
-    Array.from(group.children, (node) => [node.getAttribute('data-layer-id')!, node]),
+    Array.from(group.children, (node) => [(node as SVGElement).dataset.layerId!, node]),
   )
   const shapes: CanvasShape[] = []
   for (const shape of paths) {
@@ -249,7 +249,7 @@ export function styleStackedAreas(group: SVGGElement, mark: StackedAreaMark, tok
   const layers = new Map(options.layers.map((layer) => [layer.id, layer]))
   if (styleCompositeCanvas(group, layers, options, tokens)) return
   for (const node of group.children) {
-    const layer = layers.get(node.getAttribute('data-layer-id')!)
+    const layer = layers.get((node as SVGElement).dataset.layerId!)
     if (!layer) throw new Error('Missing stackedArea layer for rendered path.')
     const style = resolveCompositeStyle(layer, options, tokens)
     node.setAttribute('fill', style.fill)

@@ -82,8 +82,7 @@ export function renderAxes(
       renderClassicAxis(group, gridLayer, axis, bindings[axis.scale], regions, bindings)
     } else {
       renderCartesianAxis(
-        group,
-        gridLayer,
+        { group: group, gridLayer: gridLayer },
         axis,
         bindings[axis.scale],
         regions,
@@ -207,8 +206,7 @@ function renderCartesianCaption(
 }
 
 function renderCartesianAxis(
-  group: SVGGElement,
-  gridLayer: SVGGElement,
+  { group, gridLayer }: { readonly group: SVGGElement; readonly gridLayer: SVGGElement },
   axis: AxisHandle,
   binding: ScaleBinding,
   regions: PlotLayout,

@@ -35,6 +35,13 @@ interface PointIndex {
 
 const indexes = new WeakMap<PointHitTestMark, PointIndex>()
 
+/** The distance along the inspected axis, or in the plane for `xy`. */
+export function axisDistance(axis: 'x' | 'y' | 'xy', dx: number, dy: number) {
+  if (axis === 'x') return Math.abs(dx)
+  if (axis === 'y') return Math.abs(dy)
+  return Math.hypot(dx, dy)
+}
+
 export function nearestPoint(
   mark: PointHitTestMark,
   scales: Readonly<Record<string, ScaleBinding>>,
@@ -112,7 +119,7 @@ export function nearestPoint(
   const dy = candidate.py - point.y
   return Object.freeze({
     ...candidate,
-    distance: axis === 'x' ? Math.abs(dx) : axis === 'y' ? Math.abs(dy) : Math.hypot(dx, dy),
+    distance: axisDistance(axis, dx, dy),
   })
 }
 

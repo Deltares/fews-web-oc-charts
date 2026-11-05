@@ -170,6 +170,16 @@ export function isScaleValue(value: unknown): value is ScaleValue {
   return typeof value === 'string' || (typeof value === 'number' && Number.isFinite(value))
 }
 
+/** Which of a mark's coordinates uses a scale, if any. */
+export function scaleCoordinate(
+  mark: { readonly x: string; readonly y: string },
+  scale: string,
+): 'x' | 'y' | undefined {
+  if (mark.x === scale) return 'x'
+  if (mark.y === scale) return 'y'
+  return undefined
+}
+
 export function extentWindow(context: MarkExtentContext, opposite: string) {
   return context.mode === 'visible' ? autoscaleWindow(context.scales[opposite]) : undefined
 }

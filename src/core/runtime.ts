@@ -1,10 +1,13 @@
-import { createFrameScheduler, type DirtyLayers } from './frame-scheduler.js'
+import { createFrameScheduler } from './frame-scheduler.js'
 import { createReactiveCore } from './reactive.js'
 import type { OptionState, OptionStateSnapshot } from './options.js'
 import type { EffectHandle, ReadonlySignal } from './reactive.js'
 import type { ScaleHandle } from '../scales/scale.js'
 
 export type { EffectHandle } from './reactive.js'
+
+/** Reads a reactive value only to subscribe the running effect to it. */
+export function track(_value: unknown): void {}
 
 export interface SubscribeOptions<T = unknown> {
   /** Call the listener once immediately with the current value (previous = undefined). Default false. */
@@ -50,7 +53,7 @@ export function sourceOf(scale: ScaleHandle): DomainChangeSource | undefined {
   return attribution?.version === scale.domain.version ? attribution.source : undefined
 }
 
-const pending = new Map<(dirty: DirtyLayers) => void, DirtyLayers>()
+const pending = new Map<(dirty: number) => void, number>()
 export const scheduler = createFrameScheduler(() => {
   const work = [...pending]
   pending.clear()
@@ -158,11 +161,11 @@ export function optionSignal<T extends object>(
   }
 }
 
-export function invalidate(render: (dirty: DirtyLayers) => void, dirty: DirtyLayers) {
+export function invalidate(render: (dirty: number) => void, dirty: number) {
   pending.set(render, (pending.get(render) ?? 0) | dirty)
   scheduler.invalidate(dirty)
 }
 
-export function cancelRender(render: (dirty: DirtyLayers) => void) {
+export function cancelRender(render: (dirty: number) => void) {
   pending.delete(render)
 }

@@ -112,7 +112,9 @@ export function renderClassicAxis(
   select(axisGroup).call(renderer)
   axisGroup.setAttribute('font-size', '1em')
   axisGroup.setAttribute('font-family', 'inherit')
-  let baseline = position === 'right' ? plot.width : position === 'bottom' ? plot.height : 0
+  let baseline = 0
+  if (position === 'right') baseline = plot.width
+  else if (position === 'bottom') baseline = plot.height
   if (options.crossAt) {
     const crossed = bindings[options.crossAt.scale]
     const crossedOptions = crossed.scale.options.get().resolved
@@ -194,18 +196,21 @@ export function renderClassicAxis(
     local.append(label)
   }
   if (options.label) {
+    const onRight = position === 'right'
+    const sideX = onRight ? plot.width : 0
+    const sideAnchor = onRight ? 'end' : 'start'
     caption(
       options.label,
-      horizontal ? plot.width / 2 : position === 'right' ? plot.width : 0,
+      horizontal ? plot.width / 2 : sideX,
       horizontal ? plot.height + 30 : -9,
-      horizontal ? 'middle' : position === 'right' ? 'end' : 'start',
+      horizontal ? 'middle' : sideAnchor,
     )
   }
   if (options.unit) {
     caption(
       options.unit,
       horizontal || position === 'right' ? plot.width + 10 : -9,
-      horizontal ? (position === 'bottom' ? plot.height + 9 : -9) : -9,
+      horizontal && position === 'bottom' ? plot.height + 9 : -9,
       horizontal || position === 'right' ? 'start' : 'end',
     )
   }

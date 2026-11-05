@@ -5,6 +5,7 @@ import {
   accent,
   createKeyCache,
   extentWindow,
+  scaleCoordinate,
   scaleKey,
   setMarkId,
   type MarkDefinition,
@@ -172,7 +173,7 @@ function createVectorRenderer<M extends VectorMark>(
 
 function vectorExtents(mark: VectorMark, context: MarkExtentContext) {
   if (!isStaticMarkVisible(mark)) return
-  const coordinate = mark.x === context.scale ? 'x' : mark.y === context.scale ? 'y' : undefined
+  const coordinate = scaleCoordinate(mark, context.scale)
   if (!coordinate) return
   const window = extentWindow(context, coordinate === 'x' ? mark.y : mark.x)
   const length = mark.xValues.length
@@ -222,13 +223,10 @@ function validateVectorMark(mark: VectorMark, context: MarkValidationContext) {
   if (coordinateSystem === 'polar') {
     const radialValues = isArrowsMark(mark) ? [mark.yValues, mark.yEndValues] : [mark.yValues]
     for (const values of radialValues) {
-      for (let index = 0; index < values.length; index += 1) {
-        const value = values[index]
-        if (valid(value) && value < 0) {
-          throw new Error(
-            `${markTypeName(mark)} "${mark.id ?? ''}" requires nonnegative radial coordinates.`,
-          )
-        }
+      if (Array.from(values).some((value) => valid(value) && value < 0)) {
+        throw new Error(
+          `${markTypeName(mark)} "${mark.id ?? ''}" requires nonnegative radial coordinates.`,
+        )
       }
     }
   }

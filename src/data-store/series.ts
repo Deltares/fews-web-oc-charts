@@ -139,7 +139,7 @@ function createStore<Rows>(
   if (options.maxAge !== undefined && (!Number.isFinite(options.maxAge) || options.maxAge < 0)) {
     throw new RangeError('series.maxAge must be a nonnegative finite number.')
   }
-  const precision = options.precision === undefined ? 'float64' : options.precision
+  const { precision = 'float64' } = options
   if (precision !== 'float32' && precision !== 'float64') {
     throw new Error('series.precision must be float32 or float64.')
   }
@@ -350,7 +350,8 @@ function createStore<Rows>(
     const addValue = (logical: number) => {
       const physical = slot(logical)
       if (!Number.isFinite(y[physical])) return
-      const filterValue = window ? (windowAxis === 'x' ? x[physical] : y[physical]) : undefined
+      let filterValue: number | undefined
+      if (window) filterValue = windowAxis === 'x' ? x[physical] : y[physical]
       if (filterValue !== undefined && (filterValue < filterLow || filterValue > filterHigh)) return
       const value = axis === 'x' ? x[physical] : y[physical]
       low = Math.min(low, value)
@@ -419,7 +420,7 @@ function createStore<Rows>(
       const flush = () => {
         if (first < 0) return
         for (const index of [first, minimum, maximum, last].sort((a, b) => a - b)) {
-          if (selected[selected.length - 1] !== index) selected.push(index)
+          if (selected.at(-1) !== index) selected.push(index)
         }
         first = -1
         minimum = -1
@@ -438,7 +439,7 @@ function createStore<Rows>(
         const value = yAt(index)
         if (!Number.isFinite(value)) {
           flush()
-          if (!previousWasMissing && selected[selected.length - 1] !== index) selected.push(index)
+          if (!previousWasMissing && selected.at(-1) !== index) selected.push(index)
           previousWasMissing = true
           return
         }

@@ -276,6 +276,28 @@ export function zonedTicks(
   return Object.freeze(ticks.toSorted((left, right) => left - right))
 }
 
+function tickLabelOptions(unit: string): {
+  primaryOptions: Intl.DateTimeFormatOptions
+  secondaryOptions: Intl.DateTimeFormatOptions
+} {
+  if (unit === 'minute' || unit === 'hour') {
+    return {
+      primaryOptions: { hour: '2-digit', minute: '2-digit' },
+      secondaryOptions: { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' },
+    }
+  }
+  if (unit === 'day' || unit === 'week') {
+    return {
+      primaryOptions: { weekday: 'short' },
+      secondaryOptions: { day: 'numeric', month: 'short', year: 'numeric' },
+    }
+  }
+  if (unit === 'month') {
+    return { primaryOptions: { month: 'short' }, secondaryOptions: { year: 'numeric' } }
+  }
+  return { primaryOptions: { year: 'numeric' }, secondaryOptions: {} }
+}
+
 export function formatZonedTickLabels(
   timeZone: string,
   locale: string,
@@ -286,22 +308,7 @@ export function formatZonedTickLabels(
   const interval = intervalFor(domain[1] - domain[0], count)
   const dateTime = (options: Intl.DateTimeFormatOptions) =>
     new Intl.DateTimeFormat(locale, { timeZone, ...options })
-  const primaryOptions: Intl.DateTimeFormatOptions =
-    interval.unit === 'minute' || interval.unit === 'hour'
-      ? { hour: '2-digit', minute: '2-digit' }
-      : interval.unit === 'day' || interval.unit === 'week'
-        ? { weekday: 'short' }
-        : interval.unit === 'month'
-          ? { month: 'short' }
-          : { year: 'numeric' }
-  const secondaryOptions: Intl.DateTimeFormatOptions =
-    interval.unit === 'minute' || interval.unit === 'hour'
-      ? { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }
-      : interval.unit === 'day' || interval.unit === 'week'
-        ? { day: 'numeric', month: 'short', year: 'numeric' }
-        : interval.unit === 'month'
-          ? { year: 'numeric' }
-          : {}
+  const { primaryOptions, secondaryOptions } = tickLabelOptions(interval.unit)
   const primary = dateTime(primaryOptions)
   const secondary = Object.keys(secondaryOptions).length ? dateTime(secondaryOptions) : undefined
   const offsets = new Map<string, Set<number>>()

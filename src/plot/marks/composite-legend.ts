@@ -42,13 +42,10 @@ export function compositeLegend<L extends CompositeLayer>(
         const markVisible = options().visible
         update(
           true,
-          layers().map((candidate) =>
-            candidate.id === layer.id
-              ? { ...candidate, visible }
-              : markVisible
-                ? candidate
-                : { ...candidate, visible: false },
-          ),
+          layers().map((candidate) => {
+            if (candidate.id === layer.id) return { ...candidate, visible }
+            return markVisible ? candidate : { ...candidate, visible: false }
+          }),
         )
       },
     })),

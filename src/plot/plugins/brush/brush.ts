@@ -237,11 +237,10 @@ export function brush(initial: BrushConfig = {}): BrushHandle {
     contextVersion.get()
     const context = contexts.values().next().value
     const sharedValue = config.selection?.selection.get()
-    const next = config.selection
-      ? context
-        ? localSharedSelection(sharedValue, config.mode, context)
-        : undefined
-      : selection.get()
+    let next = config.selection ? undefined : selection.get()
+    if (config.selection && context) {
+      next = localSharedSelection(sharedValue, config.mode, context)
+    }
     if (!equalSelection(previousView, next)) {
       previousView = next
       viewVersion += 1
