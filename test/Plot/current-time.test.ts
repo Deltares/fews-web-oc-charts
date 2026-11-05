@@ -35,6 +35,9 @@ function host() {
   return element
 }
 
+const layer = (plot: Plot) =>
+  plot.element.querySelector<SVGGElement>(':scope > [data-layer="current-time"]')
+
 async function setup(
   interaction: CurrentTimeHandle,
   config: Parameters<typeof createPlot>[1] = {},
@@ -49,12 +52,12 @@ async function setup(
     ...config,
   })
   plots.push(plot)
+  // Plugins install once the browser reports the plot as visible, which can take a few frames.
+  await vi.waitFor(() => expect(layer(plot)).not.toBeNull())
   await frame()
   return { plot, t }
 }
 
-const layer = (plot: Plot) =>
-  plot.element.querySelector<SVGGElement>(':scope > [data-layer="current-time"]')
 const line = (plot: Plot) => layer(plot)?.querySelector('[data-current-time-line]')
 const label = (plot: Plot) => layer(plot)?.querySelector<SVGGElement>('[data-current-time-label]')
 

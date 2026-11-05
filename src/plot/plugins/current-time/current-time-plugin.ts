@@ -54,7 +54,11 @@ function liveScaleContext(context: PlotContext): ScaleContext {
 }
 
 function installCurrentTime(handle: CurrentTimeHandle, context: PlotContext) {
-  const guide = svgElement('g', { 'data-layer': 'current-time', 'aria-hidden': 'true' })
+  const guide = svgElement('g', {
+    'data-layer': 'current-time',
+    'aria-hidden': 'true',
+    display: 'none',
+  })
   const line = svgElement('line', {
     'data-current-time-line': '',
     'vector-effect': 'non-scaling-stroke',
@@ -64,7 +68,11 @@ function installCurrentTime(handle: CurrentTimeHandle, context: PlotContext) {
     'data-current-time-indicator': '',
     points: '0,0 5,5 -5,5',
   })
-  const label = svgElement('g', { 'data-current-time-label': '', 'pointer-events': 'none' })
+  const label = svgElement('g', {
+    'data-current-time-label': '',
+    'pointer-events': 'none',
+    display: 'none',
+  })
   const labelBackground = svgElement('rect', { rx: 3 })
   const labelText = svgElement('text', { x: 6, 'dominant-baseline': 'central' })
   label.append(labelBackground, labelText)
