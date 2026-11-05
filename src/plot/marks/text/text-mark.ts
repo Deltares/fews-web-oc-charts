@@ -24,6 +24,51 @@ import {
 } from '../mark-definition.js'
 import { applyStaticVisibility, isStaticMarkVisible, staticLegend } from '../static-legend.js'
 
+function setLabelTransform(
+  label: SVGTextElement,
+  angle: number | undefined,
+  local: boolean | undefined,
+  px: number,
+  py: number,
+) {
+  if (local) {
+    const rotate = angle ? ` rotate(${angle})` : ''
+    label.setAttribute('transform', `translate(${px},${py})${rotate}`)
+  } else if (angle) {
+    label.setAttribute('transform', `rotate(${angle} ${px} ${py})`)
+  } else {
+    label.removeAttribute('transform')
+  }
+}
+
+function updateTextLabel(
+  label: SVGTextElement,
+  mark: TextMark,
+  index: number,
+  context: MarkRenderContext,
+  xScale: MarkRenderContext['scales'][string],
+  yScale: MarkRenderContext['scales'][string],
+) {
+  const x = mark.xValues[index]
+  const y = mark.yValues[index]
+  const value = mark.textValues[index]
+  if (!isValidTextCoordinate(x) || !isValidTextCoordinate(y) || value == null) {
+    label.setAttribute('display', 'none')
+    label.textContent = ''
+    return
+  }
+  const px = xScale.project(x)
+  const py = yScale.project(y)
+  label.removeAttribute('display')
+  label.setAttribute('x', String(context.localCoordinates ? 0 : px))
+  label.setAttribute('y', String(context.localCoordinates ? 0 : py))
+  label.setAttribute('dx', String(mark.dx))
+  label.setAttribute('dy', String(mark.dy))
+  setLabelTransform(label, mark.angle, context.localCoordinates, px, py)
+  label.dataset.index = String(index)
+  label.textContent = String(value)
+}
+
 function createTextRenderer(): MarkRenderer<TextMark> {
   const group = svgElement('g', { 'data-mark': 'text' })
   const geometryKey = createKeyCache()
@@ -53,28 +98,7 @@ function createTextRenderer(): MarkRenderer<TextMark> {
           label = svgElement('text', { 'data-mark': 'text-label' })
           group.append(label)
         }
-        const x = mark.xValues[index]
-        const y = mark.yValues[index]
-        const value = mark.textValues[index]
-        if (!isValidTextCoordinate(x) || !isValidTextCoordinate(y) || value == null) {
-          label.setAttribute('display', 'none')
-          label.textContent = ''
-          continue
-        }
-        const px = xScale.project(x)
-        const py = yScale.project(y)
-        label.removeAttribute('display')
-        label.setAttribute('x', String(context.localCoordinates ? 0 : px))
-        label.setAttribute('y', String(context.localCoordinates ? 0 : py))
-        label.setAttribute('dx', String(mark.dx))
-        label.setAttribute('dy', String(mark.dy))
-        if (context.localCoordinates) {
-          const rotate = mark.angle ? ` rotate(${mark.angle})` : ''
-          label.setAttribute('transform', `translate(${px},${py})${rotate}`)
-        } else if (mark.angle) label.setAttribute('transform', `rotate(${mark.angle} ${px} ${py})`)
-        else label.removeAttribute('transform')
-        label.dataset.index = String(index)
-        label.textContent = String(value)
+        updateTextLabel(label, mark, index, context, xScale, yScale)
       }
       while (group.children.length > mark.textValues.length) group.lastElementChild?.remove()
     },

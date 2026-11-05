@@ -82,6 +82,29 @@ export function compositeHits(
   return areaHits(mark, scales, point, axis, plot, pathContext)
 }
 
+function containsPoint(
+  item: { x: number; y: number; width: number; height: number },
+  point: { readonly x: number; readonly y: number },
+) {
+  return (
+    item.width > 0 &&
+    item.height > 0 &&
+    point.x >= item.x &&
+    point.x <= item.x + item.width &&
+    point.y >= item.y &&
+    point.y <= item.y + item.height
+  )
+}
+
+function isOutside(point: { readonly x: number; readonly y: number }, plot: Readonly<Region>) {
+  return (
+    point.x < plot.x ||
+    point.x > plot.x + plot.width ||
+    point.y < plot.y ||
+    point.y > plot.y + plot.height
+  )
+}
+
 function barHits(
   mark: BarMark,
   scales: Readonly<Record<string, ScaleBinding>>,
@@ -97,13 +120,7 @@ function barHits(
   const categoryAxis = horizontal ? 'y' : 'x'
 
   if (axis === 'xy') {
-    if (
-      point.x < plot.x ||
-      point.x > plot.x + plot.width ||
-      point.y < plot.y ||
-      point.y > plot.y + plot.height
-    )
-      return []
+    if (isOutside(point, plot)) return []
     const spatial = (index.spatial ??= createSpatialGrid(
       rectangles,
       (rectangle) => rectangle,
@@ -112,20 +129,12 @@ function barHits(
     const rectangle = [...spatial.at(point.x, point.y)]
       .sort((left, right) => index.order.get(left)! - index.order.get(right)!)
       .reverse()
-      .find(
-        (item) =>
-          item.width > 0 &&
-          item.height > 0 &&
-          point.x >= item.x &&
-          point.x <= item.x + item.width &&
-          point.y >= item.y &&
-          point.y <= item.y + item.height,
-      )
+      .find((item) => containsPoint(item, point))
     return rectangle ? [barHit(mark, rectangle, 0, index)] : []
   }
 
+  const coordinate = axis === 'x' ? point.x : point.y
   if (axis === categoryAxis) {
-    const coordinate = axis === 'x' ? point.x : point.y
     const rowIndex = lowerBound(index.rows, coordinate, (row) => row.center)
     const before = index.rows[rowIndex - 1]
     const after = index.rows[rowIndex]
@@ -139,7 +148,6 @@ function barHits(
     return chosen.rectangles.map((rectangle) => barHit(mark, rectangle, distance, index))
   }
 
-  const coordinate = axis === 'x' ? point.x : point.y
   const valueIndex = lowerBound(index.values, coordinate, (item) =>
     axis === 'x' ? item.x + item.width / 2 : item.y + item.height / 2,
   )
@@ -258,22 +266,13 @@ function areaHits(
   const visible = layout.layers.filter((layer) => visibleIds.has(layer.id))
 
   if (axis === 'xy') {
-    if (
-      point.x < plot.x ||
-      point.x > plot.x + plot.width ||
-      point.y < plot.y ||
-      point.y > plot.y + plot.height
-    )
-      return []
-    for (const layer of [...visible].reverse()) {
-      const shape = pathsByLayer.get(layer.id)
-      if (shape && pathContext.isPointInPath(stackedAreaPath(shape), point.x, point.y)) {
-        const row = nearestAreaRow(mark, xScale, point.x)
-        const hit = areaHit(mark, layer, row, scales, 0)
-        return hit ? [hit] : []
-      }
-    }
-    return []
+    if (isOutside(point, plot)) return []
+    const layer = [...visible].reverse().find((candidate) => {
+      const shape = pathsByLayer.get(candidate.id)
+      return shape && pathContext.isPointInPath(stackedAreaPath(shape), point.x, point.y)
+    })
+    const hit = layer && areaHit(mark, layer, nearestAreaRow(mark, xScale, point.x), scales, 0)
+    return hit ? [hit] : []
   }
 
   if (axis === 'x') {

@@ -123,6 +123,25 @@ export function nearestPoint(
   })
 }
 
+function visiblePoint(
+  index: number,
+  x: unknown,
+  y: unknown,
+  xScale: ScaleBinding,
+  yScale: ScaleBinding,
+  plot: Readonly<Region>,
+): IndexedPoint | undefined {
+  if (!isScaleValue(x) || !isScaleValue(y)) return undefined
+  if (!canProject(xScale, x) || !canProject(yScale, y)) return undefined
+  const px = xScale.project(x)
+  const py = yScale.project(y)
+  if (!Number.isFinite(px) || !Number.isFinite(py)) return undefined
+  if (px < plot.x || px > plot.x + plot.width || py < plot.y || py > plot.y + plot.height) {
+    return undefined
+  }
+  return Object.freeze({ index, x, y, px, py })
+}
+
 function buildPointIndex(
   mark: PointHitTestMark,
   xScale: ScaleBinding,
@@ -142,16 +161,8 @@ function buildPointIndex(
   for (let index = 0; index < length; index += 1) {
     const x = data ? data.xAt(index) : line?.xValues[index]
     const y = data ? data.yAt(index) : line?.yValues[index]
-    if (!isScaleValue(x) || !isScaleValue(y)) continue
-    if (!canProject(xScale, x) || !canProject(yScale, y)) continue
-
-    const px = xScale.project(x)
-    const py = yScale.project(y)
-    if (!Number.isFinite(px) || !Number.isFinite(py)) continue
-    if (px < plot.x || px > plot.x + plot.width || py < plot.y || py > plot.y + plot.height) {
-      continue
-    }
-    points.push(Object.freeze({ index, x, y, px, py }))
+    const point = visiblePoint(index, x, y, xScale, yScale, plot)
+    if (point) points.push(point)
   }
   const byX = [...points].sort((left, right) => left.px - right.px || left.index - right.index)
   const byY = [...points].sort((left, right) => left.py - right.py || left.index - right.index)

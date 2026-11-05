@@ -134,6 +134,31 @@ export function isTooltipHandle(value: object): value is TooltipHandle {
   return handles.has(value)
 }
 
+function validateFormatting(options: Readonly<TooltipOptions>) {
+  for (const key of ['formatValue', 'formatUnit', 'formatRange'] as const) {
+    if (options[key] !== undefined && typeof options[key] !== 'function') {
+      throw new TypeError(`tooltip.${key} must be a function.`)
+    }
+  }
+  for (const key of ['showX', 'showY'] as const) {
+    if (options[key] !== undefined && typeof options[key] !== 'boolean') {
+      throw new TypeError(`tooltip.${key} must be boolean.`)
+    }
+  }
+  if (typeof options.coordinateLabels !== 'boolean') {
+    throw new TypeError('tooltip.coordinateLabels must be boolean.')
+  }
+  if (options.bounds !== undefined && !['always', 'stacked', 'never'].includes(options.bounds)) {
+    throw new Error('tooltip.bounds must be always, stacked or never.')
+  }
+  if (
+    options.digits !== undefined &&
+    (!Number.isInteger(options.digits) || options.digits < 0 || options.digits > 15)
+  ) {
+    throw new RangeError('tooltip.digits must be an integer in [0, 15].')
+  }
+}
+
 export function tooltip(initial: OptionPatch<TooltipOptions> = {}): TooltipHandle {
   validateKeys(initial, optionKeys, 'tooltip')
   const consumers = new Set<(options: Readonly<TooltipOptions>) => void>()
@@ -162,31 +187,7 @@ export function tooltip(initial: OptionPatch<TooltipOptions> = {}): TooltipHandl
       formatRange: undefined,
     }),
     validate(options) {
-      for (const key of ['formatValue', 'formatUnit', 'formatRange'] as const) {
-        if (options[key] !== undefined && typeof options[key] !== 'function') {
-          throw new TypeError(`tooltip.${key} must be a function.`)
-        }
-      }
-      for (const key of ['showX', 'showY'] as const) {
-        if (options[key] !== undefined && typeof options[key] !== 'boolean') {
-          throw new TypeError(`tooltip.${key} must be boolean.`)
-        }
-      }
-      if (typeof options.coordinateLabels !== 'boolean') {
-        throw new TypeError('tooltip.coordinateLabels must be boolean.')
-      }
-      if (
-        options.bounds !== undefined &&
-        !['always', 'stacked', 'never'].includes(options.bounds)
-      ) {
-        throw new Error('tooltip.bounds must be always, stacked or never.')
-      }
-      if (
-        options.digits !== undefined &&
-        (!Number.isInteger(options.digits) || options.digits < 0 || options.digits > 15)
-      ) {
-        throw new RangeError('tooltip.digits must be an integer in [0, 15].')
-      }
+      validateFormatting(options)
       if (!['x', 'y', 'xy'].includes(options.axis)) {
         throw new Error('tooltip.axis must be x, y or xy.')
       }

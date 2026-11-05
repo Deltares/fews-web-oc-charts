@@ -350,6 +350,25 @@ export function createEnsemble(
     generation += 1
   }
 
+  function evictOldest(evict: (value: number) => void, touchedBlocks: Set<number>) {
+    evict(xAt(0))
+    touchedBlocks.add(Math.floor(head / extentBlockSize))
+    head = (head + 1) % x.length
+    count -= 1
+  }
+
+  /** Stores one input row at the end of the ring and returns its physical slot. */
+  function writeRow(columns: EnsembleColumns, step: number) {
+    const physical = (head + count) % x.length
+    x[physical] = columns.x[step]
+    for (let member = 0; member < memberCount; member += 1) {
+      values[member * x.length + physical] = columns.values[member * columns.length + step]
+    }
+    count += 1
+    serial += 1
+    return physical
+  }
+
   function push(columns: EnsembleColumns) {
     let evictedCount = 0
     let evictedFrom = Infinity
@@ -364,29 +383,12 @@ export function createEnsemble(
     for (let step = 0; step < start; step += 1) evict(columns.x[step])
     reserve(Math.min(maxPoints, count + columns.length - start))
     for (let step = start; step < columns.length; step += 1) {
-      if (count === x.length) {
-        evict(xAt(0))
-        touchedBlocks.add(Math.floor(head / extentBlockSize))
-        head = (head + 1) % x.length
-        count -= 1
-      }
-      const physical = (head + count) % x.length
-      x[physical] = columns.x[step]
-      for (let member = 0; member < memberCount; member += 1) {
-        values[member * x.length + physical] = columns.values[member * columns.length + step]
-      }
-      count += 1
-      serial += 1
-      touchedBlocks.add(Math.floor(physical / extentBlockSize))
+      if (count === x.length) evictOldest(evict, touchedBlocks)
+      touchedBlocks.add(Math.floor(writeRow(columns, step) / extentBlockSize))
     }
     if (count && maxAge !== undefined) {
       const cutoff = xAt(count - 1) - maxAge
-      while (count && xAt(0) < cutoff) {
-        evict(xAt(0))
-        touchedBlocks.add(Math.floor(head / extentBlockSize))
-        head = (head + 1) % x.length
-        count -= 1
-      }
+      while (count && xAt(0) < cutoff) evictOldest(evict, touchedBlocks)
     }
     if (extentIndexDirty) rebuildExtentIndex()
     else for (const block of touchedBlocks) extentBlocks[block] = refreshExtentBlock(block)

@@ -275,6 +275,26 @@ function createEnsembleRenderer(): MarkRenderer<EnsembleMark> {
   const geometryKey = createKeyCache()
   const styleKey = createKeyCache()
 
+  function updateMemberPath(member: number, id: string, d: string) {
+    let node = membersGroup.children[member] as SVGPathElement | undefined
+    if (!node) {
+      node = svgElement('path', { 'data-part': 'member', fill: 'none' })
+      membersGroup.append(node)
+    }
+    node.dataset.memberId = id
+    node.setAttribute('d', d)
+  }
+
+  function finishMembers(canvas: boolean, count: number, shapes: CanvasShape[]) {
+    if (!canvas) {
+      while (membersGroup.children.length > count) membersGroup.lastElementChild?.remove()
+    } else if (count) {
+      renderCompositeCanvas(membersGroup, shapes)
+    } else {
+      clearCompositeCanvas(membersGroup)
+    }
+  }
+
   function renderMembers(
     mark: EnsembleMark,
     options: Readonly<EnsembleOptions>,
@@ -305,24 +325,10 @@ function createEnsembleRenderer(): MarkRenderer<EnsembleMark> {
         decimate ? store.memberLod(member, window, width) : undefined,
       )
       const id = store.members[member].id
-      if (canvas) {
-        shapes.push({ layerId: id, path: sink as Path2D })
-        continue
-      }
-      let node = membersGroup.children[member] as SVGPathElement | undefined
-      if (!node) {
-        node = svgElement('path', { 'data-part': 'member', fill: 'none' })
-        membersGroup.append(node)
-      }
-      node.dataset.memberId = id
-      node.setAttribute('d', (sink as ReturnType<typeof svgPath>).d)
+      if (canvas) shapes.push({ layerId: id, path: sink as Path2D })
+      else updateMemberPath(member, id, (sink as ReturnType<typeof svgPath>).d)
     }
-    if (canvas) {
-      if (count) renderCompositeCanvas(membersGroup, shapes)
-      else clearCompositeCanvas(membersGroup)
-    } else {
-      while (membersGroup.children.length > count) membersGroup.lastElementChild?.remove()
-    }
+    finishMembers(canvas, count, shapes)
   }
 
   return {

@@ -92,6 +92,25 @@ export function releaseSharedPointer(pointer: SharedPointer, source: symbol) {
   if (reactive.untracked(() => state.get().source) === source) state.set(inactive)
 }
 
+/** The pixel for a shared value, if it is in the scale's domain and inside the region. */
+function sharedPixel(
+  binding: ScaleBinding,
+  value: SharedPointerValue['value'],
+  axis: 'x' | 'y',
+  region: Readonly<Region>,
+) {
+  const domain = binding.scale.domain.get()
+  if (binding.scale.kind === 'band') {
+    if (!domain.includes(value)) return undefined
+  } else if (Number(value) < Number(domain[0]) || Number(value) > Number(domain[1])) {
+    return undefined
+  }
+  const pixel = binding.project(value)
+  const low = axis === 'x' ? region.x : region.y
+  const high = low + (axis === 'x' ? region.width : region.height)
+  return Number.isFinite(pixel) && pixel >= low && pixel <= high ? pixel : undefined
+}
+
 export function projectSharedPointer(
   pointer: SharedPointer,
   mode: 'x' | 'y' | 'xy',
@@ -113,16 +132,8 @@ export function projectSharedPointer(
     if (!match) continue
     const [, binding] = match
     const value = shared.values.find((entry) => entry.scale === binding.scale)!.value
-    const domain = binding.scale.domain.get()
-    if (binding.scale.kind === 'band') {
-      if (!domain.includes(value)) continue
-    } else if (Number(value) < Number(domain[0]) || Number(value) > Number(domain[1])) {
-      continue
-    }
-    const pixel = binding.project(value)
-    const low = axis === 'x' ? region.x : region.y
-    const high = low + (axis === 'x' ? region.width : region.height)
-    if (!Number.isFinite(pixel) || pixel < low || pixel > high) continue
+    const pixel = sharedPixel(binding, value, axis, region)
+    if (pixel === undefined) continue
     point[axis] = pixel
     axes += axis
   }

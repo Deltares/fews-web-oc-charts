@@ -198,6 +198,23 @@ function vectorExtents(mark: VectorMark, context: MarkExtentContext) {
   }
 }
 
+function hasVectorScaleKinds(coordinateSystem: string, xKind: string, yKind: string) {
+  if (coordinateSystem === 'polar') return xKind === 'angular' && yKind === 'radial'
+  const continuous = ['linear', 'time', 'degrees']
+  return continuous.includes(xKind) && continuous.includes(yKind)
+}
+
+function validateRadialValues(mark: VectorMark) {
+  const radialValues = isArrowsMark(mark) ? [mark.yValues, mark.yEndValues] : [mark.yValues]
+  for (const values of radialValues) {
+    if (Array.from(values).some((value) => valid(value) && value < 0)) {
+      throw new Error(
+        `${markTypeName(mark)} "${mark.id ?? ''}" requires nonnegative radial coordinates.`,
+      )
+    }
+  }
+}
+
 function validateVectorMark(mark: VectorMark, context: MarkValidationContext) {
   const { coordinateSystem, scales, direction } = context
   if (!Object.hasOwn(scales, mark.x) || !Object.hasOwn(scales, mark.y)) {
@@ -212,24 +229,10 @@ function validateVectorMark(mark: VectorMark, context: MarkValidationContext) {
       `${markTypeName(mark)} "${mark.id ?? ''}" requires ${xOrientation}/${yOrientation} scales.`,
     )
   }
-  const expectedKinds =
-    coordinateSystem === 'polar'
-      ? xScale.kind === 'angular' && yScale.kind === 'radial'
-      : ['linear', 'time', 'degrees'].includes(xScale.kind) &&
-        ['linear', 'time', 'degrees'].includes(yScale.kind)
-  if (!expectedKinds) {
+  if (!hasVectorScaleKinds(coordinateSystem, xScale.kind, yScale.kind)) {
     throw new Error(`${markTypeName(mark)} requires continuous scales for its coordinate system.`)
   }
-  if (coordinateSystem === 'polar') {
-    const radialValues = isArrowsMark(mark) ? [mark.yValues, mark.yEndValues] : [mark.yValues]
-    for (const values of radialValues) {
-      if (Array.from(values).some((value) => valid(value) && value < 0)) {
-        throw new Error(
-          `${markTypeName(mark)} "${mark.id ?? ''}" requires nonnegative radial coordinates.`,
-        )
-      }
-    }
-  }
+  if (coordinateSystem === 'polar') validateRadialValues(mark)
 }
 
 function markTypeName(mark: VectorMark) {

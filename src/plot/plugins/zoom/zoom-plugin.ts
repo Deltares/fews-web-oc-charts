@@ -16,6 +16,7 @@ import { isBrushHandle } from '../brush/brush.js'
 import { clamp, orderedBounds } from '../brush/brush-selection.js'
 import { isPanHandle } from '../pan/pan.js'
 import { dragMode, touchActionFor } from '../../interaction/gesture-modes.js'
+import type { ScaleBinding } from '../../../scales/scale.js'
 
 const autoModeThreshold = 25
 type ZoomSelectionMode = Exclude<ZoomOptions['mode'], 'auto'>
@@ -288,6 +289,20 @@ function installZoom(handle: ZoomHandle, context: PlotContext) {
     }
   })
 
+  function resetScale(reset: string, name: string, binding: ScaleBinding) {
+    if (reset === 'toggle' && toggled) {
+      const previous = toggledDomains.get(name)
+      if (previous) withSource('reset', () => binding.scale.update({ domain: previous }))
+      toggledDomains.delete(name)
+      return
+    }
+    if (reset === 'toggle') toggledDomains.set(name, binding.scale.domain.get())
+    const initial = initialDomains.get(name)
+    const domain =
+      reset === 'initial' && initial?.scale === binding.scale ? initial?.domain : undefined
+    withSource('reset', () => binding.scale.update({ domain }))
+  }
+
   context.on('dblclick', (event) => {
     if (event.button !== 0) return
     const config = handle.options.get().resolved
@@ -297,21 +312,7 @@ function installZoom(handle: ZoomHandle, context: PlotContext) {
     const mode = config.mode === 'auto' ? 'xy' : config.mode
     if (mode.includes('x')) axes.add('x')
     if (mode.includes('y')) axes.add('y')
-    for (const { name, binding } of zoomableScales(axes)) {
-      if (config.reset === 'toggle' && toggled) {
-        const previous = toggledDomains.get(name)
-        if (previous) withSource('reset', () => binding.scale.update({ domain: previous }))
-        toggledDomains.delete(name)
-        continue
-      }
-      if (config.reset === 'toggle') toggledDomains.set(name, binding.scale.domain.get())
-      const initial = initialDomains.get(name)
-      if (config.reset === 'initial' && initial?.scale === binding.scale) {
-        withSource('reset', () => binding.scale.update({ domain: initial.domain }))
-      } else {
-        withSource('reset', () => binding.scale.update({ domain: undefined }))
-      }
-    }
+    for (const { name, binding } of zoomableScales(axes)) resetScale(config.reset, name, binding)
     toggled = config.reset === 'toggle' && !toggled
     event.preventDefault()
   })

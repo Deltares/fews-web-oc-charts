@@ -59,36 +59,37 @@ export function validateSeriesUpdates(mark: SeriesMark, validate: (candidate: Li
   }
 }
 
+function validatePartOptions(value: unknown, keys: string[], name: string) {
+  if (value === false) return
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new TypeError(`${name} must be false or options.`)
+  }
+  validateKeys(value, keys, name)
+}
+
 function visual(options: Readonly<SeriesOptions>): LineMark {
   if (typeof options.visible !== 'boolean') throw new TypeError('series.visible must be boolean.')
   if (typeof options.label !== 'string') throw new TypeError('series.label must be a string.')
   validateLegendGroup(options.legendGroup, 'series')
-  if (options.line !== false) {
-    if (!options.line || typeof options.line !== 'object' || Array.isArray(options.line))
-      throw new TypeError('series.line must be false or options.')
-    validateKeys(
-      options.line,
-      [
-        'stroke',
-        'width',
-        'strokeDasharray',
-        'strokeLinecap',
-        'strokeLinejoin',
-        'digits',
-        'vectorEffect',
-      ],
-      'series.line',
-    )
-  }
-  if (options.markers !== false) {
-    if (!options.markers || typeof options.markers !== 'object' || Array.isArray(options.markers))
-      throw new TypeError('series.markers must be false or options.')
-    validateKeys(
-      options.markers,
-      ['symbol', 'render', 'size', 'fill', 'stroke', 'strokeWidth', 'skip'],
-      'series.markers',
-    )
-  }
+  validatePartOptions(
+    options.line,
+    [
+      'stroke',
+      'width',
+      'strokeDasharray',
+      'strokeLinecap',
+      'strokeLinejoin',
+      'digits',
+      'vectorEffect',
+    ],
+    'series.line',
+  )
+  validatePartOptions(
+    options.markers,
+    ['symbol', 'render', 'size', 'fill', 'stroke', 'strokeWidth', 'skip'],
+    'series.markers',
+  )
+  const lineStyle = options.line === false ? undefined : options.line
   const markers =
     options.markers === false
       ? false
@@ -108,13 +109,13 @@ function visual(options: Readonly<SeriesOptions>): LineMark {
     xValues: [],
     yValues: [],
     line: options.line !== false,
-    stroke: options.line === false ? undefined : options.line.stroke,
-    strokeWidth: options.line === false ? undefined : options.line.width,
-    strokeDasharray: options.line === false ? undefined : options.line.strokeDasharray,
-    strokeLinecap: options.line === false ? undefined : options.line.strokeLinecap,
-    strokeLinejoin: options.line === false ? undefined : options.line.strokeLinejoin,
-    digits: options.line === false ? undefined : options.line.digits,
-    vectorEffect: options.line === false ? undefined : options.line.vectorEffect,
+    stroke: lineStyle?.stroke,
+    strokeWidth: lineStyle?.width,
+    strokeDasharray: lineStyle?.strokeDasharray,
+    strokeLinecap: lineStyle?.strokeLinecap,
+    strokeLinejoin: lineStyle?.strokeLinejoin,
+    digits: lineStyle?.digits,
+    vectorEffect: lineStyle?.vectorEffect,
     markers,
     area: options.area === false ? undefined : options.area,
   })

@@ -410,21 +410,54 @@ function extendStackLayout(
   )
 }
 
+type StackCache = NonNullable<ReturnType<typeof cache.get>>
+type StackCacheEntry = NonNullable<ReturnType<StackCache['entries']['get']>>
+
+function isIncremental(change: TableStore['change'], version: number) {
+  return (
+    change !== undefined &&
+    ['append', 'prepend', 'upsert'].includes(change.operation) &&
+    change.version === version
+  )
+}
+
+function cacheForVersion(data: TableStore, version: number): StackCache {
+  const current = cache.get(data)
+  if (current?.version === version) return current
+  const next: StackCache =
+    current && isIncremental(data.change, version)
+      ? { ...current, version }
+      : { version, entries: new Map(), bytes: 0 }
+  cache.set(data, next)
+  return next
+}
+
+/** Stores a layout within the byte and entry budgets, evicting the oldest entries first. */
+function storeLayout(
+  current: StackCache,
+  key: string,
+  previous: StackCacheEntry | undefined,
+  result: StackLayout,
+  version: number,
+) {
+  if (result.bytes > maxBytes) return
+  if (previous) {
+    current.entries.delete(key)
+    current.bytes -= previous.layout.bytes
+  }
+  while (current.entries.size >= maxEntries || current.bytes + result.bytes > maxBytes) {
+    const oldest = current.entries.entries().next().value
+    if (!oldest) break
+    current.entries.delete(oldest[0])
+    current.bytes -= oldest[1].layout.bytes
+  }
+  current.entries.set(key, { version, layout: result })
+  current.bytes += result.bytes
+}
+
 export function stackLayout(data: TableStore, options: StackLayoutOptions): StackLayout {
   const version = data.version
-  let current = cache.get(data)
-  if (current?.version !== version) {
-    const change = data.change
-    const reusable =
-      current !== undefined &&
-      change !== undefined &&
-      ['append', 'prepend', 'upsert'].includes(change.operation) &&
-      change.version === version
-    current =
-      reusable && current ? { ...current, version } : { version, entries: new Map(), bytes: 0 }
-    cache.set(data, current)
-  }
-  if (!current) throw new Error('Stack layout cache initialization failed.')
+  const current = cacheForVersion(data, version)
   const key = JSON.stringify([
     options.x,
     options.layout,
@@ -445,25 +478,11 @@ export function stackLayout(data: TableStore, options: StackLayoutOptions): Stac
   const canExtend =
     previous?.version === version - 1 &&
     change !== undefined &&
-    ['append', 'prepend', 'upsert'].includes(change.operation) &&
-    change.version === version &&
+    isIncremental(change, version) &&
     previous.layout.layers.length === options.layers.length
   const result = canExtend
     ? extendStackLayout(data, options, previous.layout, change)
     : computeStackLayout(data, options)
-  if (result.bytes <= maxBytes) {
-    if (previous) {
-      current.entries.delete(key)
-      current.bytes -= previous.layout.bytes
-    }
-    while (current.entries.size >= maxEntries || current.bytes + result.bytes > maxBytes) {
-      const oldest = current.entries.entries().next().value
-      if (!oldest) break
-      current.entries.delete(oldest[0])
-      current.bytes -= oldest[1].layout.bytes
-    }
-    current.entries.set(key, { version, layout: result })
-    current.bytes += result.bytes
-  }
+  storeLayout(current, key, previous, result, version)
   return result
 }

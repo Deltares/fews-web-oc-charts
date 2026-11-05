@@ -7,7 +7,9 @@ import type { ScaleHandle } from '../scales/scale.js'
 export type { EffectHandle } from './reactive.js'
 
 /** Reads a reactive value only to subscribe the running effect to it. */
-export function track(_value: unknown): void {}
+export function track(_value: unknown): void {
+  // Evaluating the argument is the subscription, so there is nothing left to do.
+}
 
 export interface SubscribeOptions<T = unknown> {
   /** Call the listener once immediately with the current value (previous = undefined). Default false. */
