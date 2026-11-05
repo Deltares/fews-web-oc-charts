@@ -51,8 +51,8 @@
         reactive domain state and the frame scheduler: cached transforms during dragging,
         re-decimation and a committed path on release. Every drag resets to the same domain. The
         runner checks the final domain, removed preview transforms, newly exposed data, idle
-        geometry, and screenshots at a 0.1% changed-pixel limit with RGBA channel delta greater than
-        2. Screenshot work is outside measured intervals.
+        geometry, and that each pixel column has the same y extent in both paths, to within 0.005
+        pixels. Comparison work is outside measured intervals.
       </p>
       <p>
         Metrics include frame intervals, input-to-DOM-update latency, release-to-settled latency,
@@ -70,10 +70,10 @@
         not certification of performance budgets.
       </p>
       <p>
-        Both commands exit unsuccessfully when their visual checks exceed the threshold, even if
-        timing measurements are fast. The former RGB-only comparison missed differences in black
-        strokes on transparent pixels; the RGBA comparison exposes those differences rather than
-        loosening the limit. Decimated and dense paths are not assumed to be pixel-equivalent.
+        Both commands exit unsuccessfully when path geometry differs, even if timing measurements
+        are fast. Decimated and dense paths aren't pixel-equivalent: any downsampling of the same
+        curve antialiases differently, by about 0.5% of this fixture's pixels, while a missing
+        section of the line changes far fewer. Changed pixels are still reported, for information.
       </p>
       <p>
         Set PHASE0_TRACE_DIR to save separate diagnostic Chromium traces, screenshots and results.

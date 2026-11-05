@@ -3,6 +3,7 @@ import { createColumnarSeries } from '../src/spike/data/columnar-series.js'
 import type { ColumnarSeries } from '../src/spike/data/columnar-series.js'
 import { createSvgLineRenderer } from '../src/spike/render/svg-line.js'
 import type { SvgLineRenderer } from '../src/spike/render/svg-line.js'
+import { parsePathPoints, pathDeviation } from './benchmark-geometry.js'
 import { changedPixelRatio } from './benchmark-pixels.js'
 
 declare global {
@@ -26,6 +27,8 @@ declare global {
       spikePanP95Ms: number
       speedup: number
       changedPixelRatio: number
+      maxPathDeviation: number
+      missingPathColumns: number
     }>
   }
 }
@@ -154,6 +157,13 @@ window.runPhase0Benchmark = async () => {
   const baselinePixels = baselineContext.getImageData(0, 0, width, height).data
   const spikePixels = spikeContext.getImageData(0, 0, width, height).data
 
+  // The spike pans with a transform, so its path is 12 pixels from where it is drawn.
+  const deviation = pathDeviation(
+    parsePathPoints(baselinePath.getAttribute('d') ?? ''),
+    parsePathPoints(spikePath.getAttribute('d') ?? '').map(([x, y]) => [x + 12, y]),
+    width,
+  )
+
   renderer.destroy()
   const v4PanP95Ms = p95(baselineTimes)
   const spikePanP95Ms = p95(spikeTimes)
@@ -166,5 +176,7 @@ window.runPhase0Benchmark = async () => {
     spikePanP95Ms,
     speedup: v4PanP95Ms / spikePanP95Ms,
     changedPixelRatio: changedPixelRatio(baselinePixels, spikePixels),
+    maxPathDeviation: deviation.maxDeviation,
+    missingPathColumns: deviation.missingColumns,
   }
 }

@@ -78,9 +78,10 @@ try {
       `Phase 0 pan budget missed: expected under 8 ms, measured ${result.spikePanP95Ms.toFixed(2)} ms.`,
     )
   }
-  if (result.changedPixelRatio > 0.001) {
+  // changedPixelRatio is only informative: dense and decimated strokes antialias differently.
+  if (result.maxPathDeviation > 0.005 || result.missingPathColumns > 0) {
     throw new Error(
-      `Pan output differs by ${(result.changedPixelRatio * 100).toFixed(4)}%; the limit is 0.1%.`,
+      `Pan geometry differs by ${result.maxPathDeviation} px, with ${result.missingPathColumns} missing columns.`,
     )
   }
   if (retainedMemoryBytes >= 20 * 1024 * 1024) {

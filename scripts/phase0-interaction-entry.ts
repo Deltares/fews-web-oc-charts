@@ -10,6 +10,7 @@ import { createFrameScheduler, DirtyLayer } from '../src/spike/core/frame-schedu
 import { createReactiveCore } from '../src/spike/core/reactive.js'
 import { createColumnarSeries } from '../src/spike/data/columnar-series.js'
 import { createSvgLineRenderer } from '../src/spike/render/svg-line.js'
+import { parsePathPoints, pathDeviation } from './benchmark-geometry.js'
 import { changedPixelRatio } from './benchmark-pixels.js'
 
 type Domain = readonly [number, number]
@@ -41,6 +42,7 @@ declare global {
   interface Window {
     interactionFixture: Fixture
     compareChartScreenshots(reference: string, actual: string): Promise<number>
+    comparePaths(reference: string): ReturnType<typeof pathDeviation>
   }
 }
 
@@ -300,6 +302,13 @@ window.interactionFixture = {
     geometryUpdates,
   }),
 }
+
+window.comparePaths = (reference) =>
+  pathDeviation(
+    parsePathPoints(reference),
+    parsePathPoints(window.interactionFixture.state().path),
+    width,
+  )
 
 window.compareChartScreenshots = async (reference, actual) => {
   async function pixels(base64: string) {

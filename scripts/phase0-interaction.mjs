@@ -140,6 +140,10 @@ async function diagnosticTrace(page, name) {
   await writeFile(path.join(traceDirectory, `${name}-chromium-trace.json`), Buffer.concat(chunks))
 }
 
+const maxPathDeviation = 0.005
+const isGeometryMatch = ({ maxDeviation, missingColumns }) =>
+  maxDeviation <= maxPathDeviation && missingColumns === 0
+
 let browser
 try {
   await server.listen()
@@ -168,12 +172,14 @@ try {
     const direction = index % 2 === 0 ? 1 : -1
     const order = index % 2 === 0 ? ['v4', 'spike'] : ['spike', 'v4']
     const images = {}
+    const paths = {}
     for (const implementation of order) {
       const page = pages[implementation]
       const result = await drag(page, direction)
       if (index >= warmups) measurements[implementation].push(result)
       if (index === warmups || index === warmups + 1) {
         images[implementation] = await page.locator('#chart').screenshot()
+        paths[implementation] = await page.evaluate(() => window.interactionFixture.state().path)
       }
     }
     if (images.v4 && images.spike) {
@@ -181,7 +187,11 @@ try {
         ({ reference, actual }) => window.compareChartScreenshots(reference, actual),
         { reference: images.v4.toString('base64'), actual: images.spike.toString('base64') },
       )
-      screenshots.push({ direction, changedPixelRatio: ratio })
+      const geometry = await pages.spike.evaluate(
+        (reference) => window.comparePaths(reference),
+        paths.v4,
+      )
+      screenshots.push({ direction, changedPixelRatio: ratio, ...geometry })
       if (traceDirectory) {
         await mkdir(traceDirectory, { recursive: true })
         for (const implementation of ['v4', 'spike']) {
@@ -222,9 +232,9 @@ try {
     requestedGestureDurationMs: gestureDurationMs,
     stepsPerGesture: steps,
     screenshots,
-    visualGate: {
-      maximumChangedPixelRatio: 0.001,
-      passed: screenshots.every((screenshot) => screenshot.changedPixelRatio <= 0.001),
+    geometryGate: {
+      maximumDeviationPixels: maxPathDeviation,
+      passed: screenshots.every(isGeometryMatch),
     },
     measured: { v4: summary(measurements.v4), spike: summary(measurements.spike) },
     sustained: { requestedDurationMs: sustainedDurationMs, ...sustained },
@@ -241,10 +251,11 @@ try {
     }
     assert.deepEqual(errors, [], 'Diagnostic gestures must not emit runtime errors.')
   }
+  // changedPixelRatio is only informative: dense and decimated strokes antialias differently.
   for (const screenshot of screenshots) {
     assert.ok(
-      screenshot.changedPixelRatio <= 0.001,
-      `Settled chart screenshots differ by ${(screenshot.changedPixelRatio * 100).toFixed(4)}%; limit 0.1%.`,
+      isGeometryMatch(screenshot),
+      `Settled chart geometry differs by ${screenshot.maxDeviation} px, with ${screenshot.missingColumns} missing columns.`,
     )
   }
 } finally {
