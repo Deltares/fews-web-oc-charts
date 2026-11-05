@@ -247,9 +247,14 @@ test('SVG and canvas retain exact pixel parity through grid, palette, reversal a
         node.height.baseVal.value,
       )
     }
-    expect(actual.getContext('2d')!.getImageData(0, 0, actual.width, actual.height).data).toEqual(
-      context.getImageData(0, 0, reference.width, reference.height).data,
-    )
+    const actualPixels = actual.getContext('2d')!.getImageData(0, 0, actual.width, actual.height)
+    const referencePixels = context.getImageData(0, 0, reference.width, reference.height)
+    // toEqual compares typed arrays element by element, which takes too long at this size.
+    let differences = 0
+    for (let index = 0; index < actualPixels.data.length; index += 1) {
+      if (actualPixels.data[index] !== referencePixels.data[index]) differences += 1
+    }
+    expect(differences).toBe(0)
   }
   await frame()
   parity()

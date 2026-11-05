@@ -129,9 +129,12 @@ describe('currentTime', () => {
   test('shows the label on hover by default', async () => {
     const clock = sharedClock({ initial: start + 5 * hour })
     const { plot } = await setup(currentTime({ clock, format: () => 'now' }))
+    // The browser's real pointer can already be over the indicator, depending on the platform.
+    const indicator = layer(plot)!.querySelector('[data-current-time-indicator]')!
+    indicator.dispatchEvent(new PointerEvent('pointerleave'))
+    await frame()
     expect(label(plot)!.getAttribute('display')).toBe('none')
 
-    const indicator = layer(plot)!.querySelector('[data-current-time-indicator]')!
     indicator.dispatchEvent(new PointerEvent('pointerenter'))
     await frame()
     expect(label(plot)!.hasAttribute('display')).toBe(false)
