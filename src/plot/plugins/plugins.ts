@@ -10,6 +10,7 @@ import type { TooltipHandle } from './tooltip/tooltip.js'
 import type { HighlightHandle } from './highlight/highlight.js'
 import type { LegendHandle } from './legend/legend-plugin.js'
 import type { CrossSectionSelectHandle } from './cross-section-select/cross-section-select.js'
+import type { CurrentTimeHandle } from './current-time/current-time.js'
 
 export type PlotPlugin =
   | ZoomHandle
@@ -20,6 +21,7 @@ export type PlotPlugin =
   | HighlightHandle
   | LegendHandle
   | CrossSectionSelectHandle
+  | CurrentTimeHandle
 
 const pluginNames = [
   'zoom',
@@ -30,6 +32,7 @@ const pluginNames = [
   'highlight',
   'legend',
   'crossSectionSelect',
+  'currentTime',
 ]
 
 const names = pluginNames.map((name) => `${name}()`)
@@ -178,11 +181,11 @@ export function createPluginHost(
       for (const plugin of plugins) {
         if (!mounted.has(plugin)) mounted.set(plugin, install(plugin))
       }
-      // SVG paints in DOM order; mouseover callouts must cover persistent cross-section labels.
+      // SVG paints in DOM order; mouseover callouts must cover persistent guides and their labels.
       const crosshair = shared.element.querySelector(':scope > [data-layer="crosshair"]')
       if (crosshair) {
         for (const section of shared.element.querySelectorAll(
-          ':scope > [data-layer="cross-section-select"]',
+          ':scope > [data-layer="cross-section-select"], :scope > [data-layer="current-time"]',
         )) {
           if (crosshair.compareDocumentPosition(section) & Node.DOCUMENT_POSITION_FOLLOWING) {
             shared.element.insertBefore(section, crosshair)

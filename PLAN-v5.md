@@ -2985,6 +2985,20 @@ skipped, including `test/Data/ensemble-store.test.ts`,
 `test/Plot/ensemble-interaction.test.ts` and `test/Plot/ensemble-legend.test.ts`.
 `tsc -p tsconfig.build.json` passes. No Phase 2 pixel baselines were changed.
 
+### Phase 6 Domain plugins checkpoint
+
+**Status: in progress. `currentTime` is implemented; warning levels, alert lines, DST
+indicator, level select, data field, Beaufort, colour bar and the polar roses remain.**
+Cross-section select was implemented earlier.
+
+**`currentTime` (`plot/plugins/current-time/`).** `currentTime({ x, clock, label, format })`
+is the first consumer of `sharedClock`. A supplied clock belongs to the application, and the
+plugin never starts it. Without one, the plugin runs a private clock at the v4 refresh of
+10 seconds and stops it while the plot is suspended, so `currentTime()` works with no
+arguments. `x` is inferred when the plot has exactly one x-direction time scale. Unlike v4,
+the line is only supported in the x direction, and `label` also offers `always` and `none`.
+Clock-driven follow remains a separate step.
+
 ## 8. Additional improvements to consider
 
 - **Missing-value & quality flags**: render gaps, flag-based styling (FEWS flags/doubtful

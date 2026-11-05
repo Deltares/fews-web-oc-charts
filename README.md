@@ -426,6 +426,32 @@ or `undefined` when no members have reported layout. Removing `align` (including
 `setConfig()`) or destroying a plot releases its contribution and lets peers shrink
 their padding again. No separate group cleanup is required.
 
+## Marking the current time
+
+`currentTime()` draws a vertical line at the current time on a time scale, with a small
+triangle below it that shows the time on hover.
+
+```ts
+const clock = sharedClock({ interval: 1000 })
+clock.start()
+
+createPlot(host, {
+  scales: { time: timeScale({ timeZone: 'Europe/Amsterdam' }), level: linearScale() },
+  plugins: [currentTime({ clock, label: 'always' })],
+})
+```
+
+| Option   | Default | Meaning                                                                       |
+| -------- | ------- | ----------------------------------------------------------------------------- |
+| `x`      | -       | Time scale to mark. Required only if the plot has more than one x time scale. |
+| `clock`  | -       | `sharedClock` to follow. The application starts and stops it.                 |
+| `label`  | `hover` | When to show the time: `hover`, `always` or `none`.                           |
+| `format` | -       | Formats the label. By default it uses the time zone and locale of the scale.  |
+
+Without a `clock`, the plugin updates every 10 seconds on a private clock, which pauses
+while the plot is off-screen. Share one clock when several plots show the current time,
+so their lines always agree. The line is hidden while the time is outside the domain.
+
 ## Rebuilding configurations
 
 `plot.setConfig(config)` reconciles by identity. Mark renderers are reused for the same

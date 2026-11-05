@@ -57,6 +57,12 @@ export type {
   CrossSectionSelectHandle,
   CrossSectionSelectOptions,
 } from './plot/plugins/cross-section-select/cross-section-select.js'
+export { currentTime } from './plot/plugins/current-time/current-time-plugin.js'
+export type {
+  CurrentTimeHandle,
+  CurrentTimeLabel,
+  CurrentTimeOptions,
+} from './plot/plugins/current-time/current-time.js'
 export { tooltip } from './plot/plugins/tooltip/tooltip-plugin.js'
 export type {
   TooltipAxis,
