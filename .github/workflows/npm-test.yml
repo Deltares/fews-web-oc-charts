@@ -29,11 +29,23 @@ jobs:
           path: |
             ~/.cache/ms-playwright
           key: ${{ runner.os }}-${{ env.PLAYWRIGHT_VERSION }}
-      - run: npx playwright install --with-deps chromium firefox webkit
+      - run: npx playwright install --with-deps chromium
         if: steps.playwright-cache.outputs.cache-hit != 'true'
-
-      - name: Run Phase 1 visual regression
-        run: npm run test:visual
 
       - name: Run tests
         run: npm run test:all-browsers
+
+  visual:
+    runs-on: ubuntu-24.04
+    # Firefox and WebKit baselines depend on this image's fonts and rendering. Keep the tag equal
+    # to the installed Playwright version and to the test:visual:docker script.
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-noble
+    env:
+      # Firefox refuses to start when HOME belongs to another user.
+      HOME: /root
+    steps:
+      - uses: actions/checkout@v5
+      - run: npm ci --ignore-scripts
+      - name: Run visual regression
+        run: npm run test:visual

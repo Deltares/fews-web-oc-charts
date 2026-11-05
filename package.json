@@ -43,6 +43,7 @@
     "spike:interaction": "node scripts/phase0-interaction.mjs",
     "test:visual": "node scripts/phase1-visual-regression.mjs",
     "test:visual:update": "node scripts/phase1-visual-regression.mjs --update",
+    "test:visual:docker": "docker run --rm -e VISUAL_BROWSERS -v \"$PWD:/repo\" -v /repo/node_modules -w /repo mcr.microsoft.com/playwright:v1.64.1-noble sh -c 'npm ci --ignore-scripts && node scripts/phase1-visual-regression.mjs \"$@\"' sh",
     "test:visual:parity": "node scripts/static-visual-parity.mjs",
     "test:interaction:zoom": "node scripts/zoom-parity-interaction.mjs",
     "test:interaction:legend": "node scripts/legend-interaction.mjs",

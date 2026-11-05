@@ -1465,6 +1465,10 @@ pixels against the checked-in, browser-specific SVG reference fixtures under
 `npm run test:visual:update` refreshes those fixtures after an intentional visual
 change. To update one engine only, use
 `VISUAL_BROWSERS=firefox npm run test:visual:update` (or `chromium` / `webkit`).
+Firefox and WebKit baselines depend on the platform's fonts and canvas rendering, so they are
+recorded in the Playwright Linux image that CI uses. On another platform, use
+`npm run test:visual:docker` to check them and
+`VISUAL_BROWSERS=firefox,webkit npm run test:visual:docker -- --update` to record them.
 Review generated references before accepting them; a failing comparison is not by
 itself a reason to regenerate a baseline.
 
