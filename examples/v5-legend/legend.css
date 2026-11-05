@@ -1,0 +1,42 @@
+@import '../shared/v5.css';
+
+.legend-list {
+  padding-left: 24px;
+  list-style: none;
+}
+
+#legend > .legend-list {
+  padding-left: 0;
+}
+
+.legend-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-block: 8px;
+}
+
+.legend-row label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 220px;
+}
+
+.legend-swatch {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 36px;
+  height: 20px;
+  background: none;
+}
+
+.legend-row[data-visibility='hidden'] .legend-swatch {
+  opacity: 0.35;
+}
+
+.legend-visibility {
+  min-width: 60px;
+  font-size: 0.85rem;
+}

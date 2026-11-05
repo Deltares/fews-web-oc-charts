@@ -1,0 +1,3038 @@
+# Plan: FEWS Web OC Charts v5
+
+## 0. Decisions taken
+
+| Topic                  | Decision                                                                                                                                                                        |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Package                | Keep `@deltares/fews-web-oc-charts`, release as **major v5**                                                                                                                    |
+| Default renderer       | **SVG**; canvas is an explicit opt-in per mark or plot-wide. **No `auto` renderer** for now                                                                                     |
+| Time handling          | **Remove `luxon`**; use `Intl.DateTimeFormat` + `d3-time` (see 3.3.1)                                                                                                           |
+| Reactivity             | **Own reactive core** (no external signals library)                                                                                                                             |
+| Distribution           | Core ESM API **plus an HTML5 Web Component** (`<fews-chart>`, see 3.13)                                                                                                         |
+| Web Component          | Tag prefix **`fews-`**; v5.0 configured via **`el.config` property only** (no child config elements)                                                                            |
+| v4 compatibility layer | **Full v4 public API**, delivered in the **last phase** of the roadmap (see 3.14)                                                                                               |
+| Multi-series layouts   | **Grouped bars, named stacks (including side-by-side stacked bars) and stacked areas are v5.0 requirements**, with shared columnar layout and SVG/canvas parity (see 3.6.1)     |
+| Browser support        | **Baseline Widely Available** as of each release date; freeze the exact minimum browser versions for v5.0.0 in the support manifest, build targets and CI matrix. No polyfills. |
+
+## 1. Analysis of the current library (v4.7)
+
+| Area           | Current situation                                                                                                                                                                                     | Consequence                                                                     |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Redraw         | `CartesianAxes.zoom()` calls `plotter()` on **every** chart and `redraw()` on **every** visitor; `resize`, theme change, legend toggle all trigger full redraws                                       | Cost scales with total content, not with what changed                           |
+| Theme          | `MutationObserver` on `<html>` class → full `redraw()`                                                                                                                                                | Any unrelated class change redraws everything                                   |
+| Data           | `DataPoint[]` = array of objects `{x: Date, y: number}`; `mapDataCartesian` slices a copy per render; extent recomputed per key                                                                       | ~50–80 bytes/point + `Date` objects, GC pressure, slow for long/ensemble series |
+| Styling        | `getComputedStyle()` called in pointer-move & legend paths                                                                                                                                            | Forced style recalcs on hover                                                   |
+| Ensembles      | One `Chart` per member; percentiles computed by the app                                                                                                                                               | N DOM groups, N tooltips, N extents                                             |
+| Line + markers | `ChartLine` + `ChartMarker` can share the source array, but each creates render-window arrays (markers also filter)                                                                                   | Duplicates derived work, window arrays, legend entries and hit-tests            |
+| Axes           | `x[0..1]`, `y[0..1]` indices hard-coded (`0 \| 1`)                                                                                                                                                    | Max 2 axes per direction, index-based coupling                                  |
+| Sync           | `ZoomHandler` holds an array of axes; `addEventListener('update:x-domain')` only for x                                                                                                                | Ad-hoc, x-only, easy to create feedback loops                                   |
+| Architecture   | `Chart` does data, extent, styling, tooltip, highlight, legend symbol, cartesian **and** polar plotting (`instanceof` dispatch, circular imports via `index.js`); options mutated with lodash `merge` | Hard to extend, test, tree-shake                                                |
+| Lifecycle      | `ResizeObserver`/`MutationObserver` are never disconnected; no `destroy()`                                                                                                                            | Leaks in SPA (Vue) usage                                                        |
+| Globals        | `d3.formatDefaultLocale(...)` set in every `Axes` constructor                                                                                                                                         | Side effect on host application                                                 |
+| Live data      | Replace `chart.data` and call `redraw()`                                                                                                                                                              | Full recompute & redraw for every append                                        |
+
+Functional surface that must be preserved: cartesian & polar coordinate systems; marks
+line, marker, area, range, bar, histogram, arrow, direction, matrix, progress, rule, text;
+colour bar; time/value/band/degrees axes, time zones & locales, nice/includeZero/symmetric/
+defaultDomain/reverse, automargin, secondary axes; interactions zoom (brush + wheel),
+pan, brush select, mouse-over/crosshair, tooltip; overlays current time, DST indicator,
+warning levels, alert lines, level select, cross-section select, data field, Beaufort axis,
+legend; domain-change events.
+
+## 2. Goals & design principles
+
+1. **Invalidate, don't redraw** – every piece of state is tracked; a change marks only
+   dependent layers dirty; one `requestAnimationFrame` flush per frame.
+2. **Columnar data** – typed arrays, shared time columns, no per-point objects in
+   canonical storage; explicit ownership and bounded derived caches (see 3.2.1).
+3. **Composition over inheritance** – plain functions & objects, small modules, no
+   `instanceof`, tree-shakable ESM, no lodash.
+4. **Named, shareable state** – scales, pointer and selection are first-class objects that
+   can be shared between plots → synchronisation is free.
+5. **d3 for the math, not the scheduling** – keep `d3-scale`, `d3-shape`, `d3-axis`,
+   `d3-zoom`, `d3-brush`, `d3-array`, `d3-time`, `d3-format` and `d3-quadtree`, but
+   import sub-packages only. Time formatting uses `Intl`; hit testing uses `d3-quadtree`
+   (not `d3-delaunay`).
+6. **Explicit lifecycle** – `plot.destroy()` releases observers, listeners, buffers.
+7. **Options stay editable** – construction is not a configuration boundary. Typed
+   updates and explicit unsetting work consistently without recreation or `redraw()`
+   (see 3.1.1).
+
+## 3. Architecture
+
+```
+┌───────────────────────── Public API (functional) ─────────────────────────┐
+│ createPlot · createPolarPlot · marks · scales · axes · plugins · sync     │
+├──────────────┬──────────────┬──────────────┬──────────────┬───────────────┤
+│ Data store   │ Reactive core│ Layout engine│ Renderers    │ Interaction   │
+│ (columnar,   │ (signals +   │ (measure →   │ (SVG / Canvas│ (pointer hub, │
+│  ring buffer,│  dirty flags,│  margins →   │  per layer)  │  hit-testing, │
+│  LOD index)  │  rAF batch)  │  regions)    │              │  gestures)    │
+├──────────────┴──────────────┴──────────────┴──────────────┴───────────────┤
+│ Coordinate systems: cartesian | polar | skew-T/log-P                       │
+└────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 3.1 Reactive core (`core/`) – own implementation
+
+- Own signal primitive (~200 LOC, zero dependencies, fully owned & tested):
+  - `signal<T>(value, { equals })` – read/write cell with custom equality
+    (e.g. domain compare by value, not by array identity).
+  - `computed<T>(fn)` – lazy, cached, auto-tracked dependencies, version counter.
+  - `effect(fn)` → `dispose()`; effects run **through the scheduler**, never synchronously.
+  - `batch(fn)` / `untracked(fn)`.
+  - Push-dirty / pull-evaluate (coloured graph: clean / check / dirty) → glitch-free,
+    each computed evaluated at most once per flush.
+  - Ownership scopes (`createScope()`): every plot/plugin owns a scope; `scope.dispose()`
+    tears down all effects → basis for leak-free `destroy()`.
+  - Dev-mode diagnostics: cycle detection, effect run counters (feeds the redraw overlay).
+- Interop: tiny adapters `toVueRef(signal)` / `fromVueRef(ref)` in the Vue adapter so the
+  core stays framework-free.
+- State signals: `size`, `margins`, shareable scale `domain`, plot-local scale `range`, per-series `version`,
+  `theme`, `pointer`, `selection`, mark `visible`/`style`.
+- **Scheduler**: effects don't render directly; they set dirty bits on layers
+  (`LAYOUT | AXES | GRID | MARKS(id) | OVERLAY | INTERACTION`) and schedule one rAF.
+- Dependency precision examples:
+  - y2 domain change → only marks bound to y2 + y2 axis/grid.
+  - pointer move → only overlay layer (crosshair, highlight, tooltip); never data layers.
+  - legend toggle → one mark's visibility + autoscale of its scales (if enabled);
+    a grouped/stacked layer toggle also invalidates its composite layout (3.6.1).
+  - theme change → style token cache refresh; canvas layers repaint, SVG via CSS vars only.
+
+#### 3.1.1 Runtime options: update, unset & replace
+
+All public plot, mark, axis, scale and built-in plugin handles expose
+`update(patch)` with the same option names used at construction. No string-path
+setters, manual `redraw()`, or mutation of internal D3 objects is required.
+
+| Patch input                      | Meaning                                                                        |
+| -------------------------------- | ------------------------------------------------------------------------------ |
+| Key omitted                      | Keep its existing explicit override unchanged                                  |
+| `key: value`                     | Set an explicit override, including `false`, `0` and `''` where valid          |
+| `key: undefined`                 | Remove the explicit override; resolve from current inheritance/defaults        |
+| Nested plain object              | Recursively patch its supplied keys; omitted siblings remain unchanged         |
+| Array                            | Replace the entire array, never merge by numeric index                         |
+| Function, store or shared handle | Replace the reference atomically; never deep-merge or clone                    |
+| `null`                           | A value only where the option type explicitly permits it; never an unset alias |
+
+- **Unset is not disable**: `markers: undefined` restores inherited/default marker
+  behaviour; `markers: false` explicitly disables markers. Optional visual components
+  (`line`, `markers`, `area`, ensemble display parts) accept `false | Options`.
+  Removing a nested override such as `line.stroke` keeps the other line options.
+  Resetting a parent removes all its nested overrides. Required references such as a
+  mark's data/scale binding cannot be unset unless a documented default exists.
+- **Resolution**: retain explicit overrides separately from resolved options. Resolve
+  library defaults → applicable plot/theme defaults → handle overrides, with a
+  documented precedence per option. Unsetting reveals the **current** inherited value,
+  not the constructor value. Remove stale inline SVG/CSS attributes, canvas paint
+  settings, formatter callbacks and listeners when their overrides disappear.
+- **Types & ownership**: patches explicitly permit `undefined` for resettable keys,
+  including with `exactOptionalPropertyTypes`; plain `Partial<T>` is insufficient.
+  Readonly option snapshots expose explicit and resolved state without allowing
+  mutation to bypass invalidation. Copy owned plain option objects/arrays on input;
+  preserve store, shared-handle and callback identity. Check property presence rather
+  than truthiness, so explicit `undefined` is distinguishable from an absent key.
+- **Collections**: supplied `marks`, `axes` and `plugins` arrays are complete membership/
+  order lists; `[]` removes all, omission keeps the collection, and `undefined` restores
+  its documented default. `scales` is a named map: omitted names stay bound, and an
+  explicit `undefined` removes a binding. Stable explicit IDs identify collection
+  entries across updates; reject duplicate IDs. Reuse unchanged handles/resources,
+  dispose removed entries, and never re-ingest data for an option-only update.
+  Change one item through its retained handle instead of rebuilding the collection.
+- **Shared state**: `sharedScale.update(...)` changes its options for all consumers;
+  plot updates only change local options/bindings. Removing a scale binding still used
+  by a mark/axis is an error unless the same transaction removes/rebinds those users.
+  Replacing a scale/mark kind or plugin implementation is an explicit collection/binding
+  replacement, not an attempted patch of immutable identity or implementation type.
+- **Atomic application**: validate the complete patch before committing; invalid
+  options, unknown keys/IDs and dangling references throw a descriptive error with
+  the option path, leaving prior state intact. Multiple valid updates within `batch`
+  publish together and schedule one frame (batching is not rollback of earlier calls).
+  Effective no-op updates schedule no work. Invalidate only affected dependencies;
+  changing style/formatters must not rebuild data, extents or LOD unnecessarily.
+- **Complete configuration**: `plot.setConfig(config)` replaces the plot configuration
+  using the same shape as `createPlot`; omitted plot options return to defaults and
+  omitted collections/bindings are removed or defaulted. Unlike `update`, nested plain
+  options are replacements, not sticky merges. Reconcile entries by ID and preserve
+  data references. Reusing a handle retains its handle-managed options/state; replacing
+  its configuration must not silently mutate an externally shared handle. A config
+  snapshot does not reset live domains, pointer or selection unless explicitly set.
+  `el.config = config` delegates to this path; `el.plot.update(...)` provides patching.
+- **Validation coverage**: test set → change → unset → inherit/default for scalar,
+  nested, array, callback and feature-toggle options; parent reset; `false`/`0`/`''`;
+  strict TypeScript patches; collection removal/reorder; shared-handle updates;
+  invalid-patch atomicity; coalescing/no-ops; and cleanup of styles/listeners/caches.
+  Run the same scenarios through core, Web Component and Vue adapters, on SVG and
+  canvas. Include updating after construction without reconstructing the plot.
+
+```ts
+const observed = series(obs, {
+  id: 'obs',
+  x: 't',
+  y: 'q',
+  line: { stroke: 'red', width: 2 },
+  markers: { symbol: 'circle' },
+})
+const dischargeAxis = axis('q', { id: 'q-axis', position: 'left', label: 'Discharge' })
+const wheelZoom = zoom({ id: 'zoom', mode: 'x', wheel: 'x' })
+// Retain these handles when passing them to createPlot.
+observed.update({ line: { width: 3 }, markers: false })
+observed.update({ line: { stroke: undefined } }) // keep width; restore default stroke
+dischargeAxis.update({ label: undefined }) // remove custom label
+t.update({ follow: undefined }) // reset follow option for all consumers
+wheelZoom.update({ wheel: undefined }) // restore default wheel behaviour
+plot.update({ theme: undefined }) // restore inherited/default theme
+```
+
+### 3.2 Data store (`data/`)
+
+- `createSeries({ x, y, … })` / `createTable(columns)`:
+  - x stored as `Float64Array` (epoch ms for time), y as `Float64Array`/`Float32Array`
+    (opt-in precision), missing = `NaN`.
+  - x values must be finite and sorted in nondecreasing order. Duplicate x values are
+    supported and retain stable input order; y values must be finite or `NaN` (missing).
+    Date inputs must be valid; time columns expressed as epoch milliseconds must also
+    fall within the valid JavaScript `Date` range. Ingestion validates equal column
+    lengths and reports the offending column/index without partially creating or
+    mutating a store.
+  - Tables additionally support dictionary-encoded categorical columns for band axes,
+    with stable category identities and an explicit ordered scale domain. Numeric/time
+    x ordering rules above apply to ordered series; categorical tables are not sorted
+    numerically. Multi-series layouts use aligned value columns in one table (3.6.1).
+  - **Ensemble** = `createEnsemble({ x, members: Float32Array[] | matrix })`: one shared
+    x column, member matrix (row-major `members × time`), optional member metadata.
+- Growable **ring buffer** with `capacity`, `maxPoints`, `maxAge` retention.
+- Mutation ordering and duplicate semantics:
+  - `append(rows)` requires rows sorted nondecreasing and the first new x to be greater
+    than or equal to the current last x. `prepend(rows)` requires rows sorted
+    nondecreasing and the last new x to be less than or equal to the current first x.
+    Equal boundary timestamps are legal; append places incoming equal-time samples
+    after the existing group, while prepend places them before it, preserving input
+    order within each group. Validate the complete mutation before changing buffers
+    or indexes; reject out-of-order input rather than silently sorting it.
+  - `upsert({ from, to, rows })` atomically replaces the closed x-range `[from, to]`:
+    remove every existing sample in that range, then insert the sorted rows (which must
+    lie within the range), preserving duplicate timestamps and their input order.
+    Require finite bounds and `from <= to`. `maxPoints` retains the newest samples;
+    time-based `maxAge` retains samples with `x >= newestX - maxAge`, including all
+    duplicates at the cutoff. Retention is applied after a successful mutation.
+  - x-only hit testing exposes all samples at the selected timestamp in stable order;
+    xy hit testing selects the nearest screen-space sample and breaks exact-distance
+    ties by stable source order.
+- **Block min/max index** (e.g. 256-sample blocks, segment tree) → O(log n) extent for any
+  x-window and fast autoscale while zoomed/panned.
+- **LOD / decimation**: M4 / min-max-per-pixel-column decimation on render, retaining
+  source indices rather than copied x/y columns; cache ownership and keys in 3.2.1.
+  1M points → ~4×width vertices for a continuous line; preserve missing-value gaps.
+- Derived columns are lazy & cached by source version and normalised operation parameters:
+  ensemble quantiles, mean, median, min/max envelope, exceedance probability for warning
+  thresholds. For each requested time step, gather non-missing members into reusable
+  scratch storage, sort the valid prefix once, then call `d3.quantileSorted` for all
+  requested probabilities. No valid members → `NaN`; median and p50 share one result.
+  Bands, member summaries and tooltips reuse these store-owned results across plots.
+- Adapters: `fromObjects(array, { x: 't', y: 'value' })`, `fromFewsPiTimeSeries(json)`
+  (flag/comment columns preserved), and accepting the v4 `DataPoint[]` for migration.
+- Mutations: `append`, `prepend`, `upsert({ from, to, rows })`, `replace`, `clear`; each bumps
+  `version` and reports the affected x-range so renderers can patch incrementally.
+- Data acceptance tests cover equal-length validation; invalid/non-finite x values;
+  unsorted ingestion and mutations; duplicate timestamps and stable ordering; inclusive
+  upsert boundaries and rejection of rows outside the replacement range; atomic
+  rollback on validation failure; duplicate-aware hit testing; and retention at exact
+  `maxAge`/`maxPoints` boundaries, including duplicate timestamps.
+
+#### 3.2.1 Data ownership & D3 boundary contract
+
+This contract is a **phase-0 acceptance requirement**, not a later optimisation.
+
+- **Canonical owner**: a store owns column buffers, retention state, versions and block
+  indexes. Marks, plots, the Web Component and Vue adapter retain store references,
+  never their own data copies. A shared time column has one owner/version; dependent
+  stores subscribe to it, and aligned append/retention updates are batched atomically.
+  Object adapters convert once and do not retain source rows in core stores (compat
+  retains legacy rows as required by its API).
+- **Input ownership**: default ingestion copies caller-owned typed arrays once into
+  store-owned storage. An explicit borrowed/read-only mode may reuse buffers, but must
+  reject store mutations; external mutation is unsupported. Rendering never copies
+  canonical columns. Capacity growth may allocate replacement buffers; account for
+  spare capacity and peak old/new buffer overlap in memory benchmarks.
+- **D3 shapes**: use numeric source indices with accessors into the columns, not
+  reconstructed `{ x, y }` objects or `[x, y]` tuples. Contiguous windows use typed-array
+  `subarray` views where applicable; non-contiguous LOD uses reusable, viewport-sized
+  typed index buffers. Do not allocate an identity index array of source length.
+  A logical-index array-like adapter handles undecimated windows and ring wraparound
+  without flattening the store. Verify this adapter against runtime and TypeScript
+  D3 signatures; non-array-like iterables are materialised by D3 and are not zero-copy.
+  Accessors map logical to physical slots and preserve boundary neighbours and gaps.
+- **D3 selections**: `.datum(storeOrView)` retains a reference, not a clone. Discrete
+  joins bind stable source identifiers/indices instead of allocating point objects.
+  Rebind or clear obsolete views so DOM nodes cannot retain replaced buffers; ring
+  slot reuse must not reuse the identity of an evicted sample.
+- **Cache ownership**: stores own block indexes and derived-column caches. A bounded
+  store-associated LOD cache may be shared across marks/plots only when source columns,
+  versions, logical window, x-domain/mapping, pixel width, algorithm and gap policy
+  match; include any additional algorithm dependencies. Plot bindings own screen-space
+  geometry, spatial indexes and renderer resources. Never cache projected x/y columns
+  per mark as a second canonical dataset.
+- **Bounds & invalidation**: every cache has an explicit byte/entry limit with LRU
+  eviction; reusable scratch buffers are bounded by active viewport/member needs.
+  Mutations invalidate intersecting windows; retention, ring-slot reuse and buffer
+  replacement invalidate affected index/view references. Version keys alone are not
+  eviction: obsolete generations must be released. Last-consumer disposal releases
+  shared render caches; destroying one plot must not destroy another plot's store.
+- **Geometry keys**: SVG paths and canvas `Path2D` depend on LOD/source versions, both
+  scale domains/ranges, coordinate projection, curve, baseline and other geometry
+  options. Raster caches additionally depend on DPR and paint/style state. Keep these
+  plot-local; invalidate on resize, y-only zoom and polar configuration changes too.
+- **Interaction state**: reactive domains/selections are authoritative; D3 zoom/brush
+  state is a local interaction adapter, not another persistent source of truth.
+  Programmatic/shared domain changes rebase local gesture state without feedback
+  loops. Derive transient D3 scales from signals; do not retain parallel domain histories.
+
+### 3.3 Scales & axes (`scales/`, `axes/`)
+
+- Named scales, unlimited count:
+  ```ts
+  scales: { t: timeScale({ timeZone: 'Europe/Amsterdam' }),
+            q: linearScale({ nice: true, includeZero: true }),
+            h: linearScale({ reverse: true }), dir: degreesScale() }
+  ```
+- Shared scale state = `{ domain signal, options, autoscale policy }`; each plot binds
+  it to `{ range signal, d3 scale (derived) }`. Different-width plots share domains,
+  never pixel ranges or mutable D3 scale instances. Autoscale combines eligible extents
+  from live bindings in one shared computation; binding removal updates that union.
+- Autoscale policy per scale: `'data' | 'visible' (extent within other-axis window) |
+  'fixed' | fn`, plus `nice`, `includeZero`, `symmetric`, `defaultDomain`, `padding`.
+- Axes are views on scales: `axis('q', { position: 'left', label, unit, grid, format,
+  tickCount, labelAngle })`. Multiple axes on the same side stack automatically.
+- Time axis: `Intl`-based multi-level ticks (e.g. hour row + day row), locale/timezone per
+  axis, no global `d3.formatDefaultLocale` (number formatting via `d3.formatLocale`
+  instance per plot).
+- Polar: `angularScale(...)` & `radialScale(...)` scales with direction/intercept/range; Beaufort and
+  colour bar become axis variants.
+
+#### 3.3.1 Replacing luxon (`time/`)
+
+Luxon is currently used for: zone offsets in time-tick generation (`Axis.updateTicksForTime`,
+`PolarAxes`), multi-level tick formatting (`generateMultiFormat`), `dateFormatter` with
+format tokens, and DST transition search (`DstIndicator`). Replacement:
+
+- `zoneOffset(tz, epochMs)`: derive the offset from cached `Intl.DateTimeFormat` parts
+  (`timeZone`, `hourCycle: 'h23'`, numeric date/time parts). Normalize midnight
+  consistently. Cache formatter instances by zone/locale/options; offset-result caches
+  must use exact instants or transition-safe spans, never fixed-hour buckets that can
+  cross an offset transition.
+- `zonedTicks(scale, tz, count)`: choose calendar intervals in local civil time and
+  resolve each local boundary to its corresponding instant. Do not shift a whole domain
+  using one offset: a domain can cross an offset transition. Omit nonexistent local
+  boundaries in a spring-forward gap; emit both distinct instants for an ambiguous
+  fall-back boundary, ordered by instant. When two emitted ticks have the same local
+  label, include an offset/disambiguator in the label.
+- `zonedInterval(d3Interval, tz)`: floor/ceil/offset in local civil time for day/week/
+  month boundaries (used by ticks, grid, DST indicator, `follow` windows), with the
+  same skipped/repeated-time rules as `zonedTicks`.
+- Formatting: cached `Intl.DateTimeFormat` instances keyed by (locale, tz, options);
+  multi-format picks an option set (`{hour, minute}`, `{weekday, day}`, `{month, day}`,
+  `{month: 'long'}`, `{year}`) instead of luxon format strings. `dateFormatter` supports
+  a documented token subset (`yyyy`, `yy`, `MM`, `MMM`, `MMMM`, `dd`, `d`, `HH`, `H`,
+  `hh`, `h`, `mm`, `m`, `ss`, `s`, `SSS`, `EEE`, `EEEE`, `ZZZ`) implemented using
+  `formatToParts`. Unsupported tokens throw a descriptive error; migration guidance
+  covers replacing other Luxon-only format strings with a caller-supplied formatter.
+- `findTransitions(tz, start, end)`: detect offset change per day then binary search to
+  the minute → DST indicator.
+- Durations (`'48h'`, `'P3D'`, ms) parsed by a tiny helper for `follow` windows.
+  Numeric/millisecond and hour durations are elapsed time; ISO day durations such as
+  `P3D` are local calendar days in the scale's time zone, so they need not equal 72
+  elapsed hours across a DST transition. Unsupported duration units are rejected.
+- Future: switch internals to `Temporal` when broadly available, same public API.
+- Test matrix: Europe/Amsterdam, America/Mexico_City (DST abolished 2022),
+  Australia/Lord_Howe (30 min DST), Asia/Kolkata (+5:30), UTC. Assert offsets and tick
+  instants around both sides of transitions, skipped/repeated local times, day/week/
+  month boundaries, and format tokens. Compare against Luxon/v4 where compatibility is
+  intended; use explicit expected civil-time results for DST cases where v4 behavior is
+  not the contract.
+
+### 3.4 Layout engine (`layout/`)
+
+- Pure function `layout(size, axes, legend, title) → regions` (plot area, axis bands,
+  legend box). Text measurement via cached `OffscreenCanvas.measureText` → **automargin
+  without the current "draw, measure, redraw" loop**.
+- Stable margins (hysteresis) so tick-label width changes during pan don't cause jitter.
+- Fully unit-testable in Node.
+
+### 3.5 Renderers (`render/`)
+
+- Layer stack (each with own dirty flag): background · grid · marks (back) · marks ·
+  annotations (thresholds, current time) · axes · overlay (crosshair, highlight, brush) ·
+  interaction (event surface) · HTML (tooltip, legend).
+- **SVG is the default renderer** (crisp output, CSS styling, easy export, DOM-testable).
+  Canvas is an explicit opt-in: `renderer: 'canvas'` per mark, or a plot-wide default.
+  No automatic switching (`'auto'`) for now – keeps output predictable; may be revisited
+  once benchmarks exist. Both use the same d3 generators (`d3.line().context(ctx)` for
+  canvas). With LOD decimation SVG stays fast up to ~1M source points per series.
+- SVG: one `<path>` per series/stroke; use keyed D3 joins only for discrete marks (bars,
+  text), not one DOM element per point for continuous series. Bind stable mark/sample
+  identifiers or source indices that resolve to store data, never copied `{ x, y }`
+  objects, array positions or reusable ring-buffer slots. Define enter, update and exit
+  behavior explicitly: enter creates elements and applies initial attributes; update
+  refreshes geometry, style and accessibility attributes; exit removes obsolete elements
+  and releases bound references to obsolete views. Reorder joined elements to match
+  configured draw order. Test entering, updating, removing and reordering, including that
+  removed nodes release obsolete data views. Set `vector-effect: non-scaling-stroke`.
+- **Gesture fast path**: during pan/zoom apply a transform to cached layers
+  (CSS/SVG transform or canvas `drawImage`) and do the full LOD re-render throttled /
+  at gesture end.
+- Canvas: devicePixelRatio aware, bounded plot-local `Path2D`/raster caches with complete
+  geometry/paint dependencies (see 3.2.1).
+- Optional later: WebGL renderer for >10M points behind the same mark interface.
+- Export: `plot.toSVG()`, `plot.toPNG()` (canvas layers inlined as images).
+
+### 3.6 Marks (`marks/`) – one unified series mark
+
+```ts
+series(data, {
+  x: 't',
+  y: 'q',
+  scales: { x: 't', y: 'q' },
+  line: { stroke: 'var(--fews-obs)', width: 1.5, curve: 'stepAfter', dash: [4, 2] },
+  markers: { symbol: 'circle', size: 4, every: 1 | 'auto', fill: 'auto' },
+  area: { to: 0 | 'y0Column', fill: '…', opacity: 0.2 },
+  label: 'Observed',
+  tooltip: true,
+  hitTest: 'x' | 'xy',
+})
+```
+
+Line + markers + area in **one** mark (one data reference, one legend entry, one hit-test).
+Marker `size` is D3 symbol area in square CSS pixels (default `10`), matching v4; it is
+not a radius.
+Markers support the v4 filled D3 symbols (circle, cross, diamond, square, star, triangle
+and wye), plus directional triangles, x, plus and rectangle. SVG rendering and legend
+swatches use the same shape.
+Other marks: `band` (range / min-max), `bar` (single/grouped/stacked, step bars),
+`stackedArea` (multi-series filled areas; see 3.6.1),
+`histogram`, `arrows`/`direction` (wind/current), `heatmap` (matrix, time×level),
+`progress`, `rule` (horizontal/vertical), `text`, `thresholds` (warning levels as a mark),
+`colorBar`. Each mark implements:
+
+`arrows({ x, y, xValues, yValues, xEndValues, yEndValues })` draws one vector from
+each aligned start coordinate to its end coordinate. Cartesian plots bind `x` and `y`
+to continuous x/y scales; polar plots bind them to angular/radial scales and interpret
+the endpoint pairs through the plot's clockwise-from-north angular convention.
+`direction({ x, y, xValues, yValues, directionValues })` draws a fixed-size bearing
+glyph at each aligned position. Bearings are degrees clockwise from north and indicate
+the direction a wind/current vector comes **from**, so the glyph points 180° opposite
+the bearing; `every` can thin dense glyphs. Both marks accept `null`/`undefined` gaps,
+contribute their rendered coordinates to autoscale extents, use SVG by default, and
+support Cartesian and polar coordinate systems.
+
+The range `band` mark accepts aligned `xValues` and `yValues` of ascending numeric
+`[min, max]` pairs (with `null`/`undefined` gaps), drawing one rectangle per pair on
+cartesian numeric/time scales or one annular sector per pair on polar angular/radial
+scales. Its public constructor is `band` (also exported as `range`).
+
+```ts
+interface Mark {
+  id: string
+  update(patch: MarkOptionsPatch): void   // mark-specific typed patch, see 3.1.1
+  scales: string[]                       // dependencies → precise invalidation
+  extent(scale, window?): [min,max]      // uses block index
+  render(ctx: RenderContext): void       // ctx = coordinate system + renderer + LOD
+  hitTest(px, py | x): Hit | undefined
+  legendSymbol(): SymbolSpec             // declarative, no getComputedStyle
+}
+```
+
+Marks use `ctx.project()` rather than dispatching on axes classes. Declare supported
+coordinate/scale combinations and reject unsupported bindings during configuration
+validation, before rendering. Grouped/stacked layouts below are cartesian in v5.0;
+polar wind/current roses retain their separately specified behaviour.
+
+#### 3.6.1 Grouped bars, named stacks & stacked areas
+
+These are first-class v5.0 features, not application-side preprocessing or deferred
+enhancements. A composite mark owns ordered, independently styled/visible layers over
+one aligned table. Share the layout computation between bars and areas; keep ordinary
+`series(..., { area })` as the single-series baseline/range fill, not an implicit stack
+across unrelated marks.
+
+```ts
+import { bar, stackedArea, createTable } from '@deltares/fews-web-oc-charts'
+
+const flows = createTable({
+  t: times,
+  tEnd: intervalEnds,
+  upstream: upstreamValues,
+  lateral: lateralValues,
+  forecastUpstream: forecastUpstreamValues,
+  forecastLateral: forecastLateralValues,
+})
+const layers = [
+  { id: 'upstream', y: 'upstream', label: 'Upstream', fill: '#4477aa' },
+  { id: 'lateral', y: 'lateral', label: 'Lateral inflow', fill: '#228833' },
+]
+
+// Alternative marks: each can be used in a plot with named t/q scales.
+const grouped = bar(flows, {
+  id: 'grouped-flow',
+  x: 't',
+  scales: { x: 't', y: 'q' },
+  layers,
+  layout: 'grouped',
+  interval: { start: 't', end: 'tEnd' },
+  groupPadding: 0.1,
+  layerPadding: 0.05,
+})
+const stacked = bar(flows, {
+  id: 'stacked-flow',
+  x: 't',
+  scales: { x: 't', y: 'q' },
+  layers,
+  layout: 'stacked',
+  interval: { start: 't', end: 'tEnd' },
+})
+const areas = stackedArea(flows, {
+  id: 'flow-areas',
+  x: 't',
+  scales: { x: 't', y: 'q' },
+  layers,
+  curve: 'linear',
+})
+
+// Two independent stacks side by side within each time interval.
+const compared = bar(flows, {
+  id: 'compared-flow',
+  x: 't',
+  scales: { x: 't', y: 'q' },
+  layout: 'stacked',
+  interval: { start: 't', end: 'tEnd' },
+  groupPadding: 0.1,
+  layerPadding: 0.05,
+  layers: [
+    { ...layers[0], stack: 'observed' },
+    { ...layers[1], stack: 'observed' },
+    {
+      id: 'forecast-upstream',
+      y: 'forecastUpstream',
+      label: 'Forecast upstream',
+      stack: 'forecast',
+      fill: '#66ccee',
+    },
+    {
+      id: 'forecast-lateral',
+      y: 'forecastLateral',
+      label: 'Forecast lateral inflow',
+      stack: 'forecast',
+      fill: '#aa3377',
+    },
+  ],
+})
+
+stacked.update({ layout: 'grouped' }) // retain data and stable layer identities
+areas.update({ layers: [...layers].reverse() }) // explicit stack/legend order
+```
+
+- **Data & alignment**: each layer references a numeric value column in the same
+  table and the same x column; equal-length validation and store ownership apply.
+  Require unique x keys within these composites (strictly increasing numeric/time
+  x, or one row per category); reject duplicates with the offending row/key instead
+  of guessing aggregation. This is a mark-specific restriction, not a change to
+  ordinary series' duplicate support. Do not zip unrelated stores by index or silently
+  interpolate/zero-fill misaligned timestamps. Object/long-form migration examples
+  show explicit pivoting, duplicate aggregation and missing-value policy before ingestion.
+- **Layout API**: `bar` supports single-series `y` or multi-series `layers` (mutually
+  exclusive); multi-series bars require `layout: 'grouped' | 'stacked'`.
+  `stackedArea` requires `layers` and a continuous numeric/time x scale. Layer IDs are
+  unique within their mark, independent of labels, column names and array positions.
+  Array order determines group slots, stack accumulation, drawing and legend order.
+  Layer descriptors support `visible`, label and style updates through the normal
+  collection replacement contract; unchanged IDs retain resources and visibility
+  unless explicitly overridden. Reject incompatible scales/units within a composite:
+  all layers share one value scale and one unit, never separate y axes.
+- **Named stacks**: layers in stacked bars or `stackedArea` accept `stack: string`.
+  Equal stack IDs accumulate together; different IDs start independently from zero.
+  If all layers omit `stack`, retain one implicit stack and the simple API above.
+  If any layer names a stack, require every layer to supply a non-empty stack ID;
+  reject mixed named/unnamed input atomically. Reject `stack` on grouped bars rather
+  than ignoring it. Stack IDs are scoped to their composite mark: the same name in
+  separate marks does not merge them or coordinate their slots.
+  First appearance in the full layer array determines stack order; relative array
+  order within each stack determines accumulation. Hidden layers retain their
+  position in that ordering. Stack IDs, not display labels or positions, identify
+  legend groups and tooltip totals; use the ID as the initial stack label.
+  Stacked bars place one slot per named stack side by side within each category/
+  interval, yielding grouped-stacked bars without a separate layout mode.
+  Named area stacks are independent overlaid stacks, drawn in stack order with
+  layer order within each stack; they are not horizontally grouped or added together.
+  Hit-test ties between overlapping area stacks select the topmost painted band;
+  x-only tooltips include all eligible stacks. Use separate plots for non-overlapping
+  area-stack comparisons.
+- **Bar geometry**: support vertical and horizontal orientation, swapping category/
+  interval and value axes consistently. Band scales supply the outer category band;
+  numeric/time axes require explicit interval start/end columns or a positive
+  pixel width centred on x, never infer widths from a viewport's first sample.
+  Interval bounds must be finite, ordered and non-overlapping across rows; include
+  full interval bounds in extents/window lookup. Grouped layers divide the outer
+  band/interval into stable layer slots, each measured from zero; stacked bars divide
+  it into stack slots, with all layers in one stack sharing that slot's width.
+  `groupPadding` insets the outer band/interval; `layerPadding` separates adjacent
+  layer slots in grouped mode or stack slots in stacked mode, never stacked segments.
+  Document defaults and validate padding fractions in `[0, 1)` and positive
+  widths. Clip geometry, not the underlying intervals; reversed scales, irregular
+  time intervals and resize must not change sample identity or group membership.
+- **Stack semantics**: use a zero baseline with separate positive and negative
+  accumulators (diverging stacking) in data space, before projection. For values
+  `[3, -2, 4]`, endpoints are `[0, 3]`, `[-2, 0]`, `[3, 7]`, with extent `[-2, 7]`.
+  Grouped values use extent `[-2, 4]`. Include zero and cumulative endpoints in
+  stacked extents, including visible-window autoscale; never use only raw maxima.
+  Accumulate positive/negative values separately for each named stack and union their
+  extents, never sum independent stack totals. For stacks A = `[3, 4]` and
+  B = `[5, -2]`, the combined value extent is `[-2, 7]`, not `[-2, 12]`.
+  Require a linear value scale for stacks in v5.0; reject log scales and unsupported
+  offsets explicitly. Percent-normalised and streamgraph layouts
+  are not part of this initial contract.
+- **Missing & zero values**: zero is a valid value, not a gap. A missing (`NaN`)
+  visible layer makes that stack's row a gap, avoiding a misleading partial
+  total; other stacks at the same x remain valid. Stacked areas break only the
+  affected stack at that row and never bridge it. A grouped missing
+  value leaves only its own slot empty. All-missing/empty composites contribute no
+  data extent, use scale `defaultDomain` and create no hit candidates. Hidden layers
+  do not contribute to missing-value checks, sums, extents or hit tests.
+- **Visibility & updates**: hiding a layer restacks the remaining visible layers in
+  its stack; other stacks' totals are unchanged. Grouped bars retain hidden layer
+  slots and stacked bars retain fully hidden stack slots so other bars do not jump
+  horizontally. Only explicit membership/order changes remove/reorder those slots.
+  Changing a layer's `stack` retains its layer ID and invalidates both the old and
+  new stacks; validate the complete replacement layer array before committing.
+  A layer change invalidates dependent composite geometry, extents and hit indexes, not
+  unrelated marks or canonical columns. Append/prepend/upsert/retention use the
+  existing atomic table mutation contract, updating all aligned columns together.
+  Recompute affected stack rows; membership/order/visibility changes rebuild the
+  applicable layout. Validate patches before committing and support unsetting
+  layout/style options under 3.1.1 without reconstructing the plot.
+- **Derived data & LOD**: cache bounded columnar lower/upper stack endpoints and
+  extent indexes by table/column versions, stack membership/order, layer order,
+  visibility and gap policy; never materialise D3's source-sized nested tuple output
+  as a second dataset.
+  Compute stacks before decimation. Stacked areas use one shared retained-index set
+  per stack for all its boundaries, preserving gap edges, sign changes and boundary
+  extrema;
+  independently decimating each layer is invalid because shared edges can diverge.
+  Preserve viewport neighbours and apply the same curve to shared boundaries;
+  initially support linear and step curves, rejecting unsupported curves explicitly.
+  Bars use interval/window culling, not line decimation that drops categories.
+  Account for endpoint, index and scratch buffers under 3.2.1 with explicit limits.
+- **Rendering & interaction**: SVG and canvas consume the same endpoints/group slots;
+  keyed SVG rectangles use `(layerId, sampleId)`, areas one path per layer.
+  Hit testing uses actual rectangles or filled stack bands, not raw y or nearest
+  vertices alone; highlights follow the selected segment. Tooltips expose layer ID,
+  label, original value, stack ID, stack lower/upper bounds and per-stack positive/
+  negative totals where applicable, without replacing raw values with cumulative
+  heights. x-only tooltips
+  list eligible layers in configured order; zero-height/zero-width geometry is not
+  an xy hit candidate. Crosshair, export and accessible data tables use the same
+  source identity and raw/derived-value distinction.
+- **Legend & adapters**: expose a composite parent and stable per-layer children
+  for grouped bars and implicit stacks; named stacks use parent → stack → layer
+  hierarchy, with stack entry identity derived from `(markId, stackId)`.
+  Stack toggles affect only their layers; layer isolation acts within its stack,
+  stack isolation within its composite. Compute parent/stack mixed state recursively
+  using the headless model (3.8.1), filled symbols and existing mixed/toggle/isolate
+  semantics. Built-in, Web Component and Vue custom legends all drive the same
+  visibility/restacking path. Use the same config/handle types in all entry points,
+  with no extra element attributes or framework-specific layout state.
+- **Acceptance tests**: assert exact endpoints/extents for positive, negative, mixed,
+  zero, missing and empty input; layer reorder/hide/show/isolate; duplicate/misaligned
+  input rejection and invalid-patch atomicity. Include at least two named stacks
+  with independent positive/negative totals and gaps; assert union extents, stable
+  stack slots, stack/layer isolation, reassignment, reorder/removal, unnamed defaults,
+  mixed named/unnamed rejection and rejection of stack IDs in grouped mode.
+  Cover categorical and numeric/time groups, explicit intervals, horizontal/reversed
+  axes, padding, clipping, resize,
+  visible-window autoscale, appends/upserts/retention and option resets. Verify shared
+  area boundaries and gaps before/after LOD and zoom, raw versus cumulative tooltip
+  values, segment hit tests, stable IDs and cleanup. Add deterministic grouped-bar,
+  stacked-bar, side-by-side named-stack bar and overlaid named-stack area fixtures,
+  including overlapping-area hit order, for both SVG/canvas, exports and core/element/
+  Vue entry points, including legend-driven restacking and unchanged source buffers.
+
+### 3.7 Ensembles (first-class)
+
+```ts
+ensemble(fc, {
+  x: 't',
+  scales: { x: 't', y: 'q' },
+  show: {
+    members: { opacity: 0.25, max: 50 }, // SVG default; renderer: 'canvas' for large sets
+    spread: [
+      [5, 95],
+      [25, 75],
+    ], // quantile bands, nested
+    median: { stroke: 'black' },
+    mean: false,
+    control: { member: 0, stroke: 'red' },
+  },
+  highlightOnHover: true, // nearest member at pointer
+  exceedance: { threshold: 'alarm', show: 'tooltip' },
+})
+```
+
+- Members drawn in SVG as one `<path>` per member inside one group (decimated); for
+  large ensembles opt into a single canvas layer (one draw call per member).
+- Tooltip shows quantiles at pointer time, optional nearest member id.
+- Legend: one entry with sub-items (members / spread / median), toggles individually.
+- Entry IDs identify the mark and stable ensemble part (not label or array position);
+  partial visibility is represented explicitly in the headless legend model (3.8.1).
+- Memory: 50 members × 10k steps ≈ 2 MB Float32 vs. ~40 MB with object arrays.
+
+### 3.8 Interaction & plugins (`plugins/`)
+
+- Single **pointer hub** per plot (one listener set, rAF-coalesced, touch/pen aware) that
+  publishes a `pointer` signal `{ px, py, x: Map<scaleName, value>, inside }`. Pixel
+  coordinates are relative to the plot region; each configured scale name maps to its
+  inverted pointer value (nearest category for band scales).
+- Plugin interface:
+  ```ts
+  type Plugin = (ctx: PlotContext) => { update?(dirty: DirtyFlags): void; destroy(): void }
+  ```
+- Built-in plugin factories return configurable handles (3.1.1). Their public
+  `handle.update(optionsPatch)` is distinct from the installed instance's internal
+  `update(dirty)` render hook; user-defined plugins may opt into the same contract.
+- Ported plugins:
+  `zoom({ mode: 'x'|'y'|'xy', wheel, modifier, wheelModifier, reset: 'initial'|'full'|'toggle' })`,
+  `pan`, `brush` (select range → event), `crosshair` (former MouseOver: trace values,
+  vertical/horizontal), `tooltip` (HTML, positioning), `legend` (HTML, toggle, isolate),
+  `currentTime` (driven by a shared clock signal), `dstIndicator`, `alertLines`,
+  `levelSelect`, `crossSectionSelect`, `dataField`.
+- Hit testing: bisect on ordered typed x columns using logical ring indices; polar uses
+  angular bisect. Only scatter/xy hit testing builds a lazy, plot-local screen-space
+  `d3-quadtree`, storing source indices rather than copied point records. Rebuild on
+  relevant source/projection/domain/range changes; map pointers back through temporary
+  gesture transforms. D3 allocates tree nodes and bulk-build coordinate scratch arrays:
+  include both in memory budgets, cap indexed points, and surface budget exhaustion
+  explicitly rather than silently dropping hit-test candidates.
+- Keyboard & a11y: focusable plot, arrow keys pan, +/- zoom, `Esc` reset, ARIA summary,
+  optional hidden data table.
+
+#### 3.8.1 Headless legend model
+
+Legend state belongs to the core, not to the built-in SVG legend plugin. A Vue component must
+be able to render its own legend without installing that plugin, querying chart DOM,
+calling `drawLegendSymbol`, or maintaining a second list of visible series.
+
+- Every plot exposes `plot.legend`: a read-only reactive `entries` signal and commands
+  `toggle(id)`, `setVisible(id, boolean)`, `isolate(id)` and `showAll()`. The model is
+  available without a legend renderer; the built-in SVG plugin consumes this same
+  model and commands. It contains metadata/references only, never copies of columns,
+  DOM nodes or per-point data.
+- Each immutable entry snapshot has `{ id, markId, label, symbol, visibility, disabled,
+  children }`. `visibility` is `'visible' | 'hidden' | 'mixed'`; `children` is an ordered
+  readonly list for ensemble parts or composite bar/area stacks/layers/groups,
+  including recursive named-stack hierarchies (3.6.1). IDs remain stable on rename, reorder, style
+  changes and config reconciliation; duplicate IDs are rejected. Labels are plain text.
+  Unlabelled/excluded marks follow one documented inclusion policy in all renderers.
+- `symbol` uses the core's typed, declarative `SymbolSpec`, including composed line/
+  marker/area symbols, bar/stacked-area layers and ensemble bands. Resolve theme/mark styles through the shared
+  style cache, never by scraping a rendered SVG path. The same spec works for SVG and
+  canvas marks; a pure symbol-to-SVG-primitives helper supports framework rendering
+  without raw HTML injection or an imperative DOM renderer.
+  The current core exports `createLegendSwatch(entry.symbol)` for a decorative SVG element
+  and `legendSymbolPrimitives(entry.symbol)` for typed `{ type, attributes }` geometry
+  (`line`, `circle`, `rect`, `path`, `text`); both default to a 20×20 swatch.
+  Both use the same pure geometry; neither owns labels, controls, layout or visibility.
+  Shapes match the v4 `drawLegendSymbol` output: `line` spans the width, `area` is a
+  centred half-height band (stacked area, band, progress), `bar` a centred square,
+  `steps` the three v4 step bars (histogram, heatmap), `rule` a vertical line, `arrow` a
+  shaft with arrowhead, `direction` an upward arrowhead and `text` the `+1.0` sample.
+  `composite` parts overlay (area, line, markers); `stack` parts form bottom-to-top
+  coloured bands. Composite marks (`bar`, `stackedArea`) follow v4: a single unstacked
+  layer collapses into one leaf entry; an unlabelled multi-layer mark has no heading and
+  its layers (and named-stack groups) become top-level entries; a labelled multi-layer
+  mark is a heading showing its first layer's symbol. Every mark accepts a
+  `legendGroup: string` option: marks sharing it are nested, in mark order, under one
+  heading placed at the first member's position (ID `group:<name>`). The heading's
+  visibility is the combined (`mixed`) state of its members; toggling it toggles all
+  members, and isolation works among groups/ungrouped entries and among members.
+  Members keep their own hierarchy and inclusion rules (static marks still need a
+  `label`). Legend-group and named-stack headings use the `group` symbol, a "layers"
+  icon (diamond above two chevrons) stroked in `currentColor`, since their members may
+  be of any kind; each layer entry carries its own symbol. Static marks (`line`, `rule`, `band`,
+  `progress`, `text`, `arrows`, `direction`) and `heatmap` join the legend only when they
+  have a `label`; their `visible` option is toggled by the legend.
+  Marker `size` is D3's symbol area (matching v4, default 10); `opacity` on area/bar
+  symbols is fill opacity, matching chart rendering without dimming their outlines.
+  Hidden entries keep their symbols:
+  the application dims the swatch and uses a checkbox for hidden/mixed state.
+  Optional `MarkDefinition.legend` capabilities supply symbols and visibility operations;
+  the model owns IDs, hierarchy and commands without mark-kind checks. Series, bars and
+  stacked areas use shared `resolveLineStyles`/`resolveCompositeStyle` helpers with the
+  SVG/canvas mark renderers. These helpers are also exported for tooltip/highlight consumers.
+  All marks opt in; static marks and `heatmap` only when labelled.
+- Commands change authoritative mark/ensemble/composite-layer visibility via the runtime option/state
+  path (3.1.1), not a Vue-local mirror. Parent toggle hides all children when fully
+  visible, otherwise shows all; child changes recompute the parent's mixed state.
+  Isolation operates on siblings at the selected hierarchy level; `showAll()` affects
+  eligible, enabled entries only. Disabled commands and stale/unknown IDs report
+  descriptive errors rather than silently succeeding.
+- Hidden marks retain their legend entries so users can restore them. Visibility
+  affects rendering, hit testing and configured autoscale consistently; do not clear
+  unrelated source/LOD caches. Programmatic handle updates, built-in UI actions and
+  external Vue actions all publish the same state and one `legendtoggle` change event
+  per transaction, including affected IDs, resulting visibility and action source.
+  Style/label changes refresh metadata without emitting visibility events.
+- Entry snapshots update only for legend-relevant changes (membership, ordering,
+  labels, visibility, symbol/style/theme), never every pointer move or data append
+  when metadata is unchanged. Dispose subscriptions when a consumer or plot is removed.
+- Rendering is independent: installing no legend plugin reserves no chart margin and
+  creates no legend DOM. External legends use normal application layout; ResizeObserver
+  handles resulting chart-size changes. Enforce at most one built-in legend renderer
+  per plot, while allowing multiple read-only/custom consumers of the same model.
+
+### 3.9 Synchronisation (`sync/`)
+
+Domain/selection state is shareable; sync = sharing the same signal. Scale bindings and
+pointer pixels remain plot-local.
+
+```ts
+const time = sharedScale(timeScale({ timeZone })) // one domain signal
+const pointer = sharedPointer({ by: 'x' }) // crosshair across plots
+const sel = sharedSelection()
+
+createPlot(elA, { scales: { t: time, q: linearScale() }, plugins: [crosshair({ pointer })] })
+createPlot(elB, { scales: { t: time, h: linearScale() }, plugins: [crosshair({ pointer })] })
+```
+
+- Works for any scale (x **or** y), any number of plots, no feedback loops (single source
+  of truth), domain changes via `subscribe(time.domain, listener)` or typed plot events
+  via `plot.on('domainchange', listener)`.
+- Shared pointers publish domain values keyed by shared scale identity plus source/
+  active state; each plot derives its own pixels and inside/clipping state. The pointer
+  hub's `{ px, py, inside }` is local and is never copied into another plot as authority.
+- `sharedPointer({ by: 'x' | 'y' | 'xy' })` defaults to x. Install it through
+  `crosshair({ pointer })` on each Cartesian plot; plots may use different local names
+  for the same scale handles. `subscribe(pointer.state, listener)` observes immutable
+  `{ source, active, values }` snapshots, where `source` is an opaque per-installation
+  symbol and `values` is an array of `{ scale, value }` entries. Equal domains on
+  different handles are not a link.
+- The latest local primary-pointer publication owns shared state. Leaving, cancelling,
+  removing the owner's crosshair or destroying its plot clears that state; an older
+  source cannot clear a newer one. Replacing the pointer handle or scale membership
+  releases ownership and waits for new local input instead of republishing stale values.
+  Changing domains, ranges or size reprojects the stored domain values without echoing
+  them. `plot.pointer` and ordinary tooltips remain local.
+- Only matching, in-bounds destination axes render; an x-only shared pointer does not
+  invent a y guide. For multiple matching scales in one direction, the label's scale
+  name (or the snap target if no label is configured) is preferred, falling back to
+  binding order. Destination
+  snapping uses its own mark data and may derive the other guide locally; it never
+  republishes snapped coordinates. xy snapping requires both shared axes. Without a
+  `pointer` option, existing local crosshair behavior is unchanged.
+- Optional `linkScales(a, b, { transform })` for linked but different scales
+  (e.g. UTC vs. local, m vs. ft, offset by forecast lead time).
+- `sharedSelection()` owns an immutable domain selection independently of plots.
+  Install it with `brush({ mode: 'x', persistent: true, selection })` on each plot.
+  `subscribe(selection.selection, listener)` observes `{ mode, ranges }`, where each
+  range contains `{ scale, axis, range }`; scale identity, not its plot-local name,
+  links consumers. Use separate brush handles when plots use different local names,
+  memberships or directions; one brush handle has one local-name selection view.
+- Initialize or update the shared selection with
+  `selection.setSelection({ mode: 'x', ranges: [{ scale: time, axis: 'x', range: [start, end] }] })`.
+  The shared setter validates shape, axis coverage, scale kinds and numeric/category
+  ranges before publishing a copied, frozen snapshot. Equivalent ranges are no-ops,
+  irrespective of entry order. Install a brush before calling its local-name
+  `handle.setSelection()`; before installation use the scale-identity shared setter.
+- Persistent brush gestures and local-name `setSelection()` write the same shared
+  source of truth. Destination brushes derive their own immutable local-name views and
+  reuse existing projection, clipping, handles and validation, without emitting
+  mirrored `brush` events. `handle.selection` is subscribable. Continuous ranges may
+  extend outside the current domain; off-screen selections hide without changing state.
+  Removed band categories remain stored and render again if restored.
+- Consumers display only matching scale identities and directions allowed by their
+  configured mode; an xy selection can supply an x-only consumer, and a consumer with
+  no matching ranges hides its selection. Changing mode, bindings or shared handle
+  changes the local view, not the shared snapshot. External selection changes cancel
+  an active drag rather than overwriting the new value with stale gesture state.
+- Shared selections survive brush removal and plot destruction. Explicitly clear with
+  `selection.setSelection(undefined)` or an installed brush's `setSelection(undefined)`.
+  Removing one consumer does not invalidate surviving peers. Switching between local
+  and shared mode clears the old local snapshot, not either shared selection.
+- `sharedClock({ initial, now, interval })` provides the shared current-time signal
+  `clock.time` (epoch milliseconds) and `clock.running`. It starts stopped, owns no
+  timer until `start()`, and defaults to `Date.now` with a 1000 ms interval. `initial`
+  accepts a finite Date-range number or Date; `now` is an injectable numeric time
+  source for deterministic tests. `set(numberOrDate)` changes the time manually and
+  `tick()` samples `now()` once; neither starts a timer. Repeated `start()`/`stop()`
+  calls are idempotent. Starting waits for the first interval rather than ticking
+  immediately.
+- Subscribe to `clock.time` once per consumer using the existing frame-coalesced
+  subscription API. The application owns the clock: plot destruction does not stop it.
+  Call `clock.destroy()` to stop its one timer permanently; `time` remains readable,
+  while later `set`/`tick`/`start` calls throw. Callers own their subscriptions and can
+  unsubscribe/abort them independently. Invalid manual ticks throw; a failed timer
+  source is logged explicitly and stops the clock. This is a clock foundation, not
+  a current-time mark/plugin or automatic scale follow.
+
+### 3.10 Live updates
+
+- `series.append(rows)` → incremental extent (block index), dirty only for marks using the
+  series, LOD cache invalidated for the affected x-range.
+- Scale `follow` mode: `timeScale({ follow: { window: '48h', lead: '6h' } })` keeps the window
+  sliding with new data; automatically suspended when user zooms/pans, resumed on reset.
+- Back-pressure: updates coalesced per frame; `plot.pause()`/`resume()` when not visible
+  (IntersectionObserver) – no rendering for off-screen plots.
+- Visibility suspension is render-only. `plot.pause()` and `plot.resume()` set/clear an
+  idempotent manual pause; `plot.paused` reports effective suspension. A shared
+  `IntersectionObserver` observes plot hosts. Manual pause and viewport visibility are
+  independent: visibility cannot undo a manual pause, and `resume()` cannot force an
+  off-screen plot to render. Until the first observer result arrives, a synchronous
+  viewport estimate of the host's bounding rect decides the initial state, so on-screen
+  plots paint on their first frame and initially off-screen plots never paint.
+- While suspended, dirty layers and mark updates are retained without scheduling plot
+  draws; resuming coalesces them into a latest-state frame. Plugin visual effects,
+  including external legend layout and HTML tooltips, are gated too. Plugin membership
+  changes mount/unmount on resume. Initial DOM scaffolding and explicit destruction are
+  lifecycle operations, not paints; destroying a suspended plot releases its resources
+  and drops pending work. Calling `pause()`/`resume()` after destruction throws.
+- Data ingestion/retention, shared scales and follow, signal subscriptions and
+  non-render plot events (`domainchange`, `legendchange`) continue while suspended.
+  Other plots using those handles remain active. Layout/projection and visual plugin
+  outputs reflect the last rendered layout until catch-up; `layoutchange` follows that
+  catch-up. Visibility never transfers or disposes application-owned data or handles.
+- Optional streaming helper: `connect(series, asyncIterable | WebSocket | EventSource)`.
+
+### 3.11 Styling & theming
+
+- Design tokens as CSS custom properties (`--fews-chart-*`), light/dark themes.
+- Style resolution: tokens resolved **once** per theme change into a cache shared by
+  canvas renderer, legend symbols and highlight (no `getComputedStyle` on hover).
+- Theme change detection: `prefers-color-scheme` media query + opt-in observer on a
+  configurable element (not the whole `<html>`), invalidates only `STYLE`.
+- Per-mark style may be an object, a CSS class, or a function of the datum (with
+  `color` scale support for marks like heatmap/arrows).
+
+### 3.12 Memory & resource hygiene
+
+- No per-point objects in canonical storage, no `slice` copies at render (use index
+  windows). D3 spatial-index objects, legacy rows and opt-in accessibility/export
+  materialisation are separately accounted exceptions, not hidden zero-copy claims.
+- Reusable scratch buffers for decimation/quantiles.
+- Single ResizeObserver / IntersectionObserver shared across all plots (module-level).
+- `destroy()` disconnects observers, removes listeners, detaches from shared signals,
+  frees caches; `WeakRef`/`FinalizationRegistry` as safety net in dev mode (warning).
+
+### 3.13 HTML5 Web Component (`element/`)
+
+A standards-based custom element on top of the core API, usable in plain HTML, Vue,
+React, Angular or FEWS Web OC config-driven pages without a framework adapter.
+
+```html
+<fews-chart
+  id="q"
+  sync-group="station-123"
+  zoom="x"
+  pan
+  crosshair
+  tooltip
+  legend="top"
+  current-time
+></fews-chart>
+
+<script type="module">
+  import { defineFewsChart } from '@deltares/fews-web-oc-charts/element'
+  import { time, linear, axis, series, fromObjects } from '@deltares/fews-web-oc-charts'
+  defineFewsChart() // registers <fews-chart>
+
+  const obs = fromObjects(observations, { x: 'time', y: 'value' })
+  const el = document.getElementById('q')
+  el.config = {
+    scales: {
+      t: timeScale({ timeZone: 'Europe/Amsterdam' }),
+      q: linearScale({ nice: true, includeZero: true }),
+    },
+    axes: [
+      axis('t', { position: 'bottom', grid: true }),
+      axis('q', { position: 'left', label: 'Discharge', unit: 'm³/s', grid: true }),
+    ],
+    marks: [
+      series(obs, { id: 'obs', x: 't', y: 'q', markers: { symbol: 'circle' }, label: 'Observed' }),
+    ],
+  }
+  obs.append(rows) // live update, same as core API
+</script>
+```
+
+- **Configuration (v5.0)**: a single `el.config` property with exactly the same shape as
+  `createPlot` options – no second config dialect to document and test. Assigning a new
+  object calls `plot.setConfig` (3.1.1): complete replacement semantics with incremental
+  reconciliation, not a deep merge that retains omitted options. Handles can be updated
+  directly or through `el.plot.update` without reassigning the whole configuration.
+  Attributes cover only simple, string-friendly plot-level toggles: `sync-group`, `sync`,
+  `zoom`, `pan`, `crosshair`, `tooltip`, `legend`, `current-time`, `theme`.
+- **Attribute updates/removal**: present attributes are element-owned overrides above
+  `el.config` for the corresponding option; removal deletes that override and reveals
+  the current config/default value. Removing a boolean attribute does not override
+  an explicit `true` in config with `false`. Parse and validate before applying; invalid
+  attribute/config changes emit `error` and retain the last valid state. Property/core
+  method validation errors also throw to their caller. Reconcile plugin toggles with
+  configured plugins, never install duplicate zoom/pointer listeners.
+- **Future (post-5.0, not in scope)**: declarative light-DOM child config elements
+  (`<fews-scale>`, `<fews-axis>`, `<fews-series>`, `<fews-ensemble>`, …) and `src`
+  attributes for data loading, built as a mapping onto `el.config`.
+- **Escape hatch**: `el.plot` exposes the underlying core plot object for advanced use.
+  Custom legends need not access it: the stable `el.legend` facade exposes the core
+  model directly (see below).
+- **Custom legend parity with Vue**: provide a named `<slot name="legend">` for
+  application-owned light-DOM content. Assigned content automatically suppresses the
+  built-in legend renderer, including a configured plugin, without mutating config or
+  visibility. Native slots are not scoped Vue slots: applications receive entries and
+  invoke commands through `el.legend` and events, not slot props. Legend content is UI,
+  not a second configuration dialect or a deferred child config element.
+  `legend="external"` suppresses the built-in renderer for a legend elsewhere on the
+  page; the model remains available without a slot or plugin. Custom slot/external
+  presentation takes precedence over built-in position settings. Removing slot content
+  or the external override restores the currently configured renderer. Observe
+  `slotchange`, not chart DOM mutations; never install duplicate renderers/listeners.
+- **Public legend API**: `el.legend.entries` is the current immutable readonly entry
+  snapshot from 3.8.1; `toggle(id)`, `setVisible(id, boolean)`, `isolate(id)` and
+  `showAll()` delegate to that model with identical hierarchy/error semantics.
+  Before readiness or while disconnected, entries are empty and commands throw a
+  descriptive not-ready error. The facade retains identity across reconnects but
+  rebinds to the current plot, releasing old subscriptions and snapshots. Callers
+  never need to cache a plot reference or duplicate visibility state.
+- **Legend notifications**: `legendchange` carries `{ entries }` whenever legend
+  metadata/state changes, including label, theme, membership and visibility. Publish
+  after committing state so reading `el.legend.entries` agrees with the event detail.
+  `ready` exposes the initial populated model; disconnection clears it and notifies
+  subscribers. No notifications for pointer moves or appends with unchanged metadata.
+  Keep `legendtoggle` for visibility-action details from 3.8.1, with no second mutation
+  or feedback loop. Consumers can register events once on the element across reconnects
+  and render immediately from the current snapshot if it is already ready.
+- **Symbols**: export `renderLegendSymbol(svgElement, symbol)` from the element entry
+  point. It uses the same `SymbolSpec`/pure primitive helper as Vue `LegendSymbol`,
+  replaces only children it owns in the supplied SVG, sets a documented viewBox and
+  decorative `aria-hidden`, and accepts composed symbols for SVG/canvas marks.
+  It does not query chart DOM, use `innerHTML`/raw markup, or retain the chart/store.
+  Applications own labels, rows, focus management and styling; symbols use resolved
+  style metadata so they also work outside the shadow tree.
+- **Layout & accessibility**: slotted legend UI participates in normal host layout
+  outside the plot viewport, with no additional built-in legend margin; external
+  containers use application layout. ResizeObserver updates the plot viewport when
+  a legend wraps/resizes. Light-DOM content remains application-styled; provide a
+  legend-slot wrapper part for placement. Examples use buttons/checkboxes, stable IDs,
+  keyboard access, mixed states and text labels; hidden entries remain operable.
+- **Shadow DOM** with an SVG root; theming through CSS custom properties
+  (`--fews-chart-*`, inherit through shadow boundary) and `::part(axis|legend|tooltip|plot)`;
+  `adoptedStyleSheets` shared across all instances (one stylesheet in memory).
+- **Sync**: `sync-group="name"` attribute joins a module-level registry of shared scale /
+  pointer / selection signals – synchronising charts is purely declarative.
+  `sync="t,pointer"` selects what to share.
+- **Events** (bubbling, composed `CustomEvent`s): `domainchange`, `pointerchange`,
+  `selectionchange`, `legendchange`, `legendtoggle`, `brushend`, `ready`, `error`.
+  Publish typed event maps and legend facade/entry types for plain TS and frameworks.
+- **Lifecycle**: `connectedCallback` creates the plot, `disconnectedCallback` calls
+  `destroy()` (deferred one microtask so DOM moves don't recreate the plot);
+  `ElementInternals` for ARIA role/label; works with `form`-free usage only.
+- **Data loading**: done by the application (or the Vue layer) in v5.0; the element only
+  receives series objects via `el.config` and live updates via `series.append/upsert`.
+- **SSR / frameworks**: no work in constructor (spec compliance), upgrade-safe property
+  handling (properties set before definition are re-applied), Vue `isCustomElement` docs,
+  typed `HTMLElementTagNameMap` + JSX/Vue `GlobalComponents` declarations generated.
+- Separate entry point `@deltares/fews-web-oc-charts/element` so core users don't pay for it.
+
+Custom legend example (after assigning a valid `el.config` as above):
+
+```html
+<fews-chart id="custom-chart">
+  <ul slot="legend" aria-label="Chart legend"></ul>
+</fews-chart>
+<script type="module">
+  import { renderLegendSymbol } from '@deltares/fews-web-oc-charts/element'
+
+  const el = document.getElementById('custom-chart')
+  const list = el.querySelector('[slot="legend"]')
+  function renderLegend() {
+    const rows = el.legend.entries.map((entry) => {
+      const row = document.createElement('li')
+      const button = document.createElement('button')
+      button.type = 'button'
+      button.disabled = entry.disabled
+      button.setAttribute(
+        'aria-pressed',
+        entry.visibility === 'mixed' ? 'mixed' : String(entry.visibility === 'visible'),
+      )
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+      svg.setAttribute('width', '24')
+      svg.setAttribute('height', '16')
+      renderLegendSymbol(svg, entry.symbol)
+      button.append(svg, document.createTextNode(entry.label))
+      button.addEventListener('click', () => el.legend.toggle(entry.id))
+      row.append(button)
+      return row
+    })
+    list.replaceChildren(...rows)
+  }
+  // The application calls defineFewsChart() before awaiting upgrade.
+  await customElements.whenDefined('fews-chart')
+  el.addEventListener('ready', renderLegend)
+  el.addEventListener('legendchange', renderLegend)
+  renderLegend() // also handles an already-ready element
+</script>
+```
+
+This flat example illustrates the API; ship a keyed DOM-update example preserving
+focused buttons and a recursive ensemble example for production accessibility.
+Applications dispose external listeners when their owning view is removed.
+
+- **Custom legend acceptance tests**: cover slotted and separately mounted legends,
+  no built-in DOM/margins, symbol parity with Vue for SVG/canvas marks, parent/child
+  visibility, commands/events and programmatic option resets. Verify config replacement,
+  labels/themes, slot insertion/removal, `legend="external"` removal, resize, keyboard/
+  focus preservation, late upgrade, already-ready subscription, disconnect/reconnect
+  and multiple consumers. Assert no retained old plots or duplicate notifications,
+  and no data-buffer copies or legend updates for unrelated pointer/data activity.
+
+### 3.14 v4 compatibility layer (`compat/`) – full v4 API
+
+Goal: existing v4 code works by only changing the import to
+`@deltares/fews-web-oc-charts/compat`. Implemented as thin adapters over the v5 core –
+no copy of the v4 implementation.
+
+- **Coverage** – every symbol currently exported from `src/index.ts`:
+  - Axes: `Axes`, `CartesianAxes`, `PolarAxes`, `ColourBar`, `defaultDomain`, options types,
+    `setOptions`, `redraw`, `update`, `zoom`, `resize`, `resetZoom`, `removeChart`,
+    `removeAllCharts`, `accept`, `extent`, `xScales`/`yScales`, `setDomain`, `getScale`,
+    `addEventListener('update:x-domain')`.
+  - Axis: `XAxis`, `YAxis`, `createAxis`, `AxisType`, `AxisPosition`, `AxisOrientation`,
+    `LabelOrientation`, option interfaces.
+  - Charts: `Chart` base and all 12 subclasses (`ChartLine`, `ChartMarker`, `ChartArea`,
+    `ChartRange`, `ChartBar`, `ChartHistogram`, `ChartArrow`, `ChartDirection`,
+    `ChartMatrix`, `ChartProgress`, `ChartRule`, `ChartText`) with `addTo`, `data`,
+    `setOptions`, `setAxisIndex`, `visible`, `extent`, `drawLegendSymbol`, tooltip &
+    mouseover formatter options, `CurveType`, `TextPosition`.
+  - Visitors: `Visitor`/`BaseVisitor` and all 13 visitors (`Legend`, `WarningLevels`,
+    `MouseOver`, `ZoomHandler`, `CurrentTime`, `DstIndicator`, `LevelSelect`,
+    `CrossSectionSelect`, `DataField`, `AlertLines`, `BeaufortAxis`, `PanHandler`,
+    `BrushHandler`) incl. their callbacks/events and enums (`ZoomMode`, `WheelMode`, …).
+  - Utils, Scale (`ScaleOptions`, `ResetZoom`, wind/current scales), `Tooltip`,
+    Data types (`DataPoint`, `dataExtentFor`), SCSS class names (`wb-charts`, layer classes).
+- **Mapping strategy**:
+  - `CartesianAxes`/`PolarAxes` → wrap a v5 plot; `x[i]`/`y[i]` options → named scales
+    `x0, x1, y0, y1`; `xScales[i]` returns a live d3-compatible view onto that plot's
+    scale binding, with domain writes routed through the authoritative signal.
+  - `Chart.addTo(axes, axisIndex, id, style)` → creates the matching v5 mark; `DataPoint[]`
+    converted through a shared weak-keyed cache by source-array identity and column
+    mapping/conversion policy, not by chart. Setters (even with the same array) and
+    explicit `redraw()` refresh legacy in-place edits; coalesce conversion once per
+    source/mapping per flush and notify all dependent marks. Release unused conversions.
+    Legacy rows remain accessible, so compat memory includes both representations.
+  - `ChartLine` + `ChartMarker` with same data stay two marks (behaviour preserved), but
+    share converted stores, block indexes and compatible LOD results.
+  - Existing `ChartBar` x/x1 category grouping maps to grouped `bar` layers; preserve
+    v4 legend/style/spacing behaviour. `ChartArea` scalar and explicit `[y0, y1]`
+    fills remain baseline/range fills, never implicitly stacked. New stacking is an
+    opt-in core feature, not a change to legacy charts' default semantics.
+  - Visitors → v5 plugins; `accept(visitor)` installs the plugin.
+  - Explicit `redraw()`/`zoom()` calls trigger a full invalidate for identical semantics;
+    lodash-style deep-merge `setOptions` reimplemented locally (no lodash dependency).
+    Preserve v4 merge/undefined semantics only in compat; translate resulting changes
+    to core updates. Document migration to v5's explicit `undefined` reset rather than
+    changing legacy `setOptions` behaviour.
+  - DOM structure & CSS classes kept where apps style them (`.wb-charts`, layer groups,
+    `data-chart-id`), so existing stylesheets keep working.
+- **Verification**: run the full v4 `examples/` Playwright snapshot suite and v4 unit tests
+  against `compat`; visual diffs within a small tolerance are reviewed and documented.
+- **Deprecation**: each compat symbol carries `@deprecated` JSDoc with a pointer to the v5
+  equivalent; one-time console warning in dev builds. Compat is tree-shaken away when not
+  imported; planned removal in v6.
+
+### 3.15 Vue component & composables (`vue/`)
+
+The optional Vue 3 entry point provides a first-class **`FewsChart` component backed
+directly by core `createPlot`**, not a required wrapper around `<fews-chart>`. Keep core
+framework-free; do not require custom-element registration or `isCustomElement` for
+this component. The Web Component remains a separate framework-neutral alternative.
+
+- **Component contract**: typed `config: PlotConfig` uses the same configuration as
+  core. Apply replacement config references with `plot.setConfig`, preserving stable
+  handles/stores and current interaction state (3.1.1). Expose the plot as a readonly
+  shallow ref and forward typed `ready`, `error`, domain/selection and legend events.
+  Imperative handle updates are supported; reapplying a new config follows the
+  documented replacement rules rather than a hidden controlled/uncontrolled merge.
+- **Vue-owned legend**: a scoped `#legend` slot receives `{ entries, toggle, setVisible,
+  isolate, showAll }` from the core model. Supplying the slot selects external legend
+  rendering and suppresses the built-in renderer, including any configured legend
+  plugin, without changing visibility state or mutating caller config. With no slot,
+  preserve the configured built-in legend behaviour; do not install a legend implicitly.
+  A typed `legend="external"` presentation prop also suppresses built-in rendering
+  for legends mounted elsewhere. Removing the slot/override restores the configured
+  renderer with no duplicate DOM/listeners. The component owns only presentation
+  selection; the model remains available in every mode.
+- **Symbols without chart DOM**: export `LegendSymbol` (props: `symbol: SymbolSpec`)
+  to render the declarative symbol as Vue-managed SVG, with no chart-specific
+  selectors or `v-html`. Consumers can instead render their own symbol. Legend rows,
+  labels, layout, buttons and styling belong entirely to the application and work
+  with plain HTML, Vuetify or another component library.
+- **Composable alternative**: `usePlot(containerRef, configRef)` returns a readonly
+  shallow plot ref and owns create/destroy; `useLegend(plotRef)` returns a readonly
+  shallow `entries` ref plus the same commands as the slot. It also accepts a plot
+  ref owned by `FewsChart` or application code without taking ownership of that plot.
+  An absent/not-yet-mounted plot yields empty entries; actions before readiness throw
+  a descriptive error. Watch plot identity, unsubscribe from old instances and reset
+  entries on detach; never retain stale actions/entries across replacement.
+- **Reactivity boundary**: provide `useSharedScale`, `useSeries` and signal/ref bridges,
+  but keep stores, handles and typed arrays raw (`markRaw`/`shallowRef` as appropriate).
+  Do not deep-watch/proxy large datasets or clone configs with JSON/`structuredClone`
+  (callbacks, shared identities and explicit `undefined` resets must survive).
+  Watch config identity; document replacing the config reference for declarative
+  changes and using `handle.update` for local patches. No two-way watcher loop or
+  automatic rebuilding of data stores on a legend click.
+- **Lifecycle & SSR**: create plots only after mount with a valid container; render a
+  stable chart container and empty legend entries during SSR, then populate after
+  mount. Stop Vue watchers and core subscriptions on scope disposal, destroy only
+  owned plots, and support remount/replacement without leaks. Surface validation
+  failures through the typed error event and retain the last valid config.
+- **Accessibility**: examples use keyboard-operable buttons/checkboxes with accessible
+  labels, pressed/checked state and mixed-state support. `LegendSymbol` is decorative
+  (`aria-hidden`); hidden series stay operable in the legend. Do not rely on colour
+  alone. Supply a recursive ensemble example in addition to the flat example below.
+- **Packaging**: Vue is an optional peer dependency, externalised from library builds;
+  publish typed component props/emits/slots and composable declarations. Document the
+  tested Vue minimum; no Vue runtime imports in core or the element entry point.
+
+```vue
+<script setup lang="ts">
+import type { PlotConfig } from '@deltares/fews-web-oc-charts'
+import { FewsChart, LegendSymbol } from '@deltares/fews-web-oc-charts/vue'
+
+defineProps<{ config: PlotConfig }>()
+</script>
+
+<template>
+  <FewsChart :config="config">
+    <template #legend="{ entries, toggle }">
+      <ul aria-label="Chart legend">
+        <li v-for="entry in entries" :key="entry.id">
+          <button
+            type="button"
+            :disabled="entry.disabled"
+            :aria-pressed="entry.visibility === 'mixed' ? 'mixed' : entry.visibility === 'visible'"
+            @click="toggle(entry.id)"
+          >
+            <LegendSymbol :symbol="entry.symbol" />
+            {{ entry.label }}
+          </button>
+        </li>
+      </ul>
+    </template>
+  </FewsChart>
+</template>
+```
+
+- **Acceptance tests**: mount a Vue chart with a custom legend and no built-in legend
+  DOM/margins; toggle/isolate/show all and verify mark visibility, hit tests and
+  autoscale. Verify external handle updates, mixed ensemble state, label/theme changes,
+  reorder/removal and option unsetting update the legend without data re-ingestion.
+  Cover multiple legend consumers, replacing the plot/config, switching between
+  built-in/slot/external rendering, keyboard interaction, invalid commands, SSR/
+  hydration and repeated mount/unmount cleanup. A pointer move or data append with
+  unchanged legend metadata must not rerender the Vue legend.
+
+## 4. Proposed public API sketch
+
+### Phase 1: plot and named-scale foundation
+
+Run `npm run dev` and use the example index, or open these public-API demos:
+
+- [Basic line and secondary axis](./examples/v5-basic-line/index.html): static SVG lines
+  mapped through named time/value scales, including a secondary right axis.
+- [Shared domains and plot-local ranges](./examples/v5-shared-scales/index.html):
+  shared time/discharge scales, independent resizing, domain updates and destroying/
+  recreating one consumer while the other stays live.
+- [Synchronized live stream](./examples/v5-live-stream/index.html): Phase 4 production
+  acceptance example; a following shared time scale, retained series and aligned table
+  (stacked area and grouped bars), shared pointer/selection, follow suspension/resume,
+  manual/off-screen pause and detail destroy/recreate (`npm run test:live:stream`).
+- [Runtime options and themes](./examples/v5-runtime-options/index.html): band,
+  linear and degree scales, stacked axes, handle updates, nested option unsetting,
+  configuration replacement, scoped CSS tokens and explicit cleanup.
+- [Civil-time axes](./examples/v5-time-axes/index.html): automatic multi-level time
+  labels, locale/time-zone overrides, and spring-forward/fall-back calendar behavior.
+- [Polar coordinates](./examples/v5-polar-coordinates/index.html): clockwise and
+  anticlockwise angles, intercepts, angular sweep, radial inner radius and projected
+  coordinate readouts.
+- [Cartesian range marks](./examples/v5-range/index.html): numeric/time interval rectangles,
+  independent mark styling, gaps and endpoint autoscaling.
+- [Polar range marks](./examples/v5-polar-range/index.html): angular/radial intervals rendered
+  as annular sectors, with multiple independently styled layers.
+- [Zoom interaction](./examples/v5-zoom/index.html): pointer-anchored wheel zoom with axis,
+  modifier and reset controls, plus visible-data y autoscaling that resumes on reset.
+
+The scale, theme and polar demos remain axes-only; the polar example also reports projected
+coordinates using the public `project` API. The basic-line demo uses the narrow static `line()`
+foundation for visual fixtures. The [series demo](./examples/v5-series/index.html) now uses
+the data-backed foundation and autoscaling described below. The range demos exercise the
+cartesian and polar interval mark implementations.
+The `v5-spike-*` examples remain separate phase 0 prototypes, not examples of the
+public v5 API.
+
+The package root now exports `createPlot`, `createPolarPlot`, `linearScale`, `timeScale`,
+`bandScale`, `degreesScale`, `angularScale`, `radialScale`, `sharedScale`, `axis`, `line`,
+`band` (also `range`), `layout`, `batch`, `untracked`, `effect` and `subscribe`, alongside
+typed plot events and the existing v4 exports.
+The tested phase 0 reactive primitives
+have moved into `src/core`; the spike imports remain forwarding modules so the phase 0
+fixtures keep working.
+
+```ts
+const t = timeScale({ domain: [Date.UTC(2026, 0, 1), Date.UTC(2026, 0, 2)] })
+const q = linearScale({ domain: [0, 100], includeZero: true })
+const plot = createPlot(container, {
+  title: 'Discharge',
+  scales: { t, q },
+  axes: [
+    axis('t', { position: 'bottom' }),
+    axis('q', { position: 'left', label: 'Discharge', grid: true }),
+  ],
+  theme: 'auto',
+  themeElement: container, // optional: observe class/style changes on this element
+})
+const detail = createPlot(otherContainer, { scales: { t, q } })
+t.domain.set([Date.UTC(2026, 0, 1, 6), Date.UTC(2026, 0, 1, 18)])
+const stop = subscribe(t.domain, (domain, previous) => {
+  console.log('Shared domain changed', previous, '→', domain)
+})
+plot.on('domainchange', ({ scale, domain, source }) => {
+  console.log(scale, source, domain)
+})
+plot.update({ margins: { left: 16 } })
+plot.update({ margins: { left: undefined } }) // current default, not constructor value
+plot.setConfig({ scales: { t, q } }) // removes axes/title; retains shared domains
+stop()
+plot.destroy()
+detail.destroy()
+```
+
+- `subscribe(signal, listener, { immediate, signal, equals })` observes library signals
+  through the frame scheduler. It coalesces updates, supplies the previous delivered value,
+  and returns an idempotent unsubscribe function. An `AbortSignal` or active reactive scope
+  can own its lifetime. `effect(run)` exposes the existing auto-tracked effect primitive.
+- `plot.on('domainchange' | 'layoutchange' | 'legendchange', listener)` provides typed
+  plot-level notifications. Matching bubbling, composed `CustomEvent`s are dispatched on
+  `plot.element`; `HTMLElementEventMap` and `SVGElementEventMap` include typed detail.
+  `legendtoggle` and `brush` are also available through `plot.on` and retain their existing
+  DOM events. Pass `{ signal }` to dispose a plot listener when its consumer is aborted.
+
+- Scale handles are already shareable; `sharedScale(handle)` returns the same handle.
+  Their `domain` signal contains an immutable numeric pair (epoch milliseconds for
+  time), or an ordered string array for band scales. `domain.set`, `domain.update`
+  and `scale.update` validate synchronously and publish through the shared scheduler.
+  Explicit domains override autoscaling until unset. Otherwise, live mark extents are
+  combined across plot bindings, falling back to `defaultDomain` when empty.
+- Each plot owns separate `plot.scales[name]` bindings exposing `range.get()`,
+  `project(value)`, `invert(pixel)`, `ticks(count)` and `bandwidth`. No mutable D3
+  instance is exposed or shared. Axes determine x/y orientation; without axes, time
+  and band scales default to x, and linear/degrees scales to y. Override this locally
+  using `directions: { q: 'x' }`. A name cannot represent both directions in one plot.
+- Time scales generate civil-calendar ticks in their configured time zone. Time axes
+  may override `timeZone` and `locale`; horizontal axes render hour/day or coarser
+  multi-level labels, omit nonexistent spring-forward boundaries, and disambiguate
+  repeated fall-back labels. Supplying `format` opts out of the automatic label rows.
+- The SVG container uses the host's content size, observed by one shared
+  `ResizeObserver`; `width`/`height` override individual dimensions, including zero.
+  Give the host a height, or provide an explicit height. Rendering is asynchronous
+  and coalesced into one animation frame. `plot.size`, `plot.regions`, `plot.theme`
+  and handle `options` expose read-only signals; `options.get()` includes immutable
+  `explicit` and `resolved` snapshots.
+- The pure `layout(size, axes, margins, titleHeight)` function stacks axis bands from
+  the plot outwards in collection order. Plot text measurement is cached and bounded;
+  margins grow rather than jitter when domain changes alter label widths, and are
+  remeasured on resize, axis-option or font changes.
+- `theme` accepts `auto` (default), `light` and `dark`. CSS properties
+  `--fews-chart-background`, `--fews-chart-foreground`, `--fews-chart-grid`,
+  `--fews-chart-accent`, `--fews-chart-font-family` and `--fews-chart-font-size`
+  override tokens. Font size is a positive pixel value. Tokens are cached at creation
+  and theme changes, never during projection. Colour-only changes preserve axis DOM
+  and line geometry, updating only style attributes without reprojecting line points
+  or rebuilding SVG paths; font changes remeasure layout and rebuild line geometry.
+  Theme observation is opt-in on `themeElement`, never
+  implicitly on the document root; system colour-scheme changes are also observed.
+  Tooltip, crosshair and cross-section labels use the resolved font family and size,
+  including tooltips portalled to the document body. Font changes resize their
+  backgrounds and update callout clamping and cross-section label collision layout.
+  All axis text, including classic Cartesian ticks/captions and classic polar
+  angular/radial labels, inherits `--fews-chart-font-family` from the chart.
+  Tooltip placement converts viewport coordinates and bounds into the portalled
+  tooltip's CSS coordinate system so body-level CSS `zoom` keeps its arrow aligned
+  with the crosshair while preserving UI scaling.
+- Plot/scale/axis updates support set, recursive patch and explicit `undefined` reset.
+  Arrays replace membership/order; omitted scale names remain, while `undefined`
+  removes a binding. Removing a scale used by an axis requires removing/rebinding that
+  axis in the same plot update. Plot `setConfig` replaces configuration, but does not
+  reset reused handle options or live domains. Axis IDs are immutable, duplicate IDs
+  are rejected, and invalid patches leave prior state intact.
+- `destroy()` is idempotent, removes only the owned SVG, releases local computed
+  scales, effects, theme listeners/observers and resize subscriptions, and cancels
+  pending plot rendering. It never disposes shared scale/axis handles. Updating a
+  destroyed plot throws.
+
+#### Supported skew-T/log-P sounding charts
+
+`createSkewTPlot(host, config)` is a dedicated coordinate system, not a
+pre-transformed Cartesian dataset. Supply exactly one named `linearScale` for
+temperature in Celsius and one named positive `logScale` for pressure in hPa.
+Use ascending pressure domains with `reverse: true` to put high pressure at the
+bottom. Directions are inferred from scale kinds. A temperature domain describes
+the bottom-edge temperature range; cold upper-air temperatures can project into
+the viewport even when outside that bottom-edge domain.
+
+```ts
+const sounding = createSkewTPlot(host, {
+  scales: {
+    temperature: linearScale({ domain: [-40, 50] }),
+    pressure: logScale({ domain: [100, 1000], reverse: true }),
+  },
+  axes: [
+    axis('temperature', { position: 'bottom', unit: 'C', grid: true }),
+    axis('pressure', { position: 'left', unit: 'hPa', grid: true }),
+  ],
+  marks: [
+    line({
+      x: 'temperature',
+      y: 'pressure',
+      xValues: temperatures,
+      yValues: pressures,
+    }),
+  ],
+})
+```
+
+- Raw aligned values stay in sounding-level order, with gaps preserved; no
+  temperature sorting or logarithmic preprocessing is needed. Use a second line
+  for dew point, optionally with a different dash pattern.
+- The shared projection is `x = temperatureScale(T + skew * ln(pBottom / p))`,
+  `y = pressureScale(p)`, where `pBottom` is the pressure at the bottom edge.
+  `skewT.skew` defaults to `30` Celsius per unit of natural-log pressure, **not**
+  degrees of screen angle; zero gives an unskewed log-pressure plot.
+- Lines, markers, isotherms, isobars, `plot.project(T, p)`,
+  `plot.invert(svgX, svgY)` and the named values in `plot.pointer` use the same
+  projection/inverse. Public pixel coordinates are SVG coordinates, including
+  margins; pointer `px`/`py` remain plot-local, as on other plots.
+- Grid flags on the temperature/pressure axes enable isotherms/isobars. The grid
+  includes cold isotherms entering from the left and is always clipped to the
+  viewport; sounding marks use the existing `clipMarks` option.
+- Scale domains, plot size, theme and `plot.update({ skewT: { skew: 20 } })` remain
+  reactive. `skewT: undefined` resets the default skew, while `setConfig` replaces
+  the configuration using the normal v5 contract. Temperature autoscale extents
+  include the shear, and visible-domain policies filter against the projected
+  temperature window rather than the raw upper-air temperatures.
+- Initial supported marks are static `line()` traces and their markers. Axes must
+  use default styling, outside layout, bottom temperature and left/right pressure.
+  Other marks, area fills, axis crossings and zoom plugins are explicitly rejected,
+  not silently rendered with Cartesian geometry. Adiabats, mixing-ratio curves,
+  parcel diagnostics and wind barbs are not included in this simple sounding chart.
+- `logScale()` is also usable on Cartesian plots. Domains and projected values
+  must be strictly positive; logarithmic padding, nice domains, ticks, inversion,
+  autoscale and multiplicative wheel zoom preserve physical scale values.
+- [Sounding example](./examples/v5-skew-t/index.html) demonstrates temperature,
+  dew point, runtime skew changes and a physical-coordinate readout.
+
+This is the plot/scale foundation, not completion of every roadmap phase 1 exit gate.
+Time ticks use local civil-calendar boundaries with `Intl` labels in the configured
+locale/zone, including spring-gap omission, fall-fold disambiguation and multi-level
+horizontal axis labels. Phase 1 also includes `createPolarPlot`, `angular` and `radial`
+scales, angular/radial axes, and `plot.project(angle, radius)` for converting data
+coordinates to SVG coordinates. Angular scales default to a clockwise bearing from
+north and may configure direction, intercept and angular range; radial scales may
+configure an inner-radius fraction. Polar axes keep radial rings, angular spokes and
+captions in small, separate SVG rendering functions, with shared plot-local centre/radius
+geometry and the existing scale-binding/tick-formatting APIs. Grid copies stay in the
+grid layer; axis geometry and captions stay in the axes layer. This is an internal
+simplification, not a new renderer or plugin API: phase 2 polar marks, phase 3 hit testing
+and phase 6 wind/current roses remain in their respective phases.
+The minimal cartesian `line()` mark renders aligned
+array-like x/y values against named x/y scales, preserves gaps, and is clipped to the
+plot region. Its boolean `line` option defaults to `true`; `line: false` hides the
+stroke while retaining configured markers and area. Marks with no enabled line,
+markers or area do not contribute autoscale extents. Plot configuration synchronously rejects non-gap values that do not match
+their bound scale kind (strings for band scales, numbers otherwise). It is a static fixture primitive: replace the mark to change its values;
+polar marks and interaction APIs follow in
+their respective phases. The deterministic per-engine visual regression gate remains
+part of the phase 1 exit criteria.
+`npm run test:visual` renders the basic-line (including the secondary axis),
+shared-scales and spring/fall civil-time-axis states in Chromium, Firefox and WebKit
+at a fixed viewport and device scale factor. It compares each engine's rendered
+pixels against the checked-in, browser-specific SVG reference fixtures under
+`test/visual/baselines/<browser>/` using the §5 changed-pixel threshold;
+`npm run test:visual:update` refreshes those fixtures after an intentional visual
+change. To update one engine only, use
+`VISUAL_BROWSERS=firefox npm run test:visual:update` (or `chromium` / `webkit`).
+Firefox and WebKit baselines depend on the platform's fonts and canvas rendering, so they are
+recorded in the Playwright Linux image that CI uses. On another platform, use
+`npm run test:visual:docker` to check them and
+`VISUAL_BROWSERS=firefox,webkit npm run test:visual:docker -- --update` to record them.
+Review generated references before accepting them; a failing comparison is not by
+itself a reason to regenerate a baseline.
+
+```ts
+const polar = createPolarPlot(container, {
+  scales: {
+    bearing: angularScale({ domain: [0, 360], direction: 'clockwise' }),
+    distance: radialScale({ domain: [0, 100], innerRadius: 0.15 }),
+  },
+  axes: [
+    axis('bearing', { position: 'angular', grid: true }),
+    axis('distance', { position: 'radial', grid: true }),
+  ],
+})
+const point = polar.project(90, 50)
+```
+
+### Data-backed series foundation
+
+The package root exports `createSeries`, `fromObjects` and `series`. This is a
+cartesian SVG foundation, not completion of phase 2 or the live/sync roadmap.
+
+```ts
+const data = createSeries(
+  { x: new Float64Array([0, 1, 2]), y: new Float64Array([10, NaN, 30]) },
+  { capacity: 256, maxPoints: 1000, maxAge: 86_400_000 },
+)
+const observed = series(data, {
+  id: 'observed',
+  x: 't',
+  y: 'q',
+  line: { stroke: '#1677a6', width: 2 },
+  markers: { symbol: 'circle', size: 4 },
+  area: { to: 0, opacity: 0.2 },
+})
+// Bind observed through createPlot({ scales, axes, marks: [observed] }).
+data.append({ x: [3], y: [40] })
+observed.update({ line: { stroke: undefined }, markers: false })
+```
+
+- Stores own copied numeric columns, expose checked `xAt`/`yAt` logical accessors,
+  and never expose mutable canonical buffers. X accepts finite numbers or valid Dates
+  within the JavaScript Date range, ordered nondecreasingly; y accepts finite numbers
+  or `NaN`. Optional `precision: 'float32'` applies only to y and rejects overflow.
+- `capacity` is an initial allocation hint, not an ingestion limit. Append uses a
+  growable ring; `maxPoints` keeps the newest samples and `maxAge` includes every
+  duplicate at the cutoff. Prepend/upsert/replace rebuild owned typed columns;
+  incremental indexes and caches are not implemented yet.
+- Columnar mutations are `append({ x, y })`, `prepend({ x, y })`,
+  `upsert({ from, to, rows: { x, y } })`, `replace({ x, y })` and `clear()`.
+  Validation is atomic, append/prepend preserve duplicate boundary ordering, and
+  upsert replaces the closed range. `version` is a reactive numeric counter;
+  `change` reports an immutable `{ version, from, to }` with conservative bounds
+  including the old and incoming extents, so retention is covered. Empty append/
+  prepend and clearing an empty store do not publish.
+- `fromObjects(rows, { x: 'time', y: 'value' }, options)` converts once without
+  retaining caller rows. Its mutations accept object rows with the same mapping;
+  upsert uses `{ from, to, rows }`. It also accepts legacy `{ x: Date, y: number }`
+  rows with the corresponding mapping.
+- `series` retains one store reference for line/markers/baseline area and supports
+  runtime `update`, nested patch/unset, `visible` and `label` metadata. Defaults are
+  line enabled, markers/area disabled. `{}` enables default component options;
+  `false` disables; `undefined` restores defaults. IDs are immutable; x/y rebindings
+  validate against every live plot before commit. Numeric/time scales only;
+  categorical series and polar series are rejected synchronously.
+- Store changes schedule only their consumers, coalesced per frame. Geometry keys
+  skip unrelated marks and style-only updates; explicit IDs preserve DOM resources
+  across membership changes for replacements of the same mark kind, consistently
+  for every kind. Without an ID, only the same mark handle preserves its renderer;
+  plot position never determines identity. Changing an ID or kind creates a new
+  renderer and destroys the old one's resources. Replacements rebind effects and
+  validators to the new handle even when the renderer is reused, and remove obsolete
+  child nodes (including text labels). Removed/destroyed plots release their effects and
+  validators without disposing shared stores or mark handles.
+- Scale domains support shared autoscaling as described below. Block indexes, LOD,
+  shared time columns across stores, ensembles, borrowed buffers,
+  curves/dashes, canvas, hit testing and legend rendering remain roadmap work.
+  The new store temporarily lives in `src/data-store/` to coexist with legacy
+  `src/Data/` on case-insensitive filesystems.
+
+### Phase 2 autoscaling (implemented)
+
+- [Autoscaling demo](./examples/v5-autoscale/index.html): compare data, visible,
+  fixed and custom policies; move a six-hour window, toggle series/area eligibility,
+  append higher samples, and override/resume automatic domains with live readouts.
+- Scale option `autoscale` accepts `'data'`, `'visible'`, `'fixed'` or a callback.
+  Linear, time, band and radial scales default to `'data'`; degree/angular scales
+  default to `'fixed'` to retain their full-circle domain. Explicit `domain` values,
+  including `domain.set`/`update`, take precedence over every policy; unset with
+  `scale.update({ domain: undefined })` to resume automatic domains.
+- Each live plot binding contributes eligible extents to one shared scale-domain
+  computation. Domains union across plots regardless of local scale names or pixel
+  ranges. Membership changes, mark rebindings, visibility/layer updates, store
+  mutations and retention invalidate the union. Removing bindings or destroying
+  plots removes their contributions and subscriptions, without disposing shared
+  scales, stores or marks.
+- Both static `line` and data-backed `series` contribute finite paired samples.
+  Gaps, hidden series and marks with all components disabled are excluded. An area
+  baseline contributes to its y extent only when the mark has eligible samples.
+  Band domains use first-seen category order with duplicates removed.
+- `'visible'` includes samples inside the other scale's current domain, with
+  inclusive numeric boundaries or band-category membership. This is sample-based:
+  it does not interpolate segments at window edges. Each plot uses its own opposing
+  scale window before the shared union. If both opposing scales use `'visible'`
+  without explicit domains, each uses the other's full-data domain as its window,
+  avoiding cyclic domain evaluation.
+- Callbacks receive a read-only `AutoscaleContext` with `kind`, `data`, `visible`
+  and `defaultDomain`. `data`/`visible` provide immutable union extents on demand,
+  or `undefined` when empty. Return a valid domain, or `undefined` for the default.
+  Callbacks must not introduce circular dependencies between scale domains.
+  Invalid callback output throws on domain evaluation.
+- Empty/all-gap unions use `defaultDomain`. Singleton numeric data expands by
+  `max(abs(value) * 0.01, 1)` on each side (one millisecond for time), within finite/
+  Date bounds. Explicit and default singleton domains remain unchanged.
+  `includeZero`, `symmetric`, proportional `padding` and `nice` apply once after
+  the union, in that order; radial padding never produces negative domains.
+- The series example now autoscales on append, reset and layer toggles. Indexes,
+  cached extents and visible-window acceleration remain future work; this foundation
+  scans eligible samples without copying or re-ingesting canonical columns.
+
+### Phase 2 rule marks (implemented)
+
+- [Rule demo](./examples/v5-rule/index.html) shows horizontal and vertical continuous-scale rules.
+- `rule({ scale, value, stroke?, strokeWidth?, id? })` renders a full-plot reference line;
+  the bound scale's x/y direction determines whether it is vertical or horizontal.
+  Linear and time scales are supported on cartesian plots. Rules are annotations and
+  do not contribute to autoscale extents.
+- Browser tests cover orientation, scale projection updates, default/custom styling,
+  autoscale exclusion and rejection of unsupported scale/coordinate bindings.
+
+### Phase 2 progress marks (implemented SVG foundation)
+
+- [Progress demo](./examples/v5-progress/index.html) shows rounded polar completion
+  tracks and partial progress arcs.
+- `progress({ x, y, xValues, yValues, thickness?, fill?, opacity?, id? })` renders
+  each angular interval as an SVG arc centered on its radial value. `thickness` is in
+  pixels (default 12); `xValues` contains ascending finite angle pairs and `yValues`
+  contains nonnegative finite radial values. `null`/`undefined` gaps are skipped.
+  Polar angular/radial scales are required. Both interval endpoints and radial
+  centers contribute to autoscale extents.
+- Browser tests cover projected geometry, gaps, style, autoscaling, keyed renderer
+  reuse and rejection of invalid values and bindings.
+
+### Phase 2 text marks (implemented SVG foundation)
+
+- [Text demo](./examples/v5-text/index.html) places labels at aligned x/y coordinates.
+- `text({ x, y, xValues, yValues, textValues, dx?, dy?, angle?, fill?, fontFamily?,
+  fontSize?, fontWeight?, textAnchor?, dominantBaseline?, id? })` renders one SVG text
+  element for each non-gap coordinate/label tuple. Linear, time and band cartesian
+  scales are supported. Text coordinates contribute to autoscale extents; labels with
+  missing coordinates or values are skipped. IDs preserve mark and label DOM identity
+  across compatible plot updates.
+- Browser tests cover projection updates, offsets/rotation, styling, gaps, autoscaling,
+  ID-based reuse and unsupported bindings.
+
+### Phase 2 grouped/stacked bars and shared layout (implemented SVG/canvas foundation)
+
+- [Bars demo](./examples/v5-bars/index.html) compares grouped, implicit stacked,
+  side-by-side named stacks and horizontal bars using one aligned table. Controls
+  exercise visibility, layer ordering, reversed time scales, append/retention and reset.
+- `createTable(columns, { x?, maxPoints?, maxAge? })` owns copied Float64 numeric
+  columns (Dates become epoch milliseconds) and dictionary-encoded string columns.
+  `x` defaults to the first column and is the ordering/upsert/age-retention key.
+  Numeric keys are finite, nondecreasing and within the JavaScript Date range;
+  categorical keys retain input order. Column kinds are established on ingestion
+  (empty initial columns default to numeric); subsequent mutations preserve them.
+  `valueAt(column, row)`, `kind(column)` and `sampleId(row)` are checked accessors,
+  not mutable buffer views.
+- `append`, `prepend`, `replace`, `upsert({ from, to, rows })` and `clear` update all
+  aligned columns atomically. Mutations require exactly the original column names
+  and equal lengths. Upsert replaces a closed numeric key range; retention preserves
+  surviving sample IDs. Composite constraints also validate before commit, including
+  duplicate keys, overlapping intervals and stack overflow. Table mutations currently
+  rebuild columns; incremental/ring-based table updates remain phase 4 work.
+- `bar(table, { x, scales: { x, y }, y | layers, ... })` separates the table's x
+  column from category/value scale names. Single bars accept `y`; composite bars
+  require `layers` and `layout: 'grouped' | 'stacked'`. All bars require a linear
+  value scale. Category scales support band, linear and time. Numeric/time bars
+  require `interval: { start, end }` or positive pixel `width`; band bars use the
+  scale bandwidth. Intervals are finite, ascending and non-overlapping (touching
+  boundaries are allowed), and full bounds participate in extents/window overlap.
+  Width is centred on x; pixel widths do not expand data-space x extents.
+- `orientation` defaults to `'vertical'`; `'horizontal'` swaps physical axes while
+  keeping `scales.x` the category binding and `scales.y` the value binding. Bind
+  those scales to the matching axis positions or explicit plot directions.
+  `groupPadding` defaults to `0.1`: that fraction of the outer band/interval is
+  removed equally from both ends. `layerPadding` defaults to `0.05`: the gap is
+  that fraction of slot step, with no outer slot gap and no gap between stacked
+  segments. It has no effect on a single slot. Both fractions must be in `[0, 1)`.
+- The shared data-space layout in `src/layout/stack.ts` computes columnar lower/
+  upper endpoints with independent positive/negative accumulators per stack.
+  Missing visible values gap only their stack; hidden layers do not affect totals
+  or gaps. Zero is valid. All-missing/hidden/empty composites contribute no extent.
+  Named stacks require non-empty IDs on every layer; grouped bars reject stack IDs.
+  Full layer order determines stable layer/stack slots, including hidden slots.
+  Replacement layers retain prior visibility for unchanged IDs unless explicitly
+  overridden; `visible: undefined` restores default visibility.
+- Endpoint buffers are shared by equivalent table/version/layout consumers, not
+  projected geometry. The per-table LRU holds at most eight layouts and 32 MiB of
+  endpoint/total/gap buffers; oversized layouts are computed but not retained.
+  Data changes invalidate the version cache; style-only changes reuse endpoints
+  and SVG geometry. This is an endpoint cache, not an extent index or LOD system.
+- SVG segments are keyed by layer ID and stable source sample ID, interval-culled
+  and plot-clipped. Reversed scales and resizing preserve group membership. Data
+  and visible autoscale include zero/cumulative endpoints, union independent stacks
+  and include intervals overlapping the category window. Live plot validators reject
+  incompatible mark updates atomically; removed/destroyed plots release subscriptions.
+- Exact tests cover diverging endpoints, independent stack totals/gaps, union extents,
+  hidden slots, reorder/reassignment/removal, resets, malformed input, atomic mutations,
+  categorical/time geometry, horizontal/reversed scales, padding, culling, resizing,
+  visible autoscale, retained SVG identity and cleanup. Interaction/tooltip/legend
+  adapters, block indexes and
+  incremental table/stack updates remain separate roadmap work; this is not completion
+  of every phase 2 exit gate.
+
+### Phase 2 stacked-area rendering (implemented SVG/canvas foundation)
+
+- [Stacked areas demo](./examples/v5-stacked-area/index.html) compares an implicit
+  observed stack with independent named observed/forecast stacks over one aligned
+  table. Controls exercise visibility, linear/midpoint-step curves, stacking
+  order, reversed time scales, append/retention and reset. "Reverse stacking order"
+  changes accumulation within each stack (including the single-stack plot), not
+  just paint order; it also reverses the named stacks' front-to-back order.
+- [Stacked-area LOD demo](./examples/v5-stacked-area-lod/index.html) uses a dense
+  24,000-sample stack to compare sparse and pixel-bucketed views with live path/
+  retained-row readouts.
+- `stackedArea(table, { x, scales: { x, y }, layers, curve? })` requires numeric/time
+  x columns with strictly increasing unique keys, a linear/time x scale and a linear
+  value scale. It is cartesian-only. Unsupported curves, offsets, scale bindings,
+  malformed layers and mixed named/unnamed stacks are rejected before commit.
+- Areas reuse the same bounded columnar endpoint cache as stacked bars. Positive and
+  negative values accumulate independently from zero within each stack; extents union
+  independent totals rather than summing stacks. Missing visible values break every
+  band in the affected stack, while other stacks remain continuous. Hidden layers
+  do not contribute to totals or gaps, and zero remains a valid value. Visible value
+  autoscale includes interpolated boundaries at viewport edges, including windows
+  between source rows, without interpolating across gaps.
+- SVG retains one path per layer ID, including hidden layers with empty geometry.
+  Named stacks paint in first-appearance order, with relative layer order preserved
+  inside each stack. Visibility is retained across descriptor replacement unless
+  explicitly overridden; `visible: undefined` restores default visibility. Styling
+  falls back from layer to mark to theme accent; opacity defaults to `1`, stroke to
+  `none` and stroke width to `0`. Style-only changes reuse endpoints and paths
+  without reprojecting geometry.
+- Viewport culling retains every in-window row and the adjacent samples outside
+  the window. Dense stacks use per-pixel LOD with one retained-index set per stack,
+  shared by every layer boundary; bucket endpoints and boundary extrema, sign
+  transitions, gaps and viewport neighbours are retained. Linear and step curves
+  use the same selected rows. Interaction/tooltip/legend adapters remain
+  roadmap work, not claimed as completed phase 2 exit gates.
+- Browser tests cover exact diverging geometry, per-stack gaps, named paint order,
+  shared endpoint identity with bars, visibility/reset/reassignment/removal, curves,
+  viewport neighbours, reverse/resize, style-only reuse, live table mutations and
+  retention, autoscale, atomic rejection and plot lifecycle cleanup.
+
+### Phase 2 composite canvas parity and visual fixtures (implemented)
+
+- `bar` (single, grouped, implicit/named stacked and horizontal) and `stackedArea`
+  accept `renderer: 'svg' | 'canvas'`. SVG remains the default;
+  `mark.update({ renderer: undefined })` restores it. Invalid renderers, including
+  `'auto'`, are rejected atomically. The bars and stacked-area demos expose a live
+  renderer selector; `?renderer=canvas` opens either demo in canvas mode.
+- Both renderers consume the same bar rectangles and stack endpoints. Areas use
+  the same per-stack retained rows, gap/sign/extrema preservation, paint order and
+  linear/step path geometry. Switching renderers does not copy/re-ingest canonical
+  columns or alter sample IDs, endpoints, visibility or autoscaling.
+- Each canvas mark owns a transparent, device-pixel-ratio-scaled canvas inside an
+  SVG `foreignObject`. Keeping it in the mark's keyed SVG group preserves mixed
+  SVG/canvas paint order and the shared plot clip, with SVG axes/grid/title unchanged.
+  Geometry updates cache `Path2D` objects; style-only updates repaint existing paths.
+  CSS colours/variables and `currentColor` resolve once per layer per repaint.
+  Fill opacity and stroke width/colour retain the SVG semantics (opacity affects
+  fill, not stroke). Watched theme changes and device-scale changes repaint canvas;
+  use the existing `themeElement` observer for live application CSS changes.
+  Removing/replacing/destroying marks releases their canvas buffers and references.
+- `npm run test:visual` now also checks grouped, implicit stacked, side-by-side
+  named-stack and horizontal bars; implicit and overlaid named-stack areas; and
+  a step-curve named-stack view after hiding a layer/restacking. Every state runs
+  in SVG and canvas in Chromium, Firefox and WebKit against checked-in references
+  under `test/visual/baselines/<browser>/`. Canvas pixels are embedded as PNG images
+  inside the reference SVG, so the gate tests actual canvas output, not invisible
+  SVG substitutes. The existing 0.1% changed-pixel limit still applies.
+- Browser tests compare canvas backing pixels exactly against the shared SVG
+  rectangle/path geometry, including diverging/zero/missing data, independent
+  named stacks, categorical/horizontal bars, interval culling, dense area LOD,
+  reverse/resize, visibility/restacking, retention, style-only reuse, renderer
+  resets, CSS/high-DPI repaint, mixed renderer order and lifecycle cleanup.
+- This completes the composite-renderer/fixture increment, not all phase 2 exit
+  gates: plot-wide renderer defaults, canvas for other marks, public SVG/PNG export,
+  composite hit testing/tooltips, legend-driven fixtures and element/Vue entry-point
+  parity remain their respective roadmap work. Raw SVG DOM serialization alone
+  does not capture live canvas bitmaps; the fixture harness explicitly embeds them.
+
+### Phase 2 histogram (implemented SVG/canvas foundation)
+
+- `histogram(table, { x, scales: { x, y }, bins?, domain?, normalization? })`
+  reads a numeric/time sample column from `createTable`. Samples need not be
+  ordered; use a separate ordered row/time key when the sample column is unsorted
+  or contains NaN. Source columns are never reordered or modified.
+- `bins` defaults to 10 and is either an exact positive integer equal-width bin
+  count or a complete array of finite, strictly increasing edges (including both
+  outer edges). Explicit edges and `domain` are mutually exclusive. A count uses
+  `domain` when supplied, otherwise the finite sample extent. Constant samples
+  expand symmetrically by `max(0.5, abs(value) * 0.01)`. Nonrepresentable or
+  nonfinite widths/densities are rejected explicitly, before rendering.
+- Bins are `[start, end)`, except the final bin includes its upper edge.
+  Duplicates count individually; NaN and out-of-domain values do not contribute.
+  Empty bins are retained. Empty/all-NaN input without fixed bounds has no bins;
+  fixed bounds retain zero-valued bins. `mark.bins` exposes immutable
+  `{ start, end, count, value }` results, cached by source version and bin options.
+- `normalization` is `count` (default), `probability` (count / included samples)
+  or `density` (probability / bin width). Empty distributions normalize to zero.
+  Irregular density bins integrate to one when there are included samples.
+- Derived interval tables feed the existing bar geometry, extent and SVG/canvas
+  renderers with zero padding and baseline zero. Linear/time sample scales,
+  linear frequency scales, vertical/horizontal orientation, reversal, visibility,
+  visible-window autoscaling, live table mutations and style-only reuse follow
+  the bar contracts. Rebinning uses the full retained source, not the viewport.
+  Polar histograms, weights, cumulative distributions and interaction/legend
+  adapters are not included in this increment.
+- `examples/v5-histogram/` demonstrates irregular/equal-width bins, normalization,
+  SVG/canvas switching, orientation, reversal and live/empty data. Browser tests
+  cover bin edges, invalid/degenerate inputs, normalization, mutation/retention,
+  autoscale, shared geometry, exact SVG/canvas pixels and keyed renderer lifecycle.
+
+### Phase 2 heatmap (implemented SVG/canvas foundation)
+
+- `createGrid({ xEdges, yEdges, values })` owns a dense rectangular matrix.
+  Edges are complete, finite, strictly increasing numeric boundaries with finite
+  span; time edges are epoch milliseconds. `columns = xEdges.length - 1`,
+  `rows = yEdges.length - 1`,
+  and `values.length` must equal `columns * rows`. Values are row-major:
+  `values[row * columns + column]`. Typed arrays and ordinary numeric arrays are
+  accepted, copied, and never mutated. Values use private Float64 storage; edge
+  arrays and snapshots are frozen. NaN denotes a missing cell; infinities and
+  nonnumeric values are rejected. A single edge allows a zero-cell dimension.
+- `grid.snapshot()` exposes dimensions, edges and bounds-checked `valueAt(index)`.
+  `grid.replace(input)` validates and publishes an atomic replacement, including
+  shape changes. Old snapshots remain stable; `grid.version` is reactive.
+  Appending rows/columns, sparse cells, categorical grids and inferred boundaries
+  are not part of this increment.
+- `heatmap(grid, { scales: { x, y }, color, renderer?, visible?, opacity?, id? })`
+  binds explicit edges to Cartesian linear/time scales. A cell spans adjacent
+  x and y edges with no implicit padding or centering. Projected minima and
+  absolute differences preserve geometry under reversed axes. SVG rectangles
+  and canvas paths use identical geometry and plot clipping; wholly offscreen
+  cells are culled. Polar, band and other scale kinds are rejected before rendering.
+  Time edges must be within the JavaScript Date range, including replacements
+  while mounted. Bindings and identity stay fixed; replace a mark to rebind it.
+- Positional autoscaling uses the full grid footprint, including NaN cells;
+  visible-window autoscaling includes the footprint when the opposite interval
+  overlaps the viewport. Empty or hidden grids contribute no extent. Missing
+  values use the colour scale's `unknown` colour (transparent by default), rather
+  than zero. Data, visibility, resize, reversal, renderer and device-pixel-ratio
+  changes invalidate geometry. Colour-only changes reuse retained geometry.
+- **Colour is shared infrastructure**, separate from positional `ScaleHandle`s:
+  `colorScale({ domain?, colors?, clamp?, unknown? })` returns a reactive handle
+  with `map(value)`, `options` and `update(patch)`. Heatmaps share it directly;
+  the planned `colorBar` should consume the same handle, not duplicate a palette.
+  This increment does not implement `colorBar` itself or register colour scales
+  in `plot.scales`, which remains exclusively positional.
+- Colour domains are explicit ascending finite pairs (default `[0, 1]`) with
+  finite span, intentionally independent of each grid's extent so comparisons
+  are stable across plots. Two or more CSS colour literals are equally spaced
+  across the domain and interpolated piecewise in RGB. CSS variables and callbacks
+  are not supported. `clamp` defaults to true; false enables extrapolation through
+  the endpoint segments. A constant domain maps finite values to the palette
+  midpoint. NaN/nonfinite mapped values use `unknown` (default `transparent`).
+  Invalid updates are atomic; `undefined` restores the constructor's defaults.
+- `examples/v5-heatmap/` demonstrates irregular time/level cells, NaN gaps,
+  shared palettes, SVG/canvas switching, axis reversal and grid replacement.
+  Browser tests cover ownership, shape/edge validation, exact projection and
+  canvas pixels, colour mapping, shared invalidation, footprint autoscaling,
+  supported bindings, atomic updates and lifecycle cleanup. Tooltip, hit-testing
+  and legend adapters remain deferred with the other Phase 2 foundations.
+
+### Target composed API
+
+```ts
+import { createPlot, timeScale, linearScale, axis, series, ensemble, bandScale,
+         zoom, pan, crosshair, tooltip, legend, currentTime,
+         sharedScale, sharedPointer, fromObjects } from '@deltares/fews-web-oc-charts'
+
+const t = sharedScale(timeScale({ timeZone: 'Europe/Amsterdam', follow: { window: '3d' } }))
+const pointer = sharedPointer()
+
+const obs = fromObjects(observations, { x: 'time', y: 'value' })
+const fc  = createEnsemble({ x: fcTimes, members: fcMatrix })
+
+const plot = createPlot(el, {
+  scales: { t, q: linearScale({ nice: true, includeZero: true }) },
+  axes:   [axis('t', { position: 'bottom', grid: true }),
+           axis('q', { position: 'left', label: 'Discharge', unit: 'm³/s', grid: true })],
+  marks:  [ensemble(fc, { x: 't', y: 'q', show: { spread: [[5,95],[25,75]], median: {} } }),
+           series(obs, { x: 't', y: 'q', line: {}, markers: { symbol: 'circle' }, label: 'Obs' })],
+  plugins:[zoom({ mode: 'x', wheel: 'x' }), pan(), crosshair({ pointer }),
+           tooltip(), legend({ position: 'top' }), currentTime()],
+})
+
+obs.append([{ time: new Date(), value: 12.3 }])   // live update, only obs mark repaints
+plot.update({ theme: undefined })                  // remove explicit theme override
+plot.update({ marks: [...] })                      // replace membership; reconcile by id
+plot.setConfig(nextConfig)                        // full config, omitted options reset
+plot.destroy()
+```
+
+- Integration options:
+  1. Vue applications: `FewsChart` with a scoped legend slot, or `usePlot`/`useLegend`
+     when the application owns the surrounding component (see 3.15).
+  2. Framework-neutral applications: `<fews-chart>` Web Component (see 3.13).
+  3. Core functional API (`createPlot`) for full control in any framework.
+
+## 5. Package & tooling
+
+- Same package `@deltares/fews-web-oc-charts`, **v5.0.0** (semver major, breaking API).
+  v4 stays on a `v4` maintenance branch (bug fixes only) with npm dist-tag `v4`;
+  v5 pre-releases as `5.0.0-alpha.x` / `beta.x` under dist-tag `next`.
+- ESM only, `sideEffects` limited to the element registration file.
+- For each release, record a dated Baseline snapshot and freeze the exact minimum
+  versions for Chrome, Edge, Firefox and Safari/iOS in one support manifest. Generate
+  or verify the Vite target, `browserslist`, README support table and Playwright minimum-
+  version matrix from that same manifest; do not let the moving Baseline target change
+  a published release's support contract. Test both the declared minimum versions and
+  current stable versions of Chromium, Firefox and WebKit in CI. No polyfills.
+- Entry points via `exports`: `.` (core), `./element` (Web Component), `./vue`,
+  `./compat` (v4 API shim, last phase), `./style.css` (default theme tokens).
+  Until v4 is removed, `.` also exports the v4 classes and `./v5` exports the v5 API only.
+- Dependencies: d3 sub-packages only (`d3-scale`, `d3-shape`, `d3-axis`, `d3-array`,
+  `d3-selection`, `d3-zoom`, `d3-brush`, `d3-quadtree`, `d3-interpolate`,
+  `d3-scale-chromatic`, `d3-time`, `d3-format`). **Removed: `lodash-es`, `luxon`**
+  (and the full `d3` bundle). No runtime dependency for reactivity (own core).
+- Source layout:
+  ```
+  src/core (signals, scheduler, scopes)  src/time  src/data  src/scales  src/axes
+  src/layout  src/coords  src/render/{svg,canvas}  src/marks  src/plugins  src/sync
+  src/theme  src/element  src/vue  src/compat
+  ```
+- Strict TS, no circular imports (lint rule `import/no-cycle`), no barrel re-imports inside src.
+- CI quality checks: run ESLint (`npx eslint .`) and Prettier (`npm run prettier`);
+  both must pass for each phase.
+- Tests: Vitest unit (reactive core incl. glitch/ordering/disposal tests, time-zone
+  module vs. v4/luxon reference output, data, layout, scales, decimation, grouped/stacked
+  layout and stack-safe LOD (3.6.1), quantiles in
+  Node, runtime option patch/unset/replacement contract in 3.1.1), Vitest browser +
+  Playwright visual regression (port existing `examples/` as
+  fixtures, core API, `<fews-chart>` and Vue custom-legend variants), perf benchmarks (`vitest bench`)
+  with budgets in CI, memory snapshots via Playwright CDP (create/destroy 1000 elements
+  → no growth).
+- Deterministic visual fixtures are established in phase 0: pin the Playwright browser
+  builds and OS image, use a fixed viewport and DPR, serve pinned test fonts, wait for
+  `document.fonts.ready`, and disable animations/transitions. Keep separate baselines
+  per browser engine; do not require cross-engine pixel identity. Phase 1 comparisons
+  allow at most 0.1% changed pixels with per-channel delta greater than 2; any
+  fixture-specific exception is documented and reviewed.
+- Performance budgets run on a dedicated, non-shared CI runner with recorded CPU/OS
+  and pinned browser build. For latency targets, perform 10 warm-up runs and 30 measured
+  runs; enforce the stated target against p95, not a single best run. For the 60-fps
+  scenario, enforce p95 frame time <= 16.7 ms during a fixed 10-second interaction.
+- Bundle-size budget in CI (size-limit): core + series + zoom/crosshair < 45 kB gz;
+  `element` entry adds < 8 kB gz.
+
+## 6. Performance targets (CI-enforced benchmarks)
+
+| Scenario                                                 | Target                                   |
+| -------------------------------------------------------- | ---------------------------------------- |
+| 1M-point series, pan frame                               | < 8 ms                                   |
+| 50 members × 10k steps ensemble, initial render          | < 50 ms                                  |
+| Pointer move (crosshair + tooltip, 20 series)            | < 2 ms, no data-layer work               |
+| Append 1 point/s to 10 plots                             | only affected marks repaint; < 1 ms/plot |
+| Memory, 1M points, core SVG line fixture (defined below) | < 20 MB retained JS/ArrayBuffer memory   |
+| 6 synchronised plots, wheel zoom                         | 60 fps                                   |
+| 100 `<fews-chart>` elements on one page, initial render  | < 1 s total; only visible ones render    |
+
+Memory fixture: one core store with 1M points (Float64 x/y), capacity exactly 1M, one
+1000 CSS-pixel-wide SVG line plot, no markers/spatial index, warmed by 100 distinct
+pan/zoom windows. Measure post-GC incremental retained JS heap plus ArrayBuffer backing
+stores against the empty-plot baseline, without double-counting buffers. The <20 MB
+budget includes 16 MB of columns, block indexes, LOD, scratch and retained path/cache
+state. Record browser-native SVG/canvas/Path2D memory separately; this is not a claim
+that total browser memory is <20 MB. Record peak allocations during growth separately.
+
+Additional acceptance checks for the ownership contract:
+
+- Line/markers/area and two plots referencing one store retain one set of canonical
+  buffers; adding a second same-width plot can reuse LOD but not projected geometry.
+- Different-width shared-scale plots retain independent ranges and correct hit tests;
+  y-only zoom, resize and external domain updates invalidate geometry/gesture state.
+- Wrapped-ring rendering and repeated pan/zoom allocate no source-sized render copies;
+  cache counts/bytes stay within limits and plateau rather than grow per window.
+- Quantile consumers share results, sort once per requested time step, exclude missing
+  members and return `NaN` for all-missing steps.
+- Grouped/stacked composites and multiple plots retain one canonical aligned table;
+  identical stack consumers share bounded derived endpoints, not projected geometry.
+  Repeated layer/stack toggles, stack reassignment, reorders, live updates and pan/zoom plateau within declared
+  cache limits. Measure stack computation/LOD separately from rendering; pointer
+  moves perform no restacking or data-layer work. Add dedicated multi-layer memory
+  fixtures rather than applying the single-line <20 MB budget to stack buffers.
+- Compat paired marks convert once per source/mapping per flush, including in-place
+  edits followed by `redraw()`; destroying one consumer leaves others functional.
+- Separate memory fixtures cover spatial-index peak/retained allocations, ensembles,
+  compat dual representations and create/destroy cleanup of shared resources.
+
+## 7. Phased roadmap
+
+| Phase                         | Content                                                                                                                                                                                                                                                                                     | Exit criterion                                                                                                                                                                                       |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0. Spike (1–2 wk)             | Own reactive core prototype + scheduler, columnar series, M4 decimation, SVG line renderer; ownership/D3 boundary contract (3.2.1), wrapped-ring and shared-binding probes; `Intl` zone-offset prototype; deterministic visual/performance harness; benchmark vs. v4                        | ≥5× gain on pan with 1M points on the same pinned runner/browser and equivalent output; core ownership/memory checks in §6 pass; offsets and documented DST tick semantics pass the time-zone matrix |
+| 1. Core                       | Reactive core hardened (scopes, diagnostics), runtime option update/unset/setConfig contract (3.1.1), `time/` module (luxon replacement), plot container, layout engine, named scales, axes (value/time/band/degrees), coordinate systems, theme tokens, destroy                            | Static basic-line/secondary-axis/time-axes examples pass deterministic per-engine visual regression at the §5 threshold, with no unexplained diffs; core option contract tests pass                  |
+| 2. Marks                      | `series` (line+markers+area), band, single/grouped/stacked `bar` with named side-by-side stacks, `stackedArea` with named independent stacks, shared columnar stack layout and stack-safe LOD (3.6.1), histogram, rule, text, heatmap, arrows/direction, progress; SVG first, canvas opt-in | All static examples ported; grouped-bar, stacked-bar, named-stack comparison and stacked-area fixtures pass on SVG/canvas, with exact per-stack layout/extent/gap tests                              |
+| 3. Interaction                | Pointer hub, zoom, pan, brush, crosshair, tooltip, headless legend model and built-in legend renderer; composite-layer hit tests, tooltips and visibility                                                                                                                                   | mouseover/zoom/panning/brush examples ported; external legend commands work without legend DOM; composite toggles restack/autoscale correctly                                                        |
+| 4. Sync & live                | Shared scale/pointer/selection/clock, follow mode, append/retention, IntersectionObserver pause; incremental aligned-table stack updates; typed domain events via `subscribe()` and `plot.on()` (implemented)                                                                               | Complete: all steps implemented; production live-stream acceptance, Phase 4 browser suites and pan parity passed locally in Chromium (see checkpoints below)                                         |
+| 5. Ensembles                  | Ensemble store, quantile cache, members/spread/median rendering, ensemble tooltip/legend                                                                                                                                                                                                    | Implemented (see the Phase 5 checkpoint below); the 50×10k canvas initial render measured ~46 ms locally, not yet CI-enforced                                                                        |
+| 6. Domain plugins             | Warning levels, alert lines, current time, DST indicator (on new `time/`), level select, cross-section select, data field, Beaufort, colour bar, polar wind/current roses                                                                                                                   | Feature parity checklist complete                                                                                                                                                                    |
+| 7. Web Component              | `<fews-chart>` with `el.config`, plot-level attributes, `sync-group` registry, events, Shadow DOM theming, typings, slotted/external legend facade and symbol helper                                                                                                                        | All examples also runnable via `<fews-chart>`; works in Vue app without adapter; config/attribute-removal and custom-legend parity tests pass                                                        |
+| 8. Adoption                   | Vue component/composables and scoped/custom legends (3.15), docs site from examples, migration guide, FEWS Web OC integration behind a flag; `5.0.0-beta`                                                                                                                                   | FEWS Web OC runs on v5 behind a flag; Vue custom-legend and lifecycle acceptance tests pass                                                                                                          |
+| 9. Compatibility layer (last) | Full v4 public API in `./compat` (see 3.14); deprecation warnings; migration guide per class                                                                                                                                                                                                | Complete v4 example + test suite runs unchanged against `compat` (import path swap only); `5.0.0` release                                                                                            |
+
+### Phase 2 static visual parity checkpoint
+
+**Status: partial; the Phase 2 exit criterion is not complete.** All 150 covered
+comparisons (25 hosts, two themes, three engines) are now exact; the remaining gap is
+static coverage of the uncovered examples listed below. Eleven native v5 parity routes
+have been added alongside, not in place of, the 22 existing v5 examples. They use
+v5 plot/mark APIs, not v4 chart instances or copied reference SVG DOM.
+
+| v4 example         | Native v5 route                          |
+| ------------------ | ---------------------------------------- |
+| basic-line         | `examples/v5-parity-basic-line/`         |
+| range              | `examples/v5-parity-range/`              |
+| marker             | `examples/v5-parity-marker/`             |
+| area               | `examples/v5-parity-area/`               |
+| chart-text         | `examples/v5-parity-chart-text/`         |
+| reverse            | `examples/v5-parity-reverse/`            |
+| polar-line-marker  | `examples/v5-parity-polar-line-marker/`  |
+| polar-range        | `examples/v5-parity-polar-range/`        |
+| polar-axes-options | `examples/v5-parity-polar-axes-options/` |
+| bar                | `examples/v5-parity-bar/`                |
+| matrix             | `examples/v5-parity-matrix/`             |
+
+#### Opt-in native rendering capabilities
+
+- Axis `style: 'classic'` selects the reference-compatible Cartesian/polar axis
+  renderer; the default remains `'default'`. Cartesian `crossAt: { scale, value }`
+  positions an axis at a value on a perpendicular scale. Classic polar axes must
+  be supplied as a pair; invalid single-axis style updates are rejected atomically.
+- Plot `axisLayout: 'inset'` uses margins as the plot boundary and paints axes
+  before marks. `autoMargins: true` grows inset margins to fit measured ticks.
+  `background: 'canvas'` restricts the background to the plotting canvas;
+  `clipMarks: false` permits overflowing marks. Defaults are
+  `'outside'`, `false`, `'canvas'`, and `true`, respectively. The plot outside the
+  canvas is transparent by default, matching v4; use `background: 'plot'`
+  to color the entire plot.
+  Public scale projections remain absolute even when inset marks use local geometry.
+- Lines and series support dash arrays, cap/join styles, coordinate `digits`,
+  `vectorEffect`, and SVG-symbol-area markers with a `skip` interval.
+  Angular/radial lines and markers are supported; polar areas still require bands.
+- Line/series `markers.render: 'classic'` draws markers like v4 `ChartMarker`: one
+  path carrying `marker-start/mid/end` references to an SVG `<marker>` with
+  `context-fill`/`context-stroke`. The default `'default'` renderer keeps per-point
+  circles/paths; classic mode inherits the engine-specific `context-*` support
+  (WebKit paints black) and is intended only for reference parity. Commit `5e5fb1b`
+  had replaced this rendering for every marker and regressed the marker,
+  step-area, and polar-line-marker comparisons; the parity routes now opt in.
+- Bands support Cartesian `linear`, `basis`, `step`, `step-before`, and
+  `step-after` curves for equal x endpoints, plus `shapeRendering`.
+- Bars support formatted SVG label overlays through `text.format(value, layerId,
+  row)`, with optional `dx`, `dy`, and `fill`, for SVG and canvas bars.
+- Band scales support independent `paddingInner` and `paddingOuter`, falling back
+  to the existing `padding` value when unspecified.
+
+#### Exact comparison results
+
+Run `npm run test:visual:parity` for direct v4/v5 comparisons. The runner fixes
+viewport (1280 x 900), DPR (1), locale (`en-US`), timezone (`UTC`), and data seed;
+waits for fonts/rendering; forces one full repaint of every chart SVG (hidden for
+two animation frames, then shown for two) so incremental repaints from animated v4
+draws cannot leave different anti-aliasing; and compares every RGBA channel with
+**zero tolerance**.
+It covers 25 chart hosts in light and dark themes: 50 comparisons per engine.
+`VISUAL_BROWSERS=chromium` (or `firefox`/`webkit`) selects individual engines.
+Mismatch images are written below the operating system's temporary directory at
+`fews-static-parity/<engine>/<example>/<host>/<theme>/`.
+
+| Engine   | Exact comparisons | Remaining changed pixels |
+| -------- | ----------------- | ------------------------ |
+| Chromium | 50 / 50           | None                     |
+| Firefox  | 50 / 50           | None                     |
+| WebKit   | 50 / 50           | None                     |
+
+All 150 comparisons are exact, with zero tolerance.
+
+- A run after `5e5fb1b` dropped to 119/150 (marker, step-area, and
+  polar-line-marker in every engine); classic markers on those routes restored them.
+- The former Chromium polar-range residuals (78-94 px on arc edges) were a capture
+  artefact: v4's animated `arcTween` left incremental-repaint anti-aliasing. Re-inserting
+  v4's own final markup reproduced v5's pixels exactly, and after a forced full
+  repaint v4 and v5 match with 0 changed pixels.
+- The former WebKit residuals (chart-text dark, simple bar, polar-line-marker; 1-level
+  edge differences) came from the v5 line default `vector-effect: non-scaling-stroke`,
+  which WebKit anti-aliases differently from v4's unset vector effect. The parity
+  routes now set `vectorEffect: 'none'` on their data lines, as reverse and
+  polar-axes-options already did; the library default is unchanged.
+  The existing v5 visual regression suite also passes all 54 comparisons
+  (18 fixtures in each of the three engines), with zero changed pixels.
+  Library/type and example-gallery production builds pass, as do all 176 native
+  plot tests in Chromium. Formatting and `git diff --check` pass. Changed-file
+  ESLint still reports four pre-existing findings: unbound methods in
+  `band-mark.ts`, `create-plot.ts`, and `text-mark.ts`, and the empty `BarLayer`
+  interface in `bar.ts`; these unrelated findings were left unchanged.
+
+#### Reference quirks and remaining coverage
+
+At the user's explicit direction, reference bugs are preserved rather than fixed:
+
+- Chart text, grouped bars, and matrices reproduce the initial incomplete domains
+  and the different state after a theme-triggered redraw.
+- Missing categorical bar/matrix colours remain missing in the ports.
+- Classic polar radial grids preserve the reference's tick-as-pixel-radius
+  behaviour; polar-range reproduces the reference's effective Warm colour mapping.
+- The v4 matrix reference now uses the shared deterministic random generator
+  (optional validated `?seed=`), so its sparse data is repeatable.
+
+The v4 progress reference throws “Expected x to contain a number” and “Expected y
+to contain a numeric range”; it has no parity route and is **not** counted as a
+passing reference. Other uncovered examples are not implicitly certified:
+secondary-axis includes ensemble/current-time features, time-axes and vertical
+include interaction visitors, and spectrum is random/interactive. Interaction and
+domain-plugin ports remain outside this static checkpoint. All 25 covered hosts now
+match exactly; further static coverage is still needed before closing Phase 2.
+
+### Phase 3 pointer hub foundation
+
+**Status: first interaction step implemented.** `plot.pointer` is a read-only signal
+with plot-local pixel coordinates, named-scale values and an `inside` flag. Pointer
+events are coalesced per animation frame, support primary mouse/pen/touch pointers, and
+are detached with plot destruction. Cartesian continuous and band scales and polar
+angular/radial scales are inverted from the pointer position.
+
+### Phase 3 zoom and pan foundation
+
+**Status: wheel zoom, reset and drag pan implemented.** Install one `zoom()` handle through
+`createPlot({ plugins: [zoom({ mode: 'x', wheel: 'x' })] })`. Wheel zoom is anchored
+under the pointer, supports x/y/xy selection and an optional Ctrl/Shift modifier, and
+skips band scales. Double-click applies the handle's `reset` policy (`initial`, `full`
+or `toggle`). Removing the plugin or destroying the plot releases its event listeners.
+The [v5 zoom example](./examples/v5-zoom/index.html) demonstrates the public API and
+live option updates. The zoom plugin supports Cartesian plots.
+
+Install one `pan()` handle through
+`createPlot({ plugins: [pan({ mode: 'x' })] })`. Primary-button dragging inside the
+plot translates selected continuous Cartesian scale domains; band scales are skipped.
+The mode (`x`, `y` or `xy`) and optional Ctrl/Shift modifier are editable at runtime.
+Pointer capture keeps an active drag connected when it leaves the plot. Directional
+touch gestures preserve scrolling on the orthogonal axis; two-axis panning disables
+native touch gestures over the plot. The original touch-action style is restored when
+the plugin is removed or the plot is destroyed. Both also end an active gesture and
+release its listeners. The
+[v5 pan example](./examples/v5-pan/index.html) demonstrates the public API.
+The `brush()` plugin selects configured Cartesian x/y ranges by Shift-drag by default
+and emits a bubbling `brush` event from the plot SVG. Its immutable `detail` contains
+the selected mode and scale ranges; band scales report the intersected categories.
+Fixed `x`, `y` and `xy` modes retain their behavior. Opt-in `mode: 'auto'` follows the
+v4 zoom handler's movement bounds: movements within 25 SVG pixels in both directions
+are ignored; moving beyond one bound selects that axis, and beyond both selects xy.
+The mode is re-evaluated during drawing. The 50-pixel-long single-axis handles show
+the current mode and the +/-25-pixel perpendicular bounds around the start point;
+temporary xy selections have no handles, matching v4.
+
+`persistent: true` retains the selection on release, with draggable interiors,
+edge-resize handles and, for xy, corner handles. Movement and resizing are constrained
+to the plot. Persistent brushes emit live `brush` events during movement as well as
+on release; temporary brushes emit only on release. The brush itself never changes
+scale domains. Apply the event's named ranges to the desired scale handles to zoom.
+Matching brush gestures take precedence over pan regardless of plugin order.
+
+`handle.selection` is a read-only signal containing the persistent domain selection.
+Initialize or synchronize it with
+`handle.setSelection({ mode: 'x', scales: { t: [start, end] } })`; clear it with
+`handle.setSelection(undefined)`. Programmatic changes emit no `brush` event, avoiding
+feedback loops in bidirectional synchronization. Ranges are validated and copied into
+immutable snapshots, then reprojected on domain, layout, size and direction changes.
+Off-screen selections are clipped/hidden without changing their stored domain.
+For local brushes, changing the mode or disabling persistence clears the stored
+selection. Shared brushes instead derive their local view from the persistent shared
+selection; detach the shared handle before disabling persistence (see §3.9).
+Cancelled gestures keep the last published persistent selection; removing the plugin
+or destroying the plot releases capture, listeners, validators and overlay DOM.
+
+The [v5 brush example](./examples/v5-brush/index.html) demonstrates automatic and fixed
+selection modes, brush-to-zoom, and a full-domain overview with a persistent navigator
+that controls a separate main-chart time scale. The overview follows main-chart zoom
+and pan without narrowing its own domain. Both plots reuse data arrays, not scale handles.
+Brush selection and persistent navigation are implemented;
+crosshair rendering is implemented with configurable x/y guides that follow the shared pointer
+signal and hide outside the plot region. The [v5 crosshair example](./examples/v5-crosshair/index.html)
+demonstrates its public API, live mode updates and optional data-point snapping. Snap targets
+are explicit line/series marks; x and y select samples by projected screen coordinate, while
+xy selects the nearest actual sample by screen distance. Both guides use that same sample,
+and snapped guides hide when the target has no visible sample. The reusable nearest-point
+hit-test is shared with the tooltip plugin. Tooltip supports nearest-x samples across selected
+line/series marks or one nearest actual sample in xy mode, plus rectangle hits for bars and
+filled-path hits for stacked areas. Composite entries retain layer identity and report raw
+values, named stacks and cumulative bounds; overlapping area stacks resolve to the topmost
+painted layer. Tooltip coordinate visibility defaults to the value axis: x inspection
+shows y, y inspection shows x, and xy inspection shows both. `showX` and `showY`
+override this; `undefined` restores axis-based visibility. `coordinateLabels: true`
+adds x/y prefixes to visible and accessible coordinates (default: false). Names use
+configured legend labels before IDs, including static lines and marker-only marks.
+`tooltip({ showX: false, digits: 2 })` hides sample x coordinates and rounds
+numeric y values, composite raw values and bounds to at most two decimal places, including
+accessible labels, without changing source data. Defaults preserve existing mark precision.
+Composite tooltips show the raw value once, without a `value:` label, rather than repeating
+it as a coordinate on the value axis; the category coordinate and stack bounds remain available.
+Content remains text-only, with viewport-aware placement, runtime option
+updates and plugin lifecycle cleanup. The
+[v5 tooltip example](./examples/v5-tooltip/index.html) demonstrates its public API. Tooltip is
+implemented. The core now exposes a headless `plot.legend` model for series, bars and
+stacked areas, including immutable metadata snapshots, line/marker/area/bar symbol
+specifications, named-stack grouping, visibility commands, and bubbling `legendtoggle`
+events. Unlabelled entries use their mark ID, or a stable generated label when no ID
+exists. Initial entries and visibility commands are available synchronously when plot
+creation returns; subsequent handle changes are tracked reactively.
+The [v5 legend example](./examples/v5-legend/index.html) demonstrates an application-owned
+HTML legend with `Observed`/`Forecast` legend groups, mixed visibility, sibling isolation, direct mark updates,
+and SVG/canvas area rendering without a legend plugin.
+The optional built-in SVG `legend()` plugin renders the same reactive model as clickable
+swatches and labels, without checkboxes, isolate actions or a show-all control. Entries
+toggle with a click or Enter/Space. Visible, mixed and hidden entries use opacity 1,
+0.75 and 0.5 respectively. `showGroups: false` omits all parent and named-stack headings,
+displaying only leaf series/layers without changing their IDs or the headless model;
+`showGroups` defaults to true and is editable at runtime. It supports top,
+bottom, left and right docks plus four plot-overlay corners, and can be repositioned at
+runtime. Composite bar and stacked-area hit testing are implemented; the Phase 3
+interaction parity follow-up is complete. The current mark interaction contract is documented
+after the parity follow-up below.
+
+#### Phase 3 v4 interaction parity follow-up
+
+**Box zoom follow-up:** `zoom()` now previews primary-button x/y/xy drag
+selections and commits continuous-scale domains on release with source `zoom`.
+Selections clamp to the plot, ignore click jitter below 3 SVG pixels and cancel
+on pointer cancellation, lost capture, option/layout changes or plugin removal.
+Matching brush/pan modifiers take precedence independent of plugin order.
+Synchronous domain updates in brush event listeners carry source `brush`;
+brush itself remains selection-only. Regression coverage is in
+`test/Plot/zoom.test.ts` and the native zoom interaction script. Library and
+example builds and eight browser-free core follow tests pass. Box/brush domain writes
+pause live follow, and reset resumes it. Browser validation passed in the user's
+local Chromium run on 2026-10-25: follow (3 tests), brush (15 tests), zoom (10 tests)
+and the native/parity zoom interaction script, including box/wheel modes,
+modifiers, disabled wheel, runtime updates, resets and readouts.
+
+**Status: complete.** All six interaction suites (brush, legend, mark-hits,
+mouseover, pan and zoom) passed together in Chromium in the user's local
+`npm run test:interaction` run on 2026-10-25. This completes the behavioral parity
+follow-up; Phase 2 static parity (now 150/150 exact) is tracked separately.
+
+Run all six interaction suites sequentially with `npm run test:interaction`.
+The command stops on the first failing suite.
+
+The v4 gallery has interaction examples that were not covered by the static parity
+checkpoint. Reuse the native v5 APIs and examples below as the starting point for
+behavioral parity fixtures; do not treat the static screenshot comparisons above as
+interaction coverage.
+
+| v4 example(s)                               | Native v5 starting point                                                          | Parity work to cover                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ------------------------------------------- | --------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `mouseover`                                 | `examples/v5-parity-mouseover/`, `examples/v5-tooltip/`, `examples/v5-crosshair/` | `npm run test:interaction:mouseover` asserts all-series and selected-mark inspection, numeric/time formatting, extent-aware value formatting, snapped x/y samples, and vertical/horizontal guides.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `brush`                                     | `examples/v5-brush/`, `examples/v5-parity-brush/`                                 | `npm run test:interaction:brush` asserts Shift-drag auto/x/y/xy selection, brush-to-domain updates, selection-only and modifier-free modes, overview move/resize/reselect navigation and two-way domain synchronization with pan, wheel zoom and reset. v4 has no main-chart brush (Shift-drag pans), so only v5 is asserted.                                                                                                                                                                                                                                                                                                                                                                                         |
+| `wheel-zoom`, `zoom-options`, `zoom-events` | `examples/v5-zoom/`, `examples/v5-parity-zoom/`                                   | Native and side-by-side X/Y/XY wheel modes, Ctrl/Shift modifiers, disabled wheel, runtime options, initial/full/toggle resets and live domain/event readouts. `npm run test:interaction:zoom` covers both routes, including status updates and option changes without plot recreation. `test/Plot/zoom.test.ts` asserts event handles, previous/current domains, explicit state, immutable payload snapshots, lifecycle cleanup, reset direction and restored autoscaling. Library and example builds pass, and both browser suites pass in Chromium. Differences in wheel increments, reset scope, toggle semantics (including v4 Date identity comparison) and event granularity are documented on the parity page. |
+| `panning`, `shared-panning`, `shared-zoom`  | `examples/v5-pan/`, `examples/v5-shared-scales/`                                  | `npm run test:interaction:pan` asserts x/y/xy direction (including touch-action), none/Shift/Ctrl modifiers, primary-button-only dragging, enable/disable by removing and reinstalling the plugin, live domain updates, and shared pan/zoom handles on two plots synchronizing through shared scales with independent pixel ranges, one `subscribe(t.domain)` notification per wheel step, double-click reset, and overview destroy/recreate. v4's `mouseButton` option and `enable()`/`disable()` methods map to v5's primary button and plugin removal.                                                                                                                                                             |
+| `legend`                                    | `examples/v5-legend/`                                                             | Visibility changes for line/marker/area entries and grouped entries, including keyboard activation where supported. Focused browser assertions are in `npm run test:interaction:legend` (external checkbox and built-in SVG keyboard toggles, mixed group state, line/marker/stacked-area path removal and built-in legend cleanup); the sequence passes in Chromium. It found and fixed a focus loss: built-in legend layout passes re-inserted the legend layer and blurred the focused entry (regression test in `test/Plot/legend.test.ts`).                                                                                                                                                                      |
+
+Add focused browser interaction cases for these behaviors, asserting resulting scale
+domains, selections, hit/tooltip content, visibility and lifecycle cleanup rather than
+relying only on screenshots. `npm run test:interaction:mark-hits` exercises supported mark hits across the
+`basic-line`, `marker`, `bar` and `matrix` parity routes: line/marker samples, bar
+rectangles/layers and finite heatmap cells (missing heatmap cells must not hit).
+The browser checks are separate from strict static v4/v5 pixel comparisons; the
+matrix route's categorical band rendering remains unchanged.
+The mark-hit suite passed in Chromium in the user's local run on 2026-10-25.
+
+Parity is behavioral, not an instruction to reproduce every v4 implementation detail.
+The v5 tooltip remains text-only, so v4 arbitrary HTML formatter output is not a
+requirement; match its supported formatting and selection behavior without inserting
+untrusted HTML. The built-in v5 legend intentionally omits v4 checkbox/isolate/show-all
+controls; cover the headless legend model and built-in toggle behavior, and record any
+required product-level UX difference explicitly rather than claiming exact control
+parity. The Phase 3 exit criterion is complete when each listed example has a named
+v5 fixture or an explicit documented exclusion, its applicable interactions have
+focused browser assertions, and differences from v4 are recorded.
+
+| Mark kind                 | Hover / hit behavior                                    | Crosshair snapping                                                            | Tooltip                                    | Visibility                                                                   |
+| ------------------------- | ------------------------------------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------ | ---------------------------------------------------------------------------- |
+| `line()`, `series()`      | Nearest visible sample by x, y or screen distance       | Yes; x/y choose nearest projected sample and xy chooses nearest actual sample | Yes                                        | `series()` supports legend and mark visibility; static `line()` is immutable |
+| `bar()`                   | Bar rectangle or nearest category/value row             | Yes; composite layer hits                                                     | Yes; raw layer value and stack bounds      | Mark and layers support legend commands                                      |
+| `stackedArea()`           | Filled-path hit, topmost painted layer wins             | Yes; composite layer hits                                                     | Yes; raw layer value and cumulative bounds | Mark and layers support legend commands                                      |
+| `histogram()`             | Bin rectangle, including empty bins                     | Yes; through its derived interval-bar geometry                                | Yes; bin range and normalized value        | Mark visibility and single-entry legend commands                             |
+| `heatmap()`               | Containing finite-valued cell; missing cells do not hit | Yes; snaps to cell centre                                                     | Yes; cell bounds and value                 | Direct `visible` option; no legend entry                                     |
+| `band()`                  | No mark-specific hit                                    | No                                                                            | No                                         | Static mark; no visibility control                                           |
+| `rule()`                  | No mark-specific hit                                    | No                                                                            | No                                         | Static annotation; no visibility control                                     |
+| `text()`                  | No mark-specific hit                                    | No                                                                            | No                                         | Static mark; no visibility control                                           |
+| `arrows()`, `direction()` | No mark-specific hit                                    | No                                                                            | No                                         | Static marks; no visibility control                                          |
+| `progress()`              | No mark-specific hit                                    | No                                                                            | No                                         | Static polar mark; no visibility control                                     |
+
+The pointer hub remains available over every plot; “no mark-specific hit” means the
+mark does not add datum inspection. These interval, annotation, glyph and polar marks
+have no defined tooltip datum or Cartesian crosshair-snap contract yet. Their omission
+is intentional rather than an incomplete fallback. Focused browser coverage and the
+histogram/heatmap examples now exercise the newly supported kinds, including missing
+cell handling and visibility. Further mark kinds need an explicit datum/visibility UX
+decision before being added to the inspection API.
+
+Crosshair snapping now supports composite bar and stacked-area layers; snapping vertical
+stacks along x draws one y guide and cumulative-upper callout per visible layer.
+Crosshair callout nodes are reused across pointer leaves, hidden marks and empty data;
+inactive callouts are hidden rather than removed, then updated when inspection resumes.
+
+Docked legends use a separate SVG outside the entire chart SVG, including its axes and
+title. A grid reserves space within the configured host size, and the chart observes its
+remaining viewport. Corner overlays stay inside the plot and reserve no outside space;
+removing the plugin restores the original chart host and size.
+Top/bottom legend SVGs match the chart width and align their entry columns with the
+plot's left/right margins. Left/right legend SVGs match the chart height and use the
+overlay layout: a single indented column inside a box spanning the full chart height,
+including its top/bottom margins. Text is measured using the chart theme.
+All built-in legend entries share the same cell width and height, including their
+clickable bounds; the common width accommodates the widest displayed label and hierarchy
+indentation and updates when labels, grouping, size or placement change.
+In top/bottom positions, groups are laid out row by row like a table instead of with
+indentation. Each top-level group starts a new section, with its semi-bold heading and
+swatch in the first column and its entries alongside it. Nested groups such as named
+stacks start a new line in the next column. Thin dividers separate sections, and
+consecutive ungrouped series share a section. Left/right docks and corner overlays use the
+same root-group sections: a small gap with a divider spanning the column separates groups
+(omitted at the top of a column). Left/right docks only wrap into balanced columns when
+a single column is taller than the chart.
+
+Plugins are installed by a plugin host that reconciles `plot.plugins` by handle
+identity. Each built-in plugin has a `PluginDefinition` (`is`, `validate`, `install`);
+its public factory attaches the definition to the handle with `registerPlugin`
+(`src/plot/plugins/plugins.ts`), and mark factories do the same with `registerMark`
+(`src/plot/marks/marks.ts`). The registries import no definitions, so an application
+bundles only the marks and plugins it creates. An installed plugin receives a read-only
+`PlotContext` with its own reactive scope. Gesture handlers it registers through the plot's single
+pointer hub are released automatically on removal or plot destruction.
+
+Tooltip hit collection, selection, formatting and accessible text are computed in
+`src/plot/plugins/tooltip/tooltip-model.ts`; `tooltip-plugin.ts` owns DOM rendering, placement and
+lifecycle. Brush bounds and scale-selection conversions live in
+`src/plot/plugins/brush/brush-selection.ts`, while `brush-plugin.ts` keeps gesture transitions,
+publication and SVG rendering explicit. The model and bounds helpers are tested
+independently of DOM rendering.
+
+Inspectable mark definitions provide `hits(mark, context)` in their own mark
+directories, using the shared `MarkHitContext` and `MarkHit` contract. Crosshair
+snapping queries only its explicit target through the mark registry. Tooltips query
+each eligible plot mark (or their explicit `marks` list) through the same contract,
+reusing linked crosshair hits rather than repeating hit testing. Marks without
+datum inspection omit `hits`; filled-path context creation remains lazy and owned
+by the interaction consumer.
+
+Mark membership reconciliation, per-mark tracking and update validation, renderer
+mounting, geometry and style passes are owned by `src/plot/marks/mark-layer.ts`. The plot
+coordinator supplies current options, scales and regions, then delegates dirty mark
+rendering and teardown to that layer.
+
+### Phase 4 Sync & live gap assessment
+
+**Status: assessed on 2026-10-25; partial, not complete.** This inventory records the
+starting point; the shared-pointer implementation checkpoint below records subsequent work.
+The completed Phase 3 behavioral parity work is the starting point. Phase 2 static
+parity and its exit criterion remain separate;
+no static baselines need updating for this assessment.
+
+#### Existing foundations and remaining gaps
+
+| Surface                                 | Current evidence                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | Remaining Phase 4 work                                                                                                                                                                                                                                                                                                                          |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Shared scale domains and local bindings | `sharedScale()` returns the same scale handle; each plot owns its binding/range. `test/Plot/plot.test.ts` covers unequal widths, external domain updates and destroying one consumer without breaking its peer.                                                                                                                                                                                                                                                                                                                                                                 | Retain this architecture; no new domain relay or shared pixel range is needed. Extend acceptance to data-backed plots and the new sync/live consumers.                                                                                                                                                                                          |
+| Shared zoom and pan                     | `examples/v5-shared-scales/` installs shared time/value scales and pan/zoom handles. `scripts/pan-parity-interaction.mjs` already checks x/y/xy gestures, local pixel-to-domain deltas, matching ticks, one shared-domain notification per wheel step, reset, destroy and recreation.                                                                                                                                                                                                                                                                                           | Do not treat shared zoom/pan as unimplemented or duplicate the Phase 3 port. Preserve these assertions while adding live data and pointer synchronization. The existing example has axes but no marks.                                                                                                                                          |
+| Public notifications                    | `subscribe()`, `effect()`, source attribution, typed `plot.on()` events and matching DOM events exist. `test/core/runtime.test.ts` and `test/Plot/public-events.test.ts` cover subscriptions and event lifetime.                                                                                                                                                                                                                                                                                                                                                                | Reuse these surfaces for new state; do not add a second event bus. Preserve coalescing, no-op suppression, attribution and shared-handle lifetime.                                                                                                                                                                                              |
+| Shared pointer/crosshair                | `plot.pointer` and the pointer hub are plot-local. `crosshair()` has mode, snap and label options but no shared pointer input. Sharing a crosshair options handle does not share pointer state.                                                                                                                                                                                                                                                                                                                                                                                 | Implement the §3.9 domain-valued shared pointer, keyed by scale identity with source/active state, plus crosshair consumption. Reproject through each destination binding; never copy source pixels or source `inside` as destination authority.                                                                                                |
+| Shared selection                        | Persistent `brush.selection`, `setSelection()` and brush-to-main navigation exist. Programmatic selection updates do not emit user brush events. Selection snapshots use plot-local scale names; there is no independent `sharedSelection()` API.                                                                                                                                                                                                                                                                                                                               | Build on the existing validated immutable brush contract, not a second brush implementation. Define scale-identity/local-name mapping and integrate shared selection ownership, clear/update propagation and consumer teardown. Verify two-way synchronization without feedback.                                                                |
+| Shared clock                            | No v5 shared clock API or clock consumer is present in the production core.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | Add a shared current-time signal with explicit ownership/cleanup and deterministic test control. Keep current-time mark/plugin rendering in Phase 6; do not port domain plugins as part of this assessment.                                                                                                                                     |
+| Follow mode                             | `timeScale()` has no `follow` option or follow-state controls. Zoom/pan/reset operate on ordinary domains. The spike demo follows by manually setting its own domain.                                                                                                                                                                                                                                                                                                                                                                                                           | Implement the window/lead contract, new-data advancement, suspension on user zoom/pan and resumption on reset. Shared consumers must observe one follow state/domain; distinguish user gestures from API/autoscale writes using existing attribution.                                                                                           |
+| Series append/retention                 | `createSeries()`/`fromObjects()` support append, prepend, upsert, replace, clear, `maxPoints` and `maxAge`; appends use circular storage. `SeriesChange` reports operation, resulting invalidation indexes, replacement count and retention exclusions. A 128-sample-block x/y extent index serves unwindowed and viewport-filtered x/y extents. Simple line-only data-backed series append to the existing SVG path without reprojecting retained samples. Dense cartesian line-only series use a bounded, versioned viewport LOD cache preserving per-pixel extrema and gaps. | Complex line geometry (areas/markers) and geometry for retained/replaced data still rebuild. Add incremental processing for aligned tables and stacks before claiming general live append performance.                                                                                                                                          |
+| Aligned tables and stacks               | Table mutations validate and publish all columns atomically, preserve surviving sample IDs and apply retention. Aligned circular buffers avoid survivor relocation except at capacity growth. Stack layouts share immutable 128-row endpoint blocks across append, prepend and upsert, including retention. Candidate validation reads only inserted/replaced stack values, plus numeric key and interval boundaries. Cache remains limited to 8 entries/32 MiB.                                                                                                                | Non-append table ingestion still materializes full columns. Replace/clear and missed layout versions fully recompute endpoints. Block descriptors are rebuilt per snapshot; categorical key validation scans all keys. Add measured live cache/memory bounds; bounded typed-buffer bytes alone are not a measured browser-memory plateau.       |
+| Back-pressure and visibility            | The shared frame scheduler merges invalidations, and series-mark tests assert one geometry write for coalesced mutations with unrelated marks unchanged. A module-level ResizeObserver exists.                                                                                                                                                                                                                                                                                                                                                                                  | No `plot.pause()`/`resume()` or production IntersectionObserver exists. Add a shared visibility observer and per-plot render suspension; retain pending dirty work, draw the latest state on resume and release registrations on destroy. Frame coalescing is not producer throttling and does not make synchronous store mutation incremental. |
+| Live example and end-to-end acceptance  | `examples/v5-spike-live/` uses `src/spike/` stores, scheduler and SVG renderer, with manual follow and a timer. It is useful spike evidence, not acceptance of `createPlot()` or production stores.                                                                                                                                                                                                                                                                                                                                                                             | Add a production live-stream example using public v5 APIs, shared scales and bounded series/table retention, plus deterministic behavioral and resource checks. `connect()` and transformed `linkScales()` remain optional helpers from §3.9/§3.10, not prerequisites for the core work.                                                        |
+
+The test files and interaction script above are existing coverage, not fresh results.
+The Phase 3 checkpoint records the user's successful six-suite interaction run earlier
+on 2026-10-25, including shared-scale gestures. During this assessment the following
+focused production-foundation run was attempted:
+
+```sh
+npx vitest run test/Data/series-store.test.ts test/Data/table-store.test.ts test/Plot/plot.test.ts test/Plot/public-events.test.ts test/Plot/brush.test.ts test/Plot/series-mark.test.ts test/Plot/bar-mark.test.ts test/Plot/stacked-area-mark.test.ts test/Plot/stack-layout.test.ts
+```
+
+**Verification blocked:** Chromium headless shell crashed during launch
+(`SEGV_ACCERR`); cleanup also reported `kill EPERM` under the active sandbox.
+Vitest reported nine selected files and no executed tests. This is not a test pass
+or evidence of a product regression. Review/update the sandbox policy for the
+Playwright Chromium launch/cleanup before retrying browser validation.
+
+#### Recommended implementation sequence and acceptance
+
+1. **Shared pointer first (complete; Chromium acceptance passed).** Add the scale-identity domain-state primitive and
+   crosshair integration using the existing pointer hub and reactive runtime.
+   Test two unequal-width plots with different local scale names, x/y sharing,
+   reversed ranges, destination clipping, leave/cancel, resize/domain changes while
+   stationary, competing sources, plugin removal and source/peer destruction.
+   Assert destination pixels from destination projections, not equality with source
+   pixels; assert no echo publications.
+2. **Shared selection and clock (complete; Chromium acceptance passed).** Reuse persistent brush validation and projection.
+   Test bidirectional selection, clear, unequal bindings, missing/incompatible scales,
+   runtime membership changes and teardown. Test one shared clock update observed by
+   multiple consumers and explicit clock cleanup, without wall-clock sleeps.
+3. **Follow state and gesture integration (complete; Chromium acceptance passed).**
+   Implement window/lead validation and follow state on the shared time scale. Test
+   exact domains after append, empty data, retention and reset; zoom/pan in either peer
+   suspends follow for both, while data continues arriving. Policy: API domain writes
+   preserve follow and hold their requested domain until the next data mutation; reset
+   keeps the existing initial/full/toggle target operation, then resumes at the current
+   follow window.
+4. **Incremental live data path.** Add precise mutation/eviction metadata and production
+   extent/LOD reuse, then incremental aligned-table and stack processing. Verify
+   append, wrap, age/count retention, upsert and replace against full recomputation,
+   including missing/negative values, named stacks, reorders and visibility changes.
+   Instrument processed rows/cache bytes so a tail append proves tail work rather
+   than merely producing correct output after a full rescan.
+5. **Visibility suspension (implemented).** Add manual pause/resume and a shared IntersectionObserver
+   with separate manual/visibility state. Test zero render writes while suspended,
+   one latest-state catch-up on resume, shared consumers remaining active, repeated
+   pause/resume, initially off-screen plots, and destroy while dirty/paused. Explicitly
+   define whether non-render subscriptions continue while paused; keep data ownership
+   independent of plot visibility. See §3.10 for the implemented contract and
+   `test/Plot/visibility.test.ts` for deterministic and native-observer coverage.
+6. **Production live-stream acceptance (complete; see checkpoint below).** Add the public-API example and a dedicated
+   deterministic sync/live runner. Exercise two differently sized data-backed plots,
+   shared pointer/selection, follow suspension/reset, grouped/stacked updates, retention,
+   off-screen pause and destroy/recreate. Assert exact retained rows/IDs/endpoints,
+   bounded cache entries/bytes and a post-warmup memory plateau using the §6 accounting
+   contract. Keep computation, rendering and native browser allocations separate.
+   Rerun the existing shared-scale interaction coverage; do not use Phase 2 pixel
+   parity as a substitute for these behavioral/resource assertions.
+
+Phase 4 can close only after the missing production surfaces and the live acceptance
+checks pass. Existing domain events, shared gestures, bounded cache constants and a
+working spike alone do not meet that exit criterion.
+
+#### Shared pointer and crosshair implementation checkpoint
+
+**Status: complete; Chromium acceptance passed in the user's local run on 2026-10-25.** `src/sync/shared-pointer.ts`
+provides the shared domain-state primitive and destination projection. The local
+pointer hub notifies installed crosshairs only for actual input publications; projected
+shared state never feeds back into the hub. Crosshair inspection, labels and snapping
+use the destination bindings. Plugin scopes disconnect publishers and release ownership
+on removal/destroy, without retaining plots in shared state.
+
+`examples/v5-shared-scales/` now installs xy shared crosshairs on both plots.
+`test/core/shared-pointer.test.ts` covers immutable snapshots, no-op suppression,
+source handoff/release, unequal/reversed local bindings, stationary reprojection,
+independent-axis clipping, identity matching, categories and option validation.
+`test/Plot/shared-pointer.test.ts` adds browser coverage for local names, one shared
+notification/no echo, source leave/cancel, plugin replacement/removal, queued input,
+destroy/recreate, scope cleanup, destination snapping and unchanged local pointer state.
+
+The DOM-independent shared-pointer and runtime suites pass together (21 tests),
+including category inversion from band centers in normal and reversed ranges:
+
+```sh
+npx vitest run --browser.enabled=false test/core/shared-pointer.test.ts test/core/runtime.test.ts
+```
+
+The library/declaration and example builds pass. The full workspace type-check still reports
+errors in unrelated legacy examples/tests; no diagnostics remain in touched files.
+The sandboxed browser attempt was blocked by the Chromium launch/cleanup failure
+described above. The user's subsequent local run passed all five browser suites
+(95 tests), including all 12 shared-pointer tests, and the pan interaction runner:
+
+```sh
+npx vitest run test/Plot/shared-pointer.test.ts test/Plot/plot.test.ts test/Plot/tooltip.test.ts test/Plot/tooltip-model.test.ts test/Plot/interaction-marks.test.ts
+npm run test:interaction:pan
+```
+
+The pan runner confirmed direction, modifier, button and enable/disable behavior
+plus shared-scale synchronization. Shared selection/clock, follow mode, visibility
+pause and incremental live processing were still open at this checkpoint; the
+selection/clock implementation is recorded below. Frozen Phase 2 pixel mismatches
+and static baselines were not changed.
+
+#### Shared selection and clock implementation checkpoint
+
+**Status: complete; Chromium acceptance passed in the user's local run on 2026-10-25.** The user chose persistent
+application-owned selection state and an initially stopped, explicitly controlled
+clock. `src/sync/shared-selection.ts` stores validated immutable scale-identity ranges;
+brush handles map their local-name selection views directly onto that state rather
+than relaying DOM events or maintaining synchronized copies. Shared brush selection
+requires `persistent: true`. The existing range/scale validation is reused through
+`src/sync/selection-validation.ts`; existing brush geometry and interaction stay in
+the brush plugin. Consumer removal/destroy detaches mappings without clearing state.
+
+`src/sync/shared-clock.ts` provides the subscribable time/running signals, manual
+set/tick and explicit start/stop/destroy. Its time source is injectable; tests use fake
+timers rather than sleeps. There is no automatic timer start or timer per plot.
+Current-time rendering remains Phase 6, and clock-driven follow remains a separate
+Phase 4 step.
+
+The shared-scales example now demonstrates Shift-drag shared time selections, explicit
+clear, clock tick/start/stop, and teardown. Existing domain snapshot shape and pan/zoom
+controls are preserved. Its clock does not move scale domains.
+
+The focused DOM-independent suites pass together (54 tests):
+
+```sh
+npx vitest run --browser.enabled=false test/core/shared-selection.test.ts test/core/shared-clock.test.ts test/core/shared-pointer.test.ts test/core/runtime.test.ts test/Plot/brush-selection.test.ts
+```
+
+Coverage includes two-way local-name mapping and no-op/no-echo subscriptions, initial
+state, partial/missing/incompatible identity mappings, alias validation, xy/mode
+filtering, immutable snapshots, clear, handle replacement, consumer detach/reconnect,
+retained categories, existing local brush behavior, clock coalescing across consumers,
+timer ownership and failure reporting, Date limits and explicit clock destruction.
+Library/declaration and example builds pass. Full workspace type-check still reports
+unrelated legacy diagnostics; none are in touched files.
+
+Initial browser verification was attempted but Chromium crashed during launch (`SEGV_ACCERR`)
+under the active sandbox before executing any tests. The user's subsequent local
+Chromium run passed all five suites (53 tests), including all eight shared-selection
+tests and both shared-selection validation tests. Both interaction runners also passed:
+
+```sh
+npx vitest run test/Plot/shared-selection.test.ts test/Plot/shared-selection-validation.test.ts test/Plot/brush.test.ts test/Plot/brush-selection.test.ts test/Plot/shared-pointer.test.ts
+npm run test:interaction:brush
+npm run test:interaction:pan
+```
+
+The new browser suite covers unequal/reversed bindings, two-way gestures and event
+isolation, domain clipping, categories, runtime shared-handle/membership changes,
+external-update gesture cancellation, removal/destroy/recreation and resource cleanup,
+plus independent shared-clock consumers. The validation suite covers incompatible
+peer mappings and atomic plot patches before resources are mounted. The brush runner
+confirmed Shift-drag selection, brush-to-domain updates, overview navigation and two-way
+synchronization. The pan runner confirmed direction, modifier, button and enable/disable
+behavior plus shared-scale synchronization. Follow gesture browser acceptance,
+visibility pause, incremental live processing and production live-stream acceptance
+remain open. Frozen Phase 2 pixel mismatches and static baselines remain unchanged.
+
+#### Follow state implementation checkpoint
+
+**Status: implementation landed; DOM-independent acceptance and browser gesture acceptance pass.** `timeScale({ follow: { window, lead } })`
+now validates numeric millisecond and elapsed (`ms`, `s`, `m`, `h`) durations and ISO
+calendar-day durations.
+While active, the shared time scale derives its window from the latest data extent,
+applying lead before window; empty data retains the configured base domain. Count
+retention and appends are read through the existing reactive extent sources, including
+mutations whose extent does not change.
+
+`ScaleHandle.following`, `pauseFollow()` and `resumeFollow()` expose shared follow
+state/control. Explicit pause holds the currently resolved domain, including any
+padding/nice resolution, instead of restoring an older API/base domain; resume
+recomputes the latest follow window. Domain writes while paused replace the held
+domain without resuming follow. Wheel zoom and pan attribution suspend follow for every consumer of the
+shared scale; reset resumes it after applying the existing configured reset target.
+API domain writes leave follow active and hold the requested domain until the next data
+mutation. The focused tests cover validation, empty/live/retained data, exact domains,
+API override, explicit pause/resume, reset, shared scale identity and local-calendar
+window behavior across a DST gap.
+
+The DOM-independent suite passes:
+
+```sh
+npx vitest run --browser.enabled=false test/core/follow.test.ts
+```
+
+`npm run build` passes. The browser interaction suite `test/Plot/follow.test.ts` passed
+all three tests in the user's local run on 2026-10-25. No Phase 2 visual baselines were
+changed.
+
+#### Incremental series mutation metadata checkpoint
+
+**Status: series mutation metadata and extent reuse implemented; stack/table incrementality remains open.**
+`SeriesChange` preserves its inclusive domain `from`/`to` fields and now reports the
+operation, prior/resulting lengths, submitted input length, half-open invalidated index
+range, explicitly replaced row count, and rows evicted by capacity or age retention.
+Append-only invalidation starts at the previous length when retention does not evict
+rows; retention exclusions include both existing and submitted rows, and front eviction
+invalidates the full resulting sequence. A 128-sample-block extent index updates only
+blocks touched by mutations unless storage is reallocated or replaced. Full-domain
+unwindowed line extents use the index; viewport y-extents use binary search on the
+ordered x column and aggregate fully covered blocks, scanning only partial block edges.
+Viewport x-extents filter by the visible y-range using block y bounds to exclude or
+aggregate fully contained blocks, scanning only partial blocks and edge samples.
+Line-only cartesian series without markers or area fills append newly projected points
+to the existing path when change metadata confirms an unretained append and the scales
+and rendering options are unchanged. Replacement, eviction, gaps, and complex rendering
+continue through the full geometry path where appropriate.
+The user reports the full browser suite passed (63 files, 562 tests). After viewport
+extent reuse was added, the focused DOM-independent series-store suite passed (18 tests)
+and `npm run build` passed. The user subsequently reports the focused browser suite
+`test/Plot/series-mark.test.ts` passed all nine tests, including the tail-append projection
+count and replacement rebuild assertions. After viewport x-extent support was added,
+the focused DOM-independent series-store suite passed (18 tests) and `npm run build`
+passed. The user reports `test/Plot/autoscale.test.ts` passed all 14 browser tests,
+including visible x autoscale filtering data-backed series by the y viewport.
+The user reports the updated `test/Plot/series-mark.test.ts` passed all 10 tests,
+including dense line-only LOD rendering with preserved extrema/gaps. Production bounded
+LOD cache tests pass (19 series-store tests), and the library build passes. Complex/
+retained geometry reuse and incremental table/stack processing remain open. The current
+bounded LOD path is limited to dense cartesian line-only series.
+
+#### Incremental aligned-table and stack append checkpoint
+
+`TableChange` now identifies mutation kind, old/new row counts, input length, invalidated
+row range, replaced rows, retention exclusions and affected key bounds. Metadata is
+published before the table version signal so subscribers see a consistent mutation
+snapshot.
+
+For append-only table updates, `stackLayout()` extends a matching cached layout using
+immutable blocks of up to 128 rows. Complete blocks share existing endpoint buffers;
+a partial tail block copies at most 127 surviving rows. Count/age retention slices
+surviving block ranges and releases evicted block references, without changing older
+snapshots or retaining chains of previous layouts. Gaps and diverging totals are computed
+only for new rows. The bar and stacked-area table validators use the same append path,
+including with retention: all incoming rows are validated before eviction, preserving
+atomic overflow, duplicate-key and interval rejection. Replace, clear and missed layout
+versions use full computation.
+
+Aligned tables now keep every column and sample ID in aligned circular buffers.
+Append validates a combined old/incoming view before writing, applies count/age retention
+by advancing the logical head, and copies survivors only during geometric capacity growth.
+Only surviving incoming rows are written. Age retention uses binary search and preserves
+all duplicate keys at the cutoff. Prepend/upsert/replace/clear still use the full-copy
+path, including after wraparound. Retention options are copied at construction.
+Categorical composite append validation checks all prior keys, not only the last key.
+
+`tableStorageDiagnostics()` in the internal table module reports canonical capacity/bytes
+and cumulative relocated/appended rows. Tests compare all values and sample IDs against
+a reference across 512 wrapped appends, assert zero survivor relocation and constant
+canonical bytes at fixed capacity, and cover growth, oversized input, combined retention,
+clear/reuse, non-append mutations after wrap and atomic rejection. These counters exclude
+validation work, transient ingestion buffers, dictionaries and native browser allocations.
+The circular-table checkpoint passed 42 focused tests and the library build. Browser
+acceptance for that checkpoint is confirmed by the user's local Chromium run: bar,
+stacked-area and histogram suites all pass (3 files, 28 tests).
+
+The immutable-block checkpoint adds `StackLayout.copiedRows` and accounts for all typed
+buffers reachable from each snapshot, including partially evicted blocks. Tests run
+512 retained appends each for stacked, grouped and named layouts, comparing every
+endpoint and total with full recomputation, including hidden layers and gaps. They
+assert tail-only processing, fewer than 128 copied prefix rows, bounded reachable
+buffer bytes and unchanged old snapshots. A guarded table view verifies that an append
+reads no surviving value columns. Age eviction, oversized batches, complete eviction,
+missed versions, clear/reuse and absolute overflow row indexes are also covered.
+Focused table/stack/series suites pass (49 tests), and the library build passes.
+Browser acceptance for this checkpoint is confirmed by the user's local Chromium run:
+bar, stacked-area and histogram suites all pass (3 files, 28 tests).
+
+Endpoint lookup now binary-searches block descriptors; constructing a snapshot still
+walks those descriptors. Categorical duplicate validation scans the complete candidate.
+Typed-buffer accounting excludes descriptor objects, transient validation allocations,
+externally retained snapshots and native browser allocations.
+
+The non-append reuse checkpoint adds `TableChange.spliceFrom`, the insertion/removal
+start in the previous snapshot before retention. Existing conservative invalidation
+ranges remain unchanged. Matching cached prepend/upsert layouts map surviving prefix
+and suffix ranges through row-count changes and retention, share whole unaffected
+blocks, and recompute inserted rows plus blocks intersecting the mutation boundaries.
+No prefix endpoint copying is needed for these operations. Old snapshots stay immutable.
+
+Tests compare every endpoint and positive/negative total with full recomputation across
+prepend, middle insertion, variable-length replacement, deletion and repeated upserts
+for grouped, stacked and named layouts with hidden layers and gaps. They also cover
+categorical prepends/duplicate rejection, retention crossing inserted rows, complete
+eviction, atomic overflow rejection and replacement/clear fallbacks. Focused
+table/stack/series suites pass (55 tests), and the library build passes. Browser acceptance
+for this checkpoint is confirmed by the user's local Chromium run: bar, stacked-area
+and histogram suites all pass (3 files, 28 tests).
+At that checkpoint, non-append ingestion and candidate validation still performed full
+work; the following checkpoint addresses mark-level candidate validation.
+
+#### Incremental candidate validation checkpoint
+
+Table validators now receive an immutable half-open candidate splice range for prepend
+and upsert, before retention. Append keeps its existing tail hint. Bar and stacked-area
+validation share `validateStackUpdate()`: only inserted/replaced value rows are read
+and their gaps/totals calculated, in chunks of at most 128 rows. Validation does not
+allocate or copy old endpoint prefixes and does not require constructing the previous
+cached layout. Numeric keys check the inserted range and both neighbors; deletion
+checks the newly adjacent boundary. Categorical keys still scan the whole candidate to
+reject duplicates against any surviving key.
+
+Bar intervals similarly check the inserted range, preceding end and first succeeding
+interval. All incoming rows are validated before retention, including rows that will be
+discarded. Replace and option changes retain complete validation. No version, sample ID
+or canonical buffer is published until all consumers accept the candidate.
+
+Guarded-view tests measure exactly six value reads per changed row for a three-layer
+stack and bound numeric key reads by changed length plus three, including empty deletion
+and end-of-table ranges. Integration tests exercise both interval boundaries, invalid
+intervals, bar/area overflow before retention, categorical duplicates and atomic rejection.
+Focused table/stack/series suites pass (63 tests), and the library build passes.
+Browser acceptance is confirmed by the user's local Chromium run: bar, stacked-area
+and histogram suites all pass (3 files, 28 tests).
+
+Non-append table merging/copying and store-level input checks still visit full columns.
+Categorical key scans and block descriptor rebuilding remain open; the following
+checkpoint addresses series LOD reuse and adds the live-memory acceptance runner.
+
+#### Mutation-aware series LOD and live-memory acceptance checkpoint
+
+**Status: block-summary LOD reuse implemented and unit-verified; measured live-memory
+acceptance passed for the line and composite fixtures after fixing a stack retention
+leak. Phase 4 remains in progress (visibility suspension and full sync/live acceptance).**
+
+1. **Reuse mutation-maintained summaries.** The existing physical 128-sample extent
+   blocks now also record the first minimum/maximum positions and whether a block
+   contains missing values. LOD combines first/minimum/maximum/last from a complete,
+   gap-free block contained in one pixel bucket, rather than reading every source
+   row. Logical indexes are reprojected from physical positions after ring retention.
+   Pixel-boundary blocks, partial blocks and blocks with gaps use the original
+   row-level M4 reduction, preserving extrema tie order, duplicate x values, gap
+   boundaries and viewport neighbors. Append/age/count retention refresh only touched
+   summaries; growth, prepend, upsert and replace still rebuild the summary index.
+   Clear releases summaries. Selected viewport snapshots remain versioned, immutable
+   and bounded by the existing 16-entry/2 MiB LRU; this is summary reuse, not reuse of
+   stale logical-index snapshots across mutations.
+2. **Verify work, not just output.** Internal `seriesStorageDiagnostics()` reports
+   canonical typed-buffer bytes, summary block count and cumulative summary rows,
+   directly scanned LOD rows and rows represented by reused summaries. A 512-append
+   retained fixture with 16,384 samples checks at most 256 summary rows refreshed per
+   append, at most `8 * 128 + 256` directly scanned LOD rows for an eight-pixel window,
+   over 15,000 rows represented by summaries, constant canonical bytes and bounded
+   selected-index bytes. Full M4 reference comparisons cover both precisions, repeated
+   extrema, missing blocks, duplicates, reversed/degenerate/outside windows, append,
+   prepend, variable-length upsert/deletion, oversized retention, replace, clear and
+   reuse. Old selected-index snapshots stay unchanged. Query work still traverses
+   summary descriptors and pixel edges; gap-heavy or high-resolution views can still
+   scan every visible row. This is not a universal tail-only geometry path.
+3. **Run production memory acceptance.** `npm run test:live:memory` serves
+   `scripts/phase4-live-memory.html` and uses production `createPlot()`, series,
+   retained tables, grouped bars and stacked areas, not spike implementations.
+   The line fixture uses exactly 1M Float64 x/y samples and one 1000 CSS-pixel-wide
+   SVG plot, warmed with 100 distinct windows. The separate three-layer table
+   fixture retains 2048 rows across 1000/640-pixel plots. Each fixture warms module,
+   rendering and live-update paths before measuring an empty-plot baseline; after
+   population/window warmup and 128 live warmup batches, six measured rounds each
+   append 128 batches of 32 rows. Checks include all retained line/table values,
+   table IDs, every stack endpoint/total against full recomputation, per-append
+   summary/LOD work, no table survivor relocation, stack processing/copy counts and
+   bounded LOD/stack caches. `stackCacheDiagnostics()` reports the existing cache's
+   entry count and conservative typed-buffer byte charge.
+
+The runner measures post-GC CDP JS heap plus backing-store bytes separately, without
+adding canonical/derived diagnostics again. The single-line retained limit is
+20 MiB (matching the existing Phase 0 byte threshold); the separate composite fixture
+has a declared 32 MiB limit. Every measured live sample must remain below its retained
+limit. Post-warmup last-minus-first growth must be at most 1 MiB and the six-sample
+spread at most 2 MiB. Destroy must leave at most 1 MiB above the empty-plot baseline.
+JSON output records samples, budgets, browser/OS/CPU, canonical/cache accounting, SVG
+path characters and DOM counters. Native SVG bytes are not measured by CDP heap usage:
+DOM/path counts are proxies, not a native-memory budget pass. Pre-GC high-water samples
+are observations, not a true peak during canonical growth. Dedicated growth peaks,
+native allocation accounting, longer create/destroy stress, visibility suspension
+and the complete sync/live acceptance scenario remain separate work.
+
+Verification on 2026-10-25: the focused DOM-independent series/table/stack suite passes
+(3 files, 67 tests), the production memory fixture bundles successfully, and the
+library build passes. The broader workspace `tsc --noEmit` remains failing on existing
+example/test diagnostics; none are reported for the changed source/tests or the new
+memory fixture. The focused Chromium series-mark run was attempted but executed no
+tests: headless Chromium crashed with `SEGV_ACCERR`, and cleanup reported `kill EPERM`
+under the sandbox. The memory runner was therefore not launched again through the
+same blocked browser path. Update the sandbox policy to permit Playwright Chromium
+launch/cleanup, then run:
+
+```sh
+npx vitest run test/Plot/series-mark.test.ts
+npm run test:live:memory
+```
+
+At that point no measured memory plateau was claimed; the measured runs follow below.
+No Phase 2 pixel baselines were changed.
+Changed code passes Prettier. Targeted ESLint reports only the pre-existing unused
+`xValue` destructuring in `test/Data/series-store.test.ts`; it was left unchanged.
+
+**First measured run (user's local Chromium, 2026-10-25).** After adding explicit
+`directions` to the axis-less fixture plots:
+
+- **Line fixture: passed.** Retained 17,038,416 bytes (16.25 MiB, below 20 MiB) over a
+  16,400,741-byte empty-plot baseline; 16,000,000 bytes are canonical columns.
+  Six post-warmup samples grew/spread by 73,748 bytes; destroy left 20,948 bytes.
+  LOD cache: one entry, 9,136 bytes. Summary blocks represented about 87% of LOD
+  rows. Pre-GC observation: 43,953,040 bytes total (not a peak budget).
+- **Composite fixture: failed the plateau.** Retained 1,619,947 bytes after warmup,
+  but six samples grew linearly by 12,764,775 bytes (about 2.5 MiB per 128 appends),
+  in both heap and backing stores, while table bytes (81,920), survivor copies and
+  the stack cache (2 entries, 335,872 bytes) stayed constant. Destroy released it
+  (30,932 bytes left), so the growth was reachable from live plot/store state.
+
+**Cause and fix.** Closures sharing V8 function contexts formed an unbounded chain:
+each new stack block's offset view, created inside `computeStackLayout()`, retained
+that layout's `blocks` array, whose reused blocks retained their creating layouts'
+arrays, back through every append. Endpoint accessors in `computeStackBlock()` also
+retained the block's `data` and `previous` tail layout. Both are now built by
+top-level helpers (`offsetView()`, `blockEndpoints()`) that capture only what they
+use. A regression test in `test/Plot/stack-layout.test.ts` runs 512 retained appends
+twice for grouped and stacked layouts and bounds post-GC `arrayBuffers` growth to
+1 MiB. It failed on the previous code (6,680,320 bytes) and passes after the fix.
+It runs only with `--expose-gc`:
+
+```sh
+NODE_OPTIONS=--expose-gc npx vitest run --browser.enabled=false test/Plot/stack-layout.test.ts
+```
+
+Focused series/table/stack suites pass with GC exposed (3 files, 68 tests), and the
+library build passes. The user's local run of the stack suite with `--expose-gc`
+also passed all 32 tests, including the leak regression.
+
+**Measured rerun after the fix (user's local Chromium, 2026-10-25): both fixtures
+pass every runner check.** The runner exited with `"status": "passed"` for 2 fixtures
+on Chromium 151.0.7922.34, macOS (darwin 27.0.0), Apple M2 Pro, 1280x720 at 1x.
+
+| Fixture    | Retained (limit)        | Plateau growth/spread (≤ 1/2 MiB) | After destroy (≤ 1 MiB) |
+| ---------- | ----------------------- | --------------------------------- | ----------------------- |
+| Line       | 17,038,144 B (< 20 MiB) | 73,940 / 73,940 B                 | 20,780 B                |
+| Composites | 1,632,915 B (< 32 MiB)  | 76,791 / 76,791 B                 | 32,956 B                |
+
+The line results match the first run within a few hundred bytes. Composite backing
+stores now stay at 7,706,682-7,706,685 bytes across all six samples (previously
++1.67 MiB per sample), and heap grows by 76,791 bytes in total. Table bytes (81,920),
+survivor copies (only the initial 2048), stack cache (2 entries, 335,872 bytes) and
+DOM counts (6169 nodes, 6127 rectangles) are unchanged from the failing run, so only
+the retained chain changed. The composite pre-GC observation fell from 141,208,421
+to 87,895,443 bytes; it is an observation, not a peak budget.
+
+This closes the series LOD reuse and measured live-memory items for these two
+fixtures. It does not measure native SVG bytes, canonical-growth peaks or
+create/destroy stress. At that checkpoint, visibility suspension (step 5) and the full
+sync/live acceptance scenario (step 6: shared pointer/selection, follow, off-screen
+pause, destroy/recreate) remained open.
+
+#### Visibility suspension checkpoint
+
+Step 5 is implemented for Cartesian, polar and Skew-T plots. A shared host
+IntersectionObserver and independent manual pause state gate main rendering and plugin
+visual effects; data ownership and non-render subscriptions remain active. Deterministic
+tests cover dirty-layer coalescing, shared consumers, membership changes and teardown;
+a native viewport-intersection test covers initially off-screen plots and re-entry.
+
+Browser-tool acceptance verified native intersection transitions, no DOM writes from
+suspended plots/plugins, a single latest-state geometry catch-up, continued shared-peer
+rendering and domain subscriptions, repeated pause/resume, dirty/paused destruction,
+polar/Skew-T suspension and deferred plugin membership changes. Canvas acceptance
+verified zero suspended paints and exactly one catch-up paint.
+The library build and type-check pass. `test/Plot/visibility.test.ts` and the existing
+plot, polar, Skew-T, follow, legend, tooltip, brush, highlight and composite-canvas
+suites pass in the Vitest Chromium runner.
+
+At the visibility checkpoint, the full production sync/live acceptance scenario
+(step 6) remained open; it is recorded below.
+
+#### Production live-stream acceptance checkpoint
+
+**Status: complete. The headless runner, the Phase 4 Vitest browser suites and pan
+parity passed locally in Chromium on 2026-10-25.**
+
+`examples/v5-live-stream/` uses only public `@lib` APIs: one `timeScale` with
+`follow: { window: '2h' }`, a shared linear value scale, a retained series (1440 points)
+and a retained aligned table (720 rows), a `stackedArea` overview (full width) and a
+grouped `bar` detail (60% width), each with a `series` level line, shared `pan`/`zoom`
+handles, per-plot crosshairs on one `sharedPointer({ by: 'xy' })` and persistent brushes
+on one `sharedSelection()`. Each batch appends four rows to both stores inside `batch()`.
+Controls cover append/stream, pause/resume follow, manual detail pause, detail
+destroy/recreate and clearing the selection. `window.liveStream` exposes the handles.
+
+`npm run test:live:stream` (`scripts/phase4-live-stream.mjs`) serves the examples with
+Vite, loads `scripts/phase4-live-stream-probe.ts` into the page (internal diagnostics
+only; the example stays public-API) and runs `scripts/phase4-live-stream-scenario.mjs`
+with real Playwright input. `--url` reuses a running dev server. It asserts:
+
+1. **Follow, retention and work.** The domain equals the exact latest two-hour window
+   after every append. Every retained series sample, table value and sample ID is
+   checked, and every stacked/grouped endpoint is compared with full recomputation.
+   There is no table survivor relocation, canonical bytes stay constant, and the
+   stack (≤ 8 entries/32 MiB) and LOD (≤ 16/2 MiB) caches stay bounded. Each append
+   processes at most `2 × layers × batch` stack rows and copies under 128.
+2. **Shared pointer.** Hovering either plot shares t/q values. Both guides match each
+   plot's own projection within 1 px (and differ from the source pixels). A follow
+   append reprojects a stationary guide without republishing pointer state; leaving
+   hides both.
+3. **Shared selection.** Shift-drag in either plot sets the same domain range (within
+   2 px of inversion), drawn through each plot's width; follow stays active. Appends
+   reproject without changing the range; clear removes both.
+4. **Follow suspension.** Wheel zoom in the detail or a pan in the overview suspends
+   follow for both plots. Data keeps arriving while the domain stays fixed.
+   Double-click and the _Resume follow_ control return to the exact latest window.
+5. **Off-screen and manual pause.** Shrinking the viewport so the detail leaves it
+   (native IntersectionObserver) produces zero detail DOM writes over six appends. The
+   overview keeps rendering and the public domain subscription fires once per batch.
+   Re-entry catches up in exactly one frame, with the latest sample at its projected
+   pixel. The same holds for manual pause/resume.
+6. **Destroy/recreate.** Destroying the detail removes its DOM. The overview, data,
+   follow, pointer publishing and shared selection survive. The recreated detail
+   immediately shows the selection, the latest data and shared guides.
+7. **Resources.** Twenty further destroy/recreate cycles must leave DOM node counts
+   unchanged and retain at most 1 MiB post-GC (CDP heap + backing stores). After
+   128 warmup batches, six samples of 64 batches each must grow ≤ 1 MiB and spread
+   ≤ 2 MiB, with a DOM spread of ≤ 64 nodes. Computation (canonical/cache bytes) and
+   rendering (DOM nodes/paths/rectangles/path characters) accounting is reported
+   separately. Native SVG memory is not measured.
+
+**Fix found by the scenario.** On resume after a pause, overlay plugins (crosshair,
+brush) rendered in two frames. The catch-up layout render always set new `size`/
+`regions` objects, so the plugins' effects ran once on resume and again in the next
+frame with identical values. `renderLayout()` now keeps the previous objects when the
+geometry is identical (`identicalLayout()` also compares axis and title regions). This
+removes redundant overlay work on every layout render; resizes still update regions and
+emit `layoutchange`, which was verified in the browser.
+
+**Verification (2026-10-25).** The full scenario passed in about 25 s in a Chromium page
+via the browser tools against `vite-examples.config.ts`: zero suspended writes, one
+catch-up frame (off-screen and manual), 711,648 B over 20 recreate cycles, and a plateau
+of 187,620 B growth / 194,352 B spread with a 1-node DOM spread. Accounting: series
+23,040 B (1440 points), table 28,800 B, stack cache 2 entries / 125,372 B, LOD cache
+empty. The series wrapped past retention during the plateau. The library build and
+DOM-independent core suites (44 tests) pass. Example, probe and runner have no
+type-check or ESLint diagnostics.
+The sandboxed runs could not launch headless Chromium (same launch failure as earlier
+checkpoints), so the headless runs were repeated locally (2026-10-25, Chromium
+151.0.7922.34, macOS 27.0.0, Apple M2 Pro):
+
+- `npm run test:live:stream` passed all seven phases (1280×1200 @ 1x, detail moved
+  off-screen by shrinking the height) within the budgets above.
+- `npx vitest run test/Plot/visibility.test.ts test/Plot/plot.test.ts
+  test/Plot/public-events.test.ts test/Plot/shared-pointer.test.ts
+  test/Plot/shared-selection.test.ts test/Plot/follow.test.ts`: 6 files, 82 tests
+  passed (follow 3, public events 4, visibility 7, shared selection 8, shared
+  pointer 12, plot 48).
+- `npm run test:interaction:pan`: direction, modifier, button, enable/disable and
+  shared-scale synchronization passed.
+
+Phase 4 is complete. No Phase 2 pixel baselines were changed.
+
+### Phase 5 Ensembles checkpoint
+
+**Status: implemented on 2026-10-27. The ensemble store, quantile cache, mark, tooltip,
+highlight and legend are in place, with Vitest browser suites passing locally in
+Chromium. The 50×10k target is met with the canvas renderer in local measurements; it
+is not yet a CI-enforced benchmark.**
+
+**Store (`data-store/ensemble.ts`).** `createEnsemble({ x, members }, options)` accepts
+one column per member or a row-major `{ memberCount, values }` matrix. It copies once
+into a members × capacity ring (Float32 by default, about 2 MB for 50 × 10k), with the
+series store's mutation, retention and `change` semantics (`EnsembleChange =
+SeriesChange`) and atomic rollback. Member metadata has stable, unique ids. A 128-step
+block index gives windowed extents over all members. `memberLod(member, window,
+width)` is M4 decimation with the same output as `series.lod`, in a bounded LRU cache
+(256 entries / 4 MiB) that is cleared on mutation. The member count is fixed for the
+lifetime of a store.
+
+**Derived columns.** `quantile(p)`, `quantiles([...])`, `mean()` and
+`exceedance(threshold)` return live, store-owned statistics (`at`, `extent`). They are
+cached as columns sharing the ring layout, so an append without reallocation only
+computes new rows. Capacity growth, `prepend`/`upsert`/`replace` and `clear` recompute
+fully. Each step gathers the valid members into a reused scratch buffer and sorts once
+for all cached quantiles. The definition is the `quantileMethod` store option, numbered as in
+Hyndman & Fan (1996), _Sample quantiles in statistical packages_, The American Statistician
+50(4): `'r6'` (default; rank `p(n + 1)`, the NIST/SEMATECH recommendation, clamped to the
+smallest and largest valid member) or `'r7'` (`d3.quantileSorted`; rank `1 + (n - 1)p`). Median and p50 share one column, and
+all-missing steps give `NaN`. The cache is bounded (32 columns / 16 MiB, LRU); evicted
+handles recompute on their next read. Quantiles are only batched when they are
+registered before the first read, so the mark requests all drawn quantiles in one
+`quantiles()` call (`ensembleStatistics`).
+
+**Mark (`plot/marks/ensemble/`).** `ensemble(store, options)` draws spread bands,
+members, mean, median and a control member inside one `g[data-mark="ensemble"]`.
+Display parts are top-level `false | Options` keys like `series()`, rather than nested
+under `show` as in the 3.7 sketch. `spread` takes `{ bands }` instead of a bare array.
+Each part accepts `visible`, so legend toggles keep its options. `renderer: 'canvas'`
+moves members onto one composite canvas with one stroke per member (the composite
+canvas gained an internal `strokeOpacity`); statistics stay SVG. Linear and time scales
+are projected through precomputed D3 bimap arithmetic instead of per-vertex `project`
+calls. Autoscale covers visible parts only, honouring `members.max`.
+
+**Inspection.** A hit is the nearest step by x pixel and the nearest drawn line at that
+step (member, control, statistic or band edge; a member wins ties). It carries the
+drawn statistics (quantiles ascending, then the mean) and the optional exceedance
+probability. The tooltip shows one row per ensemble, for example
+`fc · 10 · Member C: 10 · p5: 2 · median: 6 · p95: 10 · P(>4): 67%`. `highlight()`
+draws the hovered member's full, decimated line plus a point; this replaces the
+`highlightOnHover` option of the sketch. `exceedance` takes a numeric threshold; named
+warning-level thresholds follow in Phase 6.
+
+**Legend.** Configured parts become layers with ids `<mark>::layer:<part>`, labels
+`Members`, `5–95%` (single band) or `Spread`, `Median`, `Mean` and the control
+member's label. Each has its own `SymbolSpec`, and the heading overlays all parts. The
+composite legend rules apply: mixed heading state, heading toggles all parts, showing
+one part of a hidden mark shows only that part, isolate/show-all, a flat list for
+unlabelled marks and collapse for single-part marks.
+
+**Performance (local, Vitest browser mode, Chromium, macOS, Apple M2 Pro).** For a
+fresh 50 × 10k store with default spread bands and median, `createPlot` plus one
+animation frame takes about 46 ms with `renderer: 'canvas'` and about 82 ms with SVG
+members. Before the batching and projection fixes it took about 89 ms and 132 ms. On
+their own, quantiles take about 11 ms, member decimation about 9 ms and canvas paths
+about 8 ms. The in-repository test uses a 1 s smoke bound; a pinned-runner benchmark
+remains to be added to the §6 suite.
+
+**Not yet covered.** `crosshair({ snap })` does not accept ensembles, and the Web
+Component/Vue ensemble examples belong to Phases 7 and 8.
+
+**Verification (2026-10-27).** `npx vitest run`: 76 files, 791 tests passed, 1
+skipped, including `test/Data/ensemble-store.test.ts`,
+`test/Data/ensemble-statistics.test.ts`, `test/Plot/ensemble-mark.test.ts`,
+`test/Plot/ensemble-interaction.test.ts` and `test/Plot/ensemble-legend.test.ts`.
+`tsc -p tsconfig.build.json` passes. No Phase 2 pixel baselines were changed.
+
+### Phase 6 Domain plugins checkpoint
+
+**Status: in progress. `currentTime` is implemented; warning levels, alert lines, DST
+indicator, level select, data field, Beaufort, colour bar and the polar roses remain.**
+Cross-section select was implemented earlier.
+
+**`currentTime` (`plot/plugins/current-time/`).** `currentTime({ x, clock, label, format })`
+is the first consumer of `sharedClock`. A supplied clock belongs to the application, and the
+plugin never starts it. Without one, the plugin runs a private clock at the v4 refresh of
+10 seconds and stops it while the plot is suspended, so `currentTime()` works with no
+arguments. `x` is inferred when the plot has exactly one x-direction time scale. Unlike v4,
+the line is only supported in the x direction, and `label` also offers `always` and `none`.
+Clock-driven follow remains a separate step.
+
+## 8. Additional improvements to consider
+
+- **Missing-value & quality flags**: render gaps, flag-based styling (FEWS flags/doubtful
+  values), comments in tooltip.
+- **Forecast-aware time axis**: T0 marker, lead-time secondary axis, analysis vs forecast
+  styling switch at T0.
+- **Thresholds as data**: warning levels varying in time (time-dependent thresholds).
+- **Annotations API**: click-to-annotate, events, editable points (data editing for
+  FEWS "edit time series" use cases) with undo.
+- **Web Worker offloading**: quantiles/decimation of very large ensembles in a worker
+  (transferable typed arrays).
+- **Deterministic rendering for tests** (fixed DPR, fonts) and SSR SVG export in Node.
+- **i18n**: all labels/formatters via `Intl` with injected locale; RTL-safe legend.
+- **Accessibility**: keyboard navigation, screen-reader summary, high-contrast theme,
+  colour-blind-safe default palettes.
+- **Small multiples helper**: `createGrid(el, plots, { shared: ['t'] })` for many
+  synchronised panels with one shared pointer/tooltip.
+- **Diagnostics**: dev-mode overlay showing redraw counts per layer and frame time.
+
+## 9. Remaining open decisions
+
+None at this time.
+
+Browser baseline details: set the Vite library target from the frozen support manifest
+and keep `browserslist`, documentation and Playwright minimum-version jobs in sync.
+Verify required platform features (`adoptedStyleSheets`, `ElementInternals`,
+`OffscreenCanvas`, `Intl.DateTimeFormat#formatToParts` with time zones, CSS `:state()`)
+against that matrix. `structuredClone` is not a required platform feature and must not be
+used as a prerequisite; configuration updates preserve callbacks and shared identities
+without cloning.
+
+Deferred (revisit after v5.0): automatic SVG/canvas switching (`renderer: 'auto'`);
+declarative child config elements and `src` data loading for `<fews-chart>`.

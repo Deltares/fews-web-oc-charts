@@ -1,0 +1,235 @@
+import type {
+  CrosshairHandle,
+  CrosshairOptions,
+  CrosshairSnapOptions,
+} from '../plugins/crosshair/crosshair.js'
+import type { PlotContext } from '../plugins/plugin-definition.js'
+import type { ScaleBinding, ScaleValue } from '../../scales/scale.js'
+import { isLineMark } from '../marks/line/line.js'
+import { isSeriesMark } from '../marks/line/series.js'
+import { isBarMark } from '../marks/bar/bar.js'
+import { isStackedAreaMark } from '../marks/stacked-area/stacked-area.js'
+import type { CompositeHit } from './composite-hit-testing.js'
+import type { Region } from '../../layout/layout.js'
+import { isHistogramMark } from '../marks/histogram/histogram.js'
+import { markDefinition } from '../marks/marks.js'
+import type { MarkHit } from '../marks/mark-definition.js'
+import { projectSharedPointer } from '../../sync/shared-pointer.js'
+
+let areaPathContext: CanvasRenderingContext2D | undefined
+
+export interface CrosshairLayerGuide {
+  readonly hit: CompositeHit
+  /** SVG y coordinate of the layer's cumulative upper bound. */
+  readonly py: number
+}
+
+type InspectionAxis = 'x' | 'y'
+
+function layerCoordinates(
+  axis: InspectionAxis,
+  scaleName: string,
+  snap: CrosshairSnapOptions | undefined,
+  layers: readonly CrosshairLayerGuide[],
+) {
+  if (axis !== 'y' || !layers.length) return undefined
+  if (scaleName !== snap?.mark.y) return []
+  return layers.map(({ hit, py }) => ({
+    axis,
+    scale: scaleName,
+    value: hit.upper,
+    digits: 2,
+    position: py,
+    layerId: hit.layerId,
+  }))
+}
+
+function coordinateValue(
+  axis: InspectionAxis,
+  scaleName: string,
+  binding: ScaleBinding,
+  domain: readonly ScaleValue[],
+  hit: MarkHit | undefined,
+  snap: CrosshairSnapOptions | undefined,
+  resolved: { readonly x: number; readonly y: number },
+) {
+  if (hit && snap?.mark[axis] === scaleName) return hit[axis]
+  if (binding.scale.kind !== 'band') return binding.invert(resolved[axis])
+  return domain.reduce((closest, value) =>
+    Math.abs(binding.project(value) - resolved[axis]) <
+    Math.abs(binding.project(closest) - resolved[axis])
+      ? value
+      : closest,
+  )
+}
+
+function coordinateDigits(
+  axis: InspectionAxis,
+  scaleName: string,
+  hit: MarkHit | undefined,
+  snap: CrosshairSnapOptions | undefined,
+): number | undefined {
+  if (!hit || snap?.mark[axis] !== scaleName) return 2
+  if (axis === 'y' && (isLineMark(snap.mark) || isSeriesMark(snap.mark))) {
+    return snap.mark.digits
+  }
+  if (axis === 'y') return 2
+  return undefined
+}
+
+function coordinatesForAxis(
+  axis: InspectionAxis,
+  options: CrosshairOptions,
+  context: Omit<PlotContext, 'scope' | 'inspectCrosshair'>,
+  {
+    visible,
+    layers,
+    hit,
+    resolved,
+    axes,
+  }: {
+    readonly visible: boolean
+    readonly layers: readonly CrosshairLayerGuide[]
+    readonly hit: MarkHit | undefined
+    readonly resolved: { readonly x: number; readonly y: number }
+    readonly axes: string
+  },
+) {
+  if (!visible) return []
+  const scaleName = options.labels?.[axis]
+  if (!scaleName) return []
+  const layerValues = layerCoordinates(axis, scaleName, options.snap, layers)
+  if (layerValues) return layerValues
+  if (!axes.includes(axis)) return []
+  const binding = context.scales[scaleName]
+  if (!binding) return []
+  const domain = binding.scale.domain.get()
+  if (binding.scale.kind === 'band' && !domain.length) return []
+  return [
+    {
+      axis,
+      scale: scaleName,
+      value: coordinateValue(axis, scaleName, binding, domain, hit, options.snap, resolved),
+      digits: coordinateDigits(axis, scaleName, hit, options.snap),
+      position: resolved[axis],
+      layerId: undefined as string | undefined,
+    },
+  ]
+}
+
+function snapHits(
+  snap: CrosshairSnapOptions,
+  context: Omit<PlotContext, 'scope' | 'inspectCrosshair'>,
+  point: { readonly x: number; readonly y: number },
+  regions: { readonly plot: Readonly<Region> },
+): readonly MarkHit[] {
+  return (
+    markDefinition(snap.mark).hits?.(snap.mark, {
+      scales: context.scales,
+      point,
+      axis: snap.axis,
+      plot: regions.plot,
+      pathContext() {
+        areaPathContext ??= document.createElement('canvas').getContext('2d') ?? undefined
+        if (!areaPathContext) {
+          throw new Error('Crosshair snapping to stacked areas requires a 2D canvas context.')
+        }
+        return areaPathContext
+      },
+    }) ?? []
+  )
+}
+
+function nearestHit<T extends MarkHit>(hits: readonly T[], point: { readonly y: number }) {
+  return hits.reduce<T | undefined>(
+    (nearest, hit) =>
+      !nearest || Math.abs(hit.py - point.y) < Math.abs(nearest.py - point.y) ? hit : nearest,
+    undefined,
+  )
+}
+
+/** Vertical composites snapped along x get one horizontal guide per visible layer. */
+function layerGuides(
+  snap: CrosshairSnapOptions | undefined,
+  hits: readonly MarkHit[],
+  context: Omit<PlotContext, 'scope' | 'inspectCrosshair'>,
+): readonly CrosshairLayerGuide[] {
+  if (snap?.axis !== 'x') return []
+  const vertical =
+    isStackedAreaMark(snap.mark) ||
+    ((isBarMark(snap.mark) || isHistogramMark(snap.mark)) &&
+      snap.mark.options.get().resolved.orientation === 'vertical')
+  if (!vertical) return []
+  const valueScale = context.scales[snap.mark.y]
+  return hits.flatMap((hit) => {
+    if (!('layerId' in hit) || !Number.isFinite(hit.upper)) return []
+    const py = valueScale.project(hit.upper)
+    return Number.isFinite(py) ? [Object.freeze({ hit, py })] : []
+  })
+}
+
+export function displayInspectionValue(
+  value: ScaleValue,
+  context: Pick<PlotContext, 'scales'>,
+  scaleName: string,
+  digits?: number,
+) {
+  const scale = context.scales[scaleName]?.scale
+  if (scale?.kind === 'time' && typeof value === 'number') {
+    const options = scale.options.get().resolved
+    return new Intl.DateTimeFormat(options.locale, {
+      timeZone: options.timeZone,
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(new Date(value))
+  }
+  if (typeof value === 'number' && digits !== undefined) {
+    return String(Number(value.toFixed(digits)))
+  }
+  return String(value)
+}
+
+export function inspectCrosshair(
+  handle: CrosshairHandle,
+  context: Omit<PlotContext, 'scope' | 'inspectCrosshair'>,
+) {
+  const options = handle.options.get().resolved
+  context.options.get()
+  const pointer = context.pointer.get()
+  const regions = context.regions.get()
+  const region = regions.plot
+  let point = { x: pointer.px + region.x, y: pointer.py + region.y }
+  let axes: string = options.mode
+  let inside = pointer.inside
+  if (options.pointer) {
+    const projected = projectSharedPointer(
+      options.pointer,
+      options.snap ? 'xy' : options.mode,
+      {
+        x: options.labels?.x ?? options.snap?.mark.x,
+        y: options.labels?.y ?? options.snap?.mark.y,
+      },
+      context.scales,
+      context.direction,
+      region,
+    )
+    point = projected.point
+    axes = projected.axes
+    inside = projected.inside
+  }
+  const canSnap =
+    !options.pointer || !options.snap || [...options.snap.axis].every((axis) => axes.includes(axis))
+  const hits =
+    inside && options.snap && canSnap ? snapHits(options.snap, context, point, regions) : []
+  const hit = nearestHit(hits, point)
+  const layers = layerGuides(options.snap, hits, context)
+  const visible = inside && (!options.snap || !!hit)
+  const resolved = hit ? { x: hit.px, y: hit.py } : point
+  if (hit && options.pointer) axes = options.mode
+  const coordinates = (['x', 'y'] as const).flatMap((axis) =>
+    coordinatesForAxis(axis, options, context, { visible, layers, hit, resolved, axes }),
+  )
+  return { point: resolved, visible, hit, hits, layers, options, coordinates, axes }
+}
+
+export type CrosshairInspection = ReturnType<typeof inspectCrosshair>

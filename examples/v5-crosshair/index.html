@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>v5: crosshair</title>
+  </head>
+  <body>
+    <nav aria-label="Examples">
+      <a href="/">All examples</a>
+      <a href="../v5-brush/">Brush selection</a>
+      <a href="../v5-cross-section-select/">Cross-section select</a>
+    </nav>
+    <h1>v5: crosshair</h1>
+    <p>Move over any chart to inspect a line, stacked bars, or stacked areas.</p>
+    <fieldset class="controls">
+      <legend>Crosshair guides</legend>
+      <label for="mode">
+        Mode
+        <select id="mode">
+          <option value="x">Vertical (x)</option>
+          <option value="y">Horizontal (y)</option>
+          <option value="xy" selected>Both (xy)</option>
+        </select>
+      </label>
+      <label for="snap-axis">
+        Snap to sample by
+        <select id="snap-axis">
+          <option value="none" selected>Pointer</option>
+          <option value="x">X</option>
+          <option value="y">Y</option>
+          <option value="xy">Screen distance</option>
+        </select>
+      </label>
+    </fieldset>
+    <figure>
+      <div id="chart" class="plot-host"></div>
+      <figcaption>Line samples. In xy mode both guides use the same sample.</figcaption>
+    </figure>
+    <figure>
+      <div id="bar-chart" class="plot-host"></div>
+      <figcaption>
+        Stacked bars. The crosshair snaps to the selected category and layer; snapping by X draws
+        one horizontal guide per layer at its cumulative top.
+      </figcaption>
+    </figure>
+    <figure>
+      <div id="area-chart" class="plot-host"></div>
+      <figcaption>
+        Stacked areas. The crosshair snaps to the selected sample and visible layer; snapping by X
+        draws one horizontal guide per visible layer at its cumulative top.
+      </figcaption>
+    </figure>
+    <output id="status" class="status"></output>
+    <h2>Public API</h2>
+    <pre><code>const interaction = crosshair({ mode: 'xy' })
+const plot = createPlot(host, { scales: { t, q }, axes, marks, plugins: [interaction] })
+interaction.update({ mode: 'x' })
+interaction.update({ snap: { mark: observations, axis: 'xy' } })
+
+const barsGuide = crosshair({ mode: 'xy', labels: { x: 't', y: 'q' } })
+const barsTooltip = tooltip({ marks: [barMark], crosshair: barsGuide })
+createPlot(barHost, { scales: { t: categories, q }, marks: [barMark],
+  plugins: [barsGuide, barsTooltip] })
+barsGuide.update({ snap: { mark: barMark, axis: 'xy' } })</code></pre>
+    <script type="module" src="./v5-crosshair.ts"></script>
+  </body>
+</html>

@@ -1,0 +1,131 @@
+import { registerMark } from '../marks.js'
+import type { TableStore } from '../../../data-store/table.js'
+import type { OptionPatch } from '../../../core/options.js'
+import type { ThemeTokens } from '../../../theme/theme.js'
+import {
+  barEndpoints,
+  barLayers,
+  isBarMark,
+  validateBarScales,
+  validateBarUpdates,
+  type BarMark,
+  bar as createBarMark,
+  type BarOptions,
+} from './bar.js'
+import { barExtent } from './bar-geometry.js'
+import { renderBars, styleBars } from './render-bars.js'
+import { clearCompositeCanvas } from '../../rendering/render-composite-canvas.js'
+import { svgElement } from '../../axes/render-axes.js'
+import {
+  createKeyCache,
+  extentWindow,
+  scaleKey,
+  setMarkId,
+  type MarkDefinition,
+  type MarkRenderContext,
+  type MarkRenderer,
+} from '../mark-definition.js'
+import { compositeLegend } from '../composite-legend.js'
+import { compositeHits } from '../../interaction/composite-hit-testing.js'
+import { barHighlight } from '../highlight-shapes.js'
+
+export function createBarRenderer(kind = 'bar'): MarkRenderer<BarMark> {
+  const group = svgElement('g', { 'data-mark': kind })
+  const geometryKey = createKeyCache()
+  const styleKey = createKeyCache()
+  return {
+    mount(layer, mark) {
+      setMarkId(group, mark.id)
+      layer.append(group)
+    },
+    geometry(mark: BarMark, context: MarkRenderContext) {
+      const config = mark.options.get().resolved
+      const key = [
+        mark,
+        barEndpoints(mark),
+        config.renderer,
+        ...(config.renderer === 'canvas' ? [window.devicePixelRatio] : []),
+        config.visible,
+        config.orientation,
+        config.scales.x,
+        config.scales.y,
+        config.interval?.start,
+        config.interval?.end,
+        config.width,
+        config.groupPadding,
+        config.layerPadding,
+        ...scaleKey(context.scales[mark.x]),
+        ...scaleKey(context.scales[mark.y]),
+      ]
+      if (!geometryKey.changed(key)) return
+      styleKey.clear()
+      renderBars(group, mark, context.scales)
+    },
+    style(mark: BarMark, tokens: ThemeTokens) {
+      if (!styleKey.changed([mark, mark.options.version, tokens])) return
+      styleBars(group, mark, tokens)
+    },
+    destroy() {
+      clearCompositeCanvas(group)
+      group.remove()
+    },
+  }
+}
+
+export const barDefinition: MarkDefinition<BarMark> = {
+  name: 'bar',
+  is: isBarMark,
+  hits: (mark, { scales, point, axis, plot }) => compositeHits(mark, scales, point, axis, plot),
+  highlight: (mark, hit, { scales, color }) => barHighlight(mark, hit, scales, color),
+  legend: (mark, tokens) =>
+    compositeLegend(
+      'bar',
+      () => mark.options.get().resolved,
+      () => barLayers(mark.options.get().resolved),
+      (visible, layers) =>
+        mark.options.get().resolved.layers
+          ? mark.update({ visible, layers })
+          : mark.update({ visible: visible && layers[0]?.visible !== false }),
+      tokens,
+    ),
+  validate(mark, context) {
+    const { scales, coordinateSystem } = context
+    if (coordinateSystem !== 'cartesian') throw new Error('bar() supports cartesian plots only.')
+    validateBarScales(mark.data, mark.options.get().resolved, scales)
+    if (context.direction(mark.x) !== 'x' || context.direction(mark.y) !== 'y') {
+      throw new Error('Bar scale directions do not match its orientation.')
+    }
+  },
+  extents(mark, context) {
+    const options = mark.options.get().resolved
+    let coordinate: 'category' | 'value' | undefined
+    if (options.scales.x === context.scale) coordinate = 'category'
+    else if (options.scales.y === context.scale) coordinate = 'value'
+    if (!coordinate) return
+    const opposite = coordinate === 'category' ? options.scales.y : options.scales.x
+    barExtent(mark, coordinate, extentWindow(context, opposite))?.forEach((value) =>
+      context.add(value),
+    )
+  },
+  createRenderer: createBarRenderer,
+  track(mark) {
+    mark.options.get()
+    const _version = mark.data.version
+  },
+  validateUpdates: (mark, context) =>
+    validateBarUpdates(mark, (candidate) => {
+      const validationContext = context()
+      const { scales } = validationContext
+      validateBarScales(mark.data, candidate, scales)
+      const vertical = candidate.orientation === 'vertical'
+      const x = vertical ? candidate.scales.x : candidate.scales.y
+      const y = vertical ? candidate.scales.y : candidate.scales.x
+      if (validationContext.direction(x) !== 'x' || validationContext.direction(y) !== 'y') {
+        throw new Error('Bar scale directions do not match its orientation.')
+      }
+    }),
+}
+
+export function bar(data: TableStore, initial: OptionPatch<BarOptions>): BarMark {
+  return registerMark(createBarMark(data, initial), barDefinition)
+}

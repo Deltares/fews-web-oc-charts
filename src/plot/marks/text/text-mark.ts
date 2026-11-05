@@ -1,0 +1,175 @@
+import { registerMark } from '../marks.js'
+import type { ThemeTokens } from '../../../theme/theme.js'
+import { resolveMarkColor } from '../../../theme/color-contrast.js'
+import {
+  isTextMark,
+  isValidTextCoordinate,
+  validateTextValuesForScale,
+  type TextMark,
+  text as createTextMark,
+  type TextOptions,
+} from './text.js'
+import { svgElement } from '../../axes/render-axes.js'
+import {
+  accent,
+  createKeyCache,
+  extentWindow,
+  scaleCoordinate,
+  scaleKey,
+  setMarkId,
+  withinWindow,
+  type MarkDefinition,
+  type MarkRenderContext,
+  type MarkRenderer,
+} from '../mark-definition.js'
+import { applyStaticVisibility, isStaticMarkVisible, staticLegend } from '../static-legend.js'
+
+function setLabelTransform(
+  label: SVGTextElement,
+  angle: number | undefined,
+  local: boolean | undefined,
+  px: number,
+  py: number,
+) {
+  if (local) {
+    const rotate = angle ? ` rotate(${angle})` : ''
+    label.setAttribute('transform', `translate(${px},${py})${rotate}`)
+  } else if (angle) {
+    label.setAttribute('transform', `rotate(${angle} ${px} ${py})`)
+  } else {
+    label.removeAttribute('transform')
+  }
+}
+
+function updateTextLabel(
+  label: SVGTextElement,
+  mark: TextMark,
+  index: number,
+  context: MarkRenderContext,
+  xScale: MarkRenderContext['scales'][string],
+  yScale: MarkRenderContext['scales'][string],
+) {
+  const x = mark.xValues[index]
+  const y = mark.yValues[index]
+  const value = mark.textValues[index]
+  if (!isValidTextCoordinate(x) || !isValidTextCoordinate(y) || value == null) {
+    label.setAttribute('display', 'none')
+    label.textContent = ''
+    return
+  }
+  const px = xScale.project(x)
+  const py = yScale.project(y)
+  label.removeAttribute('display')
+  label.setAttribute('x', String(context.localCoordinates ? 0 : px))
+  label.setAttribute('y', String(context.localCoordinates ? 0 : py))
+  label.setAttribute('dx', String(mark.dx))
+  label.setAttribute('dy', String(mark.dy))
+  setLabelTransform(label, mark.angle, context.localCoordinates, px, py)
+  label.dataset.index = String(index)
+  label.textContent = String(value)
+}
+
+function createTextRenderer(): MarkRenderer<TextMark> {
+  const group = svgElement('g', { 'data-mark': 'text' })
+  const geometryKey = createKeyCache()
+  const styleKey = createKeyCache()
+  return {
+    mount(layer, mark) {
+      setMarkId(group, mark.id)
+      layer.append(group)
+    },
+    geometry(mark: TextMark, context: MarkRenderContext) {
+      if (!applyStaticVisibility(mark, group)) return
+      const xScale = context.scales[mark.x]
+      const yScale = context.scales[mark.y]
+      if (
+        !geometryKey.changed([
+          mark,
+          context.localCoordinates,
+          ...scaleKey(xScale),
+          ...scaleKey(yScale),
+        ])
+      )
+        return
+      styleKey.clear()
+      for (let index = 0; index < mark.textValues.length; index += 1) {
+        let label = group.children[index] as SVGTextElement | undefined
+        if (!label) {
+          label = svgElement('text', { 'data-mark': 'text-label' })
+          group.append(label)
+        }
+        updateTextLabel(label, mark, index, context, xScale, yScale)
+      }
+      while (group.children.length > mark.textValues.length) group.lastElementChild?.remove()
+    },
+    style(mark: TextMark, tokens: ThemeTokens) {
+      const key = [mark, tokens]
+      if (!styleKey.changed(key)) return
+      for (const label of group.children) {
+        label.setAttribute('fill', resolveMarkColor(mark.fill ?? accent(tokens), tokens, 'text'))
+        label.setAttribute(
+          'font-family',
+          mark.fontFamily ?? `var(--fews-chart-font-family, ${tokens.fontFamily})`,
+        )
+        label.setAttribute('font-size', `${mark.fontSize ?? tokens.fontSize}px`)
+        if (mark.fontWeight === undefined) label.removeAttribute('font-weight')
+        else label.setAttribute('font-weight', String(mark.fontWeight))
+        label.setAttribute('text-anchor', mark.textAnchor)
+        label.setAttribute('dominant-baseline', mark.dominantBaseline)
+      }
+    },
+    destroy() {
+      group.remove()
+    },
+  }
+}
+
+export const textDefinition: MarkDefinition<TextMark> = {
+  name: 'text',
+  is: isTextMark,
+  validate(mark, { scales, coordinateSystem, direction }) {
+    if (coordinateSystem !== 'cartesian') throw new Error('text() supports cartesian plots only.')
+    for (const coordinate of ['x', 'y'] as const) {
+      const scale = scales[mark[coordinate]]
+      if (!scale) {
+        throw new Error(`text "${mark.id ?? ''}" references a missing ${coordinate} scale.`)
+      }
+      if (direction(mark[coordinate]) !== coordinate) {
+        throw new Error(`text "${mark.id ?? ''}" requires a ${coordinate}-direction scale.`)
+      }
+      validateTextValuesForScale(mark, coordinate, scale.kind)
+    }
+  },
+  legend: (mark, tokens) =>
+    staticLegend(mark, {
+      type: 'text',
+      fill: resolveMarkColor(mark.fill ?? accent(tokens), tokens, 'text'),
+      fontFamily: mark.fontFamily,
+      fontWeight: mark.fontWeight,
+    }),
+  track: (mark) => isStaticMarkVisible(mark),
+  extents(mark, context) {
+    if (!isStaticMarkVisible(mark)) return
+    const coordinate = scaleCoordinate(mark, context.scale)
+    if (!coordinate) return
+    const window = extentWindow(context, coordinate === 'x' ? mark.y : mark.x)
+    for (let index = 0; index < mark.textValues.length; index += 1) {
+      const x = mark.xValues[index]
+      const y = mark.yValues[index]
+      if (
+        mark.textValues[index] == null ||
+        !isValidTextCoordinate(x) ||
+        !isValidTextCoordinate(y)
+      ) {
+        continue
+      }
+      if (window && !withinWindow(coordinate === 'x' ? y : x, window)) continue
+      context.add(coordinate === 'x' ? x : y)
+    }
+  },
+  createRenderer: createTextRenderer,
+}
+
+export function text(options: TextOptions): TextMark {
+  return registerMark(createTextMark(options), textDefinition)
+}

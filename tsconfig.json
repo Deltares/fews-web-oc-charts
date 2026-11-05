@@ -17,10 +17,11 @@
 
     "paths": {
       "@lib": ["./src"],
+      "@lib/*": ["./src/*"],
       "@shared": ["./examples/shared"],
       "@shared/*": ["./examples/shared/*"]
     }
   },
 
-  "include": ["src", "test", "examples", "*.config.ts"]
+  "include": ["src", "test", "examples", "scripts/**/*.ts", "*.config.ts"]
 }

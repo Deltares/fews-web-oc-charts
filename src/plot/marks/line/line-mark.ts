@@ -1,0 +1,505 @@
+import type { SeriesStore } from '../../../data-store/series.js'
+import type { OptionPatch } from '../../../core/options.js'
+import { registerMark } from '../marks.js'
+import type { ThemeTokens } from '../../../theme/theme.js'
+import { projectSkewTPoint } from '../../coordinates/skew-t-geometry.js'
+import {
+  isLineMark,
+  validateLineValuesForScale,
+  type LineMark,
+  line as createLineMark,
+  type LineOptions,
+} from './line.js'
+import {
+  isSeriesMark,
+  validateSeriesUpdates,
+  type SeriesMark,
+  series as createSeriesMark,
+  type SeriesOptions,
+} from './series.js'
+import { svgElement } from '../../axes/render-axes.js'
+import {
+  createKeyCache,
+  extentWindow,
+  isScaleValue,
+  scaleKey,
+  setMarkId,
+  withinWindow,
+  type MarkDefinition,
+  type MarkExtentContext,
+  type MarkHitContext,
+  type MarkRenderContext,
+  type MarkRenderer,
+  type MarkValidationContext,
+} from '../mark-definition.js'
+import { lineLegendSymbol, resolveLineStyles } from '../mark-styles.js'
+import { nearestPoint } from '../../interaction/point-hit-testing.js'
+import { pointHighlight } from '../highlight-shapes.js'
+import { isStaticMarkVisible, staticLegend } from '../static-legend.js'
+import { markerSymbolPath, markerSymbolRotation } from './marker-symbol.js'
+
+type LineLikeMark = LineMark | SeriesMark
+let nextSymbolId = 0
+
+function validateLineLike(mark: LineLikeMark, context: MarkValidationContext, dataBacked: boolean) {
+  const polar = context.coordinateSystem === 'polar'
+  const { scales } = context
+  if (!Object.hasOwn(scales, mark.x) || !Object.hasOwn(scales, mark.y)) {
+    throw new Error(`line "${mark.id ?? ''}" references a missing x or y scale.`)
+  }
+  if (context.direction(mark.x) !== (polar ? 'angular' : 'x')) {
+    throw new Error(
+      `line "${mark.id ?? ''}" requires an ${polar ? 'angular' : 'x'}-direction scale.`,
+    )
+  }
+  if (context.direction(mark.y) !== (polar ? 'radial' : 'y')) {
+    throw new Error(`line "${mark.id ?? ''}" requires a ${polar ? 'radial' : 'y'}-direction scale.`)
+  }
+  if (isLineMark(mark)) {
+    validateLineValuesForScale(mark, 'x', scales[mark.x].kind)
+    validateLineValuesForScale(mark, 'y', scales[mark.y].kind)
+  }
+  if (dataBacked && (scales[mark.x].kind === 'band' || scales[mark.y].kind === 'band')) {
+    throw new Error(
+      'series() requires numeric/time scales; categorical tables are not supported yet.',
+    )
+  }
+  if (mark.area) {
+    if (context.coordinateSystem === 'skewT') {
+      throw new Error('Skew-T plots support sounding lines and markers, not area fills.')
+    }
+    if (polar) throw new Error('Polar series areas require band() interval marks.')
+    const expected = scales[mark.y].kind === 'band' ? 'string' : 'number'
+    if (typeof mark.area.to !== expected) {
+      throw new TypeError(
+        `line "${mark.id ?? ''}" area.to must be a ${expected} for ${scales[mark.y].kind} scale "${mark.y}".`,
+      )
+    }
+  }
+}
+
+function lineExtents(mark: LineLikeMark, context: MarkExtentContext) {
+  const store = isSeriesMark(mark) ? mark.data : undefined
+  if (isSeriesMark(mark)) {
+    mark.options.get()
+    if (!mark.visible) return
+  } else if (!isStaticMarkVisible(mark)) return
+  if (
+    (!mark.line && !mark.markers && !mark.area) ||
+    (mark.x !== context.scale && mark.y !== context.scale)
+  ) {
+    return
+  }
+  const coordinate = mark.x === context.scale ? 'x' : 'y'
+  const window = extentWindow(context, coordinate === 'x' ? mark.y : mark.x)
+  const staticMark = isLineMark(mark) ? mark : undefined
+  if (store) {
+    const _version = store.version
+  }
+  if (store) {
+    const opposite = coordinate === 'x' ? 'y' : 'x'
+    const values = window
+      ? store.extent(coordinate, [Number(window[0]), Number(window[1])], opposite)
+      : store.extent(coordinate)
+    const eligible = values !== undefined
+    if (values) {
+      context.add(values[0])
+      context.add(values[1])
+    }
+    if (eligible && coordinate === 'y' && mark.area) context.add(mark.area.to)
+    return
+  }
+  const length = staticMark?.xValues.length ?? 0
+  let eligible = false
+  for (let index = 0; index < length; index += 1) {
+    const x = staticMark?.xValues[index]
+    const y = staticMark?.yValues[index]
+    if (!isScaleValue(x) || !isScaleValue(y)) continue
+    if (window && !withinWindow(coordinate === 'x' ? y : x, window)) continue
+    context.add(coordinate === 'x' ? x : y)
+    eligible = true
+  }
+  if (eligible && coordinate === 'y' && mark.area) context.add(mark.area.to)
+}
+
+function createLineRenderer(): MarkRenderer<LineLikeMark> {
+  const path = svgElement('path', {
+    fill: 'none',
+    'vector-effect': 'non-scaling-stroke',
+    'stroke-linecap': 'round',
+    'stroke-linejoin': 'round',
+    'data-mark': 'line',
+  })
+  let areaPath: SVGPathElement | undefined
+  let markerGroup: SVGGElement | undefined
+  const symbolId = `fews-line-symbol-${nextSymbolId++}`
+  let symbolDefinition: SVGMarkerElement | undefined
+  let symbolPath: SVGPathElement | undefined
+  const geometryKey = createKeyCache()
+  const styleKey = createKeyCache()
+  let renderedVersion: number | undefined
+  let renderedLength = 0
+  let renderedLastPointValid = false
+
+  function syncOptionalNodes(mark: LineLikeMark) {
+    if (mark.area && !areaPath) {
+      areaPath = svgElement('path', { 'data-mark': 'area', 'fill-rule': 'evenodd' })
+      path.before(areaPath)
+    } else if (!mark.area && areaPath) {
+      areaPath.remove()
+      areaPath = undefined
+    }
+    if (mark.markers && !markerGroup) {
+      markerGroup = svgElement('g', { 'data-mark': 'markers' })
+      path.after(markerGroup)
+    } else if (!mark.markers && markerGroup) {
+      markerGroup.remove()
+      markerGroup = undefined
+    }
+    syncClassicMarkers(mark.markers?.render === 'classic')
+    for (const node of [path, areaPath, markerGroup]) setMarkId(node, mark.id)
+  }
+
+  function syncClassicMarkers(classic: boolean) {
+    if (!markerGroup || !classic) {
+      if (symbolPath) markerGroup?.replaceChildren()
+      symbolPath = undefined
+      symbolDefinition = undefined
+      return
+    }
+    if (symbolPath) return
+    markerGroup.replaceChildren()
+    const definitions = svgElement('defs')
+    symbolDefinition = svgElement('marker', {
+      id: symbolId,
+      fill: 'context-fill',
+      stroke: 'context-stroke',
+    })
+    symbolDefinition.append(svgElement('path'))
+    definitions.append(symbolDefinition)
+    symbolPath = svgElement('path', {
+      'data-mark': 'marker',
+      'fill-opacity': 0,
+      'stroke-opacity': 0,
+      'marker-start': `url(#${symbolId})`,
+      'marker-mid': `url(#${symbolId})`,
+      'marker-end': `url(#${symbolId})`,
+    })
+    markerGroup.append(definitions, symbolPath)
+  }
+
+  return {
+    mount(layer) {
+      for (const node of [areaPath, path, markerGroup]) if (node) layer.append(node)
+    },
+    geometry(mark: LineLikeMark, context: MarkRenderContext) {
+      const xScale = context.scales[mark.x]
+      const yScale = context.scales[mark.y]
+      const store = isSeriesMark(mark) ? mark.data : undefined
+      const staticMark = isLineMark(mark) ? mark : undefined
+      const visible = isSeriesMark(mark) ? mark.visible : isStaticMarkVisible(mark)
+      const polar = context.coordinateSystem === 'polar'
+      const skewT = context.coordinateSystem === 'skewT'
+      const storeVersion = store?.version
+      const length = visible ? (store?.length ?? staticMark?.xValues.length ?? 0) : 0
+      const xDomain = xScale.scale.domain.get()
+      const xRange = xScale.range.get()
+      const lodWidth = Math.max(1, Math.floor(Math.abs(xRange[1] - xRange[0])))
+      const lod =
+        store &&
+        visible &&
+        mark.line &&
+        !mark.area &&
+        !mark.markers &&
+        !polar &&
+        !skewT &&
+        length > lodWidth * 4
+          ? store.lod([Number(xDomain[0]), Number(xDomain[1])], lodWidth)
+          : undefined
+      const angular = xScale.scale.options.get().resolved
+      const key = [
+        mark,
+        visible,
+        mark.line,
+        Boolean(mark.markers),
+        mark.markers?.symbol,
+        mark.markers?.render,
+        mark.markers?.skip,
+        mark.digits,
+        mark.area?.to,
+        context.skew,
+        ...scaleKey(xScale),
+        ...scaleKey(yScale),
+        ...(polar ? [context.plot.x, context.plot.y, context.plot.width, context.plot.height] : []),
+      ]
+      const changedKey = geometryKey.changed(key)
+      if (!changedKey && store && storeVersion !== renderedVersion) {
+        const change = store.change
+        if (
+          mark.line &&
+          visible &&
+          !mark.area &&
+          !markerGroup &&
+          mark.digits === undefined &&
+          !polar &&
+          !skewT &&
+          !lod &&
+          change?.operation === 'append' &&
+          change.evicted === undefined &&
+          change.previousLength === renderedLength &&
+          change.invalidatedFrom === renderedLength &&
+          change.length >= renderedLength
+        ) {
+          let tail = ''
+          let lastPointValid = renderedLastPointValid
+          for (let index = renderedLength; index < change.length; index += 1) {
+            const xValue = store.xAt(index)
+            const yValue = store.yAt(index)
+            if (!isScaleValue(xValue) || !isScaleValue(yValue)) {
+              lastPointValid = false
+              continue
+            }
+            const x = xScale.project(xValue)
+            const y = yScale.project(yValue)
+            tail += `${lastPointValid ? 'L' : 'M'}${x},${y}`
+            lastPointValid = true
+          }
+          if (tail) path.setAttribute('d', `${path.getAttribute('d') ?? ''}${tail}`)
+          renderedVersion = storeVersion
+          renderedLength = store.length
+          renderedLastPointValid = lastPointValid
+          return
+        }
+      } else if (!changedKey) return
+      styleKey.clear()
+      syncOptionalNodes(mark)
+      for (const node of [path, markerGroup]) {
+        if (!node) continue
+        if (polar) {
+          node.setAttribute(
+            'transform',
+            `translate(${context.plot.x + context.plot.width / 2},${context.plot.y + context.plot.height / 2}) rotate(${((angular.intercept ?? 0) * 180) / Math.PI}) scale(${angular.direction === 'anticlockwise' ? -1 : 1},1)`,
+          )
+        } else node.removeAttribute('transform')
+      }
+      let data = ''
+      let areaData = ''
+      let drawingSegment = false
+      let segmentCount = 0
+      let lastX = 0
+      const baseline = mark.area ? yScale.project(mark.area.to) : 0
+      let markerIndex = 0
+      let symbolData = ''
+      const sampleCount = lod?.length ?? length
+      for (let sample = 0; sample < sampleCount; sample += 1) {
+        const index = lod?.at(sample) ?? sample
+        const xValue = store ? store.xAt(index) : staticMark?.xValues[index]
+        const yValue = store ? store.yAt(index) : staticMark?.yValues[index]
+        if (!isScaleValue(xValue) || !isScaleValue(yValue)) {
+          drawingSegment = false
+          if (segmentCount > 1) areaData += `L${lastX},${baseline}Z`
+          segmentCount = 0
+          continue
+        }
+        const round = (value: number) =>
+          mark.digits === undefined ? value : Number(value.toFixed(mark.digits))
+        const angle = polar ? xScale.project(xValue) : 0
+        const radius = polar ? yScale.project(yValue) : 0
+        const sounding = skewT
+          ? projectSkewTPoint(xScale, yScale, Number(xValue), Number(yValue), context.skew!)
+          : undefined
+        let unroundedX: number
+        let unroundedY: number
+        if (sounding) {
+          unroundedX = sounding.x
+          unroundedY = sounding.y
+        } else if (polar) {
+          unroundedX = radius * Math.sin(angle)
+          unroundedY = -radius * Math.cos(angle)
+        } else {
+          unroundedX = xScale.project(xValue)
+          unroundedY = yScale.project(yValue)
+        }
+        const x = round(unroundedX)
+        const y = round(unroundedY)
+        data += `${drawingSegment ? 'L' : 'M'}${x},${y}`
+        if (mark.area) {
+          if (drawingSegment) {
+            areaData += `L${x},${y}`
+            segmentCount += 1
+          } else {
+            segmentCount = 1
+            areaData += `M${x},${baseline}L${x},${y}`
+          }
+          lastX = x
+        }
+        if (markerGroup && index % (mark.markers?.skip ?? 1) === 0) {
+          const shape = mark.markers?.symbol ?? 'circle'
+          let marker = markerGroup.children[markerIndex] as SVGElement | undefined
+          if (symbolPath) {
+            symbolData += `${markerIndex ? 'L' : 'M'}${x},${y}`
+          } else if (shape === 'circle') {
+            if (marker?.tagName !== 'circle') {
+              marker?.remove()
+              marker = svgElement('circle', { 'data-mark': 'marker' })
+              markerGroup.insertBefore(marker, markerGroup.children[markerIndex] ?? null)
+            }
+            marker.setAttribute('cx', String(x))
+            marker.setAttribute('cy', String(y))
+          } else {
+            if (marker?.tagName !== 'path') {
+              marker?.remove()
+              marker = svgElement('path', { 'data-mark': 'marker' })
+              markerGroup.insertBefore(marker, markerGroup.children[markerIndex] ?? null)
+            }
+            marker.setAttribute(
+              'transform',
+              `translate(${x},${y}) rotate(${markerSymbolRotation(shape)})`,
+            )
+          }
+          markerIndex += 1
+        }
+        drawingSegment = true
+      }
+      if (segmentCount > 1) areaData += `L${lastX},${baseline}Z`
+      path.setAttribute('d', data)
+      path.setAttribute('display', mark.line ? '' : 'none')
+      areaPath?.setAttribute('d', areaData)
+      renderedVersion = storeVersion
+      renderedLength = store?.length ?? 0
+      renderedLastPointValid = drawingSegment
+      if (symbolPath) {
+        // A single-vertex path needs a closing segment for marker-start to paint.
+        symbolPath.setAttribute('d', symbolData + (markerIndex === 1 ? 'Z' : ''))
+      } else if (markerGroup) {
+        while (markerGroup.children.length > markerIndex) markerGroup.lastElementChild?.remove()
+      }
+    },
+    style(mark: LineLikeMark, tokens: ThemeTokens) {
+      const key = [
+        mark,
+        mark.stroke,
+        mark.strokeWidth,
+        mark.strokeDasharray,
+        mark.strokeLinecap,
+        mark.strokeLinejoin,
+        mark.vectorEffect,
+        mark.markers,
+        mark.area,
+        tokens,
+      ]
+      if (!styleKey.changed(key)) return
+      const styles = resolveLineStyles(mark, tokens)
+      path.setAttribute('stroke', styles.line.stroke)
+      path.setAttribute('stroke-width', String(styles.line.strokeWidth))
+      for (const [name, value] of [
+        ['vector-effect', mark.vectorEffect ?? 'non-scaling-stroke'],
+        ['stroke-linecap', styles.line.strokeLinecap],
+        ['stroke-linejoin', styles.line.strokeLinejoin],
+      ]) {
+        if (path.getAttribute(name) !== value) path.setAttribute(name, value)
+      }
+      if (mark.strokeDasharray === undefined) path.removeAttribute('stroke-dasharray')
+      else path.setAttribute('stroke-dasharray', mark.strokeDasharray)
+      if (areaPath) {
+        areaPath.setAttribute('fill', styles.area.fill)
+        areaPath.setAttribute('fill-opacity', String(styles.area.opacity))
+        areaPath.setAttribute('stroke', 'none')
+      }
+      if (symbolPath && symbolDefinition) {
+        const size = styles.marker.size
+        const shape = mark.markers?.symbol ?? 'circle'
+        const rotation = markerSymbolRotation(shape)
+        for (const [name, value] of [
+          ['markerWidth', size],
+          ['markerHeight', size],
+          ['refX', size / 2],
+          ['refY', size / 2],
+        ] as const) {
+          symbolDefinition.setAttribute(name, String(value))
+        }
+        const symbolShape = symbolDefinition.firstElementChild!
+        symbolShape.setAttribute('d', markerSymbolPath(shape, size))
+        const rotate = rotation ? ` rotate(${rotation})` : ''
+        symbolShape.setAttribute('transform', `translate(${size / 2},${size / 2})${rotate}`)
+        const openShape = shape === 'x' || shape === 'plus'
+        symbolPath.setAttribute('fill', openShape ? 'none' : styles.marker.fill)
+        symbolPath.setAttribute('stroke', styles.marker.stroke)
+        symbolPath.setAttribute('stroke-width', String(styles.marker.strokeWidth))
+      } else if (markerGroup) {
+        for (const marker of markerGroup.children) {
+          if (marker.tagName === 'circle') {
+            marker.setAttribute('r', String(Math.sqrt(styles.marker.size / Math.PI)))
+          } else if (marker.tagName === 'path') {
+            const shape = mark.markers?.symbol ?? 'circle'
+            marker.setAttribute('d', markerSymbolPath(shape, styles.marker.size))
+          }
+          const openShape = mark.markers?.symbol === 'x' || mark.markers?.symbol === 'plus'
+          marker.setAttribute('fill', openShape ? 'none' : styles.marker.fill)
+          marker.setAttribute('stroke', styles.marker.stroke)
+          marker.setAttribute('stroke-width', String(styles.marker.strokeWidth))
+        }
+      }
+    },
+    destroy() {
+      areaPath?.remove()
+      path.remove()
+      markerGroup?.remove()
+    },
+  }
+}
+
+function pointMarkHits(mark: LineLikeMark, { scales, point, axis, plot }: MarkHitContext) {
+  if (isLineMark(mark) && !isStaticMarkVisible(mark)) return []
+  const hit = nearestPoint(mark, scales, point, axis, plot)
+  return hit ? [hit] : []
+}
+
+export const lineDefinition: MarkDefinition<LineMark> = {
+  name: 'line',
+  is: isLineMark,
+  hits: pointMarkHits,
+  highlight: (mark, hit, { color }) => pointHighlight(mark, hit, color),
+  legend: (mark, tokens) => staticLegend(mark, lineLegendSymbol(mark, tokens)),
+  validate: (mark, context) => validateLineLike(mark, context, false),
+  extents: lineExtents,
+  createRenderer: createLineRenderer,
+  track: (mark) => isStaticMarkVisible(mark),
+}
+
+export const seriesDefinition: MarkDefinition<SeriesMark> = {
+  name: 'series',
+  is: isSeriesMark,
+  hits: pointMarkHits,
+  highlight: (mark, hit, { color }) => pointHighlight(mark, hit, color),
+  legend(mark, tokens) {
+    const options = mark.options.get().resolved
+    return {
+      label: options.label,
+      group: options.legendGroup,
+      symbol: lineLegendSymbol(mark, tokens),
+      visible: () => mark.visible,
+      setVisible: (visible) => mark.update({ visible }),
+    }
+  },
+  validate: (mark, context) => validateLineLike(mark, context, true),
+  extents: lineExtents,
+  createRenderer: createLineRenderer,
+  track(mark) {
+    mark.options.get()
+    const _version = mark.data.version
+  },
+  validateUpdates: (mark, context) =>
+    validateSeriesUpdates(mark, (candidate) => validateLineLike(candidate, context(), true)),
+}
+
+export function line(options: LineOptions): LineMark {
+  return registerMark(createLineMark(options), lineDefinition)
+}
+
+export function series(
+  data: SeriesStore<unknown>,
+  initial: OptionPatch<SeriesOptions>,
+): SeriesMark {
+  return registerMark(createSeriesMark(data, initial), seriesDefinition)
+}
