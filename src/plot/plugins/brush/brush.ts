@@ -190,7 +190,7 @@ export function brush(initial: BrushConfig = {}): BrushHandle {
         throw new Error('brush.modifier must be none, ctrl or shift.')
       }
       if (typeof options.persistent !== 'boolean') {
-        throw new Error('brush.persistent must be boolean.')
+        throw new TypeError('brush.persistent must be boolean.')
       }
       if (options.targets !== undefined) {
         if (

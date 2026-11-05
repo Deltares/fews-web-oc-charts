@@ -120,7 +120,7 @@ export function createPointerHub(context: PointerHubContext): PointerHub {
   function queue(event: PointerEvent, entered: boolean) {
     if (!event.isPrimary) return
     pending = { clientX: event.clientX, clientY: event.clientY, entered }
-    if (frame === undefined) frame = requestAnimationFrame(publish)
+    frame ??= requestAnimationFrame(publish)
   }
 
   // Hover feedback is suppressed while a button is held, so drag gestures

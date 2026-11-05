@@ -124,11 +124,11 @@ function blockEndpoints(
     },
     positiveAt(row: number) {
       check(row)
-      return gap[row] ? NaN : positive[row]
+      return gap[row] ? Number.NaN : positive[row]
     },
     negativeAt(row: number) {
       check(row)
-      return gap[row] ? NaN : negative[row]
+      return gap[row] ? Number.NaN : negative[row]
     },
   })
 }
@@ -185,8 +185,8 @@ function computeStackBlock(
       processedRows += data.length - startRow
     }
     for (const layer of layers) {
-      const lower = new Float64Array(data.length).fill(NaN)
-      const upper = new Float64Array(data.length).fill(NaN)
+      const lower = new Float64Array(data.length).fill(Number.NaN)
+      const upper = new Float64Array(data.length).fill(Number.NaN)
       bytes += lower.byteLength + upper.byteLength
       const oldLayer = previous?.layers.find((item) => item.id === layer.id)
       if (oldLayer) {
@@ -377,7 +377,7 @@ export function stackCacheDiagnostics(data: TableStore) {
 export function stackLayout(data: TableStore, options: StackLayoutOptions): StackLayout {
   const version = data.version
   let current = cache.get(data)
-  if (!current || current.version !== version) {
+  if (current?.version !== version) {
     const change = data.change
     const reusable =
       current !== undefined &&

@@ -56,7 +56,6 @@ const validators = new WeakMap<
   StackedAreaMark,
   Set<(options: Readonly<StackedAreaOptions>) => void>
 >()
-const tableChecks = new WeakMap<StackedAreaMark, (data: TableView) => void>()
 export const isStackedAreaMark = (value: object): value is StackedAreaMark => handles.has(value)
 
 function layoutOptions(options: Readonly<StackedAreaOptions>) {
@@ -193,7 +192,6 @@ export function stackedArea(
     const resolved = state.getSnapshot().resolved
     validateData(candidate, resolved, appendFrom, splice)
   }
-  tableChecks.set(mark, check)
   validateTableUpdates(data, check)
   handles.add(mark)
   validators.set(mark, consumers)

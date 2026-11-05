@@ -27,13 +27,13 @@ import {
   withinWindow,
   type MarkDefinition,
   type MarkExtentContext,
+  type MarkHitContext,
   type MarkRenderContext,
   type MarkRenderer,
   type MarkValidationContext,
 } from '../mark-definition.js'
 import { lineLegendSymbol, resolveLineStyles } from '../mark-styles.js'
 import { nearestPoint } from '../../interaction/point-hit-testing.js'
-import type { MarkHitContext } from '../mark-definition.js'
 import { pointHighlight } from '../highlight-shapes.js'
 import { isStaticMarkVisible, staticLegend } from '../static-legend.js'
 import { markerSymbolPath, markerSymbolRotation } from './marker-symbol.js'
@@ -415,10 +415,8 @@ function createLineRenderer(): MarkRenderer<LineLikeMark> {
         }
         const symbolShape = symbolDefinition.firstElementChild!
         symbolShape.setAttribute('d', markerSymbolPath(shape, size))
-        symbolShape.setAttribute(
-          'transform',
-          `translate(${size / 2},${size / 2})${rotation ? ` rotate(${rotation})` : ''}`,
-        )
+        const rotate = rotation ? ` rotate(${rotation})` : ''
+        symbolShape.setAttribute('transform', `translate(${size / 2},${size / 2})${rotate}`)
         const openShape = shape === 'x' || shape === 'plus'
         symbolPath.setAttribute('fill', openShape ? 'none' : styles.marker.fill)
         symbolPath.setAttribute('stroke', styles.marker.stroke)

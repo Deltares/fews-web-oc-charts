@@ -39,7 +39,7 @@ export function renderBars(
   for (const rectangle of rectangles) {
     const key = JSON.stringify([rectangle.layerId, rectangle.sampleId])
     let node = existing.get(key)
-    if (!node) node = svgElement('rect', { 'data-mark': 'bar-segment', 'data-key': key })
+    node ??= svgElement('rect', { 'data-mark': 'bar-segment', 'data-key': key })
     existing.delete(key)
     node.dataset.layerId = rectangle.layerId
     node.dataset.sampleId = String(rectangle.sampleId)

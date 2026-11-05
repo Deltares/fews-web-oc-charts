@@ -220,12 +220,12 @@ function installZoom(handle: ZoomHandle, context: PlotContext) {
     event.preventDefault()
   })
   context.on('pointermove', (event) => {
-    if (!active || event.pointerId !== active.pointerId) return
+    if (active?.pointerId !== event.pointerId) return
     dragBounds(event)
     event.preventDefault()
   })
   context.on('pointerup', (event) => {
-    if (!active || event.pointerId !== active.pointerId) return
+    if (active?.pointerId !== event.pointerId) return
     const bounds = dragBounds(event)
     const mode = active?.mode
     finish(event)

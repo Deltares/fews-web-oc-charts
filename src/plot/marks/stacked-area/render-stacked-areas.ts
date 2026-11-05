@@ -163,11 +163,10 @@ export function renderStackedAreas(
       continue
     }
     let node = existing.get(layer.id)
-    if (!node)
-      node = svgElement('path', {
-        'data-mark': 'stacked-area-layer',
-        'data-layer-id': layer.id,
-      })
+    node ??= svgElement('path', {
+      'data-mark': 'stacked-area-layer',
+      'data-layer-id': layer.id,
+    })
     existing.delete(layer.id)
     node.setAttribute('d', d)
     group.append(node)

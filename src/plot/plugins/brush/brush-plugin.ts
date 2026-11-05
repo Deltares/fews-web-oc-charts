@@ -181,7 +181,7 @@ function installBrush(handle: BrushHandle, context: PlotContext) {
 
   function updateGesture(event: PointerEvent) {
     const gesture = active
-    if (!gesture || event.pointerId !== gesture.pointerId) return
+    if (gesture?.pointerId !== event.pointerId) return
     const config = handle.options.get().resolved
     if (
       config.mode !== gesture.config.mode ||
@@ -322,7 +322,7 @@ function installBrush(handle: BrushHandle, context: PlotContext) {
     event.preventDefault()
   })
   context.on('pointermove', (event) => {
-    if (!active || event.pointerId !== active.pointerId) return
+    if (active?.pointerId !== event.pointerId) return
     updateGesture(event)
     if (active?.config.persistent) publish(active)
     event.preventDefault()

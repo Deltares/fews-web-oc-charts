@@ -273,7 +273,7 @@ export function zonedTicks(
   }
   if (localTime <= lastCivil) throw new RangeError('Tick domain produces more than 10,000 ticks.')
   if (ticks.length === 0) return Object.freeze([start, end])
-  return Object.freeze(ticks.sort((left, right) => left - right))
+  return Object.freeze(ticks.toSorted((left, right) => left - right))
 }
 
 export function formatZonedTickLabels(
@@ -308,7 +308,10 @@ export function formatZonedTickLabels(
   for (const tick of ticks) {
     const label = primary.format(tick)
     let values = offsets.get(label)
-    if (!values) offsets.set(label, (values = new Set()))
+    if (!values) {
+      values = new Set()
+      offsets.set(label, values)
+    }
     values.add(zoneOffset(timeZone, tick))
   }
   let previousContext = ''

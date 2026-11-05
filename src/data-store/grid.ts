@@ -52,7 +52,7 @@ function copyGrid(input: GridInput): GridView {
   const yEdges = edges(input.yEdges, 'yEdges')
   const columns = xEdges.length - 1
   const rows = yEdges.length - 1
-  if (!input.values || input.values.length !== columns * rows)
+  if (input.values?.length !== columns * rows)
     throw new Error('grid.values length must equal columns * rows.')
   const values = new Float64Array(input.values.length)
   for (let index = 0; index < values.length; index++) {

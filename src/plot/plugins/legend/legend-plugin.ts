@@ -397,7 +397,7 @@ function installLegend(handle: LegendHandle, context: PlotContext) {
     ) {
       wrapper.replaceChildren(leading, trailing)
     }
-    if (!releaseViewport) releaseViewport = context.useViewport(viewport)
+    releaseViewport ??= context.useViewport(viewport)
   }
   reactive.untracked(updateLayout)
   context.scope.run(() => reactive.effect(updateLayout))

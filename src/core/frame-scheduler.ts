@@ -1,5 +1,5 @@
 export const DirtyLayer = {
-  layout: 1 << 0,
+  layout: 1,
   axes: 1 << 1,
   grid: 1 << 2,
   marks: 1 << 3,

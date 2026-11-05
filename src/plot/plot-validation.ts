@@ -160,7 +160,7 @@ export function validateAxisAppearance(
     throw new Error('axis.crossAt must reference a perpendicular scale.')
   }
   if ((crossed.kind === 'band') !== (typeof axis.crossAt.value === 'string')) {
-    throw new Error('axis.crossAt.value must match the crossing scale kind.')
+    throw new TypeError('axis.crossAt.value must match the crossing scale kind.')
   }
 }
 function validatePlotScales(options: PlotOptions, coordinateSystem: CoordinateSystem) {

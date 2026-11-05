@@ -112,7 +112,7 @@ export function createReactiveCore(
 
   class Scope implements ReactiveScope {
     private cleanups: (() => void)[] = []
-    private children = new Set<Scope>()
+    private readonly children = new Set<Scope>()
     private isDisposed = false
     private readonly parent: Scope | undefined
 

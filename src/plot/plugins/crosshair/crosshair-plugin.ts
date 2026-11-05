@@ -64,6 +64,35 @@ function validateLabels(
   }
 }
 
+function layerGuideIds(snap: CrosshairOptions['snap']) {
+  if (snap?.axis !== 'x') return []
+  if (isBarMark(snap.mark)) {
+    const options = snap.mark.options.get().resolved
+    if (options.orientation !== 'vertical') return []
+    return barLayers(options)
+      .filter((candidate) => candidate.visible !== false)
+      .map((candidate) => candidate.id)
+  }
+  if (isHistogramMark(snap.mark)) {
+    const options = histogramBar(snap.mark).options.get().resolved
+    if (options.orientation !== 'vertical') return []
+    return barLayers(options)
+      .filter((candidate) => candidate.visible !== false)
+      .map((candidate) => candidate.id)
+  }
+  if (isStackedAreaMark(snap.mark)) {
+    return snap.mark.options
+      .get()
+      .resolved.layers.filter((candidate) => candidate.visible !== false)
+      .map((candidate) => candidate.id)
+  }
+  return []
+}
+
+function calloutKey(axis: 'x' | 'y', layerId: string | undefined) {
+  return JSON.stringify([axis, layerId ?? null])
+}
+
 function installCrosshair(handle: CrosshairHandle, context: PlotContext) {
   const layer = svgElement('g', {
     'data-layer': 'crosshair',
@@ -92,35 +121,6 @@ function installCrosshair(handle: CrosshairHandle, context: PlotContext) {
   const calloutNodes = new Map<string, CrosshairCallout>()
   layer.append(layerGuides, callouts)
   context.element.append(layer)
-
-  function layerGuideIds(snap: CrosshairOptions['snap']) {
-    if (snap?.axis !== 'x') return []
-    if (isBarMark(snap.mark)) {
-      const options = snap.mark.options.get().resolved
-      if (options.orientation !== 'vertical') return []
-      return barLayers(options)
-        .filter((candidate) => candidate.visible !== false)
-        .map((candidate) => candidate.id)
-    }
-    if (isHistogramMark(snap.mark)) {
-      const options = histogramBar(snap.mark).options.get().resolved
-      if (options.orientation !== 'vertical') return []
-      return barLayers(options)
-        .filter((candidate) => candidate.visible !== false)
-        .map((candidate) => candidate.id)
-    }
-    if (isStackedAreaMark(snap.mark)) {
-      return snap.mark.options
-        .get()
-        .resolved.layers.filter((candidate) => candidate.visible !== false)
-        .map((candidate) => candidate.id)
-    }
-    return []
-  }
-
-  function calloutKey(axis: 'x' | 'y', layerId: string | undefined) {
-    return JSON.stringify([axis, layerId ?? null])
-  }
 
   function createCallout(axis: 'x' | 'y', layerId: string | undefined): CrosshairCallout {
     const group = svgElement('g', { 'data-crosshair-label': axis })

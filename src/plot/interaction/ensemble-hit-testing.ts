@@ -146,8 +146,10 @@ export function ensembleHits(
   if (statistics.median) lines.push({ value: statistics.median.at(index), member: undefined })
   if (statistics.mean) lines.push({ value: statistics.mean.at(index), member: undefined })
   for (const [, , low, high] of statistics.bands) {
-    lines.push({ value: low.at(index), member: undefined })
-    lines.push({ value: high.at(index), member: undefined })
+    lines.push(
+      { value: low.at(index), member: undefined },
+      { value: high.at(index), member: undefined },
+    )
   }
   let nearest: { value: number; member: number | undefined; py: number } | undefined
   for (const line of lines) {

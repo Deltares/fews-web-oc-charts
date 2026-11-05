@@ -27,10 +27,12 @@ export interface PlotLayout {
   readonly margins: Readonly<Margins>
 }
 
+const DEFAULT_MARGINS: Margins = { top: 8, right: 8, bottom: 8, left: 8 }
+
 export function layout(
   size: Size,
   axes: readonly AxisMeasure[] = [],
-  margins: Margins = { top: 8, right: 8, bottom: 8, left: 8 },
+  margins: Margins = DEFAULT_MARGINS,
   titleHeight = 0,
 ): PlotLayout {
   finiteNonnegative(size.width, 'size.width')

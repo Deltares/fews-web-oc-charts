@@ -85,7 +85,8 @@ function arrowHead(cx: number, cy: number, unit: number, horizontal: boolean) {
     [0, -2 * unit],
     [halfWidth, unit],
   ].map(([x, y]) => (horizontal ? [cx - y, cy + x] : [cx + x, cy + y]))
-  return `M${points.map(([x, y]) => `${x},${y}`).join('L')}Z`
+  const path = points.map((point) => point.join(',')).join('L')
+  return `M${path}Z`
 }
 
 /** A "layers" icon in the text colour: a diamond above two chevrons. */

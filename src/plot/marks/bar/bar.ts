@@ -63,7 +63,6 @@ export interface BarMark {
 }
 const handles = new WeakSet<object>()
 const validators = new WeakMap<BarMark, Set<(options: Readonly<BarOptions>) => void>>()
-const tableChecks = new WeakMap<BarMark, (data: TableView) => void>()
 export const isBarMark = (value: object): value is BarMark => handles.has(value)
 
 export function barLayers(options: Readonly<BarOptions>): readonly BarLayer[] {
@@ -286,7 +285,6 @@ export function bar(data: TableStore, initial: OptionPatch<BarOptions>): BarMark
     const resolved = state.getSnapshot().resolved
     validateData(candidate, resolved, appendFrom, splice)
   }
-  tableChecks.set(mark, check)
   validateTableUpdates(data, check)
   handles.add(mark)
   validators.set(mark, consumers)

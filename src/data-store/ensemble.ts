@@ -188,7 +188,7 @@ function normalize(
     if (!Number.isSafeInteger(memberCount)) {
       throw new RangeError('ensemble.members.memberCount must be a safe integer.')
     }
-    if (!matrix.values || matrix.values.length !== memberCount * length) {
+    if (matrix.values?.length !== memberCount * length) {
       throw new RangeError('ensemble.members.values length must equal memberCount * x.length.')
     }
     read = (member, step) => matrix.values[member * length + step]
@@ -209,7 +209,7 @@ function normalize(
     for (let step = 0; step < length; step += 1) {
       const value = read(member, step)
       if (value === null) {
-        values[member * length + step] = NaN
+        values[member * length + step] = Number.NaN
         continue
       }
       if (
@@ -536,18 +536,18 @@ export function createEnsemble(
           if (index < starts[position]) continue
           group[position].data[physical] = valid
             ? quantileSorted(sorted, group[position].parameter!)!
-            : NaN
+            : Number.NaN
         }
       } else if (target.kind === 'mean') {
         let sum = 0
         for (let member = 0; member < valid; member += 1) sum += scratch[member]
-        target.data[physical] = valid ? sum / valid : NaN
+        target.data[physical] = valid ? sum / valid : Number.NaN
       } else {
         let above = 0
         for (let member = 0; member < valid; member += 1) {
           if (scratch[member] > target.parameter!) above += 1
         }
-        target.data[physical] = valid ? above / valid : NaN
+        target.data[physical] = valid ? above / valid : Number.NaN
       }
     }
     for (const column of group) {

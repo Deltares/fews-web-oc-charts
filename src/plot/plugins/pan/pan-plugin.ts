@@ -96,7 +96,7 @@ function installPan(handle: PanHandle, context: PlotContext) {
   })
 
   context.on('pointermove', (event) => {
-    if (!active || event.pointerId !== active.pointerId) return
+    if (active?.pointerId !== event.pointerId) return
     const position = context.locate(event)
     if (!position) return
     const previous = active

@@ -68,10 +68,8 @@ function createTextRenderer(): MarkRenderer<TextMark> {
         label.setAttribute('dx', String(mark.dx))
         label.setAttribute('dy', String(mark.dy))
         if (context.localCoordinates) {
-          label.setAttribute(
-            'transform',
-            `translate(${px},${py})${mark.angle ? ` rotate(${mark.angle})` : ''}`,
-          )
+          const rotate = mark.angle ? ` rotate(${mark.angle})` : ''
+          label.setAttribute('transform', `translate(${px},${py})${rotate}`)
         } else if (mark.angle) label.setAttribute('transform', `rotate(${mark.angle} ${px} ${py})`)
         else label.removeAttribute('transform')
         label.dataset.index = String(index)

@@ -376,7 +376,7 @@ function areaValueIndex(
       candidates.push({ py: y.project(value), row, layer: endpoint })
     }
   }
-  const values = Object.freeze(candidates.sort((left, right) => left.py - right.py))
+  const values = Object.freeze(candidates.toSorted((left, right) => left.py - right.py))
   const index = { key, values, descriptors }
   areaValueIndexes.set(mark, index)
   return index

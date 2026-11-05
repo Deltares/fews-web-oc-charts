@@ -160,7 +160,7 @@ function parseFollowDuration(value: FollowDuration, path: string, allowZero: boo
       )
     }
   } else {
-    throw new Error(`${path} must be a finite number or a supported duration string.`)
+    throw new TypeError(`${path} must be a finite number or a supported duration string.`)
   }
   const amount = result.milliseconds ?? result.calendarDays!
   if (!Number.isFinite(amount) || !Number.isSafeInteger(result.calendarDays ?? 0)) {
@@ -276,7 +276,8 @@ function createScale(kind: ScaleKind, initial: OptionPatch<ScaleOptions>) {
     if (kind !== 'linear' && (options.includeZero || options.symmetric)) {
       throw new Error('scale.includeZero and scale.symmetric require a linear scale.')
     }
-    new Intl.DateTimeFormat(options.locale, { timeZone: options.timeZone })
+    // Throws a RangeError for an unsupported locale or time zone.
+    new Intl.DateTimeFormat(options.locale, { timeZone: options.timeZone }).resolvedOptions()
     resolveDomain(options)
   }
   const defaults = (): ScaleOptions => ({
@@ -408,7 +409,7 @@ function createScale(kind: ScaleKind, initial: OptionPatch<ScaleOptions>) {
     if (kind === 'time' && config.follow !== undefined && followingState.get()) {
       const currentData = dataState.get()
       const override = followOverride.get()
-      if (override && override.dataVersion === dataState.version) {
+      if (override?.dataVersion === dataState.version) {
         return resolveDomain(config, override.domain)
       }
       const extent = currentData.extent

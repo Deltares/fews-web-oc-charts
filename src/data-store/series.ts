@@ -228,7 +228,7 @@ function createStore<Rows>(
       }
       const physical = (head + count) % x.length
       x[physical] = Number(columns.x[index])
-      y[physical] = columns.y[index] ?? NaN
+      y[physical] = columns.y[index] ?? Number.NaN
       count += 1
       touchedBlocks.add(Math.floor(physical / extentBlockSize))
     }
@@ -595,7 +595,7 @@ function createStore<Rows>(
           nextY[index] = yAt(index)
         } else if (index < before + columns.x.length) {
           nextX[index] = Number(columns.x[index - before])
-          nextY[index] = columns.y[index - before] ?? NaN
+          nextY[index] = columns.y[index - before] ?? Number.NaN
         } else {
           const source = index - before - columns.x.length + after
           nextX[index] = xAt(source)
@@ -708,7 +708,7 @@ export function fromObjects<T>(
         x[index] = epoch(row?.[xKey], `fromObjects.x[${index}]`)
         if (value !== null && typeof value !== 'number')
           throw new TypeError(`fromObjects.y[${index}] must be a number or null.`)
-        y[index] = value ?? NaN
+        y[index] = value ?? Number.NaN
       }
       return { x, y }
     },
