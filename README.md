@@ -430,6 +430,13 @@ or `undefined` when no members have reported layout. Removing `align` (including
 `setConfig()`) or destroying a plot releases its contribution and lets peers shrink
 their padding again. No separate group cleanup is required.
 
+Plots with a `left` or `right` legend only line up when their legends are equally
+wide. Give every plot of the group the same `legend({ position: 'right', width: 160 })`:
+the legend box then takes exactly that width in CSS pixels, and labels that do not fit
+are truncated with an ellipsis, keeping the full text in a `<title>` and the entry's
+accessible name. `width` also applies to corner overlays; `top` and `bottom` legends
+span the chart and ignore it.
+
 ## Marking the current time
 
 `currentTime()` draws a vertical line at the current time on a time scale, with a small

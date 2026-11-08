@@ -466,8 +466,43 @@ describe('headless legend model', () => {
       await frame()
       const docked = geometry()
       expect(docked.relative).toEqual(overlay.relative)
-      expect(docked.box.y).toBe(0)
-      expect(docked.box.height).toBe(current.size.get().height)
+      expect(docked.box.y).toBe(current.regions.get().plot.y)
+      expect(docked.box.height).toBe(overlay.box.height)
+      expect(docked.box.height).toBeLessThan(current.size.get().height)
+    }
+  })
+
+  test('moves a tall side legend up to stay within the chart', async () => {
+    const marks = Array.from({ length: 7 }, (_, index) =>
+      series(createSeries({ x: [0, 1], y: [index, index + 1] }), {
+        id: `s${index}`,
+        label: `Series ${index}`,
+        x: 'x',
+        y: 'y',
+      }),
+    )
+    const current = plot({
+      title: 'Flow',
+      height: 200,
+      scales: { x: linearScale(), y: linearScale() },
+      directions: { x: 'x' },
+      marks,
+      plugins: [legend({ position: 'right' })],
+    })
+    await frame()
+    const layout = current.element.closest('[data-legend-layout]')!
+    const box = layout.querySelector<SVGRectElement>('.fews-chart-legend__background')!
+    const top = box.y.baseVal.value
+    const bottom = top + box.height.baseVal.value
+    expect(current.regions.get().plot.y).toBeGreaterThan(0)
+    expect(top).toBeLessThan(current.regions.get().plot.y)
+    expect(top).toBeGreaterThanOrEqual(0)
+    expect(bottom).toBe(current.size.get().height)
+    const entries = [...layout.querySelectorAll<SVGGElement>('[data-entry-id]')]
+    for (const entry of entries) {
+      const { f } = entry.transform.baseVal.consolidate()!.matrix
+      expect(f).toBeGreaterThanOrEqual(top)
+      expect(f + 26).toBeLessThanOrEqual(bottom)
     }
   })
 
@@ -1040,5 +1075,79 @@ describe('legend groups', () => {
       'visible',
     ])
     expect(() => rule({ scale: 'q', value: 1, legendGroup: '' })).toThrow(/legendGroup/)
+  })
+})
+
+describe('fixed-width legends', () => {
+  const labels = (layer: Element) =>
+    [...layer.querySelectorAll('.fews-chart-legend__entry')].map((entry) => ({
+      text: entry.querySelector('text')!.textContent,
+      title: entry.querySelector('title')?.textContent ?? null,
+      label: entry.getAttribute('aria-label'),
+    }))
+
+  test('gives docked legends the same box width regardless of their labels', async () => {
+    const make = (label: string) =>
+      plot({
+        width: 600,
+        height: 200,
+        scales: { x: linearScale(), y: linearScale() },
+        directions: { x: 'x' },
+        marks: [series(createSeries({ x: [0, 1], y: [2, 3] }), { id: 'a', label, x: 'x', y: 'y' })],
+        plugins: [legend({ position: 'right', width: 120 })],
+      })
+    const short = make('Q')
+    const long = make('Discharge at the upstream gauging station')
+    await frame()
+    const box = (current: Plot) =>
+      current.element.parentElement!.parentElement!.querySelector('.fews-chart-legend-svg')!
+    for (const current of [short, long]) {
+      expect(box(current).getBoundingClientRect().width).toBeCloseTo(120, 4)
+      const background = box(current).querySelector('.fews-chart-legend__background')!
+      expect(background.getAttribute('width')).toBe('120')
+    }
+    expect(short.size.get().width).toBe(long.size.get().width)
+    expect(labels(box(short))).toEqual([{ text: 'Q', title: null, label: 'Q' }])
+    const [truncated] = labels(box(long))
+    expect(truncated.text).toMatch(/^Discharge.*…$/)
+    expect(truncated.title).toBe('Discharge at the upstream gauging station')
+    expect(truncated.label).toBe('Discharge at the upstream gauging station')
+    const text = box(long).querySelector('.fews-chart-legend__entry text')!
+    const entry = box(long).querySelector('.fews-chart-legend__entry rect')!
+    expect(text.getBoundingClientRect().right).toBeLessThanOrEqual(
+      entry.getBoundingClientRect().right,
+    )
+  })
+
+  test('applies to overlays, ignores top and bottom, and restores content sizing', async () => {
+    const handle = legend({ position: 'top-left', width: 90 })
+    const current = plot({
+      width: 600,
+      height: 300,
+      scales: { x: linearScale(), y: linearScale() },
+      directions: { x: 'x' },
+      marks: [
+        series(createSeries({ x: [0, 1], y: [2, 3] }), {
+          id: 'a',
+          label: 'A rather long series label',
+          x: 'x',
+          y: 'y',
+        }),
+      ],
+      plugins: [handle],
+    })
+    await frame()
+    const background = () =>
+      document.querySelector<SVGRectElement>('.fews-chart-legend__background')!
+    expect(background().getAttribute('width')).toBe('90')
+    handle.update({ position: 'bottom' })
+    await frame()
+    expect(Number(background().getAttribute('width'))).toBe(current.size.get().width)
+    handle.update({ position: 'left', width: undefined })
+    await frame()
+    expect(Number(background().getAttribute('width'))).toBeGreaterThan(90)
+    expect(document.querySelector('.fews-chart-legend__entry title')).toBeNull()
+    expect(() => handle.update({ width: 0 })).toThrow(/legend\.width/)
+    expect(() => legend({ width: Number.NaN })).toThrow(/legend\.width/)
   })
 })
