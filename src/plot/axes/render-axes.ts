@@ -166,11 +166,16 @@ function renderCartesianTick(
   }
 }
 
+function gridDash(options: Readonly<AxisOptions>): Record<string, string> {
+  return options.gridDasharray ? { 'stroke-dasharray': options.gridDasharray } : {}
+}
+
 function renderCartesianGridLine(
   gridLayer: SVGGElement,
   pixel: number,
   plot: PlotLayout['plot'],
   horizontal: boolean,
+  options: Readonly<AxisOptions>,
 ) {
   gridLayer.append(
     svgElement('line', {
@@ -179,6 +184,7 @@ function renderCartesianGridLine(
       y1: horizontal ? plot.y : pixel,
       y2: horizontal ? plot.y + plot.height : pixel,
       stroke: 'inherit',
+      ...gridDash(options),
     }),
   )
 }
@@ -235,7 +241,7 @@ function renderCartesianAxis(
     const pixel = binding.project(tick.value) + binding.bandwidth / 2
     renderCartesianTick(group, tick, pixel, options, geometry, theme.fontSize)
     if (options.grid) {
-      renderCartesianGridLine(gridLayer, pixel, plot, horizontal)
+      renderCartesianGridLine(gridLayer, pixel, plot, horizontal, options)
     }
   }
   renderCartesianCaption(group, options, plot, band, geometry, theme.fontSize)
@@ -267,6 +273,7 @@ function renderRadialAxis(
           r,
           fill: 'none',
           stroke: gridStroke,
+          ...gridDash(options),
         }),
       )
     }
@@ -303,6 +310,7 @@ function renderAngularAxis(
           x2: centerX + outerRadius * sin,
           y2: centerY - outerRadius * cos,
           stroke: gridStroke,
+          ...gridDash(options),
         }),
       )
     }

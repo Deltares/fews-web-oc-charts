@@ -29,17 +29,13 @@ export function renderClassicPolarAxes(
   const [innerRadius, outerRadius] = radial.range.get()
   const degrees = (value: number) => (value * 180) / Math.PI
   const center = `translate(${regions.plot.x + regions.plot.width / 2},${regions.plot.y + regions.plot.height / 2})`
-  const radialGrid = svgElement('g', {
-    transform: center,
-    fill: 'none',
-    stroke: 'var(--fews-chart-grid, white)',
-    'stroke-dasharray': '2',
-  })
-  const angularGrid = svgElement('g', {
-    transform: center,
-    stroke: 'var(--fews-chart-grid, white)',
-    'stroke-dasharray': '2',
-  })
+  // Both grids inherit the grid layer's `var(--fews-chart-grid, theme.grid)` stroke.
+  const dash = (axis: (typeof axes)[number]): Record<string, string> => {
+    const pattern = axis.options.get().resolved.gridDasharray
+    return pattern ? { 'stroke-dasharray': pattern } : {}
+  }
+  const radialGrid = svgElement('g', { transform: center, fill: 'none', ...dash(radialAxis) })
+  const angularGrid = svgElement('g', { transform: center, ...dash(angularAxis) })
   gridLayer.append(radialGrid, angularGrid)
   const radialGroup = svgElement('g', { transform: center })
   const radialScale = scaleLinear()
