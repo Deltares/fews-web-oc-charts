@@ -118,6 +118,54 @@ describe('ensemble inspection', () => {
     expect(last.distance).toBe(0)
   })
 
+  test('formatEntry and formatHeader build a Tempo-style plume tooltip in columns', async () => {
+    const mark = ensemble(data(), {
+      id: 'fc',
+      x: 'x',
+      y: 'y',
+      spread: { bands: [[0, 100]] },
+      median: {},
+      exceedance: { threshold: 4 },
+    })
+    const handle = tooltip({
+      marks: [mark],
+      digits: 1,
+      showX: false,
+      layout: 'columns',
+      formatHeader: ({ defaultText }) => `t = ${defaultText}`,
+      formatEntry: (entry, context) => {
+        if (context.kind === 'ensemble') return null
+        if (context.part?.band) {
+          const [low, high] = context.part.band
+          return { name: `P${low}–P${high}` }
+        }
+        if (context.exceedance) return { name: `≥ ${context.exceedance.threshold} m` }
+        return undefined
+      },
+    })
+    const { move } = await setup(mark, [handle])
+    await move(10, 10.2)
+    const content = document.querySelector<HTMLElement>('[data-tooltip-content]')!
+    expect(content.dataset.layout).toBe('columns')
+    expect(getComputedStyle(content).display).toBe('grid')
+    expect(content.querySelector('[data-tooltip-header]')!.textContent).toBe('t = 10')
+    const rows = [...content.querySelectorAll('[data-tooltip-entry]')].map((row) => [
+      row.querySelector('[data-tooltip-label]')!.textContent,
+      row.querySelector('[data-tooltip-values]')!.textContent,
+    ])
+    expect(rows).toEqual([
+      ['P0–P100', '2–10'],
+      ['Median', '6'],
+      ['≥ 4 m', '67%'],
+    ])
+    const values = content.querySelector<HTMLElement>('[data-tooltip-values]')!
+    expect(getComputedStyle(values).textAlign).toBe('end')
+    const tooltipElement = document.querySelector('[data-layer="tooltip"]')!
+    expect(tooltipElement.getAttribute('aria-label')).toBe(
+      't = 10; P0–P100 · 2–10; Median · 6; ≥ 4 m · 67%',
+    )
+  })
+
   test('omits hidden parts from hits', async () => {
     const mark = ensemble(data(), { x: 'x', y: 'y', median: {}, mean: {} })
     const { current } = await setup(mark, [])
