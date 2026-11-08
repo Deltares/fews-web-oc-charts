@@ -267,6 +267,107 @@ function sectionPlacements(items: readonly FlatEntry[], columns: number): Placem
   return placements
 }
 
+interface Box {
+  readonly x: number
+  readonly y: number
+  readonly width: number
+  readonly height: number
+}
+
+interface LegendLayout {
+  readonly placements: readonly Placement[]
+  readonly columns: number
+  readonly cellWidth: number
+  readonly box: Box
+}
+
+/** Row-major sections for top/bottom legends; column-major flow otherwise. */
+function flowEntries(
+  items: readonly FlatEntry[],
+  horizontal: boolean,
+  columnHeight: number,
+  plotWidth: number,
+) {
+  const itemWidth = Math.max(0, ...items.map((item) => item.width))
+  if (horizontal) {
+    const fitting = Math.floor(plotWidth / Math.max(1, itemWidth))
+    const columns = Math.max(1, Math.min(items.length, fitting))
+    return { placements: sectionPlacements(items, columns), columns, itemWidth }
+  }
+  const placements = columnPlacements(items, columnHeight)
+  const columns = Math.max(1, ...placements.map((placement) => placement.column + 1))
+  return { placements, columns, itemWidth }
+}
+
+/** Top-left corner of the legend box in the coordinates it is drawn in. */
+function boxOrigin(
+  position: LegendPosition,
+  size: { readonly width: number; readonly height: number },
+  plot: Box,
+  chartHeight: number,
+) {
+  if (position === 'top' || position === 'bottom') return { x: 0, y: 0 }
+  if (!position.includes('-')) {
+    // A side box fits its entries and starts level with the plot area, moving up only
+    // as far as needed to stay within the chart.
+    return { x: 0, y: Math.max(0, Math.min(plot.y, chartHeight - size.height)) }
+  }
+  const [vertical, side] = position.split('-')
+  return {
+    x: side === 'right' ? plot.x + plot.width - size.width - 8 : plot.x + 8,
+    y: vertical === 'bottom' ? plot.y + plot.height - size.height - 8 : plot.y + 8,
+  }
+}
+
+function legendLayout(
+  position: LegendPosition,
+  fixedWidth: number | undefined,
+  items: readonly FlatEntry[],
+  chart: { readonly width: number; readonly height: number },
+  plot: Box,
+): LegendLayout {
+  const horizontal = position === 'top' || position === 'bottom'
+  // Left/right docks use the overlay layout, wrapping into columns only when one column
+  // does not fit the full chart height, margins included.
+  const columnHeight = position.includes('-')
+    ? Infinity
+    : Math.max(itemHeight, chart.height - verticalPadding * 2)
+  const { placements, columns, itemWidth } = flowEntries(
+    items,
+    horizontal,
+    columnHeight,
+    plot.width,
+  )
+  const contentHeight = Math.max(0, ...placements.map((placement) => placement.y + itemHeight))
+  const height = contentHeight + verticalPadding * 2
+  let width = columns * itemWidth + horizontalPadding * 2
+  let cellWidth = itemWidth
+  if (horizontal) {
+    width = chart.width
+    cellWidth = Math.max(itemWidth, plot.width / columns)
+  } else if (fixedWidth !== undefined) {
+    width = fixedWidth
+    cellWidth = Math.max(0, fixedWidth - horizontalPadding * 2) / columns
+  }
+  const origin = boxOrigin(position, { width, height }, plot, chart.height)
+  return { placements, columns, cellWidth, box: { ...origin, width, height } }
+}
+
+function appendDivider(layer: SVGGElement, x: number, width: number, y: number) {
+  layer.append(
+    svgElement('line', {
+      class: 'fews-chart-legend__divider',
+      x1: x,
+      x2: x + width,
+      y1: y,
+      y2: y,
+      stroke: 'currentColor',
+      'stroke-opacity': 0.15,
+      'aria-hidden': 'true',
+    }),
+  )
+}
+
 function appendSymbol(group: SVGGElement, entry: LegendEntry) {
   for (const primitive of legendSymbolPrimitives(entry.symbol, {
     width: swatchWidth,
@@ -442,13 +543,36 @@ function installLegend(handle: LegendHandle, context: PlotContext) {
     layer.addEventListener(type, (event) => event.stopPropagation())
   }
 
+  function focusedEntryId() {
+    const active = context.element.ownerDocument.activeElement
+    return active instanceof SVGElement && layer.contains(active)
+      ? active.dataset.entryId
+      : undefined
+  }
+
+  function restoreFocus(id: string | undefined) {
+    if (!id) return
+    const replacement = [...layer.querySelectorAll<SVGElement>('[data-entry-id]')].find(
+      (element) => element.dataset.entryId === id,
+    )
+    replacement?.focus()
+  }
+
+  /** Sizes the external SVG of a docked legend; overlays draw inside the chart. */
+  function sizeExternal(horizontal: boolean, box: Box, chartHeight: number) {
+    const svgHeight = horizontal ? box.height : chartHeight
+    external.setAttribute('width', String(box.width))
+    external.setAttribute('height', String(svgHeight))
+    external.setAttribute('viewBox', `0 0 ${box.width} ${svgHeight}`)
+    external.style.width = horizontal ? '100%' : `${box.width}px`
+    external.style.height = horizontal ? `${box.height}px` : '100%'
+  }
+
   const render = () => {
     if (context.suspended.get()) return
-    const active = context.element.ownerDocument.activeElement
-    const focusedId =
-      active instanceof SVGElement && layer.contains(active) ? active.dataset.entryId : undefined
+    const focusedId = focusedEntryId()
     const { position, showGroups, width: fixedWidth } = handle.options.get().resolved
-    const { width, height } = context.size.get()
+    const size = context.size.get()
     const { plot } = context.regions.get()
     const tokens = context.theme.get()
     const fontSize = tokens.fontSize
@@ -459,98 +583,47 @@ function installLegend(handle: LegendHandle, context: PlotContext) {
     const measure: Measure = (label, bold) =>
       measurer.measure(label, `${bold ? '600 ' : ''}${fontSize}px ${tokens.fontFamily}`)
     const items = flattenEntries(context.legend.entries.get(), measure, showGroups, !horizontal)
-    const itemWidth = Math.max(0, ...items.map((item) => item.width))
-    const horizontalColumns = Math.max(
-      1,
-      Math.min(items.length, Math.floor(plot.width / Math.max(1, itemWidth))),
+    const { placements, columns, cellWidth, box } = legendLayout(
+      position,
+      fixedWidth,
+      items,
+      size,
+      plot,
     )
-    // Left/right docks use the overlay layout, wrapping into columns only when one column
-    // does not fit the full chart height, margins included.
-    const columnHeight = overlay ? Infinity : Math.max(itemHeight, height - verticalPadding * 2)
-    const placements = horizontal
-      ? sectionPlacements(items, horizontalColumns)
-      : columnPlacements(items, columnHeight)
-    const columns = horizontal
-      ? horizontalColumns
-      : Math.max(1, ...placements.map((placement) => placement.column + 1))
-    const fixed = !horizontal && fixedWidth !== undefined
-    let cellWidth = horizontal ? Math.max(itemWidth, plot.width / columns) : itemWidth
-    if (fixed) cellWidth = Math.max(0, fixedWidth - horizontalPadding * 2) / columns
-    const contentWidth = columns * itemWidth
-    const contentHeight = Math.max(0, ...placements.map((placement) => placement.y + itemHeight))
-    let boxWidth = !overlay && horizontal ? width : contentWidth + horizontalPadding * 2
-    if (fixed) boxWidth = fixedWidth
-    const docked = !overlay && !horizontal
-    const boxHeight = contentHeight + verticalPadding * 2
-    const corners = position.split('-')
-    const rightAligned = position === 'right' || corners[1] === 'right'
-    const bottomAligned = position === 'bottom' || corners[0] === 'bottom'
-    let x = 0
-    let y = 0
-    if (overlay) {
-      x = rightAligned ? plot.x + plot.width - boxWidth - 8 : plot.x + 8
-      y = bottomAligned ? plot.y + plot.height - boxHeight - 8 : plot.y + 8
-    } else {
-      // A side box fits its entries and starts level with the plot area, moving up only
-      // as far as needed to stay within the chart.
-      if (docked) y = Math.max(0, Math.min(plot.y, height - boxHeight))
-      const svgHeight = horizontal ? boxHeight : height
-      external.setAttribute('width', String(boxWidth))
-      external.setAttribute('height', String(svgHeight))
-      external.setAttribute('viewBox', `0 0 ${boxWidth} ${svgHeight}`)
-      external.style.width = horizontal ? '100%' : `${boxWidth}px`
-      external.style.height = horizontal ? `${boxHeight}px` : '100%'
-    }
+    if (!overlay) sizeExternal(horizontal, box, size.height)
 
     layer.replaceChildren(focusStyle)
     layer.dataset.position = position
     layer.dataset.overlay = String(overlay)
-    const background = svgElement('rect', {
-      class: 'fews-chart-legend__background',
-      x,
-      y,
-      width: boxWidth,
-      height: boxHeight,
-      rx: 3,
-      fill: `var(--fews-chart-legend-background, ${tokens.background})`,
-      stroke: 'currentColor',
-      'stroke-opacity': 0.2,
-    })
-    layer.append(background)
-    const left = x + (horizontal ? plot.x : horizontalPadding)
-    const top = y + verticalPadding
+    layer.append(
+      svgElement('rect', {
+        class: 'fews-chart-legend__background',
+        ...box,
+        rx: 3,
+        fill: `var(--fews-chart-legend-background, ${tokens.background})`,
+        stroke: 'currentColor',
+        'stroke-opacity': 0.2,
+      }),
+    )
+    const truncate = !horizontal && fixedWidth !== undefined
+    const left = box.x + (horizontal ? plot.x : horizontalPadding)
+    const top = box.y + verticalPadding
+    // Top/bottom dividers span every column; column dividers span their own column.
+    const dividerStart = (x: number) => (horizontal ? left : x)
+    const dividerWidth = horizontal ? columns * cellWidth : cellWidth
     for (const { item, column, y: offset, divider } of placements) {
-      const positionedY = top + offset
-      const positionedX = left + column * cellWidth
-      if (divider) {
-        const dividerY = positionedY - sectionGap / 2
-        layer.append(
-          svgElement('line', {
-            class: 'fews-chart-legend__divider',
-            x1: horizontal ? left : positionedX,
-            x2: horizontal ? left + columns * cellWidth : positionedX + cellWidth,
-            y1: dividerY,
-            y2: dividerY,
-            stroke: 'currentColor',
-            'stroke-opacity': 0.15,
-            'aria-hidden': 'true',
-          }),
-        )
-      }
+      const x = left + column * cellWidth
+      const y = top + offset
+      if (divider) appendDivider(layer, dividerStart(x), dividerWidth, y - sectionGap / 2)
       const room = cellWidth - item.indent - labelOffset - truncatedTrailing
-      const text = fixed
+      const text = truncate
         ? fitLabel(item.entry.label, room, item.heading, measure)
         : item.entry.label
-      appendEntry(layer, item, positionedX, positionedY, cellWidth, fontSize, text, (id) =>
+      appendEntry(layer, item, x, y, cellWidth, fontSize, text, (id) =>
         context.legend.toggle(id, 'built-in'),
       )
     }
-    if (focusedId) {
-      const replacement = [...layer.querySelectorAll<SVGElement>('[data-entry-id]')].find(
-        (element) => element.dataset.entryId === focusedId,
-      )
-      replacement?.focus()
-    }
+    restoreFocus(focusedId)
   }
   reactive.untracked(render)
   context.scope.run(() => reactive.effect(render))
