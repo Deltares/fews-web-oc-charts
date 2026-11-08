@@ -17,6 +17,11 @@ export interface AxisOptions {
   label: string
   unit: string
   grid: boolean
+  /**
+   * SVG dash pattern for this axis's gridlines, e.g. `'2'` for the FEWS dotted grid.
+   * Undefined draws solid hairlines. The classic zero line stays solid.
+   */
+  gridDasharray?: string
   tickCount: number
   labelAngle: number
   locale?: string
@@ -80,6 +85,7 @@ export function axis(scale: string, initial: OptionPatch<AxisOptions> = {}): Axi
     'label',
     'unit',
     'grid',
+    'gridDasharray',
     'tickCount',
     'labelAngle',
     'locale',
@@ -115,6 +121,12 @@ export function axis(scale: string, initial: OptionPatch<AxisOptions> = {}): Axi
         throw new TypeError('axis.label and axis.unit must be strings.')
       }
       if (typeof options.grid !== 'boolean') throw new Error('axis.grid must be boolean.')
+      if (
+        options.gridDasharray !== undefined &&
+        (typeof options.gridDasharray !== 'string' || !options.gridDasharray.trim())
+      ) {
+        throw new TypeError('axis.gridDasharray must be a non-empty string.')
+      }
       if (options.id !== undefined && (typeof options.id !== 'string' || !options.id)) {
         throw new Error('axis.id must be a nonempty string.')
       }

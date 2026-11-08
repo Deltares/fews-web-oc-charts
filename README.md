@@ -437,6 +437,11 @@ are truncated with an ellipsis, keeping the full text in a `<title>` and the ent
 accessible name. `width` also applies to corner overlays; `top` and `bottom` legends
 span the chart and ignore it.
 
+Gridlines of both axis styles are solid hairlines in `--fews-chart-grid` (or the
+theme's `grid` token). For the dotted FEWS grid, opt in per axis with
+`axis('y', { style: 'classic', grid: true, gridDasharray: '2' })`; the classic frame
+and zero line stay solid.
+
 ## Marking the current time
 
 `currentTime()` draws a vertical line at the current time on a time scale, with a small

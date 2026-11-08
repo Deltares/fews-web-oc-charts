@@ -161,11 +161,13 @@ export function renderClassicAxis(
     }
   }
   if (options.grid) {
+    // Gridlines and frame are solid hairlines that inherit the grid layer's
+    // `var(--fews-chart-grid, theme.grid)` stroke; dashing is opt-in.
     const grid = svgElement('g', {
       transform: `translate(${plot.x},${plot.y})`,
       fill: 'none',
-      'stroke-dasharray': '2',
-      stroke: 'var(--fews-chart-grid, white)',
+      stroke: 'inherit',
+      ...(options.gridDasharray ? { 'stroke-dasharray': options.gridDasharray } : {}),
     })
     const gridRenderer = horizontal
       ? axisBottom(renderer.scale()).tickSize(plot.height)
@@ -179,10 +181,12 @@ export function renderClassicAxis(
       select(tick).select('line').attr('stroke', 'inherit')
       if (select(tick).datum() === 0) {
         tick.setAttribute('stroke-dasharray', 'none')
-        tick.setAttribute('stroke', 'var(--fews-chart-foreground, black)')
+        tick.setAttribute('stroke', 'currentColor')
       }
     }
-    grid.querySelector('.domain')?.setAttribute('stroke', 'currentColor')
+    const frame = grid.querySelector('.domain')
+    frame?.setAttribute('stroke', 'inherit')
+    frame?.setAttribute('stroke-dasharray', 'none')
     gridLayer.append(grid)
   }
   const caption = (text: string, x: number, y: number, anchor: string) => {
