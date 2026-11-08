@@ -54,6 +54,7 @@ export function resolveEnsembleStyles(options: Readonly<EnsembleOptions>, tokens
     stroke: resolveMarkColor(part === false ? stroke : (part.stroke ?? stroke), tokens),
     strokeWidth: part === false ? width : (part.width ?? width),
     strokeDasharray: part === false ? undefined : part.strokeDasharray,
+    halo: part === false ? 0 : (part.halo ?? 0),
   })
   const members = options.members === false ? {} : options.members
   const spread = options.spread === false ? {} : options.spread
@@ -63,8 +64,10 @@ export function resolveEnsembleStyles(options: Readonly<EnsembleOptions>, tokens
       strokeWidth: members.width ?? 1,
       opacity: members.opacity ?? 0.25,
     },
+    // Bands are translucent context areas: `colorContrast: 'auto'` leaves their fill as
+    // configured, since darkening it would bury the lines drawn over it.
     spread: {
-      fill: resolveMarkColor(spread.fill ?? accent(tokens), tokens),
+      fill: spread.fill ?? accent(tokens),
       opacity: spread.opacity ?? 0.2,
     },
     median: line(options.median, tokens.foreground, 2),
@@ -89,7 +92,8 @@ function partSymbol(
       opacity: styles.members.opacity,
     }
   }
-  return { type: 'line', ...styles[part] }
+  const { stroke, strokeWidth, strokeDasharray } = styles[part]
+  return { type: 'line', stroke, strokeWidth, strokeDasharray }
 }
 
 export function ensemblePartSymbol(
@@ -266,12 +270,20 @@ function createEnsembleRenderer(): MarkRenderer<EnsembleMark> {
   const group = svgElement('g', { 'data-mark': 'ensemble' })
   const spreadGroup = svgElement('g', { 'data-part': 'spread' })
   const membersGroup = svgElement('g', { 'data-part': 'members' })
-  const lines = {
-    mean: svgElement('path', { 'data-part': 'mean', fill: 'none' }),
-    median: svgElement('path', { 'data-part': 'median', fill: 'none' }),
-    control: svgElement('path', { 'data-part': 'control', fill: 'none' }),
+  const lineParts = ['mean', 'median', 'control'] as const
+  const line = (part: string) => svgElement('path', { 'data-part': part, fill: 'none' })
+  const lines = { mean: line('mean'), median: line('median'), control: line('control') }
+  const halos = {
+    mean: line('mean-halo'),
+    median: line('median-halo'),
+    control: line('control-halo'),
   }
-  group.append(spreadGroup, membersGroup, lines.mean, lines.median, lines.control)
+  group.append(spreadGroup, membersGroup)
+  for (const part of lineParts) {
+    halos[part].setAttribute('stroke-linejoin', 'round')
+    halos[part].setAttribute('aria-hidden', 'true')
+    group.append(halos[part], lines[part])
+  }
   const geometryKey = createKeyCache()
   const styleKey = createKeyCache()
 
@@ -384,6 +396,11 @@ function createEnsembleRenderer(): MarkRenderer<EnsembleMark> {
           ? ''
           : linePath(store.length, store.xAt, (index) => store.valueAt(control, index), px, py),
       )
+      for (const part of lineParts) {
+        const settings = options[part]
+        const halo = settings !== false && (settings.halo ?? 0) > 0
+        halos[part].setAttribute('d', halo ? (lines[part].getAttribute('d') ?? '') : '')
+      }
     },
     style(mark: EnsembleMark, tokens: ThemeTokens) {
       if (!styleKey.changed([mark, mark.options.version, tokens])) return
@@ -411,13 +428,16 @@ function createEnsembleRenderer(): MarkRenderer<EnsembleMark> {
         node.setAttribute('fill', styles.spread.fill)
         node.setAttribute('fill-opacity', String(styles.spread.opacity))
       }
-      for (const part of ['mean', 'median', 'control'] as const) {
+      for (const part of lineParts) {
         const style = styles[part]
+        for (const node of [lines[part], halos[part]]) {
+          if (style.strokeDasharray) node.setAttribute('stroke-dasharray', style.strokeDasharray)
+          else node.removeAttribute('stroke-dasharray')
+        }
         lines[part].setAttribute('stroke', style.stroke)
         lines[part].setAttribute('stroke-width', String(style.strokeWidth))
-        if (style.strokeDasharray)
-          lines[part].setAttribute('stroke-dasharray', style.strokeDasharray)
-        else lines[part].removeAttribute('stroke-dasharray')
+        halos[part].setAttribute('stroke', `var(--fews-chart-background, ${tokens.background})`)
+        halos[part].setAttribute('stroke-width', String(style.strokeWidth + style.halo * 2))
       }
     },
     destroy() {
@@ -444,7 +464,7 @@ function ensembleHighlight(
   for (const part of hit.parts) {
     if (part.part === 'spread') {
       const d = tick(yScale.project(part.lower!)) + tick(yScale.project(part.upper!))
-      shapes.push({ type: 'path', d, stroke: styles.spread.fill })
+      shapes.push({ type: 'path', d, stroke: resolveMarkColor(styles.spread.fill, tokens) })
     } else {
       const cy = yScale.project(part.value!)
       if (Number.isFinite(cy))

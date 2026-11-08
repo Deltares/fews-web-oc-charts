@@ -62,7 +62,11 @@ composite layers and their SVG/canvas renderers, legend swatches and highlights.
 All adjusted colors, including tooltip symbols, tooltip names and cross-section
 sample labels, use only the tooltip background as their contrast reference.
 Heatmap color-scale mappings and
-their swatches remain unchanged because their colors encode values.
+their swatches remain unchanged because their colors encode values. Ensemble spread
+bands are translucent context areas and also keep their configured fill, so they do
+not darken behind the median and control lines drawn over them; give those lines a
+`halo` (e.g. `median: { halo: 2 }`, a background-coloured outline of that many pixels
+on each side) to keep them legible where bands overlap.
 
 The comparison uses `--fews-chart-tooltip-background` (or its theme default),
 never `--fews-chart-background`, transparent outer margins or an external legend's
