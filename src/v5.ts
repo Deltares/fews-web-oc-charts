@@ -56,6 +56,8 @@ export type {
   CrossSectionPoint,
   CrossSectionSelectHandle,
   CrossSectionSelectOptions,
+  CrossSectionValueContext,
+  CrossSectionValueFormatter,
 } from './plot/plugins/cross-section-select/cross-section-select.js'
 export { currentTime } from './plot/plugins/current-time/current-time-plugin.js'
 export type {
