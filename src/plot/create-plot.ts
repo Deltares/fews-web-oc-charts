@@ -693,9 +693,8 @@ function createPlotInternal(
     clipRect.setAttribute('height', String(plotRegion.height))
   }
 
-  function renderLayout(current: PlotOptions, tokens: ThemeTokens) {
-    if (current.axisLayout === 'inset') marksLayer.before(axesLayer)
-    else axesLayer.before(marksLayer)
+  /** The plot size from the viewport, explicit options or the measured host. */
+  function updateSize(current: PlotOptions) {
     const actualSize = Object.freeze({
       width: viewportSize.get()?.width ?? current.width ?? measured.get().width,
       height: viewportSize.get()?.height ?? current.height ?? measured.get().height,
@@ -708,39 +707,58 @@ function createPlotInternal(
       )
     )
       size.set(actualSize)
+    return actualSize
+  }
+
+  /** Regions from the measured axes and margins, widened to the alignment group's bounds. */
+  function layoutRegions(current: PlotOptions, tokens: ThemeTokens, actualSize: Size) {
     const cartesianAxes = current.axes.filter((axis) =>
       isCartesianSide(axis.options.get().resolved.position),
     )
-    const measures = cartesianAxes.map((axis) => measureAxis(axis, tokens))
+    const inset = current.axisLayout === 'inset'
+    // Measuring also updates each axis's stable width, so it runs for inset axes too.
+    const measured = cartesianAxes.map((axis) => measureAxis(axis, tokens))
+    const measures = inset ? [] : measured
     const { margins, insetMargins } = layoutMargins(current, tokens, cartesianAxes)
-    const naturalRegions = layout(
-      actualSize,
-      current.axisLayout === 'inset' ? [] : measures,
-      current.axisLayout === 'inset' ? insetMargins : margins,
-      current.title ? tokens.fonts.title.size * 2 : 0,
-    )
+    const baseMargins = inset ? insetMargins : margins
+    const titleHeight = current.title ? tokens.fonts.title.size * 2 : 0
+    const naturalRegions = layout(actualSize, measures, baseMargins, titleHeight)
     alignment?.member.report(
       actualSize.width,
       naturalRegions.margins.left,
       naturalRegions.margins.right,
     )
     const aligned = alignment?.group.bounds.get()
-    const baseMargins = current.axisLayout === 'inset' ? insetMargins : margins
-    let nextRegions = naturalRegions
-    if (aligned) {
-      nextRegions = layout(
-        actualSize,
-        current.axisLayout === 'inset' ? [] : measures,
-        {
-          ...baseMargins,
-          left: baseMargins.left + Math.max(0, aligned.left - naturalRegions.margins.left),
-          right:
-            baseMargins.right +
-            Math.max(0, actualSize.width - naturalRegions.margins.right - aligned.right),
-        },
-        current.title ? tokens.fonts.title.size * 2 : 0,
-      )
-    }
+    if (!aligned) return naturalRegions
+    return layout(
+      actualSize,
+      measures,
+      {
+        ...baseMargins,
+        left: baseMargins.left + Math.max(0, aligned.left - naturalRegions.margins.left),
+        right:
+          baseMargins.right +
+          Math.max(0, actualSize.width - naturalRegions.margins.right - aligned.right),
+      },
+      titleHeight,
+    )
+  }
+
+  function renderTitle(current: PlotOptions, tokens: ThemeTokens) {
+    const titleRegion = regions.get().title
+    title.setAttribute('x', String(titleRegion.x + titleRegion.width / 2))
+    title.setAttribute('y', String(titleRegion.y + tokens.fonts.title.size))
+    applyFont(title, tokens.fonts.title)
+    title.textContent = current.title
+    if (current.title) element.setAttribute('aria-label', current.title)
+    else element.removeAttribute('aria-label')
+  }
+
+  function renderLayout(current: PlotOptions, tokens: ThemeTokens) {
+    if (current.axisLayout === 'inset') marksLayer.before(axesLayer)
+    else axesLayer.before(marksLayer)
+    const actualSize = updateSize(current)
+    const nextRegions = layoutRegions(current, tokens, actualSize)
     if (
       !identicalLayout(
         reactive.untracked(() => regions.get()),
@@ -754,11 +772,7 @@ function createPlotInternal(
     element.setAttribute('viewBox', `0 0 ${actualSize.width} ${actualSize.height}`)
     background.setAttribute('width', String(actualSize.width))
     background.setAttribute('height', String(actualSize.height))
-    const titleRegion = regions.get().title
-    title.setAttribute('x', String(titleRegion.x + titleRegion.width / 2))
-    title.setAttribute('y', String(titleRegion.y + tokens.fonts.title.size))
-    applyFont(title, tokens.fonts.title)
-    title.textContent = current.title
+    renderTitle(current, tokens)
     const plotRegion = regions.get().plot
     if (current.clipMarks) marksLayer.setAttribute('clip-path', `url(#${clipId})`)
     else marksLayer.removeAttribute('clip-path')
@@ -768,8 +782,6 @@ function createPlotInternal(
       marksLayer.setAttribute('transform', `translate(${plotRegion.x},${plotRegion.y})`)
     else marksLayer.removeAttribute('transform')
     updateBackgroundAndClip(current, actualSize, plotRegion, localMarks)
-    if (current.title) element.setAttribute('aria-label', current.title)
-    else element.removeAttribute('aria-label')
   }
 
   function updateInsetMargin(
