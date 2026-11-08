@@ -27,6 +27,13 @@ export interface LegendOptions {
   position: LegendPosition
   /** Include parent and named-stack entries; false renders only leaf series/layers. */
   showGroups: boolean
+  /**
+   * Fixed box width in CSS pixels for column legends (`left`, `right` and the corner
+   * overlays); `top` and `bottom` legends span the chart and ignore it. Labels that do not
+   * fit are truncated with an ellipsis and keep their full text in a `<title>`. Undefined
+   * sizes the box to its content.
+   */
+  width?: number
 }
 
 export interface LegendHandle {
@@ -35,7 +42,7 @@ export interface LegendHandle {
 }
 
 const handles = new WeakSet<object>()
-const optionKeys = ['position', 'showGroups']
+const optionKeys = ['position', 'showGroups', 'width']
 
 const visibilityOpacity: Readonly<Record<string, number>> = { hidden: 0.5, mixed: 0.75 }
 
@@ -50,6 +57,12 @@ export function legend(initial: OptionPatch<LegendOptions> = {}): LegendHandle {
     validate(options) {
       if (typeof options.showGroups !== 'boolean') {
         throw new TypeError('legend.showGroups must be boolean.')
+      }
+      if (
+        options.width !== undefined &&
+        (typeof options.width !== 'number' || !Number.isFinite(options.width) || options.width <= 0)
+      ) {
+        throw new RangeError('legend.width must be a positive finite number.')
       }
       if (
         ![
@@ -87,6 +100,29 @@ const verticalPadding = 6
 const swatchWidth = 20
 const swatchHeight = 20
 const sectionGap = 7
+const labelOffset = swatchWidth + 8
+/** Space after a label: separates columns in content-sized legends. */
+const labelTrailing = 16
+/** Minimum space after a truncated label in a fixed-width legend. */
+const truncatedTrailing = 6
+const ellipsis = '\u2026'
+
+type Measure = (label: string, bold: boolean) => number
+
+/** Longest prefix of `label` that fits `room` with an ellipsis, or the label itself. */
+function fitLabel(label: string, room: number, bold: boolean, measure: Measure): string {
+  if (measure(label, bold) <= room) return label
+  const characters = Array.from(label)
+  let low = 0
+  let high = characters.length - 1
+  while (low < high) {
+    const middle = Math.ceil((low + high) / 2)
+    const candidate = `${characters.slice(0, middle).join('').trimEnd()}${ellipsis}`
+    if (measure(candidate, bold) <= room) low = middle
+    else high = middle - 1
+  }
+  return low ? `${characters.slice(0, low).join('').trimEnd()}${ellipsis}` : ellipsis
+}
 
 interface FlatEntry {
   readonly entry: LegendEntry
@@ -117,7 +153,7 @@ function sectionStarts(items: readonly FlatEntry[]): boolean[] {
 
 function flattenEntries(
   entries: readonly LegendEntry[],
-  measure: (label: string, bold: boolean) => number,
+  measure: Measure,
   showGroups: boolean,
   indented: boolean,
 ): FlatEntry[] {
@@ -132,7 +168,7 @@ function flattenEntries(
           depth: showGroups ? depth : 0,
           indent,
           heading,
-          width: indent + swatchWidth + 8 + measure(entry.label, heading) + 16,
+          width: indent + labelOffset + measure(entry.label, heading) + labelTrailing,
         })
       }
       visit(entry.children, depth + 1)
@@ -247,6 +283,7 @@ function appendEntry(
   y: number,
   width: number,
   fontSize: number,
+  text: string,
   toggle: (id: string) => void,
 ) {
   const { entry } = item
@@ -281,7 +318,7 @@ function appendEntry(
   group.append(symbol)
 
   const label = svgElement('text', {
-    x: swatchWidth + 8 + item.indent,
+    x: labelOffset + item.indent,
     y: itemHeight / 2,
     'dominant-baseline': 'middle',
     'font-size': fontSize,
@@ -289,8 +326,13 @@ function appendEntry(
     fill: 'currentColor',
     'pointer-events': 'none',
   })
-  label.textContent = entry.label
+  label.textContent = text
   group.append(label)
+  if (text !== entry.label) {
+    const title = svgElement('title')
+    title.textContent = entry.label
+    group.append(title)
+  }
 
   group.addEventListener('click', (event) => {
     event.stopPropagation()
@@ -405,7 +447,7 @@ function installLegend(handle: LegendHandle, context: PlotContext) {
     const active = context.element.ownerDocument.activeElement
     const focusedId =
       active instanceof SVGElement && layer.contains(active) ? active.dataset.entryId : undefined
-    const { position, showGroups } = handle.options.get().resolved
+    const { position, showGroups, width: fixedWidth } = handle.options.get().resolved
     const { width, height } = context.size.get()
     const { plot } = context.regions.get()
     const tokens = context.theme.get()
@@ -414,20 +456,16 @@ function installLegend(handle: LegendHandle, context: PlotContext) {
     external.style.fontFamily = `var(--fews-chart-font-family, ${tokens.fontFamily})`
     const horizontal = position === 'top' || position === 'bottom'
     const overlay = position.includes('-')
-    const items = flattenEntries(
-      context.legend.entries.get(),
-      (label, bold) =>
-        measurer.measure(label, `${bold ? '600 ' : ''}${fontSize}px ${tokens.fontFamily}`),
-      showGroups,
-      !horizontal,
-    )
+    const measure: Measure = (label, bold) =>
+      measurer.measure(label, `${bold ? '600 ' : ''}${fontSize}px ${tokens.fontFamily}`)
+    const items = flattenEntries(context.legend.entries.get(), measure, showGroups, !horizontal)
     const itemWidth = Math.max(0, ...items.map((item) => item.width))
     const horizontalColumns = Math.max(
       1,
       Math.min(items.length, Math.floor(plot.width / Math.max(1, itemWidth))),
     )
-    // Left/right docks use the overlay layout inside a box spanning the full chart height,
-    // margins included, wrapping into columns only when one column does not fit.
+    // Left/right docks use the overlay layout, wrapping into columns only when one column
+    // does not fit the full chart height, margins included.
     const columnHeight = overlay ? Infinity : Math.max(itemHeight, height - verticalPadding * 2)
     const placements = horizontal
       ? sectionPlacements(items, horizontalColumns)
@@ -435,12 +473,15 @@ function installLegend(handle: LegendHandle, context: PlotContext) {
     const columns = horizontal
       ? horizontalColumns
       : Math.max(1, ...placements.map((placement) => placement.column + 1))
-    const cellWidth = horizontal ? Math.max(itemWidth, plot.width / columns) : itemWidth
+    const fixed = !horizontal && fixedWidth !== undefined
+    let cellWidth = horizontal ? Math.max(itemWidth, plot.width / columns) : itemWidth
+    if (fixed) cellWidth = Math.max(0, fixedWidth - horizontalPadding * 2) / columns
     const contentWidth = columns * itemWidth
     const contentHeight = Math.max(0, ...placements.map((placement) => placement.y + itemHeight))
-    const boxWidth = !overlay && horizontal ? width : contentWidth + horizontalPadding * 2
+    let boxWidth = !overlay && horizontal ? width : contentWidth + horizontalPadding * 2
+    if (fixed) boxWidth = fixedWidth
     const docked = !overlay && !horizontal
-    const boxHeight = docked ? height : contentHeight + verticalPadding * 2
+    const boxHeight = contentHeight + verticalPadding * 2
     const corners = position.split('-')
     const rightAligned = position === 'right' || corners[1] === 'right'
     const bottomAligned = position === 'bottom' || corners[0] === 'bottom'
@@ -450,6 +491,9 @@ function installLegend(handle: LegendHandle, context: PlotContext) {
       x = rightAligned ? plot.x + plot.width - boxWidth - 8 : plot.x + 8
       y = bottomAligned ? plot.y + plot.height - boxHeight - 8 : plot.y + 8
     } else {
+      // A side box fits its entries and starts level with the plot area, moving up only
+      // as far as needed to stay within the chart.
+      if (docked) y = Math.max(0, Math.min(plot.y, height - boxHeight))
       const svgHeight = horizontal ? boxHeight : height
       external.setAttribute('width', String(boxWidth))
       external.setAttribute('height', String(svgHeight))
@@ -493,7 +537,11 @@ function installLegend(handle: LegendHandle, context: PlotContext) {
           }),
         )
       }
-      appendEntry(layer, item, positionedX, positionedY, cellWidth, fontSize, (id) =>
+      const room = cellWidth - item.indent - labelOffset - truncatedTrailing
+      const text = fixed
+        ? fitLabel(item.entry.label, room, item.heading, measure)
+        : item.entry.label
+      appendEntry(layer, item, positionedX, positionedY, cellWidth, fontSize, text, (id) =>
         context.legend.toggle(id, 'built-in'),
       )
     }
