@@ -289,6 +289,24 @@ tooltip({
 })
 ```
 
+## Cross-section labels
+
+`crossSectionSelect` labels each selected line with its value at the selection. By
+default the value uses the mark's `digits`, or a precision derived from the y domain.
+`format` formats the selected x value in the callout; `formatValue(value, context)`
+formats each sample value, with the `mark`, the sample's `x` and `index`, and
+`defaultText` in `context`. Its result is also the `value` of the points in
+`currentData`.
+
+```ts
+crossSectionSelect(now, onChange, {
+  x: 'time',
+  format: (time) => formatTime(time),
+  formatValue: (value, { mark, defaultText }) =>
+    mark === pressure ? `${value.toFixed(0)} hPa` : `${defaultText} m`,
+})
+```
+
 ## Listening to changes
 
 Use `subscribe()` to observe any library signal, including a shared scale's domain.

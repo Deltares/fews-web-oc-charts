@@ -12,6 +12,7 @@ import {
   brush,
   type Plot,
 } from '../../src/index.js'
+import type { CrossSectionValueContext } from '../../src/plot/plugins/cross-section-select/cross-section-select.js'
 
 const plots: Plot[] = []
 const hosts: HTMLElement[] = []
@@ -220,6 +221,49 @@ describe('cross-section select plugin', () => {
     await frame()
     expect(interaction.currentData.get()).toHaveLength(1)
     expect(plot.element.querySelectorAll('[data-cross-section-point]')).toHaveLength(1)
+  })
+
+  test('formats each sample value per mark with formatValue', async () => {
+    const formatValue = vi.fn((value: number, context: CrossSectionValueContext) =>
+      context.mark.id === 'first' ? `${value.toFixed(0)} hPa` : `${context.defaultText} m`,
+    )
+    const { plot, interaction, first, second } = await setup(
+      crossSectionSelect(5, undefined, { x: 't', formatValue }),
+    )
+    const labels = () =>
+      [...plot.element.querySelectorAll('[data-cross-section-label]')].map(
+        (node) => node.textContent,
+      )
+    expect(labels()).toEqual(['20 hPa', '6.0 m'])
+    expect(interaction.currentData.get().map(({ value }) => value)).toEqual(['20 hPa', '6.0 m'])
+    expect(formatValue).toHaveBeenCalledWith(20, {
+      mark: first,
+      x: 5,
+      index: 1,
+      defaultText: '20.0',
+    })
+    expect(formatValue).toHaveBeenCalledWith(6, {
+      mark: second,
+      x: 10,
+      index: 2,
+      defaultText: '6.0',
+    })
+
+    // Interpolated samples report the selection as x and the index of the point before it.
+    formatValue.mockClear()
+    interaction.update({ interpolate: true })
+    await frame()
+    expect(
+      formatValue.mock.calls.find(([, context]) => context.mark === second)?.[1],
+    ).toMatchObject({
+      x: 5,
+      index: 1,
+    })
+
+    interaction.update({ formatValue: undefined })
+    await frame()
+    expect(labels()).toEqual(['20.0', '26.0'])
+    expect(() => interaction.update({ formatValue: 'x' as never })).toThrow(/formatValue/)
   })
 
   test('clamps a drag to the selected scale domain and calls back on release only', async () => {

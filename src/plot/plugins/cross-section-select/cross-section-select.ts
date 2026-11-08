@@ -22,8 +22,26 @@ export interface CrossSectionSelectOptions {
    * none outside the line's points or next to a missing value.
    */
   interpolate: boolean
+  /** Formats the selected x value in the callout. */
   format?: (value: number) => string
+  /** Formats each mark's sample value in its label and in `currentData`. */
+  formatValue?: CrossSectionValueFormatter
 }
+
+export interface CrossSectionValueContext {
+  readonly mark: CrossSectionMark
+  /** The sample's x value: the selection itself when interpolated. */
+  readonly x: number
+  /** Index of the sample, or of the point before it when interpolated. */
+  readonly index: number
+  /** The default text: the value with the mark's `digits`, or the y-axis precision. */
+  readonly defaultText: string
+}
+
+export type CrossSectionValueFormatter = (
+  value: number,
+  context: CrossSectionValueContext,
+) => string
 
 export interface CrossSectionPoint {
   readonly id: string | undefined
@@ -57,7 +75,7 @@ const handleCallbacks = new WeakMap<
   CrossSectionSelectHandle,
   ((value: number) => void) | undefined
 >()
-const optionKeys = ['x', 'marks', 'draggable', 'interpolate', 'format']
+const optionKeys = ['x', 'marks', 'draggable', 'interpolate', 'format', 'formatValue']
 
 export function isCrossSectionSelectHandle(value: object): value is CrossSectionSelectHandle {
   return handles.has(value)
@@ -108,6 +126,7 @@ export function crossSectionSelect(
       draggable: false,
       interpolate: false,
       format: undefined,
+      formatValue: undefined,
     }),
     isAtomicReference: (value) => isLineMark(value) || isSeriesMark(value),
     validate(options) {
@@ -121,8 +140,10 @@ export function crossSectionSelect(
       if (typeof options.interpolate !== 'boolean') {
         throw new TypeError('crossSectionSelect.interpolate must be boolean.')
       }
-      if (options.format !== undefined && typeof options.format !== 'function') {
-        throw new TypeError('crossSectionSelect.format must be a function.')
+      for (const key of ['format', 'formatValue'] as const) {
+        if (options[key] !== undefined && typeof options[key] !== 'function') {
+          throw new TypeError(`crossSectionSelect.${key} must be a function.`)
+        }
       }
       for (const validate of consumers) validate(options, value.get())
     },

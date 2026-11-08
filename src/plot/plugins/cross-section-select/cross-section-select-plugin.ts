@@ -2,7 +2,7 @@ import { registerPlugin } from '../plugins.js'
 import type { OptionPatch } from '../../../core/options.js'
 import { precisionFixed } from 'd3-format'
 import { reactive, track } from '../../../core/runtime.js'
-import type { ScaleKind } from '../../../scales/scale.js'
+import type { ScaleBinding, ScaleKind } from '../../../scales/scale.js'
 import { resolveLineStyles } from '../../marks/mark-styles.js'
 import type { PluginDefinition, PlotContext } from '../plugin-definition.js'
 import {
@@ -104,11 +104,109 @@ function interpolated(
   return { index: high - 1, xValue: value, yValue }
 }
 
+interface Sample {
+  readonly index: number
+  readonly xValue: unknown
+  readonly yValue: unknown
+}
+
+type ValueAt = (index: number) => unknown
+
+function markValues(mark: CrossSectionMark) {
+  const series = isSeriesMark(mark)
+  return {
+    length: series ? mark.data.length : mark.xValues.length,
+    xAt: (index: number) => (series ? mark.data.xAt(index) : mark.xValues[index]),
+    yAt: (index: number) => (series ? mark.data.yAt(index) : mark.yValues[index]),
+  }
+}
+
+/** Index of the first point at or after `value`, or `length` when there is none. */
+function firstAtOrAfter(value: number, length: number, xAt: ValueAt) {
+  let low = 0
+  let high = length
+  while (low < high) {
+    const middle = (low + high) >>> 1
+    const x = xAt(middle)
+    if (typeof x !== 'number' || x < value) low = middle + 1
+    else high = middle
+  }
+  return low
+}
+
+const finite = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isFinite(value)
+
+/** The point at or after the selection, else the last one, stepping back past missing values. */
+function steppedSample(
+  low: number,
+  length: number,
+  xAt: ValueAt,
+  yAt: ValueAt,
+): Sample | undefined {
+  let index = Math.min(low, length - 1)
+  if (index < 0) return undefined
+  let yValue = yAt(index)
+  if (!finite(yValue)) {
+    for (let candidate = index - 1; candidate >= 0; candidate -= 1) {
+      const previous = yAt(candidate)
+      if (finite(previous)) {
+        index = candidate
+        yValue = previous
+        break
+      }
+    }
+  }
+  return { index, xValue: xAt(index), yValue }
+}
+
+/** Whether the sample is numeric and drawable on the mark's scales. */
+function drawable(
+  sample: Sample,
+  xScale: ScaleBinding,
+  yScale: ScaleBinding,
+): sample is Sample & {
+  readonly xValue: number
+  readonly yValue: number
+} {
+  const { xValue, yValue } = sample
+  if (!finite(yValue) || typeof xValue !== 'number') return false
+  if (xScale.scale.kind === 'log' && xValue <= 0) return false
+  if (yScale.scale.kind === 'log' && yValue <= 0) return false
+  const domain = yScale.scale.domain.get()
+  return yValue >= Number(domain[0]) && yValue <= Number(domain[1])
+}
+
+/** The label text: `formatValue`, else the mark's `digits` or a precision from the y domain. */
+function labelText(
+  mark: CrossSectionMark,
+  sample: { readonly index: number; readonly xValue: number; readonly yValue: number },
+  yScale: ScaleBinding,
+  formatValue: CrossSectionSelectOptions['formatValue'],
+) {
+  const domain = yScale.scale.domain.get()
+  const interval = Math.abs(Number(domain[1]) - Number(domain[0])) / 100
+  const digits =
+    mark.digits ?? (interval > 0 ? Math.max(0, Math.min(15, precisionFixed(interval))) : 2)
+  const defaultText = sample.yValue.toFixed(digits)
+  if (!formatValue) return defaultText
+  const text = formatValue(sample.yValue, {
+    mark,
+    x: sample.xValue,
+    index: sample.index,
+    defaultText,
+  })
+  if (typeof text !== 'string') {
+    throw new TypeError('crossSectionSelect.formatValue must return a string.')
+  }
+  return text
+}
+
 function pointFor(
   mark: CrossSectionMark,
   value: number,
   context: PlotContext,
-  interpolate: boolean,
+  options: Readonly<CrossSectionSelectOptions>,
 ): CrossSectionPoint | undefined {
   if (isSeriesMark(mark)) {
     mark.options.get()
@@ -118,65 +216,25 @@ function pointFor(
   const xScale = context.scales[mark.x]
   const yScale = context.scales[mark.y]
   if (!xScale || !yScale) return undefined
-  const length = isSeriesMark(mark) ? mark.data.length : mark.xValues.length
-  let low = 0
-  let high = length
-  const xAt = (index: number) => (isSeriesMark(mark) ? mark.data.xAt(index) : mark.xValues[index])
-  const yAt = (index: number) => (isSeriesMark(mark) ? mark.data.yAt(index) : mark.yValues[index])
-  while (low < high) {
-    const middle = (low + high) >>> 1
-    const x = xAt(middle)
-    if (typeof x !== 'number' || x < value) low = middle + 1
-    else high = middle
-  }
-  let index: number
-  let xValue: unknown
-  let yValue: unknown
-  if (interpolate) {
-    if (low >= length) return undefined
+  const { length, xAt, yAt } = markValues(mark)
+  const low = firstAtOrAfter(value, length, xAt)
+  let sample: Sample | undefined
+  if (!options.interpolate) sample = steppedSample(low, length, xAt, yAt)
+  else if (low < length) {
     const logY = yScale.scale.kind === 'log'
     const point = interpolated(value, low, xAt, yAt, (x) => xScale.project(x), logY)
-    if (!point) return undefined
-    index = point.index
-    xValue = point.xValue
-    yValue = point.yValue
-  } else {
-    if (low >= length) low = length - 1
-    if (low < 0) return undefined
-    index = low
-    yValue = yAt(index)
-    if (typeof yValue !== 'number' || !Number.isFinite(yValue)) {
-      for (let candidate = index - 1; candidate >= 0; candidate -= 1) {
-        const previous = yAt(candidate)
-        if (typeof previous === 'number' && Number.isFinite(previous)) {
-          index = candidate
-          yValue = previous
-          break
-        }
-      }
-    }
-    xValue = xAt(index)
+    sample = point && { index: point.index, xValue: point.xValue, yValue: point.yValue }
   }
-  if (typeof yValue !== 'number' || !Number.isFinite(yValue)) return undefined
-  if (typeof xValue !== 'number') return undefined
-  if (xScale.scale.kind === 'log' && xValue <= 0) return undefined
-  if (yScale.scale.kind === 'log' && yValue <= 0) return undefined
-  const domain = yScale.scale.domain.get()
-  if (yValue < Number(domain[0]) || yValue > Number(domain[1])) return undefined
-  const yDomain = yScale.scale.domain.get()
-  const interval = Math.abs(Number(yDomain[1]) - Number(yDomain[0])) / 100
-  const digits =
-    mark.digits ?? (interval > 0 ? Math.max(0, Math.min(15, precisionFixed(interval))) : 2)
-  const formatted = yValue.toFixed(digits)
+  if (!sample || !drawable(sample, xScale, yScale)) return undefined
   const markId = isLineMark(mark) ? mark.id : mark.options.get().resolved.id
   return Object.freeze({
     id: markId,
     mark,
-    index,
-    x: context.scales[mark.x].project(xValue),
-    y: yScale.project(yValue),
-    value: formatted,
-    data: Object.freeze({ x: xValue, y: yValue }),
+    index: sample.index,
+    x: xScale.project(sample.xValue),
+    y: yScale.project(sample.yValue),
+    value: labelText(mark, sample, yScale, options.formatValue),
+    data: Object.freeze({ x: sample.xValue, y: sample.yValue }),
   })
 }
 
@@ -259,7 +317,7 @@ function installCrossSectionSelect(handle: CrossSectionSelectHandle, context: Pl
     const x = xBinding.project(value)
     const marks = marksForRender(options, context.options.get().resolved.marks)
     const entries = marks
-      .map((mark, index) => ({ point: pointFor(mark, value, context, options.interpolate), index }))
+      .map((mark, index) => ({ point: pointFor(mark, value, context, options), index }))
       .filter((entry): entry is { point: CrossSectionPoint; index: number } => !!entry.point)
     const points = entries.map(({ point }) => point)
     publishCrossSectionData(handle, Object.freeze(points))
