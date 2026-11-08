@@ -343,6 +343,48 @@ function createEnsembleRenderer(): MarkRenderer<EnsembleMark> {
     finishMembers(canvas, count, shapes)
   }
 
+  function renderBands(
+    store: EnsembleStore,
+    bands: ReturnType<typeof ensembleStatistics>['bands'],
+    px: Project,
+    py: Project,
+  ) {
+    for (const [position, [low, high, lowStatistic, highStatistic]] of bands.entries()) {
+      let node = spreadGroup.children[position] as SVGPathElement | undefined
+      if (!node) {
+        node = svgElement('path', { 'data-part': 'band', stroke: 'none' })
+        spreadGroup.append(node)
+      }
+      node.dataset.band = `${low}-${high}`
+      node.setAttribute('d', bandPath(store, lowStatistic, highStatistic, px, py))
+    }
+    while (spreadGroup.children.length > bands.length) spreadGroup.lastElementChild?.remove()
+  }
+
+  /** Mean, median and control paths, each with its halo when one is configured. */
+  function renderLines(
+    store: EnsembleStore,
+    options: Readonly<EnsembleOptions>,
+    statistics: ReturnType<typeof ensembleStatistics>,
+    px: Project,
+    py: Project,
+  ) {
+    const control = options.control ? controlMemberIndex(store, options.control.member) : undefined
+    const values = {
+      mean: statistics.mean?.at,
+      median: statistics.median?.at,
+      control: control === undefined ? undefined : (index: number) => store.valueAt(control, index),
+    }
+    for (const part of lineParts) {
+      const valueAt = values[part]
+      const d = valueAt ? linePath(store.length, store.xAt, valueAt, px, py) : ''
+      const settings = options[part]
+      const halo = settings !== false && (settings.halo ?? 0) > 0
+      lines[part].setAttribute('d', d)
+      halos[part].setAttribute('d', halo ? d : '')
+    }
+  }
+
   return {
     mount(layer, mark) {
       setMarkId(group, mark.id)
@@ -364,43 +406,12 @@ function createEnsembleRenderer(): MarkRenderer<EnsembleMark> {
       styleKey.clear()
       group.setAttribute('display', options.visible ? '' : 'none')
       if (!options.visible) return
-      const store = mark.data
       renderMembers(mark, options, xScale, yScale)
       const px = projector(xScale)
       const py = projector(yScale)
-      const statistics = ensembleStatistics(options, store)
-      const bands = statistics.bands
-      for (const [position, [low, high, lowStatistic, highStatistic]] of bands.entries()) {
-        let node = spreadGroup.children[position] as SVGPathElement | undefined
-        if (!node) {
-          node = svgElement('path', { 'data-part': 'band', stroke: 'none' })
-          spreadGroup.append(node)
-        }
-        node.dataset.band = `${low}-${high}`
-        node.setAttribute('d', bandPath(store, lowStatistic, highStatistic, px, py))
-      }
-      while (spreadGroup.children.length > bands.length) spreadGroup.lastElementChild?.remove()
-      for (const part of ['mean', 'median'] as const) {
-        const statistic = statistics[part]
-        lines[part].setAttribute(
-          'd',
-          statistic ? linePath(store.length, store.xAt, statistic.at, px, py) : '',
-        )
-      }
-      const control = options.control
-        ? controlMemberIndex(store, options.control.member)
-        : undefined
-      lines.control.setAttribute(
-        'd',
-        control === undefined
-          ? ''
-          : linePath(store.length, store.xAt, (index) => store.valueAt(control, index), px, py),
-      )
-      for (const part of lineParts) {
-        const settings = options[part]
-        const halo = settings !== false && (settings.halo ?? 0) > 0
-        halos[part].setAttribute('d', halo ? (lines[part].getAttribute('d') ?? '') : '')
-      }
+      const statistics = ensembleStatistics(options, mark.data)
+      renderBands(mark.data, statistics.bands, px, py)
+      renderLines(mark.data, options, statistics, px, py)
     },
     style(mark: EnsembleMark, tokens: ThemeTokens) {
       if (!styleKey.changed([mark, mark.options.version, tokens])) return
