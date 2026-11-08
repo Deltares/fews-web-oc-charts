@@ -37,6 +37,46 @@ to observe live CSS class/style changes, as with other theme tokens.
 Mouseover crosshair callouts render above persistent cross-section callouts and
 sample labels, regardless of plugin installation order.
 
+## Fonts
+
+Charts use the plot host's computed `font-family` and a 12 px size unless the theme
+tokens below are set on the host (or `themeElement`). The base pair is
+`--fews-chart-font-family` and `--fews-chart-font-size`, with optional
+`--fews-chart-font-weight` and `--fews-chart-font-variant-numeric`.
+
+Each text role has its own tokens, which fall back to the base ones:
+
+| Role        | Prefix                     | Text                                                           |
+| ----------- | -------------------------- | -------------------------------------------------------------- |
+| Tick labels | `--fews-chart-tick-`       | Axis tick labels, cartesian and polar                          |
+| Axis titles | `--fews-chart-axis-label-` | Axis labels and units                                          |
+| Plot title  | `--fews-chart-title-`      | The plot `title`                                               |
+| Legend      | `--fews-chart-legend-`     | Built-in legend labels (group headings stay semibold)          |
+| Tooltip     | `--fews-chart-tooltip-`    | HTML tooltip, crosshair, current-time and cross-section badges |
+
+Append `font-family`, `font-size` (pixels), `font-weight` or `font-variant-numeric`
+to the prefix:
+
+```css
+.chart-host {
+  --fews-chart-font-size: 12px;
+  --fews-chart-tick-font-size: 11px;
+  --fews-chart-tick-font-variant-numeric: tabular-nums;
+  --fews-chart-axis-label-font-weight: 600;
+  --fews-chart-title-font-size: 14px;
+  --fews-chart-tooltip-font-variant-numeric: tabular-nums;
+}
+```
+
+Layout measures every role with its own font: axis margins, the title band (twice the
+title size), legend columns and badge widths. Set fonts through these tokens rather than
+CSS on the SVG text, which the layout would not measure. Text marks keep their own
+`fontFamily`, `fontSize` and `fontWeight` options and default to the base font.
+
+Font families must be real font-family lists. A CSS-wide keyword such as
+`--fews-chart-font-family: inherit` counts as unset; when nothing is set on the host
+or its ancestors, the host's computed `font-family` is used.
+
 ## Automatic mark color contrast
 
 FEWS configuration colors can be retained as source colors while improving their

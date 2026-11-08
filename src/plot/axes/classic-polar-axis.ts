@@ -8,6 +8,7 @@ import type { ScaleBinding } from '../../scales/scale.js'
 import type { PlotLayout } from '../../layout/layout.js'
 import { niceDegreeSteps } from '../../Utils/niceDegreeSteps.js'
 import { svgElement } from '../rendering/svg.js'
+import { applyFont, type ThemeTokens } from '../../theme/theme.js'
 
 export function renderClassicPolarAxes(
   axesLayer: SVGGElement,
@@ -15,6 +16,7 @@ export function renderClassicPolarAxes(
   axes: readonly AxisHandle[],
   bindings: Readonly<Record<string, ScaleBinding>>,
   regions: PlotLayout,
+  theme: ThemeTokens,
 ) {
   const angularAxis = axes.find((axis) => axis.options.get().resolved.position === 'angular')
   const radialAxis = axes.find((axis) => axis.options.get().resolved.position === 'radial')
@@ -44,8 +46,7 @@ export function renderClassicPolarAxes(
   select(radialGroup).call(
     axisBottom(radialScale).ticks(radialAxis.options.get().resolved.tickCount),
   )
-  radialGroup.setAttribute('font-size', '1em')
-  radialGroup.setAttribute('font-family', 'inherit')
+  applyFont(radialGroup, theme.fonts.tick)
   radialGroup.querySelector('.domain')?.setAttribute('stroke', 'none')
   axesLayer.append(radialGroup)
   for (const value of radialScale.ticks(radialAxis.options.get().resolved.tickCount)) {
@@ -71,6 +72,7 @@ export function renderClassicPolarAxes(
   const angularGroup = svgElement('g', {
     transform: `${center} rotate(${-degrees(intercept)})`,
   })
+  applyFont(angularGroup, theme.fonts.tick)
   axesLayer.append(angularGroup)
   for (const value of ticks) {
     const angle = angular.project(value)

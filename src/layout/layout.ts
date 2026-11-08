@@ -74,14 +74,37 @@ export function layout(
   })
 }
 
+/**
+ * Canvas text cannot apply `font-variant-numeric`, so text with a numeric variant such as
+ * `tabular-nums` is measured as hidden HTML text instead.
+ */
+function measureInDocument(text: string, font: string, variantNumeric: string) {
+  const span = document.createElement('span')
+  span.style.cssText = 'position:absolute;left:-10000px;top:0;visibility:hidden;white-space:pre'
+  span.style.font = font
+  span.style.fontVariantNumeric = variantNumeric
+  span.textContent = text
+  document.body.append(span)
+  const width = span.getBoundingClientRect().width
+  span.remove()
+  return width
+}
+
 export function createTextMeasurer() {
   let context: OffscreenCanvasRenderingContext2D | CanvasRenderingContext2D | null | undefined
   const cache = new Map<string, number>()
   return {
-    measure(text: string, font: string): number {
-      const key = `${font}\0${text}`
+    /** Width of `text` in a CSS `font` shorthand, with an optional `font-variant-numeric`. */
+    measure(text: string, font: string, variantNumeric = 'normal'): number {
+      const key = `${font}\0${variantNumeric}\0${text}`
       const cached = cache.get(key)
       if (cached !== undefined) return cached
+      if (variantNumeric !== 'normal') {
+        const width = measureInDocument(text, font, variantNumeric)
+        if (cache.size >= 512) cache.clear()
+        cache.set(key, width)
+        return width
+      }
       context ??=
         typeof OffscreenCanvas === 'function'
           ? new OffscreenCanvas(1, 1).getContext('2d')

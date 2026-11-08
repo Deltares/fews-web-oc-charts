@@ -1,7 +1,7 @@
 import type { AxisHandle, AxisOptions } from './axis.js'
 import type { PlotLayout } from '../../layout/layout.js'
 import type { ScaleBinding, ScaleValue } from '../../scales/scale.js'
-import type { ThemeTokens } from '../../theme/theme.js'
+import { applyFont, type FontTokens, type ThemeTokens } from '../../theme/theme.js'
 import { formatZonedTickLabels } from '../../time/zoned-time.js'
 import { renderClassicAxis } from './classic-axis.js'
 import { renderClassicPolarAxes } from './classic-polar-axis.js'
@@ -79,7 +79,7 @@ export function renderAxes(
       fill: 'currentColor',
     })
     if (axis.options.get().resolved.style === 'classic') {
-      renderClassicAxis(group, gridLayer, axis, bindings[axis.scale], regions, bindings)
+      renderClassicAxis(group, gridLayer, axis, bindings[axis.scale], regions, bindings, theme)
     } else {
       renderCartesianAxis(
         { group: group, gridLayer: gridLayer },
@@ -138,7 +138,7 @@ function renderCartesianTick(
   pixel: number,
   options: Readonly<AxisOptions>,
   { horizontal, sign, baseline, textAnchor, dominantBaseline }: CartesianAxisGeometry,
-  fontSize: number,
+  font: FontTokens,
 ) {
   const x = horizontal ? pixel : baseline
   const y = horizontal ? baseline : pixel
@@ -154,15 +154,17 @@ function renderCartesianTick(
   const labelX = x + (horizontal ? 0 : sign * 9)
   const labelY = y + (horizontal ? sign * 9 : 0)
   const textAttributes = { 'text-anchor': textAnchor, 'dominant-baseline': dominantBaseline }
-  group.append(rotatedText(primary, labelX, labelY, options.labelAngle, textAttributes))
+  const label = rotatedText(primary, labelX, labelY, options.labelAngle, textAttributes)
+  applyFont(label, font)
+  group.append(label)
   if (secondary) {
-    const contextY = labelY + sign * fontSize
-    group.append(
-      rotatedText(secondary, labelX, contextY, options.labelAngle, {
-        ...textAttributes,
-        'data-tick-context': '',
-      }),
-    )
+    const contextY = labelY + sign * font.size
+    const context = rotatedText(secondary, labelX, contextY, options.labelAngle, {
+      ...textAttributes,
+      'data-tick-context': '',
+    })
+    applyFont(context, font)
+    group.append(context)
   }
 }
 
@@ -195,20 +197,21 @@ function renderCartesianCaption(
   plot: PlotLayout['plot'],
   band: PlotLayout['plot'],
   { horizontal, sign }: CartesianAxisGeometry,
-  fontSize: number,
+  font: FontTokens,
 ) {
   const caption = [options.label, options.unit && `(${options.unit})`].filter(Boolean).join(' ')
   if (!caption) return
-  const xOffset = sign < 0 ? fontSize : band.width - fontSize
-  const yOffset = sign > 0 ? band.height - fontSize : fontSize
+  const xOffset = sign < 0 ? font.size : band.width - font.size
+  const yOffset = sign > 0 ? band.height - font.size : font.size
   const x = horizontal ? plot.x + plot.width / 2 : band.x + xOffset
   const y = horizontal ? band.y + yOffset : plot.y + plot.height / 2
-  group.append(
-    rotatedText(caption, x, y, horizontal ? undefined : -90, {
-      'text-anchor': 'middle',
-      'dominant-baseline': 'middle',
-    }),
-  )
+  const text = rotatedText(caption, x, y, horizontal ? undefined : -90, {
+    'text-anchor': 'middle',
+    'dominant-baseline': 'middle',
+    'data-axis-caption': '',
+  })
+  applyFont(text, font)
+  group.append(text)
 }
 
 function renderCartesianAxis(
@@ -239,12 +242,12 @@ function renderCartesianAxis(
   )
   for (const tick of axisTickLabels(binding, axis)) {
     const pixel = binding.project(tick.value) + binding.bandwidth / 2
-    renderCartesianTick(group, tick, pixel, options, geometry, theme.fontSize)
+    renderCartesianTick(group, tick, pixel, options, geometry, theme.fonts.tick)
     if (options.grid) {
       renderCartesianGridLine(gridLayer, pixel, plot, horizontal, options)
     }
   }
-  renderCartesianCaption(group, options, plot, band, geometry, theme.fontSize)
+  renderCartesianCaption(group, options, plot, band, geometry, theme.fonts.axisLabel)
 }
 
 interface PolarAxisGeometry {
@@ -261,6 +264,7 @@ function renderRadialAxis(
   binding: ScaleBinding,
   { centerX, centerY }: PolarAxisGeometry,
   gridStroke: string,
+  font: FontTokens,
 ) {
   const options = axis.options.get().resolved
   for (const tick of axisTickLabels(binding, axis)) {
@@ -283,6 +287,7 @@ function renderRadialAxis(
       'text-anchor': 'start',
     })
     label.textContent = tick.primary
+    applyFont(label, font)
     axisGroup.append(label)
   }
 }
@@ -294,6 +299,7 @@ function renderAngularAxis(
   binding: ScaleBinding,
   { centerX, centerY, innerRadius, outerRadius }: PolarAxisGeometry,
   gridStroke: string,
+  font: FontTokens,
 ) {
   const options = axis.options.get().resolved
   const config = binding.scale.options.get().resolved
@@ -327,6 +333,7 @@ function renderAngularAxis(
       'dominant-baseline': 'middle',
     })
     label.textContent = tick.primary
+    applyFont(label, font)
     axisGroup.append(label)
   }
 }
@@ -335,7 +342,7 @@ function renderPolarCaptions(
   axisGroup: SVGGElement,
   axes: readonly AxisHandle[],
   { centerX, centerY, outerRadius }: PolarAxisGeometry,
-  fontSize: number,
+  font: FontTokens,
 ) {
   for (const axis of axes) {
     const options = axis.options.get().resolved
@@ -344,12 +351,13 @@ function renderPolarCaptions(
     const radialCaption = options.position === 'radial'
     const label = svgElement('text', {
       x: radialCaption ? centerX + outerRadius * 0.7 : centerX,
-      y: radialCaption ? centerY - outerRadius * 0.7 : centerY - outerRadius - fontSize * 2,
+      y: radialCaption ? centerY - outerRadius * 0.7 : centerY - outerRadius - font.size * 2,
       'text-anchor': radialCaption ? 'start' : 'middle',
       'dominant-baseline': 'middle',
       'data-axis-caption': axis.scale,
     })
     label.textContent = caption
+    applyFont(label, font)
     axisGroup.append(label)
   }
 }
@@ -365,7 +373,7 @@ export function renderPolarAxes(
   axesLayer.replaceChildren()
   gridLayer.replaceChildren()
   if (axes.some((axis) => axis.options.get().resolved.style === 'classic')) {
-    renderClassicPolarAxes(axesLayer, gridLayer, axes, bindings, regions)
+    renderClassicPolarAxes(axesLayer, gridLayer, axes, bindings, regions, theme)
     return
   }
   const plot = regions.plot
@@ -389,7 +397,15 @@ export function renderPolarAxes(
   axesLayer.append(axisGroup)
 
   if (radialAxis && radialBinding) {
-    renderRadialAxis(axisGroup, gridLayer, radialAxis, radialBinding, geometry, gridStroke)
+    renderRadialAxis(
+      axisGroup,
+      gridLayer,
+      radialAxis,
+      radialBinding,
+      geometry,
+      gridStroke,
+      theme.fonts.tick,
+    )
   } else {
     axisGroup.append(
       svgElement('circle', {
@@ -402,8 +418,16 @@ export function renderPolarAxes(
     )
   }
   if (angularAxis && angularBinding) {
-    renderAngularAxis(axisGroup, gridLayer, angularAxis, angularBinding, geometry, gridStroke)
+    renderAngularAxis(
+      axisGroup,
+      gridLayer,
+      angularAxis,
+      angularBinding,
+      geometry,
+      gridStroke,
+      theme.fonts.tick,
+    )
   }
-  renderPolarCaptions(axisGroup, axes, geometry, theme.fontSize)
-  axisGroup.setAttribute('font-size', String(theme.fontSize))
+  renderPolarCaptions(axisGroup, axes, geometry, theme.fonts.axisLabel)
+  axisGroup.setAttribute('font-size', String(theme.fonts.tick.size))
 }

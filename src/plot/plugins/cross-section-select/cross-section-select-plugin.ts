@@ -24,6 +24,7 @@ import { svgElement } from '../../rendering/svg.js'
 import { markerSymbolPath, markerSymbolRotation } from '../../marks/line/marker-symbol.js'
 import { resolveMarkColor } from '../../../theme/color-contrast.js'
 import { accent } from '../../marks/mark-definition.js'
+import { applyFont } from '../../../theme/theme.js'
 
 interface CrossSectionValidationContext {
   readonly marks: readonly object[]
@@ -282,11 +283,10 @@ function installCrossSectionSelect(handle: CrossSectionSelectHandle, context: Pl
 
     calloutText.textContent =
       options.format?.(value) ?? displayInspectionValue(value, context, options.x, 2)
-    const calloutHeight = theme.fontSize + 10
+    const calloutHeight = theme.fonts.tooltip.size + 10
     calloutBackground.setAttribute('fill', theme.tooltipBackground)
     calloutText.setAttribute('fill', theme.tooltipColor)
-    calloutText.setAttribute('font-family', theme.fontFamily)
-    calloutText.setAttribute('font-size', String(theme.fontSize))
+    applyFont(calloutText, theme.fonts.tooltip)
     calloutText.setAttribute('y', String(calloutHeight / 2))
     const calloutWidth = calloutText.getComputedTextLength() + 12
     calloutBackground.setAttribute('width', String(calloutWidth))
@@ -299,7 +299,7 @@ function installCrossSectionSelect(handle: CrossSectionSelectHandle, context: Pl
     pointLayer.replaceChildren()
     labelLayer.replaceChildren()
     if (!entries.length) return
-    const labelHeight = theme.fontSize + 8
+    const labelHeight = theme.fonts.tooltip.size + 8
     const labelGap = 4
     const offset = 12
     const labels = entries
@@ -339,12 +339,11 @@ function installCrossSectionSelect(handle: CrossSectionSelectHandle, context: Pl
           x: labelHeight / 2,
           y: labelHeight / 2,
           'dominant-baseline': 'central',
-          'font-family': theme.fontFamily,
-          'font-size': theme.fontSize,
           fill: resolveMarkColor(point.mark.stroke ?? accent(theme), theme, 'text'),
           'data-cross-section-label': point.id ?? '',
         })
         text.textContent = point.value
+        applyFont(text, theme.fonts.tooltip)
         group.append(background, text)
         labelLayer.append(group)
         const width = text.getComputedTextLength() + labelHeight

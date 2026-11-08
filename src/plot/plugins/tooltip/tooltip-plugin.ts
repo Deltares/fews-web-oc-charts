@@ -16,6 +16,7 @@ import { calculateTooltipPlacement } from '../../../Utils/tooltipPlacement.js'
 import { positionTooltipArrow } from '../../../Utils/tooltipArrow.js'
 import { computeTooltipModel, type TooltipModel } from './tooltip-model.js'
 import { createLegendSwatch } from '../legend/legend-swatch.js'
+import { applyFont } from '../../../theme/theme.js'
 
 let nextTooltipId = 0
 
@@ -65,8 +66,7 @@ function positionTooltip(
 
 function renderTooltip(element: HTMLDivElement, context: PlotContext, model: TooltipModel) {
   const theme = context.theme.get()
-  element.style.fontFamily = theme.fontFamily
-  element.style.fontSize = `${theme.fontSize}px`
+  applyFont(element, theme.fonts.tooltip)
   element.style.backgroundColor = theme.tooltipBackground
   element.style.color = theme.tooltipColor
   element.replaceChildren()

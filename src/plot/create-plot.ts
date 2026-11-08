@@ -27,7 +27,14 @@ import {
   type Margins,
   type PlotLayout,
 } from '../layout/layout.js'
-import { resolveTheme, watchTheme, type ThemeMode, type ThemeTokens } from '../theme/theme.js'
+import {
+  applyFont,
+  canvasFont,
+  resolveTheme,
+  watchTheme,
+  type ThemeMode,
+  type ThemeTokens,
+} from '../theme/theme.js'
 import type { ColorContrast } from '../theme/color-contrast.js'
 import { isAxisHandle, validateAxisUpdates, type AxisHandle, type AxisSide } from './axes/axis.js'
 import { observeSize } from './resize.js'
@@ -588,25 +595,24 @@ function createPlotInternal(
     const axisOptions = axis.options.get().resolved
     const binding = scaleBindings.scales[axis.scale]
     const labels = axisTickLabels(binding, axis)
+    const tick = tokens.fonts.tick
+    const font = canvasFont(tick)
     const maxWidth = Math.max(
       0,
       ...labels.flatMap(({ primary, secondary }) =>
         [primary, secondary]
           .filter(Boolean)
-          .map((label) => measurer.measure(label, `${tokens.fontSize}px ${tokens.fontFamily}`)),
+          .map((label) => measurer.measure(label, font, tick.variantNumeric)),
       ),
     )
     const labelRows = labels.some(({ secondary }) => secondary) ? 2 : 1
     const angle = Math.abs((axisOptions.labelAngle * Math.PI) / 180)
     const horizontal = axisOptions.position === 'top' || axisOptions.position === 'bottom'
     const labelExtent = horizontal
-      ? Math.abs(Math.sin(angle)) * maxWidth +
-        Math.abs(Math.cos(angle)) * tokens.fontSize * labelRows
-      : Math.abs(Math.cos(angle)) * maxWidth +
-        Math.abs(Math.sin(angle)) * tokens.fontSize * labelRows
-    const thickness = Math.ceil(
-      12 + labelExtent + (axisOptions.label || axisOptions.unit ? tokens.fontSize * 2 : 0),
-    )
+      ? Math.abs(Math.sin(angle)) * maxWidth + Math.abs(Math.cos(angle)) * tick.size * labelRows
+      : Math.abs(Math.cos(angle)) * maxWidth + Math.abs(Math.sin(angle)) * tick.size * labelRows
+    const caption = axisOptions.label || axisOptions.unit ? tokens.fonts.axisLabel.size * 2 : 0
+    const thickness = Math.ceil(12 + labelExtent + caption)
     const previous = axisWidths.get(axis)
     const version = axis.options.version
     const stable =
@@ -616,13 +622,15 @@ function createPlotInternal(
   }
 
   function layoutMargins(current: PlotOptions, tokens: ThemeTokens, cartesianAxes: AxisHandle[]) {
+    // Polar plots reserve room for the captions above the outer ring.
+    const polarRoom = tokens.fonts.axisLabel.size * 2
     const margins =
       coordinateSystem === 'polar' && current.axisLayout !== 'inset'
         ? {
-            top: current.margins.top + tokens.fontSize * 2,
-            right: current.margins.right + tokens.fontSize * 2,
-            bottom: current.margins.bottom + tokens.fontSize * 2,
-            left: current.margins.left + tokens.fontSize * 2,
+            top: current.margins.top + polarRoom,
+            right: current.margins.right + polarRoom,
+            bottom: current.margins.bottom + polarRoom,
+            left: current.margins.left + polarRoom,
           }
         : current.margins
     const insetMargins = { ...margins }
@@ -709,7 +717,7 @@ function createPlotInternal(
       actualSize,
       current.axisLayout === 'inset' ? [] : measures,
       current.axisLayout === 'inset' ? insetMargins : margins,
-      current.title ? tokens.fontSize * 2 : 0,
+      current.title ? tokens.fonts.title.size * 2 : 0,
     )
     alignment?.member.report(
       actualSize.width,
@@ -730,7 +738,7 @@ function createPlotInternal(
             baseMargins.right +
             Math.max(0, actualSize.width - naturalRegions.margins.right - aligned.right),
         },
-        current.title ? tokens.fontSize * 2 : 0,
+        current.title ? tokens.fonts.title.size * 2 : 0,
       )
     }
     if (
@@ -748,7 +756,8 @@ function createPlotInternal(
     background.setAttribute('height', String(actualSize.height))
     const titleRegion = regions.get().title
     title.setAttribute('x', String(titleRegion.x + titleRegion.width / 2))
-    title.setAttribute('y', String(titleRegion.y + tokens.fontSize))
+    title.setAttribute('y', String(titleRegion.y + tokens.fonts.title.size))
+    applyFont(title, tokens.fonts.title)
     title.textContent = current.title
     const plotRegion = regions.get().plot
     if (current.clipMarks) marksLayer.setAttribute('clip-path', `url(#${clipId})`)
@@ -931,8 +940,7 @@ function createPlotInternal(
       lastColorContrast = current.colorContrast
       lastThemeVersion = version
       theme.set(tokens)
-      const fontChanged =
-        tokens.fontSize !== previous.fontSize || tokens.fontFamily !== previous.fontFamily
+      const fontChanged = JSON.stringify(tokens.fonts) !== JSON.stringify(previous.fonts)
       if (fontChanged) {
         axisWidths.clear()
         insetWidths.clear()
