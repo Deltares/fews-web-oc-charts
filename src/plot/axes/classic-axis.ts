@@ -3,8 +3,8 @@ import { precisionFixed, formatLocale } from 'd3-format'
 import { scaleLinear, scaleBand, scaleUtc } from 'd3-scale'
 import { tickStep } from 'd3-array'
 import { select } from 'd3-selection'
-import type { AxisHandle } from './axis.js'
-import type { ScaleBinding, ScaleValue } from '../../scales/scale.js'
+import type { AxisHandle, AxisOptions } from './axis.js'
+import type { ScaleBinding, ScaleOptions, ScaleValue } from '../../scales/scale.js'
 import type { PlotLayout } from '../../layout/layout.js'
 import { zoneOffset, zonedParts } from '../../time/zoned-time.js'
 import { svgElement } from '../rendering/svg.js'
@@ -33,6 +33,217 @@ function timeLabel(value: number, timeZone: string, locale: string): string {
   return format(parts.month !== 1 ? { month: 'long' } : { year: 'numeric' })
 }
 
+type Side = 'top' | 'right' | 'bottom' | 'left'
+type Plot = PlotLayout['plot']
+type Options = Readonly<AxisOptions>
+
+const factories = { bottom: axisBottom, top: axisTop, left: axisLeft, right: axisRight }
+const orientations = {
+  bottom: AxisOrientation.Bottom,
+  top: AxisOrientation.Top,
+  left: AxisOrientation.Left,
+  right: AxisOrientation.Right,
+}
+
+function localBandScale(domain: readonly ScaleValue[], range: number[], options: ScaleOptions) {
+  return scaleBand<ScaleValue>()
+    .domain([...domain])
+    .range(range)
+    .paddingInner(options.paddingInner ?? options.padding)
+    .paddingOuter(options.paddingOuter ?? options.padding)
+}
+
+/**
+ * A d3-compatible scale in plot-local pixels, so d3's half-pixel alignment and path
+ * rounding are independent of the plot's outer margins.
+ */
+function localScale(binding: ScaleBinding, horizontal: boolean, plot: Plot) {
+  const config = binding.scale.options.get().resolved
+  const domain = binding.scale.domain.get()
+  const offset = horizontal ? plot.x : plot.y
+  const range = binding.range.get().map((pixel) => pixel - offset)
+  if (config.reverse) range.reverse()
+  const band = binding.scale.kind === 'band'
+  const numeric = scaleLinear().domain(domain.map(Number)).range(range)
+  const categorical = localBandScale(domain, range, config)
+  const project = (value: ScaleValue) => (band ? categorical(value) : numeric(Number(value)))
+  const scale = Object.assign(
+    (value: ScaleValue) => {
+      const pixel = project(value)
+      if (pixel === undefined) throw new Error(`Cannot project classic axis tick "${value}".`)
+      return pixel
+    },
+    {
+      domain: () => [...domain],
+      range: () => [...range],
+      copy: () => scale,
+      ...(band ? { bandwidth: () => binding.bandwidth, round: () => false } : {}),
+    },
+  )
+  return { scale, numeric }
+}
+
+type ClassicRenderer = ReturnType<typeof factories.bottom<ScaleValue>>
+
+function timeTicks(renderer: ClassicRenderer, binding: ScaleBinding, options: Options) {
+  const config = binding.scale.options.get().resolved
+  const timeZone = options.timeZone ?? config.timeZone
+  const locale = options.locale ?? config.locale
+  const offsetDomain = binding.scale.domain
+    .get()
+    .map((value) => new Date(Number(value) + zoneOffset(timeZone, Number(value)) * 60_000))
+  const values = scaleUtc()
+    .domain(offsetDomain)
+    .ticks(options.tickCount)
+    .map((value) => +value - zoneOffset(timeZone, +value) * 60_000)
+  renderer
+    .tickValues(values)
+    .tickFormat((value) => options.format?.(+value) ?? timeLabel(+value, timeZone, locale))
+}
+
+function numericTicks(
+  renderer: ClassicRenderer,
+  binding: ScaleBinding,
+  options: Options,
+  numeric: ReturnType<typeof scaleLinear<number>>,
+) {
+  const ticks = options.tickCount
+  const degrees = binding.scale.kind === 'degrees'
+  renderer.tickValues(degrees ? binding.ticks(ticks).map(Number) : numeric.ticks(ticks))
+  renderer.tickFormat((value) => options.format?.(value) ?? numbers.format('~g')(Number(value)))
+  if (!options.format && !degrees) {
+    const domain = binding.scale.domain.get()
+    const precision = precisionFixed(tickStep(Number(domain[0]), Number(domain[1]), ticks))
+    renderer.tickFormat((value) => numbers.format(`,.${precision}f`)(Number(value)))
+  }
+}
+
+function configureTicks(
+  renderer: ClassicRenderer,
+  binding: ScaleBinding,
+  options: Options,
+  numeric: ReturnType<typeof scaleLinear<number>>,
+) {
+  if (binding.scale.kind === 'band') renderer.tickValues([...binding.scale.domain.get()])
+  else if (binding.scale.kind === 'time') timeTicks(renderer, binding, options)
+  else numericTicks(renderer, binding, options, numeric)
+}
+
+/** Plot-local pixel where the axis crosses the other scale at `crossAt.value`. */
+function crossedPixel(
+  crossAt: NonNullable<AxisOptions['crossAt']>,
+  horizontal: boolean,
+  plot: Plot,
+  bindings: Readonly<Record<string, ScaleBinding>>,
+) {
+  const crossed = bindings[crossAt.scale]
+  const crossedOptions = crossed.scale.options.get().resolved
+  const crossedRange = horizontal ? [plot.height, 0] : [0, plot.width]
+  if (crossedOptions.reverse) crossedRange.reverse()
+  const crossedDomain = crossed.scale.domain.get()
+  if (crossed.scale.kind === 'band') {
+    return localBandScale(crossedDomain, crossedRange, crossedOptions)(crossAt.value)!
+  }
+  return scaleLinear().domain(crossedDomain.map(Number)).range(crossedRange)(Number(crossAt.value))
+}
+
+function axisBaseline(
+  options: Options,
+  position: Side,
+  plot: Plot,
+  bindings: Readonly<Record<string, ScaleBinding>>,
+) {
+  const horizontal = position === 'bottom' || position === 'top'
+  if (options.crossAt) return crossedPixel(options.crossAt, horizontal, plot, bindings)
+  if (position === 'right') return plot.width
+  if (position === 'bottom') return plot.height
+  return 0
+}
+
+function rotateLabel(label: SVGTextElement, angle: number, position: Side) {
+  if (angle === 180) {
+    label.setAttribute('transform', 'rotate(180)')
+    return
+  }
+  for (const name of ['x', 'y', 'dx', 'dy']) label.removeAttribute(name)
+  label.setAttribute('text-anchor', textAnchorForAngle(angle, orientations[position]))
+  label.setAttribute('dominant-baseline', 'middle')
+  const offset = position === 'top' || position === 'left' ? -15 : 15
+  const shift = position === 'bottom' || position === 'top' ? `0,${offset}` : `${offset},0`
+  label.setAttribute('transform', `translate(${shift}) rotate(${angle})`)
+}
+
+/** Solid ticks inherit the grid colour; the zero line keeps the foreground, solid. */
+function styleGridTicks(grid: SVGGElement) {
+  grid.querySelectorAll('text').forEach((text) => text.remove())
+  for (const tick of select(grid).selectAll<SVGGElement, unknown>('.tick').nodes()) {
+    select(tick).select('line').attr('stroke', 'inherit')
+    if (select(tick).datum() === 0) {
+      tick.setAttribute('stroke-dasharray', 'none')
+      tick.setAttribute('stroke', 'currentColor')
+    }
+  }
+  const frame = grid.querySelector('.domain')
+  frame?.setAttribute('stroke', 'inherit')
+  frame?.setAttribute('stroke-dasharray', 'none')
+}
+
+function renderClassicGrid(
+  gridLayer: SVGGElement,
+  renderer: ClassicRenderer,
+  options: Options,
+  horizontal: boolean,
+  plot: Plot,
+) {
+  // Gridlines and frame are solid hairlines that inherit the grid layer's
+  // `var(--fews-chart-grid, theme.grid)` stroke; dashing is opt-in.
+  const grid = svgElement('g', {
+    transform: `translate(${plot.x},${plot.y})`,
+    fill: 'none',
+    stroke: 'inherit',
+    ...(options.gridDasharray ? { 'stroke-dasharray': options.gridDasharray } : {}),
+  })
+  const gridRenderer = horizontal
+    ? axisBottom(renderer.scale()).tickSize(plot.height)
+    : axisRight(renderer.scale()).tickSize(plot.width)
+  gridRenderer.ticks(options.tickCount)
+  const values = renderer.tickValues()
+  if (values) gridRenderer.tickValues(values)
+  select(grid).call(gridRenderer)
+  styleGridTicks(grid)
+  gridLayer.append(grid)
+}
+
+function appendCaption(local: SVGGElement, text: string, x: number, y: number, anchor: string) {
+  const label = svgElement('text', { x, y, fill: 'currentColor', 'text-anchor': anchor })
+  label.textContent = text
+  local.append(label)
+}
+
+/** The label sits centred below a horizontal axis, or above the end of a vertical one. */
+function renderLabel(local: SVGGElement, label: string, position: Side, plot: Plot) {
+  if (position === 'bottom' || position === 'top') {
+    appendCaption(local, label, plot.width / 2, plot.height + 30, 'middle')
+  } else if (position === 'right') {
+    appendCaption(local, label, plot.width, -9, 'end')
+  } else {
+    appendCaption(local, label, 0, -9, 'start')
+  }
+}
+
+/** The unit sits past the right end of a horizontal or right axis, else above the left axis. */
+function renderUnit(local: SVGGElement, unit: string, position: Side, plot: Plot) {
+  if (position === 'left') appendCaption(local, unit, -9, -9, 'end')
+  else
+    appendCaption(
+      local,
+      unit,
+      plot.width + 10,
+      position === 'bottom' ? plot.height + 9 : -9,
+      'start',
+    )
+}
+
 export function renderClassicAxis(
   group: SVGGElement,
   gridLayer: SVGGElement,
@@ -48,58 +259,9 @@ export function renderClassicAxis(
   }
   const horizontal = position === 'bottom' || position === 'top'
   const plot = regions.plot
-  const config = binding.scale.options.get().resolved
-  const domain = binding.scale.domain.get()
-  const range = binding.range.get().map((pixel) => pixel - (horizontal ? plot.x : plot.y))
-  if (config.reverse) range.reverse()
-  const numeric = scaleLinear().domain(domain.map(Number)).range(range)
-  const categorical = scaleBand<ScaleValue>()
-    .domain([...domain])
-    .range(range)
-    .paddingInner(config.paddingInner ?? config.padding)
-    .paddingOuter(config.paddingOuter ?? config.padding)
-  const scale = Object.assign(
-    (value: ScaleValue) => {
-      const pixel = binding.scale.kind === 'band' ? categorical(value) : numeric(Number(value))
-      if (pixel === undefined) throw new Error(`Cannot project classic axis tick "${value}".`)
-      return pixel
-    },
-    {
-      domain: () => [...domain],
-      range: () => [...range],
-      copy: () => scale,
-      ...(binding.scale.kind === 'band'
-        ? { bandwidth: () => binding.bandwidth, round: () => false }
-        : {}),
-    },
-  )
-  const factory = { bottom: axisBottom, top: axisTop, left: axisLeft, right: axisRight }[position]
-  const ticks = options.tickCount
-  const renderer = factory(scale)
-  if (binding.scale.kind === 'band') {
-    renderer.tickValues([...domain])
-  } else if (binding.scale.kind === 'time') {
-    const timeZone = options.timeZone ?? config.timeZone
-    const locale = options.locale ?? config.locale
-    const offsetDomain = domain.map(
-      (value) => new Date(Number(value) + zoneOffset(timeZone, Number(value)) * 60_000),
-    )
-    const values = scaleUtc()
-      .domain(offsetDomain)
-      .ticks(ticks)
-      .map((value) => +value - zoneOffset(timeZone, +value) * 60_000)
-    renderer
-      .tickValues(values)
-      .tickFormat((value) => options.format?.(+value) ?? timeLabel(+value, timeZone, locale))
-  } else {
-    renderer.tickValues(numeric.ticks(ticks))
-    if (binding.scale.kind === 'degrees') renderer.tickValues(binding.ticks(ticks).map(Number))
-    renderer.tickFormat((value) => options.format?.(value) ?? numbers.format('~g')(Number(value)))
-    if (!options.format && binding.scale.kind !== 'degrees') {
-      const precision = precisionFixed(tickStep(Number(domain[0]), Number(domain[1]), ticks))
-      renderer.tickFormat((value) => numbers.format(`,.${precision}f`)(Number(value)))
-    }
-  }
+  const { scale, numeric } = localScale(binding, horizontal, plot)
+  const renderer = factories[position](scale)
+  configureTicks(renderer, binding, options, numeric)
   const local = svgElement('g', {
     transform: `translate(${plot.x},${plot.y})`,
     'font-size': '1em',
@@ -107,115 +269,20 @@ export function renderClassicAxis(
   const axisGroup = svgElement('g', { 'data-axis-ticks': '' })
   local.append(axisGroup)
   group.append(local)
-  // The domain scale is local so d3's half-pixel alignment and path rounding
-  // are independent of the plot's outer margins.
   select(axisGroup).call(renderer)
   axisGroup.setAttribute('font-size', '1em')
   axisGroup.setAttribute('font-family', 'inherit')
-  let baseline = 0
-  if (position === 'right') baseline = plot.width
-  else if (position === 'bottom') baseline = plot.height
-  if (options.crossAt) {
-    const crossed = bindings[options.crossAt.scale]
-    const crossedOptions = crossed.scale.options.get().resolved
-    const crossedRange = horizontal ? [plot.height, 0] : [0, plot.width]
-    if (crossed.scale.options.get().resolved.reverse) crossedRange.reverse()
-    const crossedDomain = crossed.scale.domain.get()
-    baseline =
-      crossed.scale.kind === 'band'
-        ? scaleBand<ScaleValue>()
-            .domain([...crossedDomain])
-            .range(crossedRange)
-            .paddingInner(crossedOptions.paddingInner ?? crossedOptions.padding)
-            .paddingOuter(crossedOptions.paddingOuter ?? crossedOptions.padding)(
-            options.crossAt.value,
-          )!
-        : scaleLinear().domain(crossedDomain.map(Number)).range(crossedRange)(
-            Number(options.crossAt.value),
-          )
-  }
+  const baseline = axisBaseline(options, position, plot, bindings)
   axisGroup.setAttribute(
     'transform',
-    `translate(${horizontal ? 0 : baseline},${horizontal ? baseline : 0})`,
+    horizontal ? `translate(0,${baseline})` : `translate(${baseline},0)`,
   )
   if (options.labelAngle) {
     for (const label of axisGroup.querySelectorAll('text')) {
-      if (options.labelAngle === 180) {
-        label.setAttribute('transform', 'rotate(180)')
-      } else {
-        for (const name of ['x', 'y', 'dx', 'dy']) label.removeAttribute(name)
-        const orientation = {
-          bottom: AxisOrientation.Bottom,
-          top: AxisOrientation.Top,
-          left: AxisOrientation.Left,
-          right: AxisOrientation.Right,
-        }[position]
-        label.setAttribute('text-anchor', textAnchorForAngle(options.labelAngle, orientation))
-        label.setAttribute('dominant-baseline', 'middle')
-        const offset = position === 'top' || position === 'left' ? -15 : 15
-        label.setAttribute(
-          'transform',
-          `translate(${horizontal ? 0 : offset},${horizontal ? offset : 0}) rotate(${options.labelAngle})`,
-        )
-      }
+      rotateLabel(label, options.labelAngle, position)
     }
   }
-  if (options.grid) {
-    // Gridlines and frame are solid hairlines that inherit the grid layer's
-    // `var(--fews-chart-grid, theme.grid)` stroke; dashing is opt-in.
-    const grid = svgElement('g', {
-      transform: `translate(${plot.x},${plot.y})`,
-      fill: 'none',
-      stroke: 'inherit',
-      ...(options.gridDasharray ? { 'stroke-dasharray': options.gridDasharray } : {}),
-    })
-    const gridRenderer = horizontal
-      ? axisBottom(renderer.scale()).tickSize(plot.height)
-      : axisRight(renderer.scale()).tickSize(plot.width)
-    gridRenderer.ticks(ticks)
-    const values = renderer.tickValues()
-    if (values) gridRenderer.tickValues(values)
-    select(grid).call(gridRenderer)
-    grid.querySelectorAll('text').forEach((text) => text.remove())
-    for (const tick of select(grid).selectAll<SVGGElement, unknown>('.tick').nodes()) {
-      select(tick).select('line').attr('stroke', 'inherit')
-      if (select(tick).datum() === 0) {
-        tick.setAttribute('stroke-dasharray', 'none')
-        tick.setAttribute('stroke', 'currentColor')
-      }
-    }
-    const frame = grid.querySelector('.domain')
-    frame?.setAttribute('stroke', 'inherit')
-    frame?.setAttribute('stroke-dasharray', 'none')
-    gridLayer.append(grid)
-  }
-  const caption = (text: string, x: number, y: number, anchor: string) => {
-    const label = svgElement('text', {
-      x,
-      y,
-      fill: 'currentColor',
-      'text-anchor': anchor,
-    })
-    label.textContent = text
-    local.append(label)
-  }
-  if (options.label) {
-    const onRight = position === 'right'
-    const sideX = onRight ? plot.width : 0
-    const sideAnchor = onRight ? 'end' : 'start'
-    caption(
-      options.label,
-      horizontal ? plot.width / 2 : sideX,
-      horizontal ? plot.height + 30 : -9,
-      horizontal ? 'middle' : sideAnchor,
-    )
-  }
-  if (options.unit) {
-    caption(
-      options.unit,
-      horizontal || position === 'right' ? plot.width + 10 : -9,
-      horizontal && position === 'bottom' ? plot.height + 9 : -9,
-      horizontal || position === 'right' ? 'start' : 'end',
-    )
-  }
+  if (options.grid) renderClassicGrid(gridLayer, renderer, options, horizontal, plot)
+  if (options.label) renderLabel(local, options.label, position, plot)
+  if (options.unit) renderUnit(local, options.unit, position, plot)
 }
