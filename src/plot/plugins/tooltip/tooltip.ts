@@ -238,7 +238,9 @@ export function isTooltipHandle(value: object): value is TooltipHandle {
 function validateLayout(options: Readonly<TooltipOptions>) {
   if (
     options.maxDistance !== undefined &&
-    (typeof options.maxDistance !== 'number' || !(options.maxDistance >= 0))
+    (typeof options.maxDistance !== 'number' ||
+      Number.isNaN(options.maxDistance) ||
+      options.maxDistance < 0)
   ) {
     throw new RangeError('tooltip.maxDistance must be a nonnegative number.')
   }

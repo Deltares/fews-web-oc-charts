@@ -211,7 +211,10 @@ restore `'stacked'`.
 e.g. centimetres for water levels and whole hectopascals for pressure:
 
 ```ts
-const digits = new Map([[waterLevel, 2], [pressure, 0]])
+const digits = new Map([
+  [waterLevel, 2],
+  [pressure, 0],
+])
 tooltip({
   formatValue: (value, context) =>
     typeof value === 'number' && context.axis !== 'x'
@@ -231,14 +234,14 @@ is rebuilt from the result unless you return one.
 
 `context` says what the row describes, with raw numbers rather than text:
 
-| `context.kind` | Row | Extra context |
-|---|---|---|
-| `series` | A line, series or histogram sample | `hit.x`, `hit.y` |
-| `layer` | A bar or stacked-area layer | `layer: { id, label }`; `hit.value`, `hit.lower`, `hit.upper`, `hit.stack` |
-| `heatmap` | A heatmap cell | `hit.value` and the cell's x/y edges |
-| `ensemble` | The nearest ensemble member or statistic line | `hit.member`, `hit.statistics` |
-| `ensemblePart` | An ensemble band, median, mean or control row | `part` (`part.band` holds a band's percentiles) |
-| `exceedance` | The ensemble exceedance row | `exceedance: { threshold, probability }` |
+| `context.kind` | Row                                           | Extra context                                                              |
+| -------------- | --------------------------------------------- | -------------------------------------------------------------------------- |
+| `series`       | A line, series or histogram sample            | `hit.x`, `hit.y`                                                           |
+| `layer`        | A bar or stacked-area layer                   | `layer: { id, label }`; `hit.value`, `hit.lower`, `hit.upper`, `hit.stack` |
+| `heatmap`      | A heatmap cell                                | `hit.value` and the cell's x/y edges                                       |
+| `ensemble`     | The nearest ensemble member or statistic line | `hit.member`, `hit.statistics`                                             |
+| `ensemblePart` | An ensemble band, median, mean or control row | `part` (`part.band` holds a band's percentiles)                            |
+| `exceedance`   | The ensemble exceedance row                   | `exceedance: { threshold, probability }`                                   |
 
 `context.markLabel` is the mark's `label`, or `undefined` when its name falls back
 to its id.
