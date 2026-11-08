@@ -18,6 +18,11 @@ export interface EnsembleLineOptions extends EnsemblePartVisibility {
   stroke?: string
   width?: number
   strokeDasharray?: string
+  /**
+   * Draws a background-coloured outline this many CSS pixels wide on each side of the
+   * line, under it, so the line stays legible over the spread bands and members.
+   */
+  halo?: number
 }
 
 export interface EnsembleMembersOptions extends EnsemblePartVisibility {
@@ -121,8 +126,10 @@ function validatePart(value: unknown, name: string, allowed: readonly string[], 
     if (part[key] !== undefined && (typeof part[key] !== 'string' || !part[key]))
       throw new TypeError(`ensemble.${name}.${key} must be a non-empty string.`)
   }
-  if (part.width !== undefined && (!Number.isFinite(part.width) || Number(part.width) < 0))
-    throw new RangeError(`ensemble.${name}.width must be nonnegative.`)
+  for (const key of ['width', 'halo']) {
+    if (part[key] !== undefined && (!Number.isFinite(part[key]) || Number(part[key]) < 0))
+      throw new RangeError(`ensemble.${name}.${key} must be nonnegative.`)
+  }
   if (
     part.opacity !== undefined &&
     (!Number.isFinite(part.opacity) || Number(part.opacity) < 0 || Number(part.opacity) > 1)
@@ -149,7 +156,7 @@ function validateOptions(options: Readonly<EnsembleOptions>, data: EnsembleStore
   validateLegendGroup(options.legendGroup, 'ensemble')
   if (options.renderer !== 'svg' && options.renderer !== 'canvas')
     throw new Error('ensemble.renderer must be svg or canvas.')
-  const lineKeys = ['stroke', 'width', 'strokeDasharray']
+  const lineKeys = ['stroke', 'width', 'strokeDasharray', 'halo']
   if (validatePart(options.members, 'members', ['stroke', 'width', 'opacity', 'max'])) {
     const max = (options.members as EnsembleMembersOptions).max
     if (max !== undefined && (!Number.isSafeInteger(max) || max < 0))

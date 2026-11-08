@@ -240,3 +240,67 @@ describe('ensemble marks', () => {
     }
   })
 })
+
+describe('ensemble line halos', () => {
+  test('draws a background-coloured halo under lines that request one', async () => {
+    const mark = ensemble(store(), {
+      x: 'x',
+      y: 'y',
+      spread: {},
+      median: { stroke: '#dc2626', width: 1.5, halo: 2 },
+      mean: { strokeDasharray: '4 2' },
+      control: { member: 'control', halo: 1, strokeDasharray: '3 1' },
+    })
+    const current = plot({
+      scales: { x: linearScale({ domain: [0, 3] }), y: linearScale({ domain: [0, 10] }) },
+      marks: [mark],
+    })
+    await frame()
+    const group = current.element.querySelector('[data-mark="ensemble"]')!
+    const order = [...group.children].map((node) => node.getAttribute('data-part'))
+    expect(order).toEqual([
+      'spread',
+      'members',
+      'mean-halo',
+      'mean',
+      'median-halo',
+      'median',
+      'control-halo',
+      'control',
+    ])
+    const background = `var(--fews-chart-background, ${current.theme.get().background})`
+    const medianHalo = part(current, 'median-halo')
+    expect(medianHalo.getAttribute('d')).toBe(part(current, 'median').getAttribute('d'))
+    expect(medianHalo.getAttribute('stroke')).toBe(background)
+    expect(medianHalo.getAttribute('stroke-width')).toBe('5.5')
+    expect(medianHalo.getAttribute('aria-hidden')).toBe('true')
+    expect(part(current, 'control-halo').getAttribute('stroke-width')).toBe('4')
+    expect(part(current, 'control-halo').getAttribute('stroke-dasharray')).toBe('3 1')
+    expect(part(current, 'mean-halo').getAttribute('d')).toBe('')
+
+    mark.update({ median: { halo: undefined } })
+    await frame()
+    expect(part(current, 'median-halo').getAttribute('d')).toBe('')
+    expect(() => mark.update({ median: { halo: -1 } })).toThrow(/median\.halo/)
+  })
+
+  test('leaves spread fills unadjusted under automatic contrast', async () => {
+    const current = plot({
+      colorContrast: 'auto',
+      scales: { x: linearScale({ domain: [0, 3] }), y: linearScale({ domain: [0, 10] }) },
+      marks: [
+        ensemble(store(), {
+          x: 'x',
+          y: 'y',
+          members: { stroke: '#fde68a' },
+          spread: { fill: '#fde68a' },
+          median: { stroke: '#fde68a' },
+        }),
+      ],
+    })
+    await frame()
+    expect(part(current, 'band').getAttribute('fill')).toBe('#fde68a')
+    expect(part(current, 'median').getAttribute('stroke')).not.toBe('#fde68a')
+    expect(part(current, 'member').getAttribute('stroke')).not.toBe('#fde68a')
+  })
+})
