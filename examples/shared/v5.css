@@ -3,6 +3,8 @@
 .plot-host {
   height: 320px;
   min-width: 0;
+  /* The visual regression baselines were recorded with the library's former default. */
+  --fews-chart-font-family: sans-serif;
 }
 
 .plot-host svg {

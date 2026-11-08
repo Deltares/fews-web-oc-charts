@@ -13,6 +13,7 @@ import {
   type CurrentTimeHandle,
   type CurrentTimeOptions,
 } from './current-time.js'
+import { applyFont } from '../../../theme/theme.js'
 
 const REFRESH_INTERVAL = 10_000
 
@@ -125,11 +126,10 @@ function installCurrentTime(handle: CurrentTimeHandle, context: PlotContext) {
     }
     label.removeAttribute('display')
     labelText.textContent = options.format?.(value) ?? displayInspectionValue(value, context, name)
-    const height = theme.fontSize + 10
+    const height = theme.fonts.tooltip.size + 10
     labelBackground.setAttribute('fill', theme.tooltipBackground)
     labelText.setAttribute('fill', theme.tooltipColor)
-    labelText.setAttribute('font-family', theme.fontFamily)
-    labelText.setAttribute('font-size', String(theme.fontSize))
+    applyFont(labelText, theme.fonts.tooltip)
     labelText.setAttribute('y', String(height / 2))
     const width = labelText.getComputedTextLength() + 12
     labelBackground.setAttribute('width', String(width))

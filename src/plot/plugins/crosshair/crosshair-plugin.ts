@@ -22,6 +22,7 @@ import {
   releaseSharedPointer,
   type SharedPointer,
 } from '../../../sync/shared-pointer.js'
+import { applyFont } from '../../../theme/theme.js'
 
 interface CrosshairCallout {
   readonly group: SVGGElement
@@ -278,7 +279,7 @@ function installCrosshair(handle: CrosshairHandle, context: PlotContext) {
       for (const nodes of calloutNodes.values()) nodes.group.setAttribute('display', 'none')
       const activeCallouts = new Set<string>()
       const theme = context.theme.get()
-      const height = theme.fontSize + 10
+      const height = theme.fonts.tooltip.size + 10
       for (const coordinate of inspection.coordinates) {
         if (coordinate.layerId !== undefined && !guideSet.has(coordinate.layerId)) continue
         const key = calloutKey(coordinate.axis, coordinate.layerId)
@@ -299,8 +300,7 @@ function installCrosshair(handle: CrosshairHandle, context: PlotContext) {
         if (nodes.measuredText !== text || nodes.measuredTheme !== theme) {
           nodes.background.setAttribute('fill', theme.tooltipBackground)
           nodes.text.setAttribute('fill', theme.tooltipColor)
-          nodes.text.setAttribute('font-family', theme.fontFamily)
-          nodes.text.setAttribute('font-size', String(theme.fontSize))
+          applyFont(nodes.text, theme.fonts.tooltip)
           nodes.text.setAttribute('y', String(height / 2))
           nodes.background.setAttribute('width', String(nodes.text.getComputedTextLength() + 12))
           nodes.background.setAttribute('height', String(height))

@@ -22,7 +22,7 @@ import type { PlotContext } from '../../src/plot/plugins/plugin-definition.js'
 import { bindScale } from '../../src/scales/scale.js'
 import { barRectangles } from '../../src/plot/marks/bar/bar-geometry.js'
 import { lineDefinition } from '../../src/plot/marks/line/line-mark.js'
-import type { ThemeTokens } from '../../src/theme/theme.js'
+import { roleFonts, type ThemeTokens } from '../../src/theme/theme.js'
 import { lineLegendSymbol } from '../../src/plot/marks/mark-styles.js'
 
 const theme: ThemeTokens = {
@@ -35,6 +35,7 @@ const theme: ThemeTokens = {
   tooltipColor: '#222',
   fontFamily: 'sans-serif',
   fontSize: 12,
+  fonts: roleFonts({ family: 'sans-serif', size: 12, weight: 'normal', variantNumeric: 'normal' }),
 }
 
 function setup() {

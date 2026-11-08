@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vite-plus/test'
 import { rgb } from 'd3-color'
 import { improveColorContrast, resolveMarkColor } from '../../src/theme/color-contrast.js'
-import type { ThemeTokens } from '../../src/theme/theme.js'
+import { roleFonts, type ThemeTokens } from '../../src/theme/theme.js'
 import { resolveLineStyles, resolveCompositeStyle } from '../../src/plot/marks/mark-styles.js'
 
 const theme: ThemeTokens = {
@@ -14,6 +14,7 @@ const theme: ThemeTokens = {
   tooltipColor: '#edf2f4',
   fontFamily: 'sans-serif',
   fontSize: 12,
+  fonts: roleFonts({ family: 'sans-serif', size: 12, weight: 'normal', variantNumeric: 'normal' }),
 }
 
 function contrast(color: string, background: string) {

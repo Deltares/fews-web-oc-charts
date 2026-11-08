@@ -12,6 +12,7 @@ import type { LegendEntry } from './legend.js'
 import type { PluginDefinition, PlotContext } from '../plugin-definition.js'
 import { svgElement } from '../../rendering/svg.js'
 import { createTextMeasurer } from '../../../layout/layout.js'
+import { applyFont, canvasFont, type FontTokens } from '../../../theme/theme.js'
 
 export type LegendPosition =
   | 'top'
@@ -383,7 +384,7 @@ function appendEntry(
   x: number,
   y: number,
   width: number,
-  fontSize: number,
+  font: FontTokens,
   text: string,
   toggle: (id: string) => void,
 ) {
@@ -422,11 +423,11 @@ function appendEntry(
     x: labelOffset + item.indent,
     y: itemHeight / 2,
     'dominant-baseline': 'middle',
-    'font-size': fontSize,
-    ...(item.heading ? { 'font-weight': 600 } : {}),
     fill: 'currentColor',
     'pointer-events': 'none',
   })
+  applyFont(label, font)
+  if (item.heading) label.setAttribute('font-weight', '600')
   label.textContent = text
   group.append(label)
   if (text !== entry.label) {
@@ -575,13 +576,13 @@ function installLegend(handle: LegendHandle, context: PlotContext) {
     const size = context.size.get()
     const { plot } = context.regions.get()
     const tokens = context.theme.get()
-    const fontSize = tokens.fontSize
+    const font = tokens.fonts.legend
     external.style.color = `var(--fews-chart-foreground, ${tokens.foreground})`
-    external.style.fontFamily = `var(--fews-chart-font-family, ${tokens.fontFamily})`
+    external.style.fontFamily = font.family
     const horizontal = position === 'top' || position === 'bottom'
     const overlay = position.includes('-')
     const measure: Measure = (label, bold) =>
-      measurer.measure(label, `${bold ? '600 ' : ''}${fontSize}px ${tokens.fontFamily}`)
+      measurer.measure(label, canvasFont(font, bold ? '600' : font.weight), font.variantNumeric)
     const items = flattenEntries(context.legend.entries.get(), measure, showGroups, !horizontal)
     const { placements, columns, cellWidth, box } = legendLayout(
       position,
@@ -619,7 +620,7 @@ function installLegend(handle: LegendHandle, context: PlotContext) {
       const text = truncate
         ? fitLabel(item.entry.label, room, item.heading, measure)
         : item.entry.label
-      appendEntry(layer, item, x, y, cellWidth, fontSize, text, (id) =>
+      appendEntry(layer, item, x, y, cellWidth, font, text, (id) =>
         context.legend.toggle(id, 'built-in'),
       )
     }

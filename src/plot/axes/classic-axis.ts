@@ -8,6 +8,7 @@ import type { ScaleBinding, ScaleOptions, ScaleValue } from '../../scales/scale.
 import type { PlotLayout } from '../../layout/layout.js'
 import { zoneOffset, zonedParts } from '../../time/zoned-time.js'
 import { svgElement } from '../rendering/svg.js'
+import { applyFont, type FontTokens, type ThemeTokens } from '../../theme/theme.js'
 import { textAnchorForAngle } from '../../Utils/textAnchorForAngle.js'
 import { AxisOrientation } from '../../Axis/axisOrientation.js'
 
@@ -36,6 +37,7 @@ function timeLabel(value: number, timeZone: string, locale: string): string {
 type Side = 'top' | 'right' | 'bottom' | 'left'
 type Plot = PlotLayout['plot']
 type Options = Readonly<AxisOptions>
+type Caption = { readonly text: string; readonly font: FontTokens }
 
 const factories = { bottom: axisBottom, top: axisTop, left: axisLeft, right: axisRight }
 const orientations = {
@@ -214,14 +216,21 @@ function renderClassicGrid(
   gridLayer.append(grid)
 }
 
-function appendCaption(local: SVGGElement, text: string, x: number, y: number, anchor: string) {
+function appendCaption(
+  local: SVGGElement,
+  caption: { readonly text: string; readonly font: FontTokens },
+  x: number,
+  y: number,
+  anchor: string,
+) {
   const label = svgElement('text', { x, y, fill: 'currentColor', 'text-anchor': anchor })
-  label.textContent = text
+  label.textContent = caption.text
+  applyFont(label, caption.font)
   local.append(label)
 }
 
 /** The label sits centred below a horizontal axis, or above the end of a vertical one. */
-function renderLabel(local: SVGGElement, label: string, position: Side, plot: Plot) {
+function renderLabel(local: SVGGElement, label: Caption, position: Side, plot: Plot) {
   if (position === 'bottom' || position === 'top') {
     appendCaption(local, label, plot.width / 2, plot.height + 30, 'middle')
   } else if (position === 'right') {
@@ -232,7 +241,7 @@ function renderLabel(local: SVGGElement, label: string, position: Side, plot: Pl
 }
 
 /** The unit sits past the right end of a horizontal or right axis, else above the left axis. */
-function renderUnit(local: SVGGElement, unit: string, position: Side, plot: Plot) {
+function renderUnit(local: SVGGElement, unit: Caption, position: Side, plot: Plot) {
   if (position === 'left') appendCaption(local, unit, -9, -9, 'end')
   else
     appendCaption(
@@ -251,6 +260,7 @@ export function renderClassicAxis(
   binding: ScaleBinding,
   regions: PlotLayout,
   bindings: Readonly<Record<string, ScaleBinding>>,
+  theme: ThemeTokens,
 ) {
   const options = handle.options.get().resolved
   const { position } = options
@@ -270,8 +280,7 @@ export function renderClassicAxis(
   local.append(axisGroup)
   group.append(local)
   select(axisGroup).call(renderer)
-  axisGroup.setAttribute('font-size', '1em')
-  axisGroup.setAttribute('font-family', 'inherit')
+  applyFont(axisGroup, theme.fonts.tick)
   const baseline = axisBaseline(options, position, plot, bindings)
   axisGroup.setAttribute(
     'transform',
@@ -283,6 +292,7 @@ export function renderClassicAxis(
     }
   }
   if (options.grid) renderClassicGrid(gridLayer, renderer, options, horizontal, plot)
-  if (options.label) renderLabel(local, options.label, position, plot)
-  if (options.unit) renderUnit(local, options.unit, position, plot)
+  const font = theme.fonts.axisLabel
+  if (options.label) renderLabel(local, { text: options.label, font }, position, plot)
+  if (options.unit) renderUnit(local, { text: options.unit, font }, position, plot)
 }
