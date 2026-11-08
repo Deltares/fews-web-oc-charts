@@ -1,7 +1,11 @@
 import type { EnsembleMember } from '../../data-store/ensemble.js'
 import type { Region } from '../../layout/layout.js'
 import type { ScaleBinding } from '../../scales/scale.js'
-import { controlMemberIndex, type EnsembleMark } from '../marks/ensemble/ensemble.js'
+import {
+  controlMemberIndex,
+  type EnsembleMark,
+  type EnsembleOptions,
+} from '../marks/ensemble/ensemble.js'
 import {
   drawnMemberCount,
   ensembleStatistics,
@@ -27,6 +31,8 @@ export interface EnsembleHitPart {
   /** Band bounds; undefined for line parts. */
   readonly lower: number | undefined
   readonly upper: number | undefined
+  /** Band percentiles, e.g. `[25, 75]`; undefined for line parts. */
+  readonly band?: readonly [number, number]
 }
 
 /** Inspection of one ensemble time step. */
@@ -84,6 +90,92 @@ function percentileLabel(probability: number) {
   return probability === 0.5 ? 'median' : `p${Math.round(probability * 1e6) / 1e4}`
 }
 
+type Statistics = ReturnType<typeof ensembleStatistics>
+
+/** Band and median quantiles in probability order, then the mean. */
+function reportedStatistics(statistics: Statistics, index: number): EnsembleHitStatistic[] {
+  const quantiles = new Map<number, number>()
+  for (const [low, high, lowStatistic, highStatistic] of statistics.bands) {
+    quantiles.set(low / 100, lowStatistic.at(index))
+    quantiles.set(high / 100, highStatistic.at(index))
+  }
+  if (statistics.median) quantiles.set(0.5, statistics.median.at(index))
+  const reported: EnsembleHitStatistic[] = [...quantiles]
+    .sort(([left], [right]) => left - right)
+    .map(([probability, value]) => ({ label: percentileLabel(probability), probability, value }))
+  if (statistics.mean) {
+    reported.push({ label: 'mean', probability: undefined, value: statistics.mean.at(index) })
+  }
+  return reported
+}
+
+/** Every drawn band, statistic line and control member with a finite value at `index`. */
+function drawnParts(
+  statistics: Statistics,
+  options: Readonly<EnsembleOptions>,
+  store: EnsembleMark['data'],
+  index: number,
+): EnsembleHitPart[] {
+  const parts: EnsembleHitPart[] = []
+  for (const [low, high, lowStatistic, highStatistic] of statistics.bands) {
+    const lower = lowStatistic.at(index)
+    const upper = highStatistic.at(index)
+    if (Number.isFinite(lower) && Number.isFinite(upper))
+      parts.push({
+        part: 'spread',
+        label: bandLabel(low, high),
+        value: undefined,
+        lower,
+        upper,
+        band: Object.freeze([low, high] as const),
+      })
+  }
+  const linePart = (part: 'median' | 'mean' | 'control', label: string, value: number) => {
+    if (Number.isFinite(value))
+      parts.push({ part, label, value, lower: undefined, upper: undefined })
+  }
+  if (statistics.median) linePart('median', 'Median', statistics.median.at(index))
+  if (statistics.mean) linePart('mean', 'Mean', statistics.mean.at(index))
+  if (options.control) {
+    const member = controlMemberIndex(store, options.control.member)
+    linePart('control', store.members[member].label, store.valueAt(member, index))
+  }
+  return parts
+}
+
+/** The drawn line nearest the pointer at `index`: a member, the control or a statistic. */
+function nearestLine(
+  statistics: Statistics,
+  options: Readonly<EnsembleOptions>,
+  store: EnsembleMark['data'],
+  index: number,
+  distance: (value: number) => number,
+) {
+  const lines: { value: number; member: number | undefined }[] = []
+  for (let member = 0; member < drawnMemberCount(options, store); member += 1) {
+    lines.push({ value: store.valueAt(member, index), member })
+  }
+  if (options.control) {
+    const member = controlMemberIndex(store, options.control.member)
+    lines.push({ value: store.valueAt(member, index), member })
+  }
+  if (statistics.median) lines.push({ value: statistics.median.at(index), member: undefined })
+  if (statistics.mean) lines.push({ value: statistics.mean.at(index), member: undefined })
+  for (const [, , low, high] of statistics.bands) {
+    lines.push(
+      { value: low.at(index), member: undefined },
+      { value: high.at(index), member: undefined },
+    )
+  }
+  let nearest: { value: number; member: number | undefined; distance: number } | undefined
+  for (const line of lines) {
+    if (!Number.isFinite(line.value)) continue
+    const lineDistance = distance(line.value)
+    if (!nearest || lineDistance < nearest.distance) nearest = { ...line, distance: lineDistance }
+  }
+  return nearest
+}
+
 export function ensembleHits(
   mark: EnsembleMark,
   scales: Readonly<Record<string, ScaleBinding>>,
@@ -104,64 +196,16 @@ export function ensembleHits(
   if (px < plot.x || px > plot.x + plot.width) return []
 
   const statistics = ensembleStatistics(options, store)
-  const quantiles = new Map<number, number>()
-  for (const [low, high, lowStatistic, highStatistic] of statistics.bands) {
-    quantiles.set(low / 100, lowStatistic.at(index))
-    quantiles.set(high / 100, highStatistic.at(index))
-  }
-  if (statistics.median) quantiles.set(0.5, statistics.median.at(index))
-  const reported: EnsembleHitStatistic[] = [...quantiles]
-    .sort(([left], [right]) => left - right)
-    .map(([probability, value]) => ({ label: percentileLabel(probability), probability, value }))
-  if (statistics.mean) {
-    reported.push({ label: 'mean', probability: undefined, value: statistics.mean.at(index) })
-  }
+  const reported = reportedStatistics(statistics, index)
+  const parts = drawnParts(statistics, options, store, index)
 
-  const parts: EnsembleHitPart[] = []
-  for (const [low, high, lowStatistic, highStatistic] of statistics.bands) {
-    const lower = lowStatistic.at(index)
-    const upper = highStatistic.at(index)
-    if (Number.isFinite(lower) && Number.isFinite(upper))
-      parts.push({ part: 'spread', label: bandLabel(low, high), value: undefined, lower, upper })
-  }
-  const linePart = (part: 'median' | 'mean' | 'control', label: string, value: number) => {
-    if (Number.isFinite(value))
-      parts.push({ part, label, value, lower: undefined, upper: undefined })
-  }
-  if (statistics.median) linePart('median', 'Median', statistics.median.at(index))
-  if (statistics.mean) linePart('mean', 'Mean', statistics.mean.at(index))
-  if (options.control) {
-    const member = controlMemberIndex(store, options.control.member)
-    linePart('control', store.members[member].label, store.valueAt(member, index))
-  }
-
-  // The hit's y is the drawn line nearest the pointer: a member, the control or a statistic.
-  const lines: { value: number; member: number | undefined }[] = []
-  for (let member = 0; member < drawnMemberCount(options, store); member += 1) {
-    lines.push({ value: store.valueAt(member, index), member })
-  }
-  if (options.control) {
-    const member = controlMemberIndex(store, options.control.member)
-    lines.push({ value: store.valueAt(member, index), member })
-  }
-  if (statistics.median) lines.push({ value: statistics.median.at(index), member: undefined })
-  if (statistics.mean) lines.push({ value: statistics.mean.at(index), member: undefined })
-  for (const [, , low, high] of statistics.bands) {
-    lines.push(
-      { value: low.at(index), member: undefined },
-      { value: high.at(index), member: undefined },
-    )
-  }
-  let nearest: { value: number; member: number | undefined; py: number } | undefined
-  for (const line of lines) {
-    if (!Number.isFinite(line.value)) continue
-    const py = yScale.project(line.value)
-    if (!nearest || Math.abs(py - point.y) < Math.abs(nearest.py - point.y))
-      nearest = { ...line, py }
-  }
+  const nearest = nearestLine(statistics, options, store, index, (value) =>
+    Math.abs(yScale.project(value) - point.y),
+  )
   if (!nearest) return []
+  const py = yScale.project(nearest.value)
   const dx = px - point.x
-  const dy = nearest.py - point.y
+  const dy = py - point.y
   const threshold = options.exceedance ? options.exceedance.threshold : undefined
   return [
     Object.freeze({
@@ -169,7 +213,7 @@ export function ensembleHits(
       x,
       y: nearest.value,
       px,
-      py: nearest.py,
+      py,
       distance: axisDistance(axis, dx, dy),
       member: nearest.member === undefined ? undefined : store.members[nearest.member],
       parts: Object.freeze(parts),

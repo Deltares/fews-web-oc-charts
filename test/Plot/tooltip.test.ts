@@ -596,9 +596,9 @@ describe('tooltip plugin', () => {
 
     interaction.update({ showX: false, digits: 2 })
     await frame()
-    expect(node.textContent).toBe('flow · Forecast · 4.23 · stack: total · bounds: 3.12–7.36')
+    expect(node.textContent).toBe('Forecast · 4.23 · stack: total · bounds: 3.12–7.36')
     expect(node.getAttribute('aria-label')).toBe(
-      'flow · Forecast · 4.23 · stack: total · bounds: 3.12–7.36',
+      'Forecast · 4.23 · stack: total · bounds: 3.12–7.36',
     )
     expect(data.valueAt('forecast', 0)).toBe(4.23456)
     interaction.update({ showX: undefined, digits: undefined })
@@ -664,11 +664,11 @@ describe('tooltip plugin', () => {
     expect(node.textContent).toContain('bounds: 2–5')
     interaction.update({ showX: false, digits: 0 })
     await frame()
-    expect(node.textContent).toBe('flow · Forecast · 3 · stack: total · bounds: 2–5')
-    expect(node.getAttribute('aria-label')).toBe('flow · Forecast · 3 · stack: total · bounds: 2–5')
+    expect(node.textContent).toBe('Forecast · 3 · stack: total · bounds: 2–5')
+    expect(node.getAttribute('aria-label')).toBe('Forecast · 3 · stack: total · bounds: 2–5')
     interaction.update({ bounds: 'never' })
     await frame()
-    expect(node.textContent).toBe('flow · Forecast · 3 · stack: total')
+    expect(node.textContent).toBe('Forecast · 3 · stack: total')
     expect(node.getAttribute('aria-label')).toBe(node.textContent)
   })
 

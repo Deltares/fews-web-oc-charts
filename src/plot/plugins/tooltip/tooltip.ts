@@ -15,6 +15,7 @@ import { isHistogramMark, type HistogramMark } from '../../marks/histogram/histo
 import { isHeatmapMark, type HeatmapMark } from '../../marks/heatmap/heatmap.js'
 import { isEnsembleMark, type EnsembleMark } from '../../marks/ensemble/ensemble.js'
 import type { MarkHit } from '../../marks/mark-definition.js'
+import type { EnsembleHitPart } from '../../interaction/ensemble-hit-testing.js'
 import type { ScaleValue } from '../../../scales/scale.js'
 
 export type TooltipAxis = 'x' | 'y' | 'xy'
@@ -48,6 +49,88 @@ export type TooltipRangeFormatter = (
   context: TooltipFormatContext,
 ) => string
 
+/** What a tooltip row describes. */
+export type TooltipEntryKind =
+  /** A line, series or histogram sample. */
+  | 'series'
+  /** A layer of a bar or stacked-area mark. */
+  | 'layer'
+  | 'heatmap'
+  /** The nearest ensemble member or statistic line. */
+  | 'ensemble'
+  /** An ensemble band, median, mean or control row. */
+  | 'ensemblePart'
+  /** The ensemble exceedance probability row. */
+  | 'exceedance'
+
+export type TooltipDetailKey =
+  | 'x'
+  | 'y'
+  | 'value'
+  | 'stack'
+  | 'bounds'
+  | 'member'
+  | 'range'
+  | 'probability'
+
+/** One part of a row after its name, shown as `label: text`, or `text` without a label. */
+export interface TooltipDetail {
+  readonly key: TooltipDetailKey
+  readonly label?: string
+  readonly text: string
+}
+
+/** The text of one tooltip row: its name and the details after it. */
+export interface TooltipEntryText {
+  readonly name: string
+  readonly details: readonly TooltipDetail[]
+}
+
+export interface TooltipEntryContext {
+  readonly kind: TooltipEntryKind
+  readonly mark: TooltipMark
+  readonly hit: Readonly<MarkHit>
+  /** The mark's `label`; undefined when it has none and its name falls back to its id. */
+  readonly markLabel: string | undefined
+  /** The hovered layer of a bar or stacked-area mark. */
+  readonly layer: { readonly id: string; readonly label: string | undefined } | undefined
+  /** The ensemble band, median, mean or control part of an `ensemblePart` row. */
+  readonly part: Readonly<EnsembleHitPart> | undefined
+  /** Threshold and probability of an `exceedance` row. */
+  readonly exceedance: Readonly<{ threshold: number; probability: number }> | undefined
+}
+
+/**
+ * Replaces parts of a row. Omitted fields keep their defaults; the accessible label is built
+ * from the result unless given. Strings in `details` are shown as they are.
+ */
+export interface TooltipEntryOverride {
+  readonly name?: string
+  readonly details?: readonly (TooltipDetail | string)[]
+  readonly accessibleLabel?: string
+}
+
+/** Returns changes to a row, `undefined` to keep it, or `null` to hide it. */
+export type TooltipEntryFormatter = (
+  entry: TooltipEntryText,
+  context: TooltipEntryContext,
+) => TooltipEntryOverride | null | undefined
+
+export interface TooltipHeaderContext {
+  /** The inspected x: the crosshair's x coordinate, else the first row's sample x. */
+  readonly x: ScaleValue | undefined
+  readonly scale: string | undefined
+  /** `x` formatted as an x coordinate would be, or '' without an x. */
+  readonly defaultText: string
+  /** The rows below the header, after `formatEntry`. */
+  readonly entries: readonly TooltipEntryText[]
+}
+
+/** Returns a header line above the rows, or `undefined`/'' for none. */
+export type TooltipHeaderFormatter = (context: TooltipHeaderContext) => string | undefined
+
+export type TooltipLayout = 'inline' | 'columns'
+
 export interface TooltipOptions {
   axis: TooltipAxis
   /** Inspected marks; symbols reuse their legend styles, with layer and heatmap hit colors. */
@@ -69,6 +152,20 @@ export interface TooltipOptions {
   formatUnit?: TooltipUnitFormatter
   /** Formats composite bounds and heatmap ranges before units are appended. */
   formatRange?: TooltipRangeFormatter
+  /** Changes or hides a row after its default text is built. */
+  formatEntry?: TooltipEntryFormatter
+  /** Adds a header line above the rows, e.g. the hovered time once with `showX: false`. */
+  formatHeader?: TooltipHeaderFormatter
+  /**
+   * Leaves out a mark's row when its nearest sample is more than this many CSS pixels from
+   * the pointer along the tooltip axis, e.g. for sparse series. Default: no limit.
+   */
+  maxDistance?: number
+  /**
+   * 'inline' follows each name with its details; 'columns' aligns names and right-aligns
+   * details in a grid, so tabular figures line up. Default: 'inline'.
+   */
+  layout: TooltipLayout
   /** Follows this installed crosshair and omits coordinates already shown by its callouts. */
   crosshair?: CrosshairHandle
 }
@@ -93,6 +190,10 @@ const optionKeys = [
   'formatValue',
   'formatUnit',
   'formatRange',
+  'formatEntry',
+  'formatHeader',
+  'maxDistance',
+  'layout',
 ]
 
 function validateMarks(marks: readonly TooltipMark[] | undefined) {
@@ -134,8 +235,26 @@ export function isTooltipHandle(value: object): value is TooltipHandle {
   return handles.has(value)
 }
 
+function validateLayout(options: Readonly<TooltipOptions>) {
+  if (
+    options.maxDistance !== undefined &&
+    (typeof options.maxDistance !== 'number' || !(options.maxDistance >= 0))
+  ) {
+    throw new RangeError('tooltip.maxDistance must be a nonnegative number.')
+  }
+  if (!['inline', 'columns'].includes(options.layout)) {
+    throw new Error('tooltip.layout must be inline or columns.')
+  }
+}
+
 function validateFormatting(options: Readonly<TooltipOptions>) {
-  for (const key of ['formatValue', 'formatUnit', 'formatRange'] as const) {
+  for (const key of [
+    'formatValue',
+    'formatUnit',
+    'formatRange',
+    'formatEntry',
+    'formatHeader',
+  ] as const) {
     if (options[key] !== undefined && typeof options[key] !== 'function') {
       throw new TypeError(`tooltip.${key} must be a function.`)
     }
@@ -148,6 +267,7 @@ function validateFormatting(options: Readonly<TooltipOptions>) {
   if (typeof options.coordinateLabels !== 'boolean') {
     throw new TypeError('tooltip.coordinateLabels must be boolean.')
   }
+  validateLayout(options)
   if (options.bounds !== undefined && !['always', 'stacked', 'never'].includes(options.bounds)) {
     throw new Error('tooltip.bounds must be always, stacked or never.')
   }
@@ -185,6 +305,10 @@ export function tooltip(initial: OptionPatch<TooltipOptions> = {}): TooltipHandl
       formatValue: undefined,
       formatUnit: undefined,
       formatRange: undefined,
+      formatEntry: undefined,
+      formatHeader: undefined,
+      maxDistance: undefined,
+      layout: 'inline',
     }),
     validate(options) {
       validateFormatting(options)

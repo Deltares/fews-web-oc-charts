@@ -14,7 +14,7 @@ import {
 import { TooltipPosition } from '../../../Tooltip/tooltip.js'
 import { calculateTooltipPlacement } from '../../../Utils/tooltipPlacement.js'
 import { positionTooltipArrow } from '../../../Utils/tooltipArrow.js'
-import { computeTooltipModel, type TooltipModel } from './tooltip-model.js'
+import { computeTooltipModel, type TooltipEntry, type TooltipModel } from './tooltip-model.js'
 import { createLegendSwatch } from '../legend/legend-swatch.js'
 import { applyFont } from '../../../theme/theme.js'
 
@@ -64,31 +64,62 @@ function positionTooltip(
   positionTooltipArrow(element, position, clientX / scaleX, clientY / scaleY)
 }
 
+function renderHeader(content: HTMLDivElement, header: string) {
+  const line = document.createElement('div')
+  line.dataset.tooltipHeader = ''
+  line.style.fontWeight = '600'
+  line.style.gridColumn = '1 / -1'
+  line.style.paddingBottom = '2px'
+  line.textContent = header
+  content.append(line)
+}
+
+function renderEntry(content: HTMLDivElement, entry: TooltipEntry, columns: boolean) {
+  const row = document.createElement('div')
+  row.dataset.tooltipEntry = ''
+  // In columns the row's cells join the content grid, so names and values align.
+  row.style.display = columns ? 'contents' : 'flex'
+  row.style.alignItems = 'center'
+  row.style.gap = '5px'
+  const symbol = createLegendSwatch(entry.symbol, { width: 20, height: 20 })
+  symbol.dataset.tooltipSymbol = ''
+  symbol.setAttribute('aria-hidden', 'true')
+  symbol.style.flex = 'none'
+  const name = document.createElement('span')
+  name.dataset.tooltipLabel = ''
+  name.style.color = entry.color
+  name.textContent = entry.label
+  const values = document.createElement('span')
+  values.dataset.tooltipValues = ''
+  if (columns) {
+    values.style.textAlign = 'end'
+    values.style.paddingInlineStart = '12px'
+    values.textContent = entry.values
+  } else {
+    values.textContent = entry.details
+  }
+  row.append(symbol, name, values)
+  content.append(row)
+}
+
 function renderTooltip(element: HTMLDivElement, context: PlotContext, model: TooltipModel) {
   const theme = context.theme.get()
   applyFont(element, theme.fonts.tooltip)
   element.style.backgroundColor = theme.tooltipBackground
   element.style.color = theme.tooltipColor
-  element.replaceChildren()
-  for (const entry of model.entries) {
-    const row = document.createElement('div')
-    row.dataset.tooltipEntry = ''
-    row.style.display = 'flex'
-    row.style.alignItems = 'center'
-    row.style.gap = '5px'
-    const symbol = createLegendSwatch(entry.symbol, { width: 20, height: 20 })
-    symbol.dataset.tooltipSymbol = ''
-    symbol.setAttribute('aria-hidden', 'true')
-    symbol.style.flex = 'none'
-    const name = document.createElement('span')
-    name.dataset.tooltipLabel = ''
-    name.style.color = entry.color
-    name.textContent = entry.label
-    const values = document.createElement('span')
-    values.textContent = entry.details
-    row.append(symbol, name, values)
-    element.append(row)
+  const columns = model.layout === 'columns'
+  const content = document.createElement('div')
+  content.dataset.tooltipContent = ''
+  content.dataset.layout = model.layout
+  if (columns) {
+    content.style.display = 'grid'
+    content.style.gridTemplateColumns = '20px auto auto'
+    content.style.columnGap = '5px'
+    content.style.alignItems = 'center'
   }
+  if (model.header) renderHeader(content, model.header)
+  for (const entry of model.entries) renderEntry(content, entry, columns)
+  element.replaceChildren(content)
   element.setAttribute('aria-label', model.accessibleLabel)
   if (!model.entries.length) {
     element.style.visibility = 'hidden'

@@ -74,7 +74,26 @@ export type {
   TooltipUnitFormatter,
   TooltipRangeFormatter,
   TooltipPlacementPosition,
+  TooltipDetail,
+  TooltipDetailKey,
+  TooltipEntryContext,
+  TooltipEntryFormatter,
+  TooltipEntryKind,
+  TooltipEntryOverride,
+  TooltipEntryText,
+  TooltipHeaderContext,
+  TooltipHeaderFormatter,
+  TooltipLayout,
 } from './plot/plugins/tooltip/tooltip.js'
+export type { MarkHit } from './plot/marks/mark-definition.js'
+export type { PointHit } from './plot/interaction/point-hit-testing.js'
+export type { CompositeHit } from './plot/interaction/composite-hit-testing.js'
+export type { HeatmapHit } from './plot/interaction/heatmap-hit-testing.js'
+export type {
+  EnsembleHit,
+  EnsembleHitPart,
+  EnsembleHitStatistic,
+} from './plot/interaction/ensemble-hit-testing.js'
 export { highlight } from './plot/plugins/highlight/highlight-plugin.js'
 export type {
   HighlightAxis,

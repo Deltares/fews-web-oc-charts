@@ -193,7 +193,9 @@ Replace hooks using `inspection.update({ formatValue: ... })`, or pass `undefine
 to restore the default. Without hooks, existing formatting is unchanged.
 
 Single-valued bars omit the implicit layer name. Explicit bar and stacked-area
-layers show their label, falling back to their declared id.
+layers show their label, falling back to their declared id. A labelled mark names
+its layer rows `<mark label> · <layer label>`; a mark without a label names them by
+the layer label alone, as the legend does.
 
 Composite bounds (bars, histograms and stacked areas) default to `bounds: 'stacked'`:
 only hits with a stack id append `bounds: lower–upper`. Use `bounds: 'always'`
@@ -202,6 +204,87 @@ Stack names remain visible independently of this setting. Visible text and
 accessible labels follow the same policy; heatmap coordinate ranges are unaffected.
 Change it with `inspection.update({ bounds: 'always' })`, or pass `undefined` to
 restore `'stacked'`.
+
+### Tooltip rows, header and layout
+
+`formatValue` already receives the `mark`, so values can be formatted per mark,
+e.g. centimetres for water levels and whole hectopascals for pressure:
+
+```ts
+const digits = new Map([[waterLevel, 2], [pressure, 0]])
+tooltip({
+  formatValue: (value, context) =>
+    typeof value === 'number' && context.axis !== 'x'
+      ? value.toFixed(digits.get(context.mark) ?? 1)
+      : context.defaultText,
+})
+```
+
+Each row is a name followed by details (coordinates, values, stack, bounds…). Use
+`formatEntry(entry, context)` to change or hide rows after their default text is
+built. `entry` has the default `name` and `details`; each detail has a `key`
+(`x`, `y`, `value`, `stack`, `bounds`, `member`, `range` or `probability`), an
+optional `label` (shown as `label: text`) and its `text`. Return `undefined` to
+keep the row, `null` to hide it, or `{ name?, details?, accessibleLabel? }` to
+replace parts; strings in `details` are shown as they are. The accessible label
+is rebuilt from the result unless you return one.
+
+`context` says what the row describes, with raw numbers rather than text:
+
+| `context.kind` | Row | Extra context |
+|---|---|---|
+| `series` | A line, series or histogram sample | `hit.x`, `hit.y` |
+| `layer` | A bar or stacked-area layer | `layer: { id, label }`; `hit.value`, `hit.lower`, `hit.upper`, `hit.stack` |
+| `heatmap` | A heatmap cell | `hit.value` and the cell's x/y edges |
+| `ensemble` | The nearest ensemble member or statistic line | `hit.member`, `hit.statistics` |
+| `ensemblePart` | An ensemble band, median, mean or control row | `part` (`part.band` holds a band's percentiles) |
+| `exceedance` | The ensemble exceedance row | `exceedance: { threshold, probability }` |
+
+`context.markLabel` is the mark's `label`, or `undefined` when its name falls back
+to its id.
+
+`formatHeader(context)` adds one line above the rows. It receives the inspected
+`x` (the crosshair's x coordinate, else the first row's sample), its `scale`, the
+x formatted as a coordinate (`defaultText`) and the rows' final text. Combine it
+with `showX: false` to show a shared time once instead of on every row. The header
+also starts the tooltip's accessible label.
+
+`maxDistance` leaves out a mark whose nearest sample is more than that many CSS
+pixels from the pointer along the tooltip axis, so sparse series (observations,
+late reports) don't show a value from another time.
+
+`layout: 'columns'` aligns the names and right-aligns their details in a grid, so
+digits line up with `--fews-chart-tooltip-font-variant-numeric: tabular-nums`.
+The default `layout: 'inline'` follows each name with its details.
+
+A meteogram panel with an ensemble plume and a probability bar per warning level:
+
+```ts
+tooltip({
+  crosshair: timeCrosshair,
+  showX: false,
+  layout: 'columns',
+  maxDistance: 20,
+  formatUnit: () => 'm',
+  formatHeader: ({ x }) => (typeof x === 'number' ? formatTime(x) : undefined),
+  formatEntry: (entry, context) => {
+    if (context.kind === 'ensemble') return null
+    if (context.part?.band) {
+      const [low, high] = context.part.band
+      return { name: `P${low}–P${high}` }
+    }
+    if (context.kind === 'layer' && context.mark === probability) {
+      const level = warningLevels[context.layer!.id]
+      const hit = context.hit as CompositeHit
+      return {
+        name: `${level.label} ≥ ${level.value} m`,
+        details: [`${Math.round(hit.value * 100)} %`],
+      }
+    }
+    return undefined
+  },
+})
+```
 
 ## Listening to changes
 
