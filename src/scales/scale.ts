@@ -1,0 +1,659 @@
+import { scaleBand, scaleLinear, scaleLog, scaleUtc } from 'd3-scale'
+import { createOptionState, type OptionPatch, type OptionStateSnapshot } from '../core/options.js'
+import {
+  reactive,
+  optionSignal,
+  recordScaleSource,
+  currentDomainChangeSource,
+} from '../core/runtime.js'
+import type { ReadonlySignal, Signal } from '../core/reactive.js'
+import { finiteNonnegative, validateKeys } from '../core/validation.js'
+import { niceDegreeSteps } from '../Utils/niceDegreeSteps.js'
+import { shiftZonedDays, zonedTicks } from '../time/zoned-time.js'
+
+export type ScaleValue = number | string
+export type ScaleKind = 'linear' | 'log' | 'time' | 'band' | 'degrees' | 'angular' | 'radial'
+export type ContinuousScaleKind = Exclude<ScaleKind, 'band'>
+export type NumericDomain = readonly [number, number]
+export type ScaleDomain<K extends ScaleKind = ScaleKind> = ScaleKind extends K
+  ? readonly ScaleValue[]
+  : K extends 'band'
+    ? readonly string[]
+    : NumericDomain
+export type ScaleRange = readonly [number, number]
+export type PolarDirection = 'clockwise' | 'anticlockwise'
+export type FollowDuration = number | string
+
+export interface TimeFollowOptions {
+  window: FollowDuration
+  lead?: FollowDuration
+}
+
+export interface AutoscaleContext {
+  readonly kind: ScaleKind
+  readonly data: readonly ScaleValue[] | undefined
+  readonly visible: readonly ScaleValue[] | undefined
+  readonly defaultDomain: readonly ScaleValue[]
+}
+
+export type AutoscalePolicy =
+  | 'data'
+  | 'visible'
+  | 'fixed'
+  | ((context: AutoscaleContext) => readonly ScaleValue[] | undefined)
+
+export interface ScaleOptions<Domain extends readonly ScaleValue[] = readonly ScaleValue[]> {
+  domain?: Domain
+  defaultDomain: Domain
+  autoscale: AutoscalePolicy
+  reverse: boolean
+  nice: boolean
+  includeZero: boolean
+  symmetric: boolean
+  padding: number
+  paddingInner?: number
+  paddingOuter?: number
+  timeZone: string
+  locale: string
+  follow?: TimeFollowOptions
+  direction?: PolarDirection
+  intercept?: number
+  range?: readonly [number, number]
+  innerRadius?: number
+}
+
+export type CartesianScaleOptions<Domain extends readonly ScaleValue[] = NumericDomain> = Omit<
+  ScaleOptions<Domain>,
+  'direction' | 'intercept' | 'range' | 'innerRadius' | 'follow'
+>
+export type BandScaleOptions = CartesianScaleOptions<readonly string[]>
+export interface TimeScaleOptions extends CartesianScaleOptions {
+  follow?: TimeFollowOptions
+}
+export interface AngularScaleOptions extends CartesianScaleOptions {
+  direction?: PolarDirection
+  intercept?: number
+  range?: readonly [number, number]
+}
+export interface RadialScaleOptions extends CartesianScaleOptions {
+  innerRadius?: number
+}
+
+export type ScaleHandle<K extends ScaleKind = ScaleKind> = TypedScaleHandle<ScaleDomain<K>, K>
+
+interface TypedScaleHandle<Domain extends readonly ScaleValue[], K extends ScaleKind> {
+  readonly kind: K
+  readonly domain: Signal<Domain>
+  readonly following: ReadonlySignal<boolean>
+  readonly options: ReadonlySignal<OptionStateSnapshot<ScaleOptions<Domain>>>
+  update(patch: OptionPatch<ScaleOptions<Domain>>): void
+  pauseFollow(): void
+  resumeFollow(): void
+}
+
+export type ScaleBinding<K extends ScaleKind = ScaleKind> = TypedScaleBinding<ScaleDomain<K>, K>
+
+interface TypedScaleBinding<Domain extends readonly ScaleValue[], K extends ScaleKind> {
+  readonly scale: TypedScaleHandle<Domain, K>
+  readonly range: ReadonlySignal<ScaleRange>
+  project(value: Domain[number]): number
+  invert(pixel: number): number
+  ticks(count?: number, timeZone?: string): readonly Domain[number][]
+  readonly bandwidth: number
+}
+
+const handles = new WeakSet<object>()
+type ExtentSource = (mode: 'data' | 'visible') => readonly ScaleValue[] | undefined
+const extentSources = new WeakMap<ScaleHandle, (source: ExtentSource) => () => void>()
+const dataDomains = new WeakMap<ScaleHandle, () => readonly ScaleValue[]>()
+const autoscalePauses = new WeakMap<ScaleHandle, () => void>()
+
+function defaultDomainFor(kind: ScaleKind): ScaleOptions['defaultDomain'] {
+  if (kind === 'band') return []
+  if (kind === 'degrees' || kind === 'angular') return [0, 360]
+  return kind === 'log' ? [1, 10] : [0, 1]
+}
+
+function niceDomain(kind: ScaleKind, domain: number[]) {
+  if (kind === 'time') return scaleUtc().domain(domain).nice().domain().map(Number)
+  const scale = kind === 'log' ? scaleLog() : scaleLinear()
+  return scale.domain(domain).nice().domain().map(Number)
+}
+
+export function pauseScaleAutoscale(scale: ScaleHandle): void {
+  const pause = autoscalePauses.get(scale)
+  if (!pause) throw new Error('Expected a scale handle.')
+  pause()
+}
+
+export function registerScaleExtents(scale: ScaleHandle, source: ExtentSource): () => void {
+  const register = extentSources.get(scale)
+  if (!register) throw new Error('Expected a scale handle.')
+  return register(source)
+}
+
+export function autoscaleWindow(scale: ScaleHandle): readonly ScaleValue[] {
+  const config = scale.options.get().resolved
+  // Two visible policies use data windows rather than recursively constraining each other.
+  return config.domain === undefined && config.autoscale === 'visible'
+    ? dataDomains.get(scale)!()
+    : scale.domain.get()
+}
+
+export function isScaleHandle(value: object): value is ScaleHandle {
+  return handles.has(value)
+}
+
+function equalDomain(left: readonly ScaleValue[], right: readonly ScaleValue[]) {
+  return left.length === right.length && left.every((value, i) => value === right[i])
+}
+
+interface ParsedFollowDuration {
+  readonly milliseconds?: number
+  readonly calendarDays?: number
+}
+
+function parseFollowDuration(value: FollowDuration, path: string, allowZero: boolean) {
+  let result: ParsedFollowDuration
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    result = { milliseconds: value }
+  } else if (typeof value === 'string') {
+    const elapsed = /^(\d+(?:\.\d+)?)(ms|s|m|h)$/.exec(value)
+    const calendar = /^P(\d+)D$/.exec(value)
+    if (elapsed) {
+      const units = { ms: 1, s: 1000, m: 60_000, h: 3_600_000 } as const
+      result = { milliseconds: Number(elapsed[1]) * units[elapsed[2] as keyof typeof units] }
+    } else if (calendar) {
+      result = { calendarDays: Number(calendar[1]) }
+    } else {
+      throw new Error(
+        `${path} must be milliseconds, an elapsed duration (ms, s, m, h) or ISO days (PnD).`,
+      )
+    }
+  } else {
+    throw new TypeError(`${path} must be a finite number or a supported duration string.`)
+  }
+  const amount = result.milliseconds ?? result.calendarDays!
+  if (!Number.isFinite(amount) || !Number.isSafeInteger(result.calendarDays ?? 0)) {
+    throw new RangeError(`${path} must be finite and within the supported range.`)
+  }
+  if (amount < 0 || (!allowZero && amount === 0)) {
+    throw new RangeError(`${path} must be ${allowZero ? 'nonnegative' : 'positive'}.`)
+  }
+  return result
+}
+
+function shiftFollowDuration(
+  epochMs: number,
+  duration: ParsedFollowDuration,
+  direction: -1 | 1,
+  timeZone: string,
+) {
+  const shifted =
+    duration.calendarDays === undefined
+      ? epochMs + direction * duration.milliseconds!
+      : shiftZonedDays(timeZone, epochMs, direction * duration.calendarDays)
+  if (!Number.isFinite(shifted) || Math.abs(shifted) > 8.64e15) {
+    throw new RangeError('Follow window is outside the JavaScript Date range.')
+  }
+  return shifted
+}
+
+function createScale<K extends ScaleKind>(
+  kind: K,
+  initial: OptionPatch<ScaleOptions<ScaleDomain<K>>>,
+): ScaleHandle<K>
+function createScale(kind: ScaleKind, initial: OptionPatch<ScaleOptions>) {
+  function validateDomain(values: readonly ScaleValue[], path: string) {
+    if (!Array.isArray(values)) throw new Error(`${path} must be an array.`)
+    if (kind === 'band') {
+      if (
+        values.some((value) => typeof value !== 'string') ||
+        new Set(values).size !== values.length
+      ) {
+        throw new Error(`${path} must contain unique strings for a band scale.`)
+      }
+    } else if (
+      values.length !== 2 ||
+      values.some((value) => typeof value !== 'number' || !Number.isFinite(value)) ||
+      Number(values[0]) > Number(values[1])
+    ) {
+      throw new Error(`${path} must be an ascending pair of finite numbers.`)
+    }
+    if (kind === 'radial' && values.some((value) => Number(value) < 0)) {
+      throw new Error(`${path.replace('scale.', 'radial.')} must contain nonnegative values.`)
+    }
+    if (kind === 'log' && values.some((value) => Number(value) <= 0)) {
+      throw new Error(`${path} must contain strictly positive values for a log scale.`)
+    }
+    if (kind === 'time' && values.some((value) => Math.abs(Number(value)) > 8.64e15)) {
+      throw new Error(`${path} must be within the JavaScript Date range.`)
+    }
+  }
+
+  function validate(options: Readonly<ScaleOptions>) {
+    for (const key of ['domain', 'defaultDomain'] as const) {
+      if (key === 'defaultDomain' || options[key] !== undefined) {
+        validateDomain(options[key]!, `scale.${key}`)
+      }
+    }
+    if (
+      typeof options.autoscale !== 'function' &&
+      !['data', 'visible', 'fixed'].includes(options.autoscale)
+    ) {
+      throw new Error('scale.autoscale must be data, visible, fixed or a function.')
+    }
+    if (options.follow !== undefined) {
+      if (kind !== 'time') throw new Error('scale.follow requires a time scale.')
+      validateKeys(options.follow, ['window', 'lead'], 'scale.follow')
+      parseFollowDuration(options.follow.window, 'scale.follow.window', false)
+      if (options.follow.lead !== undefined) {
+        parseFollowDuration(options.follow.lead, 'scale.follow.lead', true)
+      }
+    }
+    for (const key of ['reverse', 'nice', 'includeZero', 'symmetric'] as const) {
+      if (typeof options[key] !== 'boolean') throw new Error(`scale.${key} must be boolean.`)
+    }
+    if (kind === 'angular') {
+      if (options.direction !== 'clockwise' && options.direction !== 'anticlockwise') {
+        throw new Error('angular.direction must be clockwise or anticlockwise.')
+      }
+      if (!Number.isFinite(options.intercept)) throw new Error('angular.intercept must be finite.')
+      if (
+        !Array.isArray(options.range) ||
+        options.range.length !== 2 ||
+        options.range.some((value) => !Number.isFinite(value))
+      ) {
+        throw new Error('angular.range must be a pair of finite radians.')
+      }
+    }
+    if (
+      kind === 'radial' &&
+      (options.innerRadius === undefined ||
+        !Number.isFinite(options.innerRadius) ||
+        options.innerRadius < 0 ||
+        options.innerRadius >= 1)
+    ) {
+      throw new Error('radial.innerRadius must be between 0 (inclusive) and 1 (exclusive).')
+    }
+    finiteNonnegative(options.padding, 'scale.padding')
+    if (options.padding >= 1) throw new Error('scale.padding must be less than 1.')
+    for (const key of ['paddingInner', 'paddingOuter'] as const) {
+      if (options[key] === undefined) continue
+      if (kind !== 'band') throw new Error(`scale.${key} requires a band scale.`)
+      finiteNonnegative(options[key], `scale.${key}`)
+      if (options[key] >= 1) throw new Error(`scale.${key} must be less than 1.`)
+    }
+    if (kind !== 'linear' && (options.includeZero || options.symmetric)) {
+      throw new Error('scale.includeZero and scale.symmetric require a linear scale.')
+    }
+    // Throws a RangeError for an unsupported locale or time zone.
+    new Intl.DateTimeFormat(options.locale, { timeZone: options.timeZone }).resolvedOptions()
+    resolveDomain(options)
+  }
+  const defaults = (): ScaleOptions => ({
+    defaultDomain: defaultDomainFor(kind),
+    autoscale: kind === 'degrees' || kind === 'angular' ? 'fixed' : 'data',
+    reverse: false,
+    nice: false,
+    includeZero: false,
+    symmetric: false,
+    padding: 0,
+    timeZone: 'UTC',
+    locale: 'en-GB',
+    ...(kind === 'angular'
+      ? { direction: 'clockwise' as const, intercept: 0, range: [0, 2 * Math.PI] as const }
+      : {}),
+    ...(kind === 'radial' ? { innerRadius: 0 } : {}),
+  })
+  const keys = [...Object.keys(defaults()), 'domain', 'paddingInner', 'paddingOuter', 'follow']
+  validateKeys(initial, keys, 'scale')
+  const state = createOptionState<ScaleOptions>(initial, { defaults, validate })
+  const optionState = optionSignal(state)
+  const options = optionState.snapshot
+  const followingState = reactive.signal(options.get().resolved.follow !== undefined)
+  const following: ReadonlySignal<boolean> = {
+    get: () => followingState.get(),
+    get version() {
+      return followingState.version
+    },
+  }
+  function resolveDomain(
+    config: Readonly<ScaleOptions>,
+    source = config.domain ?? config.defaultDomain,
+    fromData = false,
+  ): readonly ScaleValue[] {
+    validateDomain(source, 'scale.domain')
+    if (kind === 'band') return Object.freeze([...source])
+    let low = Number(source[0])
+    let high = Number(source[1])
+    if (fromData && low === high) {
+      if (kind === 'log') {
+        low /= 1.01
+        high *= 1.01
+      } else {
+        const delta = kind === 'time' ? 1 : Math.max(Math.abs(low) * 0.01, 1)
+        const limit = kind === 'time' ? 8.64e15 : Number.MAX_VALUE
+        low = Math.max(-limit, low - delta)
+        high = Math.min(limit, high + delta)
+      }
+    }
+    if (config.includeZero) {
+      low = Math.min(low, 0)
+      high = Math.max(high, 0)
+    }
+    if (config.symmetric) {
+      high = Math.max(Math.abs(low), Math.abs(high))
+      low = -high
+    }
+    if (kind === 'log' && config.padding > 0) {
+      const pad = (Math.log(high) - Math.log(low)) * config.padding
+      low = Math.exp(Math.log(low) - pad)
+      high = Math.exp(Math.log(high) + pad)
+    } else if (kind !== 'log') {
+      const pad = config.padding === 0 ? 0 : (high - low) * config.padding
+      low = kind === 'radial' ? Math.max(0, low - pad) : low - pad
+      high += pad
+    }
+    let result = [low, high]
+    if (config.nice) {
+      result = niceDomain(kind, result)
+    }
+    if (
+      result.some(
+        (value) =>
+          !Number.isFinite(value) ||
+          (kind === 'log' && value <= 0) ||
+          (kind === 'time' && Math.abs(value) > 8.64e15),
+      )
+    ) {
+      throw new Error('scale.domain resolution overflowed.')
+    }
+    return Object.freeze(result)
+  }
+  const sources = new Set<ExtentSource>()
+  const sourceVersion = reactive.signal(0)
+  function union(mode: 'data' | 'visible'): readonly ScaleValue[] | undefined {
+    sourceVersion.get()
+    const categories = new Set<string>()
+    let low = Infinity
+    let high = -Infinity
+    for (const source of sources) {
+      const extent = source(mode)
+      if (!extent) continue
+      if (kind === 'band') {
+        for (const value of extent) categories.add(String(value))
+      } else {
+        low = Math.min(low, Number(extent[0]))
+        high = Math.max(high, Number(extent[1]))
+      }
+    }
+    if (kind === 'band') return categories.size ? Object.freeze([...categories]) : undefined
+    return low <= high ? Object.freeze([low, high]) : undefined
+  }
+  const dataState = reactive.computed(() => ({ extent: union('data') }))
+  const followOverride = reactive.signal<
+    { readonly domain: readonly ScaleValue[]; readonly dataVersion: number } | undefined
+  >(undefined)
+  const pausedDomain = reactive.signal<readonly ScaleValue[] | undefined>(undefined)
+  const pausedAutoscaleDomain = reactive.signal<readonly ScaleValue[] | undefined>(undefined)
+  function automaticDomain(config: Readonly<ScaleOptions>, policy = config.autoscale) {
+    const held = pausedAutoscaleDomain.get()
+    if (held !== undefined) return held
+    if (config.follow !== undefined && !followingState.get()) {
+      const paused = pausedDomain.get()
+      if (paused !== undefined) return paused
+    }
+    if (kind === 'time' && config.follow !== undefined && followingState.get()) {
+      const currentData = dataState.get()
+      const override = followOverride.get()
+      if (override?.dataVersion === dataState.version) {
+        return resolveDomain(config, override.domain)
+      }
+      const extent = currentData.extent
+      if (!extent) return resolveDomain(config, config.domain ?? config.defaultDomain)
+      const window = parseFollowDuration(config.follow.window, 'scale.follow.window', false)
+      const lead = parseFollowDuration(config.follow.lead ?? 0, 'scale.follow.lead', true)
+      const end = shiftFollowDuration(Number(extent[1]), lead, -1, config.timeZone)
+      const start = shiftFollowDuration(end, window, -1, config.timeZone)
+      return resolveDomain(config, [start, end], true)
+    }
+    if (config.domain !== undefined || policy === 'fixed') return resolveDomain(config)
+    const extent =
+      typeof policy === 'function'
+        ? policy(
+            Object.freeze({
+              kind,
+              get data() {
+                return union('data')
+              },
+              get visible() {
+                return union('visible')
+              },
+              defaultDomain: config.defaultDomain,
+            }),
+          )
+        : union(policy)
+    return resolveDomain(config, extent ?? config.defaultDomain, extent !== undefined)
+  }
+  const domain = reactive.computed(() => automaticDomain(options.get().resolved), equalDomain)
+  const handle: ScaleHandle = {
+    kind,
+    options,
+    following,
+    domain: reactive.register<readonly ScaleValue[], Signal<readonly ScaleValue[]>>(
+      {
+        get: () => domain.get(),
+        get version() {
+          return domain.version
+        },
+        set: (value) => handle.update({ domain: value }),
+        update: (updater) => handle.update({ domain: updater(domain.get()) }),
+      },
+      equalDomain,
+    ),
+    update(patch: OptionPatch<ScaleOptions>) {
+      validateKeys(patch, keys, 'scale')
+      const previousFollow = options.get().resolved.follow
+      const source = currentDomainChangeSource() ?? 'api'
+      const previousOverride = followOverride.get()
+      const changed = state.update(patch)
+      const configuredFollow = options.get().resolved.follow
+      if (Object.hasOwn(patch, 'domain') || configuredFollow === undefined || source === 'reset') {
+        pausedDomain.set(undefined)
+      }
+      if (
+        Object.hasOwn(patch, 'domain') ||
+        Object.hasOwn(patch, 'autoscale') ||
+        Object.hasOwn(patch, 'follow') ||
+        source === 'reset'
+      ) {
+        pausedAutoscaleDomain.set(undefined)
+      }
+      let followChanged = false
+      const setFollowing = (value: boolean) => {
+        if (followingState.get() === value) return
+        followingState.set(value)
+        followChanged = true
+      }
+      if (configuredFollow === undefined) {
+        setFollowing(false)
+      } else if (
+        source === 'reset' ||
+        (previousFollow === undefined && configuredFollow !== undefined)
+      ) {
+        setFollowing(true)
+      } else if (
+        source === 'zoom' ||
+        source === 'wheel' ||
+        source === 'pan' ||
+        source === 'brush'
+      ) {
+        setFollowing(false)
+      }
+      if (
+        (source === 'api' &&
+          followingState.get() &&
+          Object.hasOwn(patch, 'domain') &&
+          patch.domain !== undefined) ||
+        (Object.hasOwn(patch, 'domain') && patch.domain === undefined) ||
+        Object.hasOwn(patch, 'follow') ||
+        source === 'reset' ||
+        source === 'zoom' ||
+        source === 'wheel' ||
+        source === 'pan' ||
+        source === 'brush'
+      ) {
+        followOverride.set(
+          source === 'api' &&
+            followingState.get() &&
+            Object.hasOwn(patch, 'domain') &&
+            patch.domain !== undefined
+            ? {
+                domain: Object.freeze([...patch.domain]),
+                dataVersion: dataState.version,
+              }
+            : undefined,
+        )
+      }
+      if (changed) optionState.publish()
+      if (changed || followChanged || previousOverride !== followOverride.get()) {
+        // Reading the computed version records the source after follow state has settled.
+        recordScaleSource(handle, domain.version)
+      }
+    },
+    pauseFollow() {
+      if (kind !== 'time' || options.get().resolved.follow === undefined) {
+        throw new Error('pauseFollow requires a time scale with follow configured.')
+      }
+      if (!followingState.get()) return
+      pausedDomain.set(domain.get())
+      followingState.set(false)
+      followOverride.set(undefined)
+      recordScaleSource(handle, domain.version)
+    },
+    resumeFollow() {
+      if (kind !== 'time' || options.get().resolved.follow === undefined) {
+        throw new Error('resumeFollow requires a time scale with follow configured.')
+      }
+      if (followingState.get()) return
+      followingState.set(true)
+      pausedDomain.set(undefined)
+      pausedAutoscaleDomain.set(undefined)
+      followOverride.set(undefined)
+      recordScaleSource(handle, domain.version)
+    },
+  }
+  handles.add(handle)
+  autoscalePauses.set(handle, () => {
+    if (options.get().resolved.domain !== undefined && !followingState.get()) return
+    pausedAutoscaleDomain.set(domain.get())
+    if (followingState.get()) handle.pauseFollow()
+  })
+  extentSources.set(handle, (source) => {
+    sources.add(source)
+    sourceVersion.update((value) => value + 1)
+    return () => {
+      if (sources.delete(source)) {
+        sourceVersion.update((value) => value + 1)
+        // Release subscriptions to stores/options owned by the removed plot.
+        reactive.untracked(() => domain.get())
+      }
+    }
+  })
+  dataDomains.set(handle, () => automaticDomain(options.get().resolved, 'data'))
+  return Object.freeze(handle)
+}
+
+export const linearScale = (options: OptionPatch<CartesianScaleOptions> = {}) =>
+  createScale('linear', options)
+export const logScale = (options: OptionPatch<CartesianScaleOptions> = {}) =>
+  createScale('log', options)
+export const timeScale = (options: OptionPatch<TimeScaleOptions> = {}) =>
+  createScale('time', options)
+export const bandScale = (options: OptionPatch<BandScaleOptions> = {}) =>
+  createScale('band', options)
+export const degreesScale = (options: OptionPatch<CartesianScaleOptions> = {}) =>
+  createScale('degrees', options)
+export const angularScale = (options: OptionPatch<AngularScaleOptions> = {}) =>
+  createScale('angular', options)
+export const radialScale = (options: OptionPatch<RadialScaleOptions> = {}) =>
+  createScale('radial', options)
+
+/** Scales are shareable by default; this documents ownership without copying state. */
+export function sharedScale<T extends ScaleHandle>(scale: T): T {
+  if (!isScaleHandle(scale)) throw new Error('sharedScale requires a scale handle.')
+  return scale
+}
+
+export function bindScale<K extends ScaleKind>(
+  scale: ScaleHandle<K>,
+  range: ReadonlySignal<ScaleRange>,
+): ScaleBinding<K>
+export function bindScale(scale: ScaleHandle, range: ReadonlySignal<ScaleRange>): ScaleBinding {
+  const derived = reactive.computed(() => {
+    const domain = scale.domain.get()
+    const config = scale.options.get().resolved
+    const pixels = [...range.get()]
+    if (config.reverse) pixels.reverse()
+    if (scale.kind === 'band') {
+      return scaleBand<ScaleValue>()
+        .domain([...domain])
+        .range(pixels)
+        .padding(config.padding)
+        .paddingInner(config.paddingInner ?? config.padding)
+        .paddingOuter(config.paddingOuter ?? config.padding)
+    }
+    return (scale.kind === 'log' ? scaleLog() : scaleLinear())
+      .domain(domain.map(Number))
+      .range(pixels)
+  })
+  return {
+    scale,
+    range,
+    project(value) {
+      const current = derived.get()
+      if (!('bandwidth' in current) && typeof value !== 'number') {
+        throw new Error(`Cannot project "${value}" on ${scale.kind} scale.`)
+      }
+      if (scale.kind === 'log' && Number(value) <= 0) {
+        throw new Error(`Cannot project "${value}" on a positive log scale.`)
+      }
+      const pixel = 'bandwidth' in current ? current(value) : current(Number(value))
+      if (pixel === undefined || !Number.isFinite(pixel)) {
+        throw new Error(`Cannot project "${value}" on ${scale.kind} scale.`)
+      }
+      return pixel
+    },
+    invert(pixel) {
+      if (!Number.isFinite(pixel)) throw new Error('scale.invert requires a finite pixel.')
+      const current = derived.get()
+      if (!('invert' in current)) throw new Error('Cannot invert a band scale.')
+      return current.invert(pixel)
+    },
+    ticks(count = 10, timeZone = scale.options.get().resolved.timeZone) {
+      if (!Number.isInteger(count) || count <= 0)
+        throw new Error('scale.tickCount must be a positive integer.')
+      const current = derived.get()
+      if (scale.kind === 'time') {
+        const [start, end] = scale.domain.get().map(Number)
+        return zonedTicks(timeZone, start, end, count)
+      }
+      if (scale.kind === 'degrees' || scale.kind === 'angular') {
+        const [low, high] = scale.domain.get().map(Number)
+        const step = niceDegreeSteps((high - low) / count)
+        if (step === 0) return [low]
+        const first = Math.ceil(low / step) * step
+        return Array.from(
+          { length: Math.floor((high - first) / step) + 1 },
+          (_, i) => first + i * step,
+        )
+      }
+      return 'ticks' in current ? current.ticks(count) : current.domain()
+    },
+    get bandwidth() {
+      const current = derived.get()
+      return 'bandwidth' in current ? current.bandwidth() : 0
+    },
+  }
+}

@@ -1,0 +1,814 @@
+import { afterEach, describe, expect, test, vi } from 'vite-plus/test'
+import {
+  bandScale,
+  bar,
+  colorScale,
+  createGrid,
+  createTable,
+  createSeries,
+  series,
+  crosshair,
+  line,
+  linearScale,
+  heatmap,
+  timeScale,
+  tooltip,
+  type ContinuousScaleKind,
+  type TooltipFormatContext,
+} from '../../src/index.js'
+import type { TooltipOptions } from '../../src/plot/plugins/tooltip/tooltip.js'
+import { reactive } from '../../src/core/runtime.js'
+import { computeTooltipModel } from '../../src/plot/plugins/tooltip/tooltip-model.js'
+import type { PlotContext } from '../../src/plot/plugins/plugin-definition.js'
+import { bindScale } from '../../src/scales/scale.js'
+import { barRectangles } from '../../src/plot/marks/bar/bar-geometry.js'
+import { lineDefinition } from '../../src/plot/marks/line/line-mark.js'
+import { roleFonts, type ThemeTokens } from '../../src/theme/theme.js'
+import { lineLegendSymbol } from '../../src/plot/marks/mark-styles.js'
+
+const theme: ThemeTokens = {
+  colorContrast: 'none',
+  background: '#ffffff',
+  foreground: '#263238',
+  grid: '#dce2e5',
+  accent: '#0077bb',
+  tooltipBackground: '#fff',
+  tooltipColor: '#222',
+  fontFamily: 'sans-serif',
+  fontSize: 12,
+  fonts: roleFonts({ family: 'sans-serif', size: 12, weight: 'normal', variantNumeric: 'normal' }),
+}
+
+function setup() {
+  const first = line({
+    id: '<First>',
+    x: 'x',
+    y: 'y',
+    xValues: [5],
+    yValues: [20.12345],
+    stroke: 'blue',
+    markers: { size: 6, fill: 'red', stroke: 'black', strokeWidth: 2 },
+  })
+  const second = line({
+    id: 'Second',
+    x: 'x',
+    y: 'y',
+    xValues: [5],
+    yValues: [20.12345],
+  })
+  const pointer = reactive.signal({ px: 50, py: 50, inside: true, x: new Map<string, number>() })
+  const context = {
+    theme: reactive.signal(theme),
+    scales: {
+      x: bindScale<ContinuousScaleKind>(
+        linearScale({ domain: [0, 10] }),
+        reactive.signal([0, 100] as const),
+      ),
+      y: bindScale(linearScale({ domain: [0, 40] }), reactive.signal([100, 0] as const)),
+    },
+    inspectCrosshair: vi.fn<PlotContext['inspectCrosshair']>(),
+  }
+  const pathContext = vi.fn<() => CanvasRenderingContext2D | undefined>()
+  const handle = tooltip({ digits: 2, showX: true, coordinateLabels: true })
+  const model = () =>
+    computeTooltipModel(
+      handle.options.get().resolved,
+      context,
+      {
+        marks: [first, second],
+        pointer: pointer.get(),
+        region: { x: 0, y: 0, width: 100, height: 100 },
+      },
+      pathContext,
+    )
+  return { first, second, context, pointer, pathContext, handle, model }
+}
+
+afterEach(() => {
+  vi.restoreAllMocks()
+})
+
+describe('tooltip model', () => {
+  test.each([
+    { axis: 'x', details: ' · 20.12', accessible: '<First> · 20.12' },
+    { axis: 'y', details: ' · 5', accessible: '<First> · 5' },
+    { axis: 'xy', details: ' · 5 · 20.12', accessible: '<First> · 5 · 20.12' },
+  ] as const)(
+    'defaults to value coordinates without prefixes for $axis inspection',
+    ({ axis, details, accessible }) => {
+      const { handle, model } = setup()
+      handle.update({ axis, showX: undefined, showY: undefined, coordinateLabels: undefined })
+      expect(model().entries[0]).toMatchObject({ details, accessibleLabel: accessible })
+      handle.update({ showX: false, showY: false })
+      expect(model().entries[0]).toMatchObject({ details: '', accessibleLabel: '<First>' })
+      handle.update({ showX: true, showY: true, coordinateLabels: true })
+      expect(model().entries[0]).toMatchObject({
+        details: ' · x: 5 · y: 20.12',
+        accessibleLabel: '<First> · x: 5 · y: 20.12',
+      })
+    },
+  )
+
+  test('recomputes automatic coordinates when the axis changes, preserving explicit overrides', () => {
+    const { handle, model } = setup()
+    handle.update({ showX: undefined, showY: undefined, coordinateLabels: false })
+    expect(model().entries[0].details).toBe(' · 20.12')
+    handle.update({ axis: 'y' })
+    expect(model().entries[0].details).toBe(' · 5')
+    handle.update({ showY: true, axis: 'x' })
+    expect(model().entries[0].details).toBe(' · 20.12')
+    handle.update({ axis: 'y' })
+    expect(model().entries[0].details).toBe(' · 5 · 20.12')
+    handle.update({ showY: undefined })
+    expect(model().entries[0].details).toBe(' · 5')
+  })
+
+  test.each([true, false])(
+    'uses static legend labels for line=%s, including marker-only marks',
+    (drawLine) => {
+      const { context, pointer, pathContext } = setup()
+      const mark = line({
+        id: 'internal-id',
+        label: 'Current speed',
+        x: 'x',
+        y: 'y',
+        xValues: [0.42],
+        yValues: [20],
+        line: drawLine,
+        markers: true,
+      })
+      const model = computeTooltipModel(
+        tooltip({
+          axis: 'y',
+          formatUnit: (info) => (info.axis === 'x' ? 'm/s' : 'm'),
+        }).options.get().resolved,
+        context,
+        {
+          marks: [mark],
+          pointer: pointer.get(),
+          region: { x: 0, y: 0, width: 100, height: 100 },
+        },
+        pathContext,
+      )
+      expect(model.entries[0]).toMatchObject({
+        label: 'Current speed',
+        details: ' · 0.42 m/s',
+        accessibleLabel: 'Current speed · 0.42 m/s',
+      })
+    },
+  )
+
+  test.each([20.12345, 23])(
+    'omits depth from visible and accessible text at crosshair depth %s',
+    (depth) => {
+      const { context, handle, model } = setup()
+      const guide = crosshair({ mode: 'y', labels: { y: 'y' } })
+      context.inspectCrosshair.mockReturnValue({
+        point: { x: 50, y: context.scales.y.project(depth) },
+        visible: true,
+        hit: undefined,
+        hits: [],
+        layers: [],
+        axes: 'y',
+        options: guide.options.get().resolved,
+        coordinates: [
+          {
+            axis: 'y',
+            scale: 'y',
+            value: depth,
+            digits: undefined,
+            position: context.scales.y.project(depth),
+            layerId: undefined,
+          },
+        ],
+      })
+      const formatUnit = vi.fn((_info: TooltipFormatContext) => 'm/s')
+      handle.update({
+        axis: 'y',
+        crosshair: guide,
+        showX: undefined,
+        showY: undefined,
+        coordinateLabels: false,
+        formatUnit,
+      })
+      const result = model()
+      expect(result.entries[0]).toMatchObject({
+        details: ' · 5 m/s',
+        accessibleLabel: '<First> · 5 m/s',
+      })
+      expect(formatUnit.mock.calls.every(([info]) => info.axis === 'x')).toBe(true)
+    },
+  )
+
+  test('queries each selected mark through its registered hit function', () => {
+    const { first, second, context, pathContext, handle, model } = setup()
+    const hits = vi.spyOn(lineDefinition, 'hits')
+
+    expect(model().entries).toHaveLength(2)
+    expect(hits).toHaveBeenCalledTimes(2)
+    expect(hits).toHaveBeenNthCalledWith(1, first, {
+      scales: context.scales,
+      point: { x: 50, y: 50 },
+      axis: 'x',
+      plot: { x: 0, y: 0, width: 100, height: 100 },
+      pathContext,
+    })
+    expect(hits.mock.calls[1][0]).toBe(second)
+
+    hits.mockClear()
+    handle.update({ marks: [second] })
+    expect(model().entries).toHaveLength(1)
+    expect(hits).toHaveBeenCalledTimes(1)
+    expect(hits.mock.calls[0][0]).toBe(second)
+  })
+
+  test('computes text, accessibility and symbols without constructing DOM', () => {
+    const { model, pathContext, first, context } = setup()
+    const result = model()
+    expect(result.entries).toHaveLength(2)
+    expect(result.entries[0]).toEqual({
+      label: '<First>',
+      color: 'blue',
+      details: ' · x: 5 · y: 20.12',
+      values: 'x: 5 · y: 20.12',
+      accessibleLabel: '<First> · x: 5 · y: 20.12',
+      symbol: lineLegendSymbol(first, context.theme.get()),
+    })
+    expect(result.accessibleLabel).toBe('<First> · x: 5 · y: 20.12; Second · x: 5 · y: 20.12')
+    expect(result.point).toEqual({ x: 50, y: 50 })
+    expect(pathContext).not.toHaveBeenCalled()
+  })
+
+  test('formats raw point values with mark context and appends units to visible and accessible text', () => {
+    const { first, handle, model } = setup()
+    const formatValue = vi.fn((value: string | number, info: TooltipFormatContext) =>
+      info.axis === 'y' ? `(${info.defaultText})` : String(value),
+    )
+    const formatUnit = vi.fn((info: TooltipFormatContext) => (info.axis === 'y' ? 'm' : ''))
+    handle.update({ marks: [first], formatValue, formatUnit })
+    const result = model()
+    expect(result.entries[0].details).toBe(' · x: 5 · y: (20.12) m')
+    expect(result.accessibleLabel).toBe('<First> · x: 5 · y: (20.12) m')
+    expect(formatValue).toHaveBeenCalledWith(
+      20.12345,
+      expect.objectContaining({
+        mark: first,
+        hit: expect.objectContaining({ index: 0, y: 20.12345 }),
+        axis: 'y',
+        scale: 'y',
+        digits: 2,
+        defaultText: '20.12',
+      }),
+    )
+    expect(formatUnit).toHaveBeenCalledWith(expect.objectContaining({ defaultText: '(20.12)' }))
+    expect(first.yValues[0]).toBe(20.12345)
+
+    handle.update({ formatValue: undefined, formatUnit: undefined })
+    expect(model().entries[0].details).toBe(' · x: 5 · y: 20.12')
+  })
+
+  test('keeps locale/time-zone defaults available to value formatters', () => {
+    const { context, handle, model } = setup()
+    context.scales.x = bindScale(
+      timeScale({ domain: [0, 10], locale: 'en-GB', timeZone: 'UTC' }),
+      reactive.signal([0, 100] as const),
+    )
+    handle.update({ formatValue: (_value, info) => `[${info.defaultText}]` })
+    const expected = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'UTC',
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(new Date(5))
+    expect(model().entries[0].details).toBe(` · x: [${expected}] · y: [20.12]`)
+    handle.update({
+      showX: undefined,
+      showY: undefined,
+      coordinateLabels: undefined,
+      formatValue: undefined,
+    })
+    expect(model().entries[0]).toMatchObject({
+      details: ' · 20.12',
+      accessibleLabel: '<First> · 20.12',
+    })
+  })
+
+  test('propagates formatter errors and rejects non-string results', () => {
+    const { handle, model } = setup()
+    const error = new Error('format failed')
+    handle.update({
+      formatValue: () => {
+        throw error
+      },
+    })
+    expect(model).toThrow(error)
+    // @ts-expect-error Runtime callers must also return strings.
+    handle.update({ formatValue: () => 42 })
+    expect(model).toThrow('tooltip.formatValue must return a string.')
+    // @ts-expect-error Runtime callers must also return strings.
+    handle.update({ formatValue: undefined, formatUnit: () => null })
+    expect(model).toThrow('tooltip.formatUnit must return a string.')
+  })
+
+  test('preserves target order and chooses the first hit on an xy distance tie', () => {
+    const { first, second, handle, model } = setup()
+    handle.update({ marks: [second, first] })
+    expect(model().entries.map((entry) => entry.label)).toEqual(['Second', '<First>'])
+    handle.update({ axis: 'xy' })
+    expect(model().entries.map((entry) => entry.label)).toEqual(['Second'])
+  })
+
+  test('preserves line dashes, area and marker styles and reacts to style changes', () => {
+    const { handle, context, pointer, pathContext } = setup()
+    const first = series(createSeries({ x: [5], y: [20] }), {
+      x: 'x',
+      y: 'y',
+      line: { stroke: 'blue' },
+      markers: { size: 6, fill: 'red', stroke: 'black', strokeWidth: 2 },
+    })
+    const model = () =>
+      computeTooltipModel(
+        handle.options.get().resolved,
+        context,
+        {
+          marks: [first],
+          pointer: pointer.get(),
+          region: { x: 0, y: 0, width: 100, height: 100 },
+        },
+        pathContext,
+      )
+    first.update({
+      line: { strokeDasharray: '6 3', width: 3 },
+      area: { to: 0, fill: 'orange', opacity: 0.3 },
+    })
+    expect(model().entries[0].symbol).toMatchObject({
+      type: 'composite',
+      parts: [
+        { type: 'area', fill: 'orange', opacity: 0.3 },
+        { type: 'line', stroke: 'blue', strokeWidth: 3, strokeDasharray: '6 3' },
+        { type: 'marker', shape: 'circle', size: 6, fill: 'red', stroke: 'black', strokeWidth: 2 },
+      ],
+    })
+    first.update({ line: false, area: false })
+    expect(model().entries[0].symbol).toMatchObject({
+      type: 'composite',
+      parts: [{ type: 'marker', shape: 'circle', fill: 'red' }],
+    })
+    handle.update({
+      formatValue: (_value, info) => `[${info.defaultText}]`,
+      formatUnit: (info) => (info.axis === 'y' ? 'm' : ''),
+    })
+    expect(model().entries[0].details).toBe(' · x: [5] · y: [20] m')
+    expect(model().accessibleLabel).toBe('Series 1 · x: [5] · y: [20] m')
+  })
+
+  test('omits x only when requested and returns an empty model outside the plot', () => {
+    const { handle, model, pointer } = setup()
+    handle.update({ showX: false })
+    expect(model().entries[0].details).toBe(' · y: 20.12')
+    expect(model().entries[0].accessibleLabel).toBe('<First> · y: 20.12')
+    pointer.set({ ...pointer.get(), inside: false })
+    expect(model().entries).toEqual([])
+    expect(model().accessibleLabel).toBe('')
+  })
+
+  test('reuses linked snap hits and suppresses only identically formatted visible coordinates', () => {
+    const { first, context, handle, model } = setup()
+    const hits = vi.spyOn(lineDefinition, 'hits')
+    const guide = crosshair({ mode: 'xy', snap: { mark: first, axis: 'xy' } })
+    const hit = { index: 0, x: 5, y: 20.12345, px: 50, py: 49.691375, distance: 0 }
+    const inspection = {
+      point: { x: hit.px, y: hit.py },
+      visible: true,
+      hit,
+      hits: [hit],
+      layers: [],
+      axes: 'xy',
+      options: guide.options.get().resolved,
+      coordinates: [
+        {
+          axis: 'x' as const,
+          scale: 'x',
+          value: 5,
+          digits: undefined,
+          position: 50,
+          layerId: undefined,
+        },
+        {
+          axis: 'y' as const,
+          scale: 'y',
+          value: hit.y,
+          digits: 2,
+          position: hit.py,
+          layerId: undefined,
+        },
+      ],
+    }
+    context.inspectCrosshair.mockReturnValue(inspection)
+    handle.update({ crosshair: guide })
+    expect(model().entries).toHaveLength(1)
+    expect(model().entries[0].details).toBe('')
+    expect(model().entries[0].accessibleLabel).toBe('<First> · x: 5 · y: 20.12')
+    expect(model().point).toEqual(inspection.point)
+    handle.update({ digits: 3 })
+    expect(model().entries[0].details).toBe(' · y: 20.123')
+    handle.update({ digits: 2, formatValue: (_value, info) => info.defaultText })
+    expect(model().entries[0].details).toBe('')
+    handle.update({ formatUnit: (info) => (info.axis === 'y' ? 'm' : '') })
+    expect(model().entries[0].details).toBe(' · y: 20.12 m')
+    expect(model().entries[0].accessibleLabel).toBe('<First> · x: 5 · y: 20.12 m')
+    handle.update({ formatUnit: undefined, formatValue: (_value, info) => `[${info.defaultText}]` })
+    expect(model().entries[0].details).toBe(' · x: [5] · y: [20.12]')
+    context.inspectCrosshair.mockReturnValue({ ...inspection, visible: false })
+    expect(model().entries).toEqual([])
+    expect(hits).not.toHaveBeenCalled()
+  })
+
+  test.each([
+    { layers: undefined, label: undefined, names: ['rain'] },
+    {
+      label: 'rain',
+      layers: [
+        { id: 'single', y: 'value' },
+        { id: 'forecast', y: 'value', label: 'Forecast' },
+      ],
+      names: ['rain · single', 'rain · Forecast'],
+    },
+    {
+      label: '',
+      layers: [
+        { id: 'single', y: 'value' },
+        { id: 'forecast', y: 'value', label: 'Forecast' },
+      ],
+      names: ['single', 'Forecast'],
+    },
+  ])(
+    'omits unstacked bounds and only names declared layers ($names)',
+    ({ layers, label, names }) => {
+      const { context, pointer, pathContext } = setup()
+      const mark = bar(createTable({ category: [5], value: [0.4] }), {
+        id: 'rain',
+        label,
+        x: 'category',
+        y: layers ? undefined : 'value',
+        scales: { x: 'x', y: 'y' },
+        width: 20,
+        layers,
+        layout: layers ? 'grouped' : undefined,
+      })
+      const formatRange = vi.fn(
+        (_lower: string | number, _upper: string | number, info: TooltipFormatContext) =>
+          info.defaultText,
+      )
+      const handle = tooltip({ showX: false, formatRange })
+      const model = () =>
+        computeTooltipModel(
+          handle.options.get().resolved,
+          context,
+          {
+            marks: [mark],
+            pointer: pointer.get(),
+            region: { x: 0, y: 0, width: 100, height: 100 },
+          },
+          pathContext,
+        )
+      expect(model().entries.map((entry) => entry.label)).toEqual(names)
+      for (const entry of model().entries) {
+        expect(entry.details).toBe(' · 0.4')
+        expect(entry.accessibleLabel).toBe(`${entry.label} · 0.4`)
+      }
+      expect(formatRange).not.toHaveBeenCalled()
+
+      handle.update({ bounds: 'always', formatUnit: (info) => (info.axis === 'y' ? 'mm' : '') })
+      for (const entry of model().entries) {
+        expect(entry.details).toBe(' · 0.4 mm · bounds: 0–0.4 mm')
+        expect(entry.accessibleLabel).toBe(`${entry.label}${entry.details}`)
+      }
+      expect(formatRange).toHaveBeenCalled()
+
+      for (const bounds of ['never', undefined] as const) {
+        handle.update({ bounds })
+        for (const entry of model().entries) {
+          expect(entry.details).toBe(' · 0.4 mm')
+          expect(entry.accessibleLabel).toBe(`${entry.label} · 0.4 mm`)
+        }
+      }
+    },
+  )
+
+  test.each(['vertical', 'horizontal'] as const)(
+    'formats %s composite layers and keeps their raw values distinct from bounds',
+    (orientation) => {
+      const mark = bar(
+        createTable({ category: ['one'], observed: [3.12345], forecast: [4.23456] }),
+        {
+          id: 'flow',
+          x: 'category',
+          scales: orientation === 'vertical' ? { x: 'x', y: 'y' } : { x: 'y', y: 'x' },
+          orientation,
+          layout: 'stacked',
+          layers: [
+            { id: 'observed', y: 'observed', stack: 'total' },
+            { id: 'forecast', y: 'forecast', stack: 'total', label: 'Forecast', fill: 'red' },
+          ],
+        },
+      )
+      const category = bandScale({ domain: ['one'] })
+      const value = linearScale({ domain: [0, 10] })
+      const scales = {
+        x: bindScale(
+          orientation === 'vertical' ? category : value,
+          reactive.signal([0, 100] as const),
+        ),
+        y: bindScale(
+          orientation === 'vertical' ? value : category,
+          reactive.signal([100, 0] as const),
+        ),
+      }
+      const rectangle = barRectangles(mark, scales).find((entry) => entry.layerId === 'forecast')!
+      const handle = tooltip({ axis: 'xy', digits: 2, coordinateLabels: true })
+      const model = () =>
+        computeTooltipModel(
+          handle.options.get().resolved,
+          {
+            scales,
+            theme: reactive.signal(theme),
+            inspectCrosshair: vi.fn<PlotContext['inspectCrosshair']>(),
+          },
+          {
+            marks: [mark],
+            region: { x: 0, y: 0, width: 100, height: 100 },
+            pointer: {
+              inside: true,
+              px: rectangle.x + rectangle.width / 2,
+              py: rectangle.y + rectangle.height / 2,
+              x: new Map(),
+            },
+          },
+          () => undefined,
+        )
+      const result = model()
+      const categoryLabel = orientation === 'vertical' ? 'x: one' : 'y: one'
+      expect(result.entries).toHaveLength(1)
+      expect(result.entries[0]).toMatchObject({
+        label: 'Forecast',
+        color: 'red',
+        details: ` · ${categoryLabel} · 4.23 · stack: total · bounds: 3.12–7.36`,
+        accessibleLabel: `Forecast · ${categoryLabel} · 4.23 · stack: total · bounds: 3.12–7.36`,
+        symbol: { type: 'bar', fill: 'red' },
+      })
+      const axis = orientation === 'vertical' ? 'y' : 'x'
+      const formatRange = vi.fn(
+        (lower: string | number, upper: string | number, info: TooltipFormatContext) =>
+          `[${info.defaultText}] (${lower}, ${upper})`,
+      )
+      handle.update({
+        formatValue: (_value, info) =>
+          info.axis === axis ? `<${info.defaultText}>` : info.defaultText,
+        formatUnit: (info) => (info.axis === axis ? 'm' : ''),
+      })
+      expect(model().entries[0].details).toBe(
+        ` · ${categoryLabel} · <4.23> m · stack: total · bounds: <3.12>–<7.36> m`,
+      )
+      handle.update({ formatRange })
+      const formatted = model().entries[0]
+      expect(formatted.details).toBe(
+        ` · ${categoryLabel} · <4.23> m · stack: total · bounds: [<3.12>–<7.36>] (3.12345, 7.35801) m`,
+      )
+      expect(formatted.accessibleLabel).toContain(formatted.details.slice(3 + categoryLabel.length))
+      expect(formatRange).toHaveBeenCalledWith(
+        3.12345,
+        7.35801,
+        expect.objectContaining({
+          mark,
+          axis,
+          scale: axis,
+          digits: 2,
+          defaultText: '<3.12>–<7.36>',
+          hit: expect.objectContaining({ layerId: 'forecast', stack: 'total' }),
+        }),
+      )
+      formatRange.mockClear()
+      handle.update({ bounds: 'never' })
+      expect(model().entries[0].details).toBe(` · ${categoryLabel} · <4.23> m · stack: total`)
+      expect(model().accessibleLabel).not.toContain('bounds:')
+      expect(formatRange).not.toHaveBeenCalled()
+      handle.update({ bounds: 'always' })
+      expect(model().entries[0].details).toBe(formatted.details)
+      handle.update({ bounds: undefined })
+      expect(model().entries[0].details).toBe(formatted.details)
+      // @ts-expect-error Runtime callers must also return strings.
+      handle.update({ formatRange: () => false })
+      expect(model).toThrow('tooltip.formatRange must return a string.')
+    },
+  )
+
+  test('formats heatmap values and both coordinate ranges, with one unit per range', () => {
+    const { context, pointer, pathContext } = setup()
+    const mark = heatmap(createGrid({ xEdges: [0, 10], yEdges: [0, 40], values: [1.2345] }), {
+      id: 'grid',
+      label: 'Temperature',
+      scales: { x: 'x', y: 'y' },
+      color: colorScale({ colors: ['black', 'white'] }),
+    })
+    const handle = tooltip({ digits: 2, showX: true, coordinateLabels: true })
+    const model = () =>
+      computeTooltipModel(
+        handle.options.get().resolved,
+        context,
+        {
+          marks: [mark],
+          pointer: pointer.get(),
+          region: { x: 0, y: 0, width: 100, height: 100 },
+        },
+        pathContext,
+      )
+    expect(model().entries[0].details).toBe(' · x: 0–10 · y: 0–40 · value: 1.23')
+    const formatRange = vi.fn(
+      (_lower: string | number, _upper: string | number, info: TooltipFormatContext) =>
+        `[${info.defaultText}]`,
+    )
+    const formatValue = vi.fn(
+      (_value: string | number, info: TooltipFormatContext) => info.defaultText,
+    )
+    handle.update({
+      formatRange,
+      formatValue,
+      formatUnit: (info) => (info.axis === 'value' ? 'K' : 'm'),
+    })
+    expect(model().entries[0].details).toBe(' · x: [0–10] m · y: [0–40] m · value: 1.23 K')
+    expect(model().accessibleLabel).toBe('Temperature · x: [0–10] m · y: [0–40] m · value: 1.23 K')
+    expect(formatValue).toHaveBeenCalledWith(
+      1.2345,
+      expect.objectContaining({
+        mark,
+        axis: 'value',
+        scale: undefined,
+        digits: 2,
+        defaultText: '1.23',
+      }),
+    )
+    expect(formatRange).toHaveBeenCalledWith(
+      0,
+      10,
+      expect.objectContaining({ axis: 'x', scale: 'x' }),
+    )
+    handle.update({ bounds: 'never' })
+    expect(model().entries[0].details).toBe(' · x: [0–10] m · y: [0–40] m · value: 1.23 K')
+    formatRange.mockClear()
+    handle.update({ showX: false })
+    expect(model().entries[0].details).toBe(' · y: [0–40] m · value: 1.23 K')
+    expect(formatRange).toHaveBeenCalledTimes(1)
+    handle.update({ formatRange: undefined, formatUnit: undefined, formatValue: undefined })
+    expect(model().entries[0].details).toBe(' · y: 0–40 · value: 1.23')
+    handle.update({ showX: true, showY: false, coordinateLabels: false })
+    expect(model().entries[0].details).toBe(' · 0–10 · value: 1.23')
+    expect(model().accessibleLabel).toBe('Temperature · 0–10 · value: 1.23')
+    handle.update({ showX: false })
+    expect(model().entries[0].details).toBe(' · value: 1.23')
+  })
+})
+
+describe('tooltip text API', () => {
+  test('formatEntry renames, replaces details or hides rows, deriving accessible text', () => {
+    const { handle, model } = setup()
+    const formatEntry = vi.fn<NonNullable<TooltipOptions['formatEntry']>>((entry) => {
+      if (entry.name === 'Second') return null
+      return { name: `${entry.name}!`, details: [...entry.details, 'extra'] }
+    })
+    handle.update({ formatEntry })
+    const result = model()
+    expect(result.entries).toHaveLength(1)
+    expect(result.entries[0]).toMatchObject({
+      label: '<First>!',
+      details: ' · x: 5 · y: 20.12 · extra',
+      values: 'x: 5 · y: 20.12 · extra',
+      accessibleLabel: '<First>! · x: 5 · y: 20.12 · extra',
+    })
+    expect(result.accessibleLabel).toBe('<First>! · x: 5 · y: 20.12 · extra')
+    const [entry, context] = formatEntry.mock.calls[0]
+    expect(entry).toEqual({
+      name: '<First>',
+      details: [
+        { key: 'x', label: 'x', text: '5' },
+        { key: 'y', label: 'y', text: '20.12' },
+      ],
+    })
+    expect(Object.isFrozen(entry)).toBe(true)
+    expect(context).toMatchObject({
+      kind: 'series',
+      markLabel: undefined,
+      layer: undefined,
+      part: undefined,
+      exceedance: undefined,
+    })
+    expect(context.hit).toMatchObject({ x: 5, y: 20.12345 })
+
+    handle.update({ formatEntry: () => ({ name: 'Renamed', accessibleLabel: 'Spoken' }) })
+    expect(model().entries[0]).toMatchObject({
+      label: 'Renamed',
+      details: ' · x: 5 · y: 20.12',
+      accessibleLabel: 'Spoken',
+    })
+    handle.update({ formatEntry: () => undefined })
+    expect(model().entries[0]).toMatchObject({ label: '<First>', details: ' · x: 5 · y: 20.12' })
+  })
+
+  test('formatEntry gets the layer and mark label of composite rows', () => {
+    const { context, pointer, pathContext } = setup()
+    const strip = bar(createTable({ x: [5], yellow: [0.37] }), {
+      id: 'probability',
+      label: 'Probability',
+      x: 'x',
+      scales: { x: 'x', y: 'y' },
+      layout: 'grouped',
+      layers: [{ id: 'yellow', y: 'yellow', label: 'Waarschuwingspeil' }],
+    })
+    const thresholds: Record<string, number> = { yellow: 2.2 }
+    const formatEntry = vi.fn<NonNullable<TooltipOptions['formatEntry']>>((entry, info) => ({
+      name: `${info.layer!.label} ≥ ${thresholds[info.layer!.id]} m`,
+      details: [`${Math.round((info.hit as { value: number }).value * 100)} %`],
+    }))
+    const result = computeTooltipModel(
+      tooltip({ formatEntry, layout: 'columns' }).options.get().resolved,
+      context,
+      { marks: [strip], pointer: pointer.get(), region: { x: 0, y: 0, width: 100, height: 100 } },
+      pathContext,
+    )
+    expect(formatEntry.mock.calls[0][1]).toMatchObject({
+      kind: 'layer',
+      markLabel: 'Probability',
+      layer: { id: 'yellow', label: 'Waarschuwingspeil' },
+    })
+    expect(formatEntry.mock.calls[0][0].name).toBe('Probability · Waarschuwingspeil')
+    expect(result.layout).toBe('columns')
+    expect(result.entries[0]).toMatchObject({
+      label: 'Waarschuwingspeil ≥ 2.2 m',
+      values: '37 %',
+    })
+  })
+
+  test('formatHeader adds one line before the rows and to the accessible label', () => {
+    const { handle, model, context } = setup()
+    const formatHeader = vi.fn<NonNullable<TooltipOptions['formatHeader']>>(
+      ({ defaultText }) => `At ${defaultText}`,
+    )
+    handle.update({ formatHeader, showX: false })
+    const result = model()
+    expect(result.header).toBe('At 5')
+    expect(result.entries[0].details).toBe(' · y: 20.12')
+    expect(result.accessibleLabel).toBe('At 5; <First> · y: 20.12; Second · y: 20.12')
+    expect(formatHeader.mock.calls[0][0]).toMatchObject({
+      x: 5,
+      scale: 'x',
+      defaultText: '5',
+      entries: [
+        { name: '<First>', details: [{ key: 'y', label: 'y', text: '20.12' }] },
+        { name: 'Second', details: [{ key: 'y', label: 'y', text: '20.12' }] },
+      ],
+    })
+
+    const guide = crosshair({ mode: 'x' })
+    context.inspectCrosshair.mockReturnValue({
+      point: { x: 50, y: 50 },
+      visible: true,
+      hit: undefined,
+      hits: [],
+      layers: [],
+      axes: 'x',
+      options: guide.options.get().resolved,
+      coordinates: [
+        { axis: 'x', scale: 'x', value: 4.5, digits: 1, position: 45, layerId: undefined },
+      ],
+    })
+    handle.update({ crosshair: guide })
+    expect(model().header).toBe('At 4.5')
+    handle.update({ formatHeader: () => '' })
+    expect(model().header).toBeUndefined()
+  })
+
+  test('maxDistance leaves out marks whose nearest sample is too far away', () => {
+    const { handle, model, pointer } = setup()
+    pointer.set({ px: 80, py: 50, inside: true, x: new Map() })
+    expect(model().entries).toHaveLength(2)
+    handle.update({ maxDistance: 20 })
+    expect(model().entries).toHaveLength(0)
+    handle.update({ maxDistance: 30 })
+    expect(model().entries).toHaveLength(2)
+    expect(model().header).toBeUndefined()
+  })
+
+  test('validates the text options and formatter results', () => {
+    const { handle, model } = setup()
+    expect(() => tooltip({ maxDistance: -1 })).toThrow(/maxDistance/)
+    expect(() => tooltip({ layout: 'grid' as never })).toThrow(/layout/)
+    expect(() => tooltip({ formatEntry: 'x' as never })).toThrow(/formatEntry/)
+    expect(() => tooltip({ formatHeader: 1 as never })).toThrow(/formatHeader/)
+    expect(tooltip().options.get().resolved.layout).toBe('inline')
+    handle.update({ formatEntry: () => 5 as never })
+    expect(model).toThrow(/formatEntry must return/)
+    handle.update({ formatEntry: () => ({ details: [{ text: 3 }] }) as never })
+    expect(model).toThrow(/formatEntry details/)
+    handle.update({ formatEntry: undefined, formatHeader: () => 3 as never })
+    expect(model).toThrow(/formatHeader must return/)
+  })
+})

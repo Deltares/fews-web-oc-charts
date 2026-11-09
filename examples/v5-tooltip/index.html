@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>v5: tooltip</title>
+  </head>
+  <body>
+    <nav aria-label="Examples">
+      <a href="/">All examples</a>
+      <a href="../v5-crosshair/">Crosshair</a>
+    </nav>
+    <h1>v5: tooltip</h1>
+    <p>
+      Inspect samples with matching symbols and label colors. Crosshair axis callouts show shared
+      coordinates without repeating them in every tooltip entry.
+    </p>
+    <fieldset class="controls">
+      <legend>Tooltip options</legend>
+      <label for="mode">
+        Crosshair guides
+        <select id="mode">
+          <option value="none">None (standalone tooltip)</option>
+          <option value="x" selected>Vertical (x)</option>
+          <option value="y">Horizontal (y)</option>
+          <option value="xy">Both (xy)</option>
+        </select>
+      </label>
+      <label for="snap">
+        Snap to observed sample by
+        <select id="snap">
+          <option value="none">Free pointer</option>
+          <option value="x" selected>Nearest x</option>
+          <option value="y">Nearest y</option>
+          <option value="xy">Nearest screen position</option>
+        </select>
+      </label>
+      <label for="callouts">
+        <input id="callouts" type="checkbox" checked />
+        Axis coordinate callouts
+      </label>
+      <label for="axis">
+        Match samples by (without snapping)
+        <select id="axis">
+          <option value="x" selected>Nearest x</option>
+          <option value="y">Nearest y</option>
+          <option value="xy">Nearest screen position</option>
+        </select>
+      </label>
+      <label for="position">
+        Preferred position
+        <select id="position">
+          <option value="right" selected>Right</option>
+          <option value="left">Left</option>
+          <option value="top">Top</option>
+          <option value="bottom">Bottom</option>
+        </select>
+      </label>
+    </fieldset>
+    <figure>
+      <div id="chart" class="plot-host"></div>
+      <figcaption>
+        X/y snapping anchors the guides to an observed sample, then finds each series' nearest
+        sample along that axis. Screen-distance snapping inspects only the selected observed sample.
+        A coordinate stays in the tooltip if its scale or exact value differs from the callout; no
+        interpolation is performed. Callouts use the time scale's UTC formatting.
+      </figcaption>
+    </figure>
+    <output id="status" class="status"></output>
+    <h2>Advanced: tooltips across shared-time subplots</h2>
+    <p>
+      Each mark type has its own subplot and value scale, while all three plots share the same UTC
+      time-scale handle. Hover any panel: the pointer time is relayed to the other panels, showing
+      an x crosshair and mark-specific tooltip in all three. The line, rainfall bars and stacked
+      area each resolve values against their own mark and y scale.
+    </p>
+    <figure class="advanced-subplots">
+      <section aria-labelledby="flow-heading">
+        <h3 id="flow-heading">Observed flow — line mark</h3>
+        <div id="flow-chart" class="plot-host"></div>
+      </section>
+      <section aria-labelledby="rain-heading">
+        <h3 id="rain-heading">Rainfall — interval bar mark</h3>
+        <div id="rain-chart" class="plot-host"></div>
+      </section>
+      <section aria-labelledby="storage-heading">
+        <h3 id="storage-heading">Inflow components — stacked-area mark</h3>
+        <div id="storage-chart" class="plot-host"></div>
+      </section>
+      <figcaption>
+        The shared x domain keeps the same timestamp aligned across all panels. Each subplot owns an
+        independent y scale. Moving over one plot relays its time coordinate to the others; leaving
+        the subplot group hides all three crosshairs and tooltips. Time appears in the crosshair
+        callouts rather than the tooltips; values and stack bounds are rounded to two decimal
+        places.
+      </figcaption>
+    </figure>
+    <h3>Advanced shared-x setup</h3>
+    <pre><code>const t = timeScale({ domain: [start, end], timeZone: 'UTC' })
+const flow = line({ x: 't', y: 'q', xValues: times, yValues: discharge })
+const rain = bar(rainfallData, {
+  x: 'start', y: 'rainfall', scales: { x: 't', y: 'rain' },
+  interval: { start: 'start', end: 'end' },
+})
+const components = stackedArea(flowData, {
+  x: 't', scales: { x: 't', y: 'flow' }, layers,
+})
+const guide = crosshair({ mode: 'x', labels: { x: 't' } })
+
+// Install the same x-only guide in each plot. Relay pointer time between SVGs,
+// projecting it with each plot's t binding; each tooltip stays local to its mark.
+const display = { crosshair: guide, showX: false, digits: 2 }
+createPlot(flowHost, { scales: { t, q }, marks: [flow], plugins: [guide, tooltip({ ...display, marks: [flow] })] })
+createPlot(rainHost, { scales: { t, rain }, marks: [rain], plugins: [guide, tooltip({ ...display, marks: [rain] })] })
+createPlot(areaHost, { scales: { t, flow }, marks: [components], plugins: [guide, tooltip({ ...display, marks: [components] })] })</code></pre>
+    <h2>Public API</h2>
+    <pre><code>const guide = crosshair({
+  mode: 'x',
+  snap: { mark: observed, axis: 'x' },
+  labels: { x: 't', y: 'q' },
+})
+const interaction = tooltip({ marks: [observed, forecast], crosshair: guide })
+const plot = createPlot(host, { scales: { t, q }, marks, plugins: [guide, interaction] })
+guide.update({ mode: 'xy' })
+guide.update({ snap: { mark: observed, axis: 'y' } })
+interaction.update({ position: 'top' })
+// A linked crosshair's snap axis takes precedence over tooltip.axis.
+// Without a link, the tooltip retains all sample coordinates.
+interaction.update({ crosshair: undefined, axis: 'xy' })</code></pre>
+    <script type="module" src="./v5-tooltip.ts"></script>
+  </body>
+</html>

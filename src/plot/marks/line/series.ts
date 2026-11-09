@@ -1,0 +1,209 @@
+import { validateLegendGroup } from '../static-legend.js'
+import {
+  createOptionState,
+  type OptionPatch,
+  type OptionStateSnapshot,
+} from '../../../core/options.js'
+import type { ReadonlySignal } from '../../../core/reactive.js'
+import { optionSignal } from '../../../core/runtime.js'
+import { validateKeys } from '../../../core/validation.js'
+import { isSeriesStore, type SeriesStore } from '../../../data-store/series.js'
+import {
+  line,
+  type LineAreaOptions,
+  type LineMarkerOptions,
+  type LineMark,
+  type LineOptions,
+} from './line.js'
+
+export interface SeriesLineOptions extends Pick<
+  LineOptions,
+  'strokeDasharray' | 'strokeLinecap' | 'strokeLinejoin' | 'digits' | 'vectorEffect'
+> {
+  stroke?: string
+  width?: number
+}
+
+export type SeriesMarkerOptions = LineMarkerOptions
+
+export interface SeriesOptions {
+  id?: string
+  x: string
+  y: string
+  label: string
+  /** Legend group heading; marks sharing a group are toggled together. */
+  legendGroup?: string
+  visible: boolean
+  line: false | SeriesLineOptions
+  markers: false | SeriesMarkerOptions
+  area: false | LineAreaOptions
+}
+
+export interface SeriesMark extends Omit<LineMark, 'xValues' | 'yValues'> {
+  readonly data: SeriesStore<unknown>
+  readonly options: ReadonlySignal<OptionStateSnapshot<SeriesOptions>>
+  readonly visible: boolean
+  update(patch: OptionPatch<SeriesOptions>): void
+}
+
+const handles = new WeakSet<object>()
+const validators = new WeakMap<SeriesMark, Set<(candidate: LineMark) => void>>()
+export const isSeriesMark = (value: object): value is SeriesMark => handles.has(value)
+
+export function validateSeriesUpdates(mark: SeriesMark, validate: (candidate: LineMark) => void) {
+  const consumers = validators.get(mark)
+  if (!consumers) throw new Error('Expected a series handle.')
+  consumers.add(validate)
+  return () => {
+    consumers.delete(validate)
+  }
+}
+
+function validatePartOptions(value: unknown, keys: string[], name: string) {
+  if (value === false) return
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new TypeError(`${name} must be false or options.`)
+  }
+  validateKeys(value, keys, name)
+}
+
+function visual(options: Readonly<SeriesOptions>): LineMark {
+  if (typeof options.visible !== 'boolean') throw new TypeError('series.visible must be boolean.')
+  if (typeof options.label !== 'string') throw new TypeError('series.label must be a string.')
+  validateLegendGroup(options.legendGroup, 'series')
+  validatePartOptions(
+    options.line,
+    [
+      'stroke',
+      'width',
+      'strokeDasharray',
+      'strokeLinecap',
+      'strokeLinejoin',
+      'digits',
+      'vectorEffect',
+    ],
+    'series.line',
+  )
+  validatePartOptions(
+    options.markers,
+    ['symbol', 'render', 'size', 'fill', 'stroke', 'strokeWidth', 'skip'],
+    'series.markers',
+  )
+  const lineStyle = options.line === false ? undefined : options.line
+  const markers =
+    options.markers === false
+      ? false
+      : {
+          size: options.markers.size,
+          symbol: options.markers.symbol,
+          render: options.markers.render,
+          fill: options.markers.fill,
+          stroke: options.markers.stroke,
+          strokeWidth: options.markers.strokeWidth,
+          skip: options.markers.skip,
+        }
+  return line({
+    id: options.id,
+    x: options.x,
+    y: options.y,
+    xValues: [],
+    yValues: [],
+    line: options.line !== false,
+    stroke: lineStyle?.stroke,
+    strokeWidth: lineStyle?.width,
+    strokeDasharray: lineStyle?.strokeDasharray,
+    strokeLinecap: lineStyle?.strokeLinecap,
+    strokeLinejoin: lineStyle?.strokeLinejoin,
+    digits: lineStyle?.digits,
+    vectorEffect: lineStyle?.vectorEffect,
+    markers,
+    area: options.area === false ? undefined : options.area,
+  })
+}
+
+export function series(
+  data: SeriesStore<unknown>,
+  initial: OptionPatch<SeriesOptions>,
+): SeriesMark {
+  if (!data || !isSeriesStore(data))
+    throw new TypeError('series requires a createSeries/fromObjects store.')
+  const keys = ['id', 'x', 'y', 'label', 'legendGroup', 'visible', 'line', 'markers', 'area']
+  validateKeys(initial, keys, 'series')
+  const consumers = new Set<(candidate: LineMark) => void>()
+  const state = createOptionState<SeriesOptions>(initial, {
+    defaults: () => ({
+      x: '',
+      y: '',
+      label: '',
+      visible: true,
+      line: {},
+      markers: false,
+      area: false,
+    }),
+    validate(options) {
+      const candidate = visual(options)
+      for (const validate of consumers) validate(candidate)
+    },
+  })
+  const optionState = optionSignal(state)
+  let rendered = visual(state.getSnapshot().resolved)
+  const mark: SeriesMark = {
+    data,
+    options: optionState.snapshot,
+    get id() {
+      return rendered.id
+    },
+    get x() {
+      return rendered.x
+    },
+    get y() {
+      return rendered.y
+    },
+    get stroke() {
+      return rendered.stroke
+    },
+    get strokeWidth() {
+      return rendered.strokeWidth
+    },
+    get strokeDasharray() {
+      return rendered.strokeDasharray
+    },
+    get strokeLinecap() {
+      return rendered.strokeLinecap
+    },
+    get strokeLinejoin() {
+      return rendered.strokeLinejoin
+    },
+    get digits() {
+      return rendered.digits
+    },
+    get vectorEffect() {
+      return rendered.vectorEffect
+    },
+    get line() {
+      return rendered.line
+    },
+    get markers() {
+      return rendered.markers
+    },
+    get area() {
+      return rendered.area
+    },
+    get visible() {
+      return state.getSnapshot().resolved.visible
+    },
+    update(patch) {
+      validateKeys(patch, keys, 'series')
+      if (Object.hasOwn(patch, 'id') && patch.id !== rendered.id) {
+        throw new Error('series.id is immutable; replace the series handle instead.')
+      }
+      if (state.update(patch)) {
+        rendered = visual(state.getSnapshot().resolved)
+        optionState.publish()
+      }
+    },
+  }
+  handles.add(mark)
+  validators.set(mark, consumers)
+  return Object.freeze(mark)
+}

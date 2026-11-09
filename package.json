@@ -1,6 +1,6 @@
 {
   "name": "@deltares/fews-web-oc-charts",
-  "version": "4.8.1",
+  "version": "5.0.0-alpha.1",
   "description": "FEWS Chart Library",
   "license": "MIT",
   "private": false,
@@ -16,31 +16,50 @@
   "files": [
     "dist"
   ],
-  "module": "./dist/fews-web-oc-charts.js",
+  "module": "./dist/index.js",
   "exports": {
-    "import": "./dist/fews-web-oc-charts.js",
-    "types": "./dist/index.d.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./v5": {
+      "types": "./dist/v5.d.ts",
+      "import": "./dist/v5.js"
+    }
   },
   "engines": {
     "node": "^22.18.0 || ^24.11.0 || >=26.0.0"
   },
   "scripts": {
     "dev": "vp dev --config vite-examples.config.ts",
-    "build": "vp build --config vite-library.config.ts && tsc -p tsconfig.build.json",
+    "build": "rm -rf dist && vp build --config vite-library.config.ts && tsc -p tsconfig.build.json",
     "build-examples": "vp build --config vite-examples.config.ts",
     "lint": "vp lint",
     "format": "vp fmt .",
     "test": "vp test",
     "test:all-browsers": "vp test run --mode all-browsers",
-    "sonar": "sonar-scanner -Dsonar.host.url=$SONAR_URL -Dsonar.login=$SONAR_TOKEN -Dsonar.projectKey=$SONAR_KEY -Dsonar.projectName='Delft-FEWS Web OC Charts'"
+    "sonar": "sonar-scanner -Dsonar.host.url=$SONAR_URL -Dsonar.login=$SONAR_TOKEN -Dsonar.projectKey=$SONAR_KEY -Dsonar.projectName='Delft-FEWS Web OC Charts'",
+    "spike:benchmark": "node scripts/phase0-benchmark.mjs",
+    "spike:interaction": "node scripts/phase0-interaction.mjs",
+    "test:visual": "node scripts/phase1-visual-regression.mjs",
+    "test:visual:update": "node scripts/phase1-visual-regression.mjs --update",
+    "test:visual:docker": "docker run --rm --platform linux/amd64 -e VISUAL_BROWSERS -v \"$PWD:/repo\" -v /repo/node_modules -w /repo mcr.microsoft.com/playwright:v1.64.1-noble sh -c 'npm ci --ignore-scripts && node scripts/phase1-visual-regression.mjs \"$@\"' sh",
+    "test:visual:parity": "node scripts/static-visual-parity.mjs",
+    "test:interaction:zoom": "node scripts/zoom-parity-interaction.mjs",
+    "test:interaction:legend": "node scripts/legend-interaction.mjs",
+    "test:interaction:mark-hits": "node scripts/mark-hit-parity-interaction.mjs",
+    "test:interaction:mouseover": "node scripts/mouseover-parity-interaction.mjs",
+    "test:interaction:brush": "node scripts/brush-parity-interaction.mjs",
+    "test:interaction:pan": "node scripts/pan-parity-interaction.mjs",
+    "test:interaction": "npm run test:interaction:brush && npm run test:interaction:legend && npm run test:interaction:mark-hits && npm run test:interaction:mouseover && npm run test:interaction:pan && npm run test:interaction:zoom",
+    "test:live:memory": "node scripts/phase4-live-memory.mjs",
+    "test:live:stream": "node scripts/phase4-live-stream.mjs",
+    "prepack": "npm run build"
   },
   "devDependencies": {
-    "@types/d3": "^7.4.3",
-    "@types/lodash-es": "^4.17.12",
     "@types/luxon": "^3.7.6",
     "@types/node": "^24.19.2",
     "@vitest/browser-playwright": "5.0.5",
-    "csstype": "^3.2.3",
     "playwright": "^1.64.1",
     "sass-embedded": "^1.106.1",
     "tslib": "^2.8.1",
@@ -51,8 +70,21 @@
   },
   "dependencies": {
     "d3": "^7.9.0",
+    "d3-scale": "^4.0.2",
     "lodash-es": "^4.18.1",
-    "luxon": "^3.7.2"
+    "luxon": "^3.7.2",
+    "@types/d3": "^7.4.3",
+    "@types/lodash-es": "^4.17.12",
+    "@types/luxon": "^3.7.5",
+    "csstype": "^3.2.3",
+    "d3-array": "^3.2.4",
+    "d3-axis": "^3.0.0",
+    "d3-color": "^3.1.0",
+    "d3-format": "^3.1.2",
+    "d3-path": "^3.1.0",
+    "d3-quadtree": "^3.0.1",
+    "d3-selection": "^3.0.0",
+    "d3-shape": "^3.2.0"
   },
   "optionalDependencies": {
     "sass-embedded-linux-x64": "*"
@@ -66,10 +98,13 @@
   },
   "publishConfig": {
     "access": "public",
-    "registry": "https://registry.npmjs.org"
+    "registry": "https://registry.npmjs.org",
+    "tag": "next"
   },
   "overrides": {
     "vite": "npm:@voidzero-dev/vite-plus-core@1.4.0",
     "vitest": "5.0.5"
-  }
+  },
+  "types": "./dist/index.d.ts",
+  "sideEffects": false
 }

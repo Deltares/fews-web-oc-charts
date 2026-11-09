@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>v5: headless legend</title>
+  </head>
+  <body>
+    <nav aria-label="Examples">
+      <a href="/">All examples</a>
+      <a href="../v5-tooltip/">Tooltip</a>
+    </nav>
+    <h1>v5: headless legend</h1>
+    <p>
+      The application-owned HTML legend uses the core model directly; the button can also install
+      the optional built-in SVG renderer. The <code>Observed</code> and <code>Forecast</code> root
+      entries are legend groups (<code>legendGroup</code> option) that toggle all their marks
+      together. Toggle a layer to restack the areas and autoscale the value axis. Parent checkboxes
+      show partial visibility. Isolation affects siblings at the selected hierarchy level. When
+      enabled, choose a docked or corner-overlay position for the built-in SVG legend.
+      Library-rendered SVG swatches show each mark's styles, including the dashed line with markers;
+      group headings show a layers icon. Click a built-in swatch or label to toggle visibility;
+      dimmed entries are hidden. Turn off group headings to show only individual series and layers.
+    </p>
+    <fieldset class="controls">
+      <legend>Legend actions</legend>
+      <button id="show-all" type="button">Show all</button>
+      <button id="toggle-built-in" type="button" data-enabled="false">
+        Add built-in SVG legend
+      </button>
+      <label for="legend-position">
+        Built-in legend position
+        <select id="legend-position">
+          <option value="top">Top</option>
+          <option value="bottom">Bottom</option>
+          <option value="left">Left</option>
+          <option value="right">Right</option>
+          <option value="top-left">Top-left overlay</option>
+          <option value="top-right">Top-right overlay</option>
+          <option value="bottom-left">Bottom-left overlay</option>
+          <option value="bottom-right">Bottom-right overlay</option>
+        </select>
+      </label>
+      <label for="legend-groups">
+        <input id="legend-groups" type="checkbox" checked />
+        Show built-in legend groups
+      </label>
+      <button id="toggle-observed" type="button">Update observed visibility directly</button>
+      <label for="renderer">
+        Area renderer
+        <select id="renderer">
+          <option value="svg">SVG</option>
+          <option value="canvas">Canvas</option>
+        </select>
+      </label>
+    </fieldset>
+    <figure>
+      <div id="chart" class="plot-host"></div>
+      <figcaption>
+        Observed and forecast stacked areas and totals share the value scale. Each group combines a
+        stacked area and a series. Legend commands and direct mark updates use the same visibility
+        state.
+      </figcaption>
+    </figure>
+    <section aria-labelledby="legend-heading">
+      <h2 id="legend-heading">External legend</h2>
+      <div id="legend"></div>
+      <output id="legend-status">No visibility changes yet.</output>
+    </section>
+    <h2>Public API</h2>
+    <pre><code>const builtIn = legend({ position: 'top', showGroups: false })
+const plot = createPlot(host, { scales, axes, marks, plugins: [builtIn] })
+builtIn.update({ showGroups: true })
+// Built-in entries toggle on click or Enter/Space; opacity shows visibility.
+
+plot.on('legendchange', ({ entries }) => renderExternalLegend(entries))
+const entries = plot.legend.entries.get()
+const swatch = createLegendSwatch(entries[0].symbol, { width: 36, height: 20 })
+label.append(swatch) // Application-owned label and layout.
+// Framework renderers can use typed geometry instead of DOM elements.
+const primitives = legendSymbolPrimitives(entries[0].symbol, { width: 36, height: 20 })
+
+plot.legend.toggle(entries[0].id, 'external')
+plot.legend.isolate(entries[0].id, 'external')
+plot.legend.showAll('external')
+
+// Marks sharing a legendGroup are nested under one toggleable root entry.
+series(store, { label: 'Observed total', legendGroup: 'Observed', ... })
+stackedArea(table, { label: 'Contributions', legendGroup: 'Observed', ... })
+
+// Direct handle updates also refresh the legend.
+observed.update({ visible: false })
+plot.element.addEventListener('legendtoggle', event => {
+  console.log(event.detail.source, event.detail.changes)
+})</code></pre>
+    <script type="module" src="./v5-legend.ts"></script>
+  </body>
+</html>

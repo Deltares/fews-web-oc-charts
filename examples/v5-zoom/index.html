@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>v5: interactive zoom</title>
+  </head>
+  <body>
+    <nav aria-label="Examples">
+      <a href="/">All examples</a>
+      <a href="../v5-basic-line/">Basic line</a>
+      <a href="../v5-parity-zoom/">v4/v5 zoom parity</a>
+    </nav>
+    <h1>v5: interactive zoom</h1>
+    <p>
+      Drag a box or use the mouse wheel to zoom. Choose which scale directions respond and whether
+      Ctrl or Shift is required separately for wheel zoom, box zoom and optional drag-to-pan.
+      Double-click inside the plot to reset the selected directions using the chosen policy. Options
+      apply immediately without recreating the plot.
+    </p>
+    <fieldset class="controls">
+      <legend>Zoom interaction</legend>
+      <label for="mode">
+        Zoom mode
+        <select id="mode">
+          <option value="x" selected>Horizontal (x)</option>
+          <option value="y">Vertical (y)</option>
+          <option value="xy">Both (xy)</option>
+        </select>
+      </label>
+      <label for="wheel-enabled">
+        <input id="wheel-enabled" type="checkbox" checked />
+        Enable wheel zoom
+      </label>
+      <label for="modifier">
+        Box zoom modifier
+        <select id="modifier">
+          <option value="none">None</option>
+          <option value="ctrl">Ctrl</option>
+          <option value="shift">Shift</option>
+        </select>
+      </label>
+      <label for="wheel-modifier">
+        Wheel zoom modifier
+        <select id="wheel-modifier">
+          <option value="none">None</option>
+          <option value="ctrl">Ctrl</option>
+          <option value="shift">Shift</option>
+        </select>
+      </label>
+      <label for="pan-enabled">
+        <input id="pan-enabled" type="checkbox" />
+        Enable drag-to-pan
+      </label>
+      <label for="pan-modifier">
+        Pan modifier
+        <select id="pan-modifier">
+          <option value="none">None</option>
+          <option value="ctrl" selected>Ctrl</option>
+          <option value="shift">Shift</option>
+        </select>
+      </label>
+      <label for="reset-mode">
+        Double-click reset
+        <select id="reset-mode">
+          <option value="initial">Initial</option>
+          <option value="full">Full data</option>
+          <option value="toggle">Toggle</option>
+        </select>
+      </label>
+      <button id="reset" type="button">Restore initial view and autoscaling</button>
+    </fieldset>
+    <figure>
+      <div id="chart" class="plot-host"></div>
+      <figcaption>
+        Box zoom applies the selection on release; wheel zoom is anchored at the cursor. The y
+        domain follows visible samples until you zoom that axis. Initial reset restores the selected
+        scales' original configuration; full reset autoscales all their data. Toggle alternates full
+        extent and the previous zoomed domains. The button always restores both initial scales,
+        including visible-data y autoscaling. Pan takes precedence over box zoom when both match the
+        drag's modifier; choose distinct modifiers to use both.
+      </figcaption>
+    </figure>
+    <output id="status" class="status"></output>
+    <h2>Latest events per scale</h2>
+    <output id="event-status" class="status"></output>
+    <h2>Current domains</h2>
+    <pre id="snapshot" aria-label="Current scale domains"></pre>
+    <h2>Public API</h2>
+    <pre><code>const interaction = zoom({
+  mode: 'x', wheel: 'x',
+  modifier: ModifierKey.Shift,
+  wheelModifier: ModifierKey.None,
+})
+const panning = pan({ mode: 'x', modifier: ModifierKey.Ctrl })
+const plot = createPlot(host, { scales: { t, q }, axes, marks, plugins: [interaction, panning] })
+interaction.update({ mode: 'xy', wheel: 'xy' }) // both axes respond to the wheel
+interaction.update({ wheel: 'none', reset: 'toggle' }) // double-click remains enabled
+plot.on('domainchange', ({ scale, domain, source, explicit }) => {
+  console.log(scale, domain, source, explicit) // one event per changed scale
+})
+const readout = effect(() => {
+  snapshot.textContent = JSON.stringify({ time: t.domain.get(), value: q.domain.get() })
+})
+// Dispose the readout when the example is unmounted.
+readout.dispose()
+// Drag a box or wheel over the plot to zoom; double-click inside the plot to reset.</code></pre>
+    <script type="module" src="./v5-zoom.ts"></script>
+  </body>
+</html>

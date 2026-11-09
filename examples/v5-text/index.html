@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>v5: text marks</title>
+  </head>
+  <body>
+    <nav aria-label="Examples">
+      <a href="/">All examples</a>
+      <a href="../v5-basic-line/">Basic line</a>
+    </nav>
+    <h1>v5: text marks</h1>
+    <p>Place styled labels at data coordinates on named cartesian scales.</p>
+    <figure>
+      <div id="chart" class="plot-host"></div>
+      <figcaption>
+        Labels are aligned with the line observations and retain their positions when scales change.
+      </figcaption>
+    </figure>
+    <h2>Public API</h2>
+    <pre><code>text({
+  x: 't',
+  y: 'q',
+  xValues: times,
+  yValues: values,
+  textValues: ['Low', 'Rising', 'Peak', 'Falling', 'Recovered'],
+  dy: -10,
+  fill: '#7556a8',
+  textAnchor: 'middle',
+})</code></pre>
+    <script type="module" src="./v5-text.ts"></script>
+  </body>
+</html>

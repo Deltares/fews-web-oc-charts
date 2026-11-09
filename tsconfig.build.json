@@ -8,5 +8,6 @@
     "rootDir": "./src",
     "allowImportingTsExtensions": false
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/spike"]
 }

@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>v5: current time</title>
+  </head>
+  <body>
+    <nav aria-label="Examples">
+      <a href="/">All examples</a>
+      <a href="../v5-cross-section-select/">Cross-section select</a>
+    </nav>
+    <h1>v5: current time</h1>
+    <p>
+      Mark the current time on time axes. Both plots follow one shared clock, which the application
+      starts and stops. Hover over the triangle below the line to see the time.
+    </p>
+    <fieldset class="controls">
+      <legend>Clock</legend>
+      <label><input id="running" type="checkbox" checked /> Clock running</label>
+      <button id="later" type="button">Set clock 3 hours ahead</button>
+      <button id="now" type="button">Set clock to now</button>
+      <label for="label">
+        Label
+        <select id="label">
+          <option value="hover">On hover</option>
+          <option value="always">Always</option>
+          <option value="none">None</option>
+        </select>
+      </label>
+    </fieldset>
+    <figure>
+      <div id="upper" class="plot-host"></div>
+      <div id="lower" class="plot-host"></div>
+      <figcaption>
+        <output id="status" class="status"></output>
+      </figcaption>
+    </figure>
+    <h2>Public API</h2>
+    <pre><code>const clock = sharedClock({ interval: 1000 })
+clock.start()
+
+createPlot(host, {
+  scales: { time: timeScale({ timeZone: 'Europe/Amsterdam' }), level: linearScale() },
+  plugins: [currentTime({ clock, label: 'hover' })],
+})
+
+// Without a clock, the plugin updates itself every 10 seconds.
+currentTime()</code></pre>
+    <script type="module" src="./v5-current-time.ts"></script>
+  </body>
+</html>

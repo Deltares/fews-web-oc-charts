@@ -1,0 +1,18 @@
+.example-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+  gap: 20px;
+}
+
+.example-grid figure {
+  min-width: 0;
+  margin: 0;
+}
+
+.example-grid h2 {
+  font-size: 1.1rem;
+}
+
+.example-grid figcaption {
+  margin-top: 8px;
+}

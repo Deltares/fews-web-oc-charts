@@ -17,8 +17,8 @@ import {
   ModifierKey,
   PanningDirection,
   MouseButton,
-  BrushMode,
   WheelMode,
+  BrushMode,
 } from '@lib'
 
 function createAxes(
