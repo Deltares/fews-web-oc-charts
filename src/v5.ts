@@ -7,6 +7,7 @@ export type {
   PlotOptions,
   PlotPointer,
   PlotEventMap,
+  HitTestOptions,
   DomainChangeDetail,
   LayoutChangeDetail,
   LegendChangeDetail,
@@ -18,6 +19,7 @@ export type {
 } from './plot/create-plot.js'
 export type { PlotDomEventMap } from './plot/dom-events.js'
 export type { PlotMark } from './plot/marks/marks.js'
+export type { HoverHit, HoverMark } from './plot/plugins/hover-hits.js'
 export type { PlotPlugin } from './plot/plugins/plugins.js'
 export { axis } from './plot/axes/axis.js'
 export type { AxisHandle, AxisOptions, AxisSide } from './plot/axes/axis.js'

@@ -85,34 +85,58 @@ export function selectHoverHits(
           y: inspection.axes.includes('y') ? inspection.point.y : local.y,
         }
   const axis = inspection?.options.snap?.axis ?? options.axis
-  const hits: HoverHit[] =
+  const hits =
     pointer.inside && (!inspection || inspection.visible)
-      ? marks.flatMap<HoverHit>((mark, index): HoverHit[] => {
+      ? collectHits(marks, axis, (mark) => {
           if (axis === 'xy' && inspection?.options.snap && mark !== inspection.options.snap.mark) {
             return []
           }
-          const markHits =
-            inspection?.options.snap?.mark === mark
-              ? inspection.hits
-              : (markDefinition(mark).hits?.(mark, {
-                  scales: context.scales,
-                  point,
-                  axis,
-                  plot: region,
-                  pathContext,
-                }) ?? [])
-          return markHits.map((hit) => ({ mark, hit, index }))
+          return inspection?.options.snap?.mark === mark
+            ? inspection.hits
+            : markHitsAt(mark, { scales: context.scales, point, axis, region, pathContext })
         })
       : []
-  const selected =
-    axis === 'xy'
-      ? hits.reduce<HoverHit[]>(
-          (closest, item) =>
-            !closest.length || item.hit.distance < closest[0].hit.distance ? [item] : closest,
-          [],
-        )
-      : hits
-  return { point, inspection, hits: selected }
+  return { point, inspection, hits }
+}
+
+/** One mark's hits at an SVG point, from its mark definition. */
+export function markHitsAt(
+  mark: HoverMark,
+  state: {
+    readonly scales: PlotContext['scales']
+    readonly point: { readonly x: number; readonly y: number }
+    readonly axis: 'x' | 'y' | 'xy'
+    readonly region: Readonly<Region>
+    readonly pathContext: () => CanvasRenderingContext2D | undefined
+  },
+): readonly MarkHit[] {
+  return (
+    markDefinition(mark).hits?.(mark, {
+      scales: state.scales,
+      point: state.point,
+      axis: state.axis,
+      plot: state.region,
+      pathContext: state.pathContext,
+    }) ?? []
+  )
+}
+
+/** Every mark's hits along `x` or `y`; along `xy` only the single nearest hit. */
+export function collectHits(
+  marks: readonly HoverMark[],
+  axis: 'x' | 'y' | 'xy',
+  hitsOf: (mark: HoverMark) => readonly MarkHit[],
+): HoverHit[] {
+  const hits = marks.flatMap<HoverHit>((mark, index) =>
+    hitsOf(mark).map((hit) => ({ mark, hit, index })),
+  )
+  return axis === 'xy'
+    ? hits.reduce<HoverHit[]>(
+        (closest, item) =>
+          !closest.length || item.hit.distance < closest[0].hit.distance ? [item] : closest,
+        [],
+      )
+    : hits
 }
 
 /** Resolves the color of the hovered datum, including composite layers and heatmap cells. */

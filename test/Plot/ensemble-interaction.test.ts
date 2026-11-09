@@ -229,6 +229,27 @@ describe('ensemble inspection', () => {
     expect(document.querySelector('[data-tooltip-entry]')!.textContent).toContain('Member A: 2')
   })
 
+  test('plot.hitTest returns the nearest member under a client position', async () => {
+    const mark = ensemble(data(), { id: 'fc', x: 'x', y: 'y', median: {} })
+    const { current } = await setup(mark, [])
+    const at = (x: number, y: number) => ({
+      clientX: current.scales.x.project(x),
+      clientY: current.scales.y.project(y),
+    })
+    const [nearest, ...rest] = current.hitTest(at(9, 9.6))
+    expect(rest).toEqual([])
+    expect(nearest.mark).toBe(mark)
+    expect(nearest.hit).toMatchObject({ index: 1, member: { id: 'c' } })
+    expect(current.hitTest(at(10, 2.2), { axis: 'x', marks: [mark] })[0].hit).toMatchObject({
+      member: { id: 'a' },
+      distance: 0,
+    })
+    expect(current.hitTest({ clientX: -20, clientY: 50 })).toEqual([])
+    expect(current.hitTest(at(10, 2), { marks: [] })).toEqual([])
+    expect(() => current.hitTest(at(10, 2), { axis: 'z' as never })).toThrow(/axis/)
+    expect(() => current.hitTest(at(10, 2), { marks: [{}] as never })).toThrow(/marks/)
+  })
+
   test('highlights the hovered member line and point', async () => {
     const mark = ensemble(data(), { x: 'x', y: 'y', median: {} })
     const { current, move } = await setup(mark, [highlight({ marks: [mark], axis: 'xy' })])

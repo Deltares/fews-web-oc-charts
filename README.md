@@ -400,6 +400,24 @@ Matching bubbling, composed DOM `CustomEvent`s are dispatched on `plot.element`,
 typed `detail` available to `HTMLElement` and `SVGElement` event listeners. Existing
 `legendtoggle` and `brush` events are also available through `plot.on()`.
 
+## Hit testing
+
+`plot.hitTest({ clientX, clientY }, options)` runs the hit tests that `tooltip()` and
+`highlight()` use at a client position, for example in a click handler. By default it
+returns the single nearest hit of all inspectable marks; `axis: 'x'` or `'y'` returns each
+mark's hit along that axis instead, and `marks` restricts the marks tested. It follows no
+crosshair and returns no hits outside the plot region. An ensemble hit names the nearest
+drawn `member`, or none when a statistic line is nearer.
+
+```ts
+plot.element.addEventListener('click', (event) => {
+  const [nearest] = plot.hitTest(event, { marks: [plume] })
+  if (nearest && nearest.hit.distance <= 8 && 'member' in nearest.hit && nearest.hit.member) {
+    plume.update({ control: { member: nearest.hit.member.id } })
+  }
+})
+```
+
 ## Updating bands
 
 `band()` (also exported as `range()`) returns a reactive handle. Update interval

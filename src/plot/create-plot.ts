@@ -47,6 +47,13 @@ import type { CoordinateSystem } from './marks/mark-definition.js'
 import { isPlotMark, type PlotMark } from './marks/marks.js'
 import { createPluginHost, isPlotPlugin, type PlotPlugin } from './plugins/plugins.js'
 import {
+  collectHits,
+  isHoverMark,
+  markHitsAt,
+  type HoverHit,
+  type HoverMark,
+} from './plugins/hover-hits.js'
+import {
   projectSkewTPoint,
   invertSkewTPoint,
   type SkewTOptions,
@@ -123,6 +130,16 @@ export interface PlotEventMap {
   brush: BrushSelection
 }
 
+export interface HitTestOptions {
+  /** Marks to test; defaults to every inspectable mark in the plot. */
+  readonly marks?: readonly HoverMark[]
+  /**
+   * `xy` (the default) returns only the nearest hit; `x` or `y` returns each mark's hit at the
+   * nearest position along that axis, with the distance measured along it.
+   */
+  readonly axis?: 'x' | 'y' | 'xy'
+}
+
 export type PlotConfig = Omit<
   OptionPatch<PlotOptions>,
   'scales' | 'axes' | 'marks' | 'plugins' | 'themeElement' | 'align'
@@ -168,6 +185,14 @@ export interface Plot {
     listener: (value: T, previous: T | undefined) => void,
     options?: SubscribeOptions<T>,
   ): Unsubscribe
+  /**
+   * Hit-tests the plot's marks at a client position, as tooltip() and highlight() do, without
+   * following any crosshair. Returns no hits outside the plot region. Cartesian plots only.
+   */
+  hitTest(
+    position: { readonly clientX: number; readonly clientY: number },
+    options?: HitTestOptions,
+  ): readonly HoverHit[]
   update(patch: PlotConfig): void
   setConfig(config: PlotConfig): void
   pause(): void
@@ -1011,6 +1036,40 @@ function createPlotInternal(
     reconcile()
   }
 
+  let hitPathContext: CanvasRenderingContext2D | undefined
+  function hitTest(
+    position: { readonly clientX: number; readonly clientY: number },
+    hitOptions: HitTestOptions = {},
+  ): readonly HoverHit[] {
+    if (destroyed) throw new Error('Cannot hit-test a destroyed plot.')
+    if (coordinateSystem !== 'cartesian') {
+      throw new Error('plot.hitTest supports Cartesian plots only.')
+    }
+    const axis = hitOptions.axis ?? 'xy'
+    if (axis !== 'x' && axis !== 'y' && axis !== 'xy') {
+      throw new TypeError('hitTest axis must be x, y or xy.')
+    }
+    if (
+      hitOptions.marks !== undefined &&
+      (!Array.isArray(hitOptions.marks) || !hitOptions.marks.every(isHoverMark))
+    ) {
+      throw new TypeError('hitTest marks must be an array of inspectable marks.')
+    }
+    const located = pointerHub.locate(position)
+    if (!located?.inside) return Object.freeze([])
+    const region = regions.get().plot
+    const marks = hitOptions.marks ?? options.get().resolved.marks.filter(isHoverMark)
+    const point = { x: located.svgX, y: located.svgY }
+    const pathContext = () =>
+      (hitPathContext ??= document.createElement('canvas').getContext('2d') ?? undefined)
+    const scales = scaleBindings.scales
+    return Object.freeze(
+      collectHits(marks, axis, (mark) =>
+        markHitsAt(mark, { scales, point, axis, region, pathContext }),
+      ),
+    )
+  }
+
   return {
     element,
     options,
@@ -1030,6 +1089,7 @@ function createPlotInternal(
     },
     on,
     subscribe,
+    hitTest,
     update(patch) {
       apply(patch, false)
     },
