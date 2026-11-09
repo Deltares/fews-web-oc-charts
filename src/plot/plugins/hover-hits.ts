@@ -74,7 +74,16 @@ export function selectHoverHits(
   const { pointer, region } = state
   const marks = options.marks ?? state.marks.filter(isHoverMark)
   const inspection = options.crosshair ? context.inspectCrosshair(options.crosshair) : undefined
-  const point = inspection?.point ?? { x: pointer.px + region.x, y: pointer.py + region.y }
+  const local = { x: pointer.px + region.x, y: pointer.py + region.y }
+  // A shared pointer only carries the axes it is synchronized by; the other axis falls back to the
+  // region centre, so hit tests take that axis from this plot's own pointer instead.
+  const point =
+    !inspection || inspection.hit
+      ? (inspection?.point ?? local)
+      : {
+          x: inspection.axes.includes('x') ? inspection.point.x : local.x,
+          y: inspection.axes.includes('y') ? inspection.point.y : local.y,
+        }
   const axis = inspection?.options.snap?.axis ?? options.axis
   const hits: HoverHit[] =
     pointer.inside && (!inspection || inspection.visible)

@@ -2,9 +2,11 @@ import { afterEach, describe, expect, test, vi } from 'vite-plus/test'
 import {
   createEnsemble,
   createPlot,
+  crosshair,
   ensemble,
   highlight,
   linearScale,
+  sharedPointer,
   tooltip,
   type EnsembleMark,
   type Plot,
@@ -209,6 +211,22 @@ describe('ensemble inspection', () => {
     expect(rows[2]).toContain('6')
     expect(rows[3]).toContain('P(>4)')
     expect(rows[3]).toContain('67%')
+  })
+
+  test('names the member under the pointer with an x-only shared crosshair', async () => {
+    // The shared pointer carries x only, so the crosshair's y is the region centre (value 6,
+    // member b). The nearest member must follow this plot's pointer instead.
+    const mark = ensemble(data(), { id: 'fc', x: 'x', y: 'y', median: {} })
+    const handle = crosshair({ pointer: sharedPointer({ by: 'x' }), mode: 'x' })
+    const { move } = await setup(mark, [
+      handle,
+      tooltip({ marks: [mark], crosshair: handle, showX: false, digits: 1, maxDistance: 20 }),
+    ])
+    await move(10, 10.2)
+    const heading = document.querySelector('[data-tooltip-entry]')!.textContent
+    expect(heading).toContain('Member C: 10')
+    await move(10, 2.1)
+    expect(document.querySelector('[data-tooltip-entry]')!.textContent).toContain('Member A: 2')
   })
 
   test('highlights the hovered member line and point', async () => {
