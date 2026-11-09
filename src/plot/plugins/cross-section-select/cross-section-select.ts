@@ -26,6 +26,11 @@ export interface CrossSectionSelectOptions {
   format?: (value: number) => string
   /** Formats each mark's sample value in its label and in `currentData`. */
   formatValue?: CrossSectionValueFormatter
+  /**
+   * Called with the selected value while the line is dragged, at most once per animation frame,
+   * and with the final value just before the release callback. Not called by `setValue`.
+   */
+  onDrag?: (value: number) => void
 }
 
 export interface CrossSectionValueContext {
@@ -75,7 +80,7 @@ const handleCallbacks = new WeakMap<
   CrossSectionSelectHandle,
   ((value: number) => void) | undefined
 >()
-const optionKeys = ['x', 'marks', 'draggable', 'interpolate', 'format', 'formatValue']
+const optionKeys = ['x', 'marks', 'draggable', 'interpolate', 'format', 'formatValue', 'onDrag']
 
 export function isCrossSectionSelectHandle(value: object): value is CrossSectionSelectHandle {
   return handles.has(value)
@@ -127,6 +132,7 @@ export function crossSectionSelect(
       interpolate: false,
       format: undefined,
       formatValue: undefined,
+      onDrag: undefined,
     }),
     isAtomicReference: (value) => isLineMark(value) || isSeriesMark(value),
     validate(options) {
@@ -140,7 +146,7 @@ export function crossSectionSelect(
       if (typeof options.interpolate !== 'boolean') {
         throw new TypeError('crossSectionSelect.interpolate must be boolean.')
       }
-      for (const key of ['format', 'formatValue'] as const) {
+      for (const key of ['format', 'formatValue', 'onDrag'] as const) {
         if (options[key] !== undefined && typeof options[key] !== 'function') {
           throw new TypeError(`crossSectionSelect.${key} must be a function.`)
         }

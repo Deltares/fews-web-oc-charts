@@ -307,6 +307,19 @@ crossSectionSelect(now, onChange, {
 })
 ```
 
+With `draggable: true` the release callback (`onChange` above) runs once, when the drag
+ends. `onDrag(value)` reports the value while the line is dragged, at most once per
+animation frame, and once more with the final value just before the release callback.
+Neither runs for `setValue()`.
+
+```ts
+crossSectionSelect(now, (time) => loadMap(time), {
+  x: 'time',
+  draggable: true,
+  onDrag: (time) => previewMap(time),
+})
+```
+
 ## Listening to changes
 
 Use `subscribe()` to observe any library signal, including a shared scale's domain.

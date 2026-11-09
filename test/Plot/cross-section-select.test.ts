@@ -285,6 +285,38 @@ describe('cross-section select plugin', () => {
     expect(interaction.value.get()).toBe(10)
   })
 
+  test('reports the dragged value once per animation frame with onDrag', async () => {
+    const changed = vi.fn()
+    const dragged = vi.fn()
+    const interaction = crossSectionSelect(5, changed, { x: 't', draggable: true, onDrag: dragged })
+    const { plot } = await setup(interaction)
+    const handle = plot.element.querySelector('[data-cross-section-handle]')!
+    pointer(plot, 'pointerdown', plot.scales.t.project(5), handle)
+    pointer(plot, 'pointermove', plot.scales.t.project(6), plot.element)
+    pointer(plot, 'pointermove', plot.scales.t.project(7), plot.element)
+    expect(dragged).not.toHaveBeenCalled()
+    await new Promise(requestAnimationFrame)
+    expect(dragged).toHaveBeenCalledTimes(1)
+    expect(dragged).toHaveBeenLastCalledWith(expect.closeTo(7))
+    expect(changed).not.toHaveBeenCalled()
+
+    // A pending frame is flushed on release, before the release callback.
+    pointer(plot, 'pointermove', plot.scales.t.project(8), plot.element)
+    pointer(plot, 'pointerup', plot.scales.t.project(8), plot.element)
+    expect(dragged).toHaveBeenCalledTimes(2)
+    expect(dragged).toHaveBeenLastCalledWith(expect.closeTo(8))
+    expect(changed).toHaveBeenCalledTimes(1)
+    expect(dragged.mock.invocationCallOrder[1]).toBeLessThan(changed.mock.invocationCallOrder[0])
+    await frame()
+    expect(dragged).toHaveBeenCalledTimes(2)
+
+    // setValue does not report a drag; onDrag must be a function.
+    interaction.setValue(3)
+    await frame()
+    expect(dragged).toHaveBeenCalledTimes(2)
+    expect(() => interaction.update({ onDrag: 1 as never })).toThrow(/onDrag must be a function/)
+  })
+
   test('drags from the guide line and from the handle below the plot area', async () => {
     const interaction = crossSectionSelect(5, undefined, { x: 't', draggable: true })
     const { plot } = await setup(interaction)

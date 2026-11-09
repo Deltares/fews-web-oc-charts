@@ -482,6 +482,12 @@ function installCrossSectionSelect(handle: CrossSectionSelectHandle, context: Pl
     }
   }
 
+  let dragFrame: number | undefined
+  function reportDrag() {
+    dragFrame = undefined
+    handle.options.get().resolved.onDrag?.(handle.value.get())
+  }
+
   function finish(event?: PointerEvent) {
     if (activePointer === undefined || (event && event.pointerId !== activePointer)) return
     const pointerId = activePointer
@@ -490,6 +496,10 @@ function installCrossSectionSelect(handle: CrossSectionSelectHandle, context: Pl
       context.element.releasePointerCapture(pointerId)
     }
     captured = false
+    if (dragFrame !== undefined) {
+      cancelAnimationFrame(dragFrame)
+      reportDrag()
+    }
     if (dragChanged) notifyCrossSectionChange(handle)
     dragChanged = false
   }
@@ -526,6 +536,7 @@ function installCrossSectionSelect(handle: CrossSectionSelectHandle, context: Pl
     if (Number.isFinite(next) && next !== handle.value.get()) {
       handle.setValue(next)
       dragChanged = true
+      dragFrame ??= requestAnimationFrame(reportDrag)
       render()
     }
     event.preventDefault()
