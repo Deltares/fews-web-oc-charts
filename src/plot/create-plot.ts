@@ -36,7 +36,14 @@ import {
   type ThemeTokens,
 } from '../theme/theme.js'
 import type { ColorContrast } from '../theme/color-contrast.js'
-import { isAxisHandle, validateAxisUpdates, type AxisHandle, type AxisSide } from './axes/axis.js'
+import {
+  isAxisHandle,
+  validateAxisUpdates,
+  type AxisHandle,
+  type AxisOptions,
+  type AxisSide,
+} from './axes/axis.js'
+import { validatePlotUpdates } from '../core/plot-checks.js'
 import { observeSize } from './resize.js'
 import { observeVisibility } from './visibility.js'
 import { svgElement, renderAxes, renderPolarAxes, axisTickLabels } from './axes/render-axes.js'
@@ -588,26 +595,21 @@ function createPlotInternal(
     }
     for (const axis of current.axes) {
       if (!axisValidators.has(axis)) {
+        const check = (candidate: Readonly<AxisOptions>) => {
+          const config = options.get().resolved
+          validateAxisAppearance(candidate, axis.scale, config, coordinateSystem)
+          if (coordinateSystem === 'polar') {
+            validateClassicPolarAxes(
+              config.axes.map((item) => (item === axis ? candidate : item.options.get().resolved)),
+            )
+          }
+          direction(options.get().resolved, axis.scale, axis, candidate.position, coordinateSystem)
+        }
         axisValidators.set(
           axis,
-          validateAxisUpdates(axis, (candidate) => {
-            const config = options.get().resolved
-            validateAxisAppearance(candidate, axis.scale, config, coordinateSystem)
-            if (coordinateSystem === 'polar') {
-              validateClassicPolarAxes(
-                config.axes.map((item) =>
-                  item === axis ? candidate : item.options.get().resolved,
-                ),
-              )
-            }
-            direction(
-              options.get().resolved,
-              axis.scale,
-              axis,
-              candidate.position,
-              coordinateSystem,
-            )
-          }),
+          validatePlotUpdates(validateAxisUpdates, axis, check, () =>
+            check(axis.options.get().resolved),
+          ),
         )
       }
     }

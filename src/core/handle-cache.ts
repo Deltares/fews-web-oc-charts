@@ -1,4 +1,5 @@
 import { batch } from './runtime.js'
+import { deferPlotChecks } from './plot-checks.js'
 
 type PlainRecord = Record<string, unknown>
 
@@ -16,7 +17,11 @@ export interface HandleCache {
    * Preceding arguments and the factory identify the handle; changing them creates a new one.
    */
   use<F extends HandleFactory>(key: string, factory: F, ...args: Parameters<F>): ReturnType<F>
-  /** Runs one batched configuration pass and forgets keys that it did not use. */
+  /**
+   * Runs one batched configuration pass and forgets keys that it did not use. Updates to
+   * handles that are installed in a plot are checked against the configuration passed to the
+   * plot's next `setConfig` or `update`, not against its current one.
+   */
   collect<T>(build: () => T): T
   has(key: string): boolean
   delete(key: string): boolean
@@ -118,7 +123,7 @@ export function handleCache(): HandleCache {
       const used = new Set<string>()
       pass = used
       try {
-        const result = batch(build)
+        const result = deferPlotChecks(() => batch(build))
         for (const key of entries.keys()) if (!used.has(key)) entries.delete(key)
         return result
       } finally {

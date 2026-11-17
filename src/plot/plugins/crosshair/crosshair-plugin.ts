@@ -1,6 +1,7 @@
 import { registerPlugin } from '../plugins.js'
 import type { OptionPatch } from '../../../core/options.js'
 import { reactive } from '../../../core/runtime.js'
+import { validatePlotUpdates } from '../../../core/plot-checks.js'
 import type { PluginDefinition, PlotContext } from '../plugin-definition.js'
 import {
   isCrosshairHandle,
@@ -145,7 +146,12 @@ function installCrosshair(handle: CrosshairHandle, context: PlotContext) {
     validateSnapTarget(options.snap, current.marks, current.scales, context.direction)
     validateLabels(options, context)
   }
-  const stopValidation = validateCrosshairUpdates(handle, validateOptions)
+  const stopValidation = validatePlotUpdates(
+    validateCrosshairUpdates,
+    handle,
+    validateOptions,
+    () => validateOptions(handle.options.get().resolved),
+  )
   validateOptions(handle.options.get().resolved)
 
   const source = Symbol('crosshair pointer source')

@@ -1,3 +1,4 @@
+import { validatePlotUpdates } from '../../../core/plot-checks.js'
 import { registerMark } from '../marks.js'
 import {
   arc,
@@ -217,7 +218,12 @@ export const bandDefinition: MarkDefinition<BandMark> = {
     isStaticMarkVisible(mark)
   },
   validateUpdates: (mark, context) =>
-    validateBandUpdates(mark, (candidate) => bandDefinition.validate(candidate, context())),
+    validatePlotUpdates(
+      validateBandUpdates,
+      mark,
+      (candidate) => bandDefinition.validate(candidate, context()),
+      () => bandDefinition.validate(mark, context()),
+    ),
   extents(mark, context) {
     if (!isStaticMarkVisible(mark)) return
     let coordinate: 'x' | 'y' | undefined

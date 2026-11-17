@@ -1,5 +1,6 @@
 import type { OptionPatch } from '../../../core/options.js'
 import { reactive } from '../../../core/runtime.js'
+import { validatePlotUpdates } from '../../../core/plot-checks.js'
 import type { ScaleKind } from '../../../scales/scale.js'
 import { sharedClock } from '../../../sync/shared-clock.js'
 import { displayInspectionValue } from '../../interaction/inspection.js'
@@ -139,9 +140,12 @@ function installCurrentTime(handle: CurrentTimeHandle, context: PlotContext) {
     label.setAttribute('transform', `translate(${labelX} ${labelY})`)
   }
 
-  const stopValidation = validateCurrentTimeUpdates(handle, (options) => {
+  const check = (options: Readonly<CurrentTimeOptions>) => {
     resolveScale(options, liveScaleContext(context))
-  })
+  }
+  const stopValidation = validatePlotUpdates(validateCurrentTimeUpdates, handle, check, () =>
+    check(handle.options.get().resolved),
+  )
   context.scope.run(() => {
     reactive.effect(() => {
       const paused = handle.options.get().resolved.clock !== undefined || context.suspended.get()

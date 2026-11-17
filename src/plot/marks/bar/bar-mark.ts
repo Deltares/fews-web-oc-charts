@@ -1,3 +1,4 @@
+import { validatePlotUpdates } from '../../../core/plot-checks.js'
 import { registerMark } from '../marks.js'
 import type { TableStore } from '../../../data-store/table.js'
 import type { OptionPatch } from '../../../core/options.js'
@@ -113,17 +114,22 @@ export const barDefinition: MarkDefinition<BarMark> = {
     const _version = mark.data.version
   },
   validateUpdates: (mark, context) =>
-    validateBarUpdates(mark, (candidate) => {
-      const validationContext = context()
-      const { scales } = validationContext
-      validateBarScales(mark.data, candidate, scales)
-      const vertical = candidate.orientation === 'vertical'
-      const x = vertical ? candidate.scales.x : candidate.scales.y
-      const y = vertical ? candidate.scales.y : candidate.scales.x
-      if (validationContext.direction(x) !== 'x' || validationContext.direction(y) !== 'y') {
-        throw new Error('Bar scale directions do not match its orientation.')
-      }
-    }),
+    validatePlotUpdates(
+      validateBarUpdates,
+      mark,
+      (candidate) => {
+        const validationContext = context()
+        const { scales } = validationContext
+        validateBarScales(mark.data, candidate, scales)
+        const vertical = candidate.orientation === 'vertical'
+        const x = vertical ? candidate.scales.x : candidate.scales.y
+        const y = vertical ? candidate.scales.y : candidate.scales.x
+        if (validationContext.direction(x) !== 'x' || validationContext.direction(y) !== 'y') {
+          throw new Error('Bar scale directions do not match its orientation.')
+        }
+      },
+      () => barDefinition.validate(mark, context()),
+    ),
 }
 
 export function bar(data: TableStore, initial: OptionPatch<BarOptions>): BarMark {
