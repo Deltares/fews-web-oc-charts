@@ -18,28 +18,46 @@ import {
 
 let nextHighlightId = 0
 
-function shapeElement(shape: HighlightShape): SVGElement {
-  const stroke = shape.stroke ?? 'none'
+interface ShapePaint {
+  readonly fill: string
+  readonly stroke: string
+  readonly 'stroke-width'?: number
+  readonly 'stroke-linejoin'?: string
+}
+
+function shapeElement(shape: HighlightShape, paint: ShapePaint): SVGElement {
   switch (shape.type) {
     case 'circle':
-      return svgElement('circle', {
-        cx: shape.cx,
-        cy: shape.cy,
-        r: shape.r,
-        fill: shape.fill,
-        stroke,
-      })
+      return svgElement('circle', { cx: shape.cx, cy: shape.cy, r: shape.r, ...paint })
     case 'rect':
       return svgElement('rect', {
         x: shape.x,
         y: shape.y,
         width: shape.width,
         height: shape.height,
-        fill: shape.fill ?? 'none',
-        stroke,
+        ...paint,
       })
     case 'path':
-      return svgElement('path', { d: shape.d, fill: shape.fill ?? 'none', stroke })
+      return svgElement('path', { d: shape.d, ...paint })
+  }
+}
+
+function shapePaint(shape: HighlightShape, width: number): ShapePaint {
+  const fill = shape.fill ?? 'none'
+  const stroke = shape.stroke ?? 'none'
+  return stroke === 'none' || width === 1
+    ? { fill, stroke }
+    : { fill, stroke, 'stroke-width': width }
+}
+
+/** The shape widened by `halo` pixels on every side, painted in `color` beneath it. */
+function haloPaint(shape: HighlightShape, width: number, halo: number, color: string): ShapePaint {
+  const stroked = (shape.stroke ?? 'none') !== 'none'
+  return {
+    fill: (shape.fill ?? 'none') === 'none' ? 'none' : color,
+    stroke: color,
+    'stroke-width': (stroked ? width : 0) + 2 * halo,
+    'stroke-linejoin': 'round',
   }
 }
 
@@ -93,20 +111,31 @@ function installHighlight(handle: HighlightHandle, context: PlotContext) {
           },
           () => (pathContext ??= document.createElement('canvas').getContext('2d') ?? undefined),
         )
-        const nodes = hits.flatMap(({ mark, hit }) =>
-          (
+        const { width, halo } = handle.options.get().resolved
+        const tokens = context.theme.get()
+        const haloColor = `var(--fews-chart-highlight-halo, ${tokens.background})`
+        const halos: SVGElement[] = []
+        const nodes = hits.flatMap(({ mark, hit }) => {
+          const name = markDefinition(mark).name
+          return (
             markDefinition(mark).highlight?.(mark, hit, {
               scales: context.scales,
-              color: markColor(mark, hit, context.theme.get()),
-              tokens: context.theme.get(),
+              color: markColor(mark, hit, tokens),
+              tokens,
             }) ?? []
           ).map((shape) => {
-            const node = shapeElement(shape)
-            node.dataset.highlight = markDefinition(mark).name
+            if (halo > 0) {
+              const underlay = shapeElement(shape, haloPaint(shape, width, halo, haloColor))
+              underlay.dataset.highlightHalo = name
+              halos.push(underlay)
+            }
+            const node = shapeElement(shape, shapePaint(shape, width))
+            node.dataset.highlight = name
             return node
-          }),
-        )
-        shapes.replaceChildren(...nodes)
+          })
+        })
+        // Halos go beneath all shapes, so one shape's halo never covers another shape.
+        shapes.replaceChildren(...halos, ...nodes)
         layer.setAttribute('display', nodes.length ? '' : 'none')
       }),
     )
