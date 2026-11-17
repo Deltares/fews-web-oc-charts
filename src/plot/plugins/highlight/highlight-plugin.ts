@@ -1,6 +1,7 @@
 import { registerPlugin } from '../plugins.js'
 import type { OptionPatch } from '../../../core/options.js'
 import { reactive } from '../../../core/runtime.js'
+import { validatePlotUpdates } from '../../../core/plot-checks.js'
 import { svgElement } from '../../rendering/svg.js'
 import { markDefinition } from '../../marks/marks.js'
 import type { HighlightShape } from '../../marks/mark-definition.js'
@@ -65,10 +66,13 @@ function installHighlight(handle: HighlightHandle, context: PlotContext) {
   context.element.append(layer)
   let pathContext: CanvasRenderingContext2D | undefined
 
-  const stopValidation = validateHighlightUpdates(handle, (options) => {
+  const check = (options: Readonly<HighlightOptions>) => {
     validateTargets(options.marks, context.options.get().resolved.marks, context)
     validateCrosshair(options, context.options.get().resolved.plugins)
-  })
+  }
+  const stopValidation = validatePlotUpdates(validateHighlightUpdates, handle, check, () =>
+    check(handle.options.get().resolved),
+  )
 
   try {
     context.scope.run(() =>

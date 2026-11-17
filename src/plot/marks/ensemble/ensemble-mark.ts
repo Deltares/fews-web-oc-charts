@@ -1,3 +1,4 @@
+import { validatePlotUpdates } from '../../../core/plot-checks.js'
 import { registerMark } from '../marks.js'
 import type { OptionPatch } from '../../../core/options.js'
 import type { EnsembleStatistic, EnsembleStore } from '../../../data-store/ensemble.js'
@@ -585,7 +586,12 @@ export const ensembleDefinition: MarkDefinition<EnsembleMark> = {
     const _version = mark.data.version
   },
   validateUpdates: (mark, context) =>
-    validateEnsembleUpdates(mark, (candidate) => validateScales(candidate, context())),
+    validatePlotUpdates(
+      validateEnsembleUpdates,
+      mark,
+      (candidate) => validateScales(candidate, context()),
+      () => ensembleDefinition.validate(mark, context()),
+    ),
 }
 
 export function ensemble(data: EnsembleStore, initial: OptionPatch<EnsembleOptions>): EnsembleMark {

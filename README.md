@@ -691,3 +691,10 @@ for functions, stores and library handles. Hoist callbacks such as `autoscale` o
 `format` out of the rebuild to avoid reapplying them on every pass. `collect()` batches
 its updates and forgets keys that were not used, so removed handles are dropped; a key
 used twice in one pass throws. Use `delete(key)` or `clear()` to force recreation.
+
+A handle installed in a plot normally rejects an update that refers to marks, plugins or
+scales the plot does not have. Inside `collect()` those checks wait for the configuration
+being built, so a cached `highlight({ marks })` or `series(data, { y })` can refer to
+marks and scales that the next `setConfig` adds. `setConfig` validates the complete
+configuration; a handle that is left inconsistent with its plot because `setConfig` was
+never called is reported with `reportError` after the pass.

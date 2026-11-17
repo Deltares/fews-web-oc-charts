@@ -1,3 +1,4 @@
+import { validatePlotUpdates } from '../../../core/plot-checks.js'
 import { registerMark } from '../marks.js'
 import type { TableStore } from '../../../data-store/table.js'
 import type { OptionPatch } from '../../../core/options.js'
@@ -106,11 +107,16 @@ export const stackedAreaDefinition: MarkDefinition<StackedAreaMark> = {
     const _version = mark.data.version
   },
   validateUpdates: (mark, context) =>
-    validateStackedAreaUpdates(mark, (candidate) => {
-      const { scales, direction } = context()
-      validateStackedAreaScales(candidate, scales)
-      validateDirections(candidate.scales, direction)
-    }),
+    validatePlotUpdates(
+      validateStackedAreaUpdates,
+      mark,
+      (candidate) => {
+        const { scales, direction } = context()
+        validateStackedAreaScales(candidate, scales)
+        validateDirections(candidate.scales, direction)
+      },
+      () => stackedAreaDefinition.validate(mark, context()),
+    ),
 }
 
 export function stackedArea(

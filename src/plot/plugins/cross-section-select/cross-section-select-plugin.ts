@@ -2,6 +2,7 @@ import { registerPlugin } from '../plugins.js'
 import type { OptionPatch } from '../../../core/options.js'
 import { precisionFixed } from 'd3-format'
 import { reactive, track } from '../../../core/runtime.js'
+import { validatePlotUpdates } from '../../../core/plot-checks.js'
 import type { ScaleBinding, ScaleKind } from '../../../scales/scale.js'
 import { resolveLineStyles } from '../../marks/mark-styles.js'
 import type { PluginDefinition, PlotContext } from '../plugin-definition.js'
@@ -545,18 +546,20 @@ function installCrossSectionSelect(handle: CrossSectionSelectHandle, context: Pl
   context.on('pointercancel', finish)
   context.on('lostpointercapture', finish)
 
-  const stopValidation = validateCrossSectionSelectUpdates(handle, (options, value) =>
+  const check = (options: Readonly<CrossSectionSelectOptions>, value: number) =>
     validateOptions(options, value, {
       marks: context.options.get().resolved.marks,
       scaleKind: (name) => context.scales[name]?.scale.kind,
       direction: context.direction,
-    }),
+    })
+  const current = () => check(handle.options.get().resolved, handle.value.get())
+  const stopValidation = validatePlotUpdates(
+    validateCrossSectionSelectUpdates,
+    handle,
+    check,
+    current,
   )
-  validateOptions(handle.options.get().resolved, handle.value.get(), {
-    marks: context.options.get().resolved.marks,
-    scaleKind: (name) => context.scales[name]?.scale.kind,
-    direction: context.direction,
-  })
+  current()
   context.scope.run(() => reactive.effect(render))
   return {
     destroy() {

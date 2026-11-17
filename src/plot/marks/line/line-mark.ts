@@ -1,3 +1,4 @@
+import { validatePlotUpdates } from '../../../core/plot-checks.js'
 import type { SeriesStore } from '../../../data-store/series.js'
 import type { OptionPatch } from '../../../core/options.js'
 import { registerMark } from '../marks.js'
@@ -490,7 +491,12 @@ export const seriesDefinition: MarkDefinition<SeriesMark> = {
     const _version = mark.data.version
   },
   validateUpdates: (mark, context) =>
-    validateSeriesUpdates(mark, (candidate) => validateLineLike(candidate, context(), true)),
+    validatePlotUpdates(
+      validateSeriesUpdates,
+      mark,
+      (candidate) => validateLineLike(candidate, context(), true),
+      () => seriesDefinition.validate(mark, context()),
+    ),
 }
 
 export function line(options: LineOptions): LineMark {

@@ -1,6 +1,7 @@
 import { registerPlugin } from '../plugins.js'
 import type { OptionPatch } from '../../../core/options.js'
 import { reactive } from '../../../core/runtime.js'
+import { validatePlotUpdates } from '../../../core/plot-checks.js'
 import type { PluginDefinition, PlotContext } from '../plugin-definition.js'
 import {
   isTooltipHandle,
@@ -165,10 +166,13 @@ function installTooltip(handle: TooltipHandle, context: PlotContext) {
   document.body.append(element)
   let pathContext: CanvasRenderingContext2D | undefined
 
-  const stopValidation = validateTooltipUpdates(handle, (options) => {
+  const check = (options: Readonly<TooltipOptions>) => {
     validateTargets(options.marks, context.options.get().resolved.marks, context)
     validateCrosshair(options, context.options.get().resolved.plugins)
-  })
+  }
+  const stopValidation = validatePlotUpdates(validateTooltipUpdates, handle, check, () =>
+    check(handle.options.get().resolved),
+  )
 
   try {
     context.scope.run(() =>

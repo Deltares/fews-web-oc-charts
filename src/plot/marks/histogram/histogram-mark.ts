@@ -1,3 +1,4 @@
+import { validatePlotUpdates } from '../../../core/plot-checks.js'
 import { registerMark } from '../marks.js'
 import type { TableStore } from '../../../data-store/table.js'
 import type { OptionPatch } from '../../../core/options.js'
@@ -60,7 +61,12 @@ export const histogramDefinition: MarkDefinition<HistogramMark> = {
     const _version = mark.data.version
   },
   validateUpdates: (mark, context) =>
-    validateHistogramUpdates(mark, (candidate) => barDefinition.validate(candidate, context())),
+    validatePlotUpdates(
+      validateHistogramUpdates,
+      mark,
+      (candidate) => barDefinition.validate(candidate, context()),
+      () => histogramDefinition.validate(mark, context()),
+    ),
 }
 
 export function histogram(data: TableStore, initial: OptionPatch<HistogramOptions>): HistogramMark {
