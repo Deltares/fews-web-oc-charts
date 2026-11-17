@@ -26,6 +26,14 @@ that color. Axes, titles and outer margins keep the host's background visible.
 
 Use `background: 'plot'` to explicitly color the entire plot instead.
 
+The default theme uses neutral grays:
+
+| Token                     | Light     | Dark      |
+| ------------------------- | --------- | --------- |
+| `--fews-chart-background` | `#ffffff` | `#0a0a0a` |
+| `--fews-chart-foreground` | `#525252` | `#a3a3a3` |
+| `--fews-chart-grid`       | `#e5e5e5` | `#262626` |
+
 Tooltips, cross-section labels and axis callouts use a white background in light
 mode and a black background in dark mode. Callout and tooltip text also follows
 the theme; cross-section sample labels retain their series colors. Override
@@ -44,6 +52,9 @@ tokens below are set on the host (or `themeElement`). The base pair is
 `--fews-chart-font-family` and `--fews-chart-font-size`, with optional
 `--fews-chart-font-weight` and `--fews-chart-font-variant-numeric`.
 
+Tick labels and tooltips default to `tabular-nums` so digits line up; set their
+`font-variant-numeric` token (or the base one) to change that.
+
 Each text role has its own tokens, which fall back to the base ones:
 
 | Role        | Prefix                     | Text                                                           |
@@ -61,10 +72,8 @@ to the prefix:
 .chart-host {
   --fews-chart-font-size: 12px;
   --fews-chart-tick-font-size: 11px;
-  --fews-chart-tick-font-variant-numeric: tabular-nums;
   --fews-chart-axis-label-font-weight: 600;
   --fews-chart-title-font-size: 14px;
-  --fews-chart-tooltip-font-variant-numeric: tabular-nums;
 }
 ```
 
@@ -257,7 +266,7 @@ pixels from the pointer along the tooltip axis, so sparse series (observations,
 late reports) don't show a value from another time.
 
 `layout: 'columns'` aligns the names and right-aligns their details in a grid, so
-digits line up with `--fews-chart-tooltip-font-variant-numeric: tabular-nums`.
+the default `tabular-nums` tooltip digits line up.
 The default `layout: 'inline'` follows each name with its details.
 
 A meteogram panel with an ensemble plume and a probability bar per warning level:

@@ -143,7 +143,7 @@ describe('supported skew-T coordinate system', () => {
       current.element.querySelector('[data-isotherm="0"]')?.getAttribute('x2'),
     )
     const label = current.element.querySelector('[data-scale="p"] text')!
-    expect(getComputedStyle(label).fill).toBe('rgb(237, 242, 244)')
+    expect(getComputedStyle(label).fill).toBe('rgb(163, 163, 163)')
     current.setConfig(initial)
     await frame()
     expect(current.options.get().resolved.skewT?.skew).toBe(30)

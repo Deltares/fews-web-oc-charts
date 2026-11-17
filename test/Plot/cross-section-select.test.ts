@@ -140,13 +140,13 @@ describe('cross-section select plugin', () => {
         'rgb(213, 94, 0)',
       ])
     }
-    check('rgb(0, 0, 0)', 'rgb(237, 242, 244)')
+    check('rgb(0, 0, 0)', 'rgb(229, 229, 229)')
     plot.update({ theme: 'light' })
     await frame()
     check('rgb(255, 255, 255)', 'rgb(34, 34, 34)')
     plot.update({ theme: 'dark' })
     await frame()
-    check('rgb(0, 0, 0)', 'rgb(237, 242, 244)')
+    check('rgb(0, 0, 0)', 'rgb(229, 229, 229)')
     host.style.setProperty('--fews-chart-tooltip-background', '#123456')
     host.style.setProperty('--fews-chart-tooltip-color', '#fedcba')
     await vi.waitFor(() => expect(plot.theme.get().tooltipBackground).toBe('#123456'))

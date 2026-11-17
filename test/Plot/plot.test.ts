@@ -1402,7 +1402,7 @@ describe('createPlot named scales', () => {
     const current = plot(element, { themeElement: element, theme: 'dark' })
     await frame()
     expect(current.theme.get().accent).toBe('#ff0000')
-    expect(current.theme.get().background).toBe('#182026')
+    expect(current.theme.get().background).toBe('#0a0a0a')
     const computed = vi.spyOn(window, 'getComputedStyle')
     current.update({ title: 'no theme change' })
     await frame()
@@ -1446,8 +1446,8 @@ describe('createPlot named scales', () => {
     const current = plot(host(), { theme: 'light' })
     current.update({ theme: 'dark' })
     await frame()
-    expect(current.theme.get().background).toBe('#182026')
-    expect(current.element.querySelector('rect')!.getAttribute('fill')).toContain('#182026')
+    expect(current.theme.get().background).toBe('#0a0a0a')
+    expect(current.element.querySelector('rect')!.getAttribute('fill')).toContain('#0a0a0a')
   })
 
   test('renders unlimited secondary axes, categorical and time scales without global locale changes', async () => {

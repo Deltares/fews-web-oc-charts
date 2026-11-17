@@ -211,7 +211,7 @@ describe('tooltip plugin', () => {
       }
       check(
         theme === 'light' ? 'rgb(255, 255, 255)' : 'rgb(0, 0, 0)',
-        theme === 'light' ? 'rgb(34, 34, 34)' : 'rgb(237, 242, 244)',
+        theme === 'light' ? 'rgb(34, 34, 34)' : 'rgb(229, 229, 229)',
       )
       plot.update({ theme: 'light' })
       await frame()
@@ -221,7 +221,7 @@ describe('tooltip plugin', () => {
       for (const position of ['top', 'bottom', 'left', 'right'] as const) {
         interaction.update({ position })
         await frame()
-        check('rgb(0, 0, 0)', 'rgb(237, 242, 244)')
+        check('rgb(0, 0, 0)', 'rgb(229, 229, 229)')
       }
       host.style.setProperty('--fews-chart-tooltip-background', '#123456')
       host.style.setProperty('--fews-chart-tooltip-color', '#fedcba')
