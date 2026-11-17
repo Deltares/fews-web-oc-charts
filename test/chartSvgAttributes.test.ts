@@ -93,7 +93,12 @@ describe('charts set valid SVG attributes', () => {
       ],
       {},
     )
-    chart.addTo(cartesian, { x: { key: 'x' }, y: { key: 'y' } }, 'chart', '.chart')
+    chart.addTo(
+      cartesian,
+      { x: { key: 'x', axisIndex: 0 }, y: { key: 'y', axisIndex: 0 } },
+      'chart',
+      '.chart',
+    )
     cartesian.redraw({ x: { autoScale: true }, y: { autoScale: true } })
     const xScale = cartesian.xScales[0]
     const yScale = cartesian.yScales[0]
