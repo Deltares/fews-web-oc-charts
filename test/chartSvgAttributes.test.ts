@@ -79,6 +79,35 @@ describe('charts set valid SVG attributes', () => {
     expect(result).toMatchObject({ point: { x: 5, y: 6, time: 5, level: 6 } })
   })
 
+  test('ChartLine hovers the first and last points with middle alignment', () => {
+    const cartesian = new CartesianAxes(createContainer(), 400, 200, {
+      x: [{ type: AxisType.value, domain: [0, 10] }],
+      y: [{ type: AxisType.value, domain: [0, 10] }],
+    })
+    axes = cartesian
+    const chart = new ChartLine(
+      [
+        { x: 2, y: 4 },
+        { x: 8, y: 7 },
+        { x: 9, y: null },
+      ],
+      {},
+    )
+    chart.addTo(cartesian, { x: { key: 'x' }, y: { key: 'y' } }, 'chart', '.chart')
+    cartesian.redraw({ x: { autoScale: true }, y: { autoScale: true } })
+    const xScale = cartesian.xScales[0]
+    const yScale = cartesian.yScales[0]
+    chart.onPointerOver()
+
+    // Exactly on, and just inside, each end of the series.
+    expect(chart.onPointerMove(2, 'x', xScale, yScale)).toMatchObject({ point: { x: 2, y: 4 } })
+    expect(chart.onPointerMove(3, 'x', xScale, yScale)).toMatchObject({ point: { x: 2, y: 4 } })
+    expect(chart.onPointerMove(7, 'x', xScale, yScale)).toMatchObject({ point: { x: 8, y: 7 } })
+    // Outside the data, and next to a null on the pointer's side, nothing is hovered.
+    expect(chart.onPointerMove(1, 'x', xScale, yScale)).toBeUndefined()
+    expect(chart.onPointerMove(8.2, 'x', xScale, yScale)).toBeUndefined()
+  })
+
   test('ChartBar positions its highlight with the configured keys', () => {
     const cartesian = new CartesianAxes(createContainer(), 400, 200, {
       x: [{ type: AxisType.value }],

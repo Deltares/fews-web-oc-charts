@@ -537,11 +537,12 @@ export abstract class Chart {
     const current = datum[idx]
     const previous = datum[idx - 1]
     const next = datum[idx + 1]
-    if (!current || !previous || !next || current[targetKey] === null) return true
-    return (
-      (value < current[targetKey] && isInverseNullFn(previous)) ||
-      (value > current[targetKey] && isInverseNullFn(next))
-    )
+    if (!current || current[targetKey] === null) return true
+    // Only the neighbour on the pointer's side matters; the first and last points have
+    // none on their outer side, and isIndexValid already rejects values beyond them.
+    if (value < current[targetKey]) return previous !== undefined && isInverseNullFn(previous)
+    if (value > current[targetKey]) return next !== undefined && isInverseNullFn(next)
+    return false
   }
 
   protected pointOnPointerMove(
