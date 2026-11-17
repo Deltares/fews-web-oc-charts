@@ -93,7 +93,7 @@ describe('createPolarPlot', () => {
     current.update({ theme: 'dark', width: 600 })
     await frame()
     expectPolarBackground()
-    expect(getComputedStyle(polarBackground).fill).toBe('rgb(24, 32, 38)')
+    expect(getComputedStyle(polarBackground).fill).toBe('rgb(10, 10, 10)')
 
     current.update({ background: 'plot' })
     await frame()
@@ -222,7 +222,7 @@ describe('createPolarPlot', () => {
     const label = axisGroup?.querySelector('text')
     expect(axisGroup?.getAttribute('fill')).toBe('currentColor')
     expect(label).not.toBeNull()
-    expect(getComputedStyle(label!).fill).toBe('rgb(237, 242, 244)')
+    expect(getComputedStyle(label!).fill).toBe('rgb(163, 163, 163)')
   })
 
   test.each([

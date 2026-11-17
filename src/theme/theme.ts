@@ -37,8 +37,19 @@ const fontRoles: Readonly<Record<FontRole, string>> = {
   tooltip: 'tooltip',
 }
 
+/** Roles whose digits line up by default, so tick and tooltip values align in columns. */
+const tabularRoles: ReadonlySet<FontRole> = new Set(['tick', 'tooltip'])
+
+function roleDefault(role: FontRole, base: FontTokens): FontTokens {
+  return tabularRoles.has(role) && base.variantNumeric === 'normal'
+    ? Object.freeze({ ...base, variantNumeric: 'tabular-nums' })
+    : base
+}
+
 export function roleFonts(base: FontTokens): Readonly<Record<FontRole, FontTokens>> {
-  const fonts = Object.fromEntries(Object.keys(fontRoles).map((role) => [role, base]))
+  const fonts = Object.fromEntries(
+    (Object.keys(fontRoles) as FontRole[]).map((role) => [role, roleDefault(role, base)]),
+  )
   return Object.freeze(fonts) as Record<FontRole, FontTokens>
 }
 
@@ -98,7 +109,10 @@ function resolveFonts(style: CSSStyleDeclaration, defaults: ThemeTokens) {
     variantNumeric: 'normal',
   })
   const fonts = Object.fromEntries(
-    Object.entries(fontRoles).map(([role, prefix]) => [role, font(`${prefix}-`, base)]),
+    Object.entries(fontRoles).map(([role, prefix]) => [
+      role,
+      font(`${prefix}-`, roleDefault(role as FontRole, base)),
+    ]),
   ) as Record<FontRole, FontTokens>
   return { base, fonts: Object.freeze(fonts) }
 }
@@ -125,8 +139,8 @@ export function applyFont(element: SVGElement | HTMLElement, font: FontTokens) {
 const light: ThemeTokens = {
   colorContrast: 'none',
   background: '#ffffff',
-  foreground: '#263238',
-  grid: '#dce2e5',
+  foreground: '#525252',
+  grid: '#e5e5e5',
   accent: '#0077bb',
   tooltipBackground: '#fff',
   tooltipColor: '#222',
@@ -136,12 +150,12 @@ const light: ThemeTokens = {
 }
 const dark: ThemeTokens = {
   ...light,
-  background: '#182026',
-  foreground: '#edf2f4',
-  grid: '#45545e',
+  background: '#0a0a0a',
+  foreground: '#a3a3a3',
+  grid: '#262626',
   accent: '#66c2ff',
   tooltipBackground: '#000',
-  tooltipColor: '#edf2f4',
+  tooltipColor: '#e5e5e5',
 }
 
 export function resolveTheme(

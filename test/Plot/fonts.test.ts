@@ -80,6 +80,25 @@ describe('font roles', () => {
     expect(titleText(current).getAttribute('font-family')).toBe(family)
   })
 
+  test('defaults tick and tooltip digits to tabular-nums unless a token overrides them', () => {
+    const variants = (tokens: Record<string, string>) => {
+      const { fonts } = plot(host(tokens)).theme.get()
+      return Object.fromEntries(Object.entries(fonts).map(([role, f]) => [role, f.variantNumeric]))
+    }
+    expect(variants({})).toEqual({
+      tick: 'tabular-nums',
+      axisLabel: 'normal',
+      title: 'normal',
+      legend: 'normal',
+      tooltip: 'tabular-nums',
+    })
+    expect(variants({ '--fews-chart-tick-font-variant-numeric': 'normal' }).tick).toBe('normal')
+    expect(variants({ '--fews-chart-font-variant-numeric': 'oldstyle-nums' })).toMatchObject({
+      tick: 'oldstyle-nums',
+      tooltip: 'oldstyle-nums',
+    })
+  })
+
   test('resolves each role from its tokens and falls back to the base font', async () => {
     const element = host({
       '--fews-chart-font-family': 'serif',
