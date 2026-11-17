@@ -1,6 +1,6 @@
 {
   "name": "@deltares/fews-web-oc-charts",
-  "version": "5.0.0-alpha.1",
+  "version": "5.0.0-alpha.9",
   "description": "FEWS Chart Library",
   "license": "MIT",
   "private": false,
@@ -99,7 +99,7 @@
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org",
-    "tag": "next"
+    "tag": "alpha"
   },
   "overrides": {
     "vite": "npm:@voidzero-dev/vite-plus-core@1.4.0",
