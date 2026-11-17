@@ -18,6 +18,13 @@ export interface HighlightOptions {
   marks?: readonly HighlightMark[]
   /** Follows this installed crosshair, including its snapping, like tooltip.crosshair. */
   crosshair?: CrosshairHandle
+  /** Stroke width in pixels of traced lines, ticks and outlines; defaults to 1. */
+  width: number
+  /**
+   * Pixels of halo drawn beneath every highlight shape, in `--fews-chart-highlight-halo`
+   * (default: the plot background); defaults to 0, no halo.
+   */
+  halo: number
 }
 
 export interface HighlightHandle {
@@ -30,7 +37,7 @@ const validators = new WeakMap<
   HighlightHandle,
   Set<(options: Readonly<HighlightOptions>) => void>
 >()
-const optionKeys = ['axis', 'marks', 'crosshair']
+const optionKeys = ['axis', 'marks', 'crosshair', 'width', 'halo']
 
 function validateMarks(marks: readonly HighlightMark[] | undefined) {
   if (marks === undefined) return
@@ -64,10 +71,16 @@ export function highlight(initial: OptionPatch<HighlightOptions> = {}): Highligh
   const consumers = new Set<(options: Readonly<HighlightOptions>) => void>()
   const state = createOptionState<HighlightOptions>(initial, {
     isAtomicReference: (value) => isHoverMark(value) || isCrosshairHandle(value),
-    defaults: () => ({ axis: 'x', marks: undefined, crosshair: undefined }),
+    defaults: () => ({ axis: 'x', marks: undefined, crosshair: undefined, width: 1, halo: 0 }),
     validate(options) {
       if (!['x', 'y', 'xy'].includes(options.axis)) {
         throw new Error('highlight.axis must be x, y or xy.')
+      }
+      if (typeof options.width !== 'number' || !(options.width > 0) || !isFinite(options.width)) {
+        throw new RangeError('highlight.width must be a finite number greater than 0.')
+      }
+      if (typeof options.halo !== 'number' || !(options.halo >= 0) || !isFinite(options.halo)) {
+        throw new RangeError('highlight.halo must be a finite number of at least 0.')
       }
       if (
         options.crosshair !== undefined &&

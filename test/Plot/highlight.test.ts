@@ -185,9 +185,70 @@ describe('highlight plugin', () => {
     },
   )
 
+  test('widens strokes and draws halos beneath every highlight shape', async () => {
+    const mark = bar(createTable({ t: ['one'], observed: [3] }), {
+      id: 'flow',
+      x: 't',
+      scales: { x: 't', y: 'q' },
+      layers: [{ id: 'observed', y: 'observed', stack: 'total', fill: 'green' }],
+      layout: 'stacked',
+    })
+    const level = line({ id: 'level', x: 't', y: 'q', xValues: ['one'], yValues: [2] })
+    const handle = highlight({ axis: 'x', width: 2, halo: 1.5 })
+    const element = host()
+    element.style.setProperty('--fews-chart-highlight-halo', 'rgb(1, 2, 3)')
+    const plot = createPlot(element, {
+      width: 100,
+      height: 100,
+      margins: { top: 0, right: 0, bottom: 0, left: 0 },
+      scales: { t: bandScale({ domain: ['one'] }), q: linearScale({ domain: [0, 7] }) },
+      marks: [mark, level],
+      plugins: [handle],
+    })
+    plots.push(plot)
+    await frame()
+    vi.spyOn(plot.element, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 100, 100))
+    await pointer(plot, 'pointermove', 50, 50)
+
+    const layer = plot.element.querySelector('[data-layer="highlight"] g[clip-path]')!
+    const children = [...layer.children]
+    expect(
+      children.map((node) => [node.tagName, Object.keys((node as SVGElement).dataset)[0]]),
+    ).toEqual([
+      ['rect', 'highlightHalo'],
+      ['circle', 'highlightHalo'],
+      ['rect', 'highlight'],
+      ['circle', 'highlight'],
+    ])
+    const [rectHalo, circleHalo, rect, circle] = children
+    expect(rect.getAttribute('stroke-width')).toBe('2')
+    expect(circle.hasAttribute('stroke-width')).toBe(false)
+    const haloColor = rectHalo.getAttribute('stroke')!
+    expect(haloColor).toMatch(/^var\(--fews-chart-highlight-halo, /)
+    expect(getComputedStyle(rectHalo).stroke).toBe('rgb(1, 2, 3)')
+    expect(rectHalo.getAttribute('fill')).toBe(haloColor)
+    expect(rectHalo.getAttribute('stroke-width')).toBe('5')
+    expect(circleHalo.getAttribute('stroke-width')).toBe('3')
+    for (const name of ['x', 'y', 'width', 'height']) {
+      expect(rectHalo.getAttribute(name)).toBe(rect.getAttribute(name))
+    }
+
+    handle.update({ width: undefined, halo: undefined })
+    await frame()
+    expect(layer.querySelectorAll('[data-highlight-halo]')).toHaveLength(0)
+    expect(layer.querySelector('rect')!.hasAttribute('stroke-width')).toBe(false)
+  })
+
   test('validates options and plot integration', () => {
     expect(() => highlight({ axis: 'z' as never })).toThrow('highlight.axis')
     expect(() => highlight({ crosshair: {} })).toThrow('highlight.crosshair')
+    for (const width of [0, -1, Infinity, Number.NaN, '2' as never]) {
+      expect(() => highlight({ width })).toThrow('highlight.width')
+    }
+    for (const halo of [-1, Infinity, Number.NaN, '1' as never]) {
+      expect(() => highlight({ halo })).toThrow('highlight.halo')
+    }
+    expect(() => highlight({ width: 0.5, halo: 0 })).not.toThrow()
     const mark = line({ x: 't', y: 'q', xValues: [0], yValues: [0] })
     const directions = { t: 'x', q: 'y' } as const
     const scales = { t: linearScale({ domain: [0, 1] }), q: linearScale({ domain: [0, 1] }) }

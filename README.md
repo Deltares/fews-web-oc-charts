@@ -409,6 +409,19 @@ Matching bubbling, composed DOM `CustomEvent`s are dispatched on `plot.element`,
 typed `detail` available to `HTMLElement` and `SVGElement` event listeners. Existing
 `legendtoggle` and `brush` events are also available through `plot.on()`.
 
+## Highlight width and halo
+
+`highlight()` marks the hovered datum of each inspected mark: a dot on lines, an outline
+on bars, areas and heatmap cells, and the full trace of the nearest ensemble member.
+`width` sets the stroke width in pixels of traced lines, ticks and outlines (default 1).
+`halo` draws every highlight shape beneath itself `halo` pixels wider on each side, in
+`--fews-chart-highlight-halo`, which defaults to the plot background (default 0, no
+halo). It separates a traced member from the other members of a plume:
+
+```ts
+highlight({ axis: 'x', marks: [plume], width: 1.5, halo: 1 })
+```
+
 ## Hit testing
 
 `plot.hitTest({ clientX, clientY }, options)` runs the hit tests that `tooltip()` and
