@@ -233,14 +233,12 @@ describe('grouped and stacked bars', () => {
     await frame()
 
     expect(current.element.querySelectorAll('[data-mark="bar-segment"]')).toHaveLength(3)
-    expect(barEndpoints(mark).layers.map((layer) => [layer.lowerAt(0), layer.upperAt(0)])).toEqual(
-      [
-        [0, 4],
-        [NaN, NaN],
-        [-3, 0],
-        [4, 6],
-      ],
-    )
+    expect(barEndpoints(mark).layers.map((layer) => [layer.lowerAt(0), layer.upperAt(0)])).toEqual([
+      [0, 4],
+      [NaN, NaN],
+      [-3, 0],
+      [4, 6],
+    ])
     expect(barExtent(mark, 'value')).toEqual([-3, 6])
   })
 
