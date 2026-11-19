@@ -1285,6 +1285,51 @@ describe('createPlot named scales', () => {
     expect(() => current.subscribe(x.domain, () => {})).toThrow(/destroyed plot/)
   })
 
+  test('observes cleared time-scale options on a full reset without a domain change', async () => {
+    const x = timeScale({ domain: [0, 10], defaultDomain: [0, 10] })
+    const interaction = zoom({ mode: 'x', reset: 'full' })
+    const current = plot(host(), {
+      width: 500,
+      height: 300,
+      directions: { x: 'x' },
+      scales: { x },
+      plugins: [interaction],
+    })
+    await frame()
+    vi.spyOn(current.element, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 500, 300))
+    const options = vi.fn()
+    const plotOptions = vi.fn()
+    const domainChanges = vi.fn()
+    const domDomainChanges = vi.fn()
+    current.subscribe(x.options, options, { immediate: true })
+    current.subscribe(current.options, plotOptions, { immediate: true })
+    current.on('domainchange', domainChanges)
+    current.element.addEventListener('domainchange', domDomainChanges)
+    await frame()
+    expect(options).toHaveBeenCalledTimes(1)
+    expect(plotOptions).toHaveBeenCalledTimes(1)
+
+    current.element.dispatchEvent(
+      new MouseEvent('dblclick', { clientX: 250, clientY: 150, button: 0, cancelable: true }),
+    )
+    await frame()
+    expect(x.domain.get()).toEqual([0, 10])
+    expect(options).toHaveBeenCalledTimes(2)
+    expect(options.mock.calls[1][0].explicit.domain).toBeUndefined()
+    expect(options.mock.calls[1][1].explicit.domain).toEqual([0, 10])
+    expect(domainChanges).not.toHaveBeenCalled()
+    expect(domDomainChanges).not.toHaveBeenCalled()
+
+    current.update({ title: 'Updated' })
+    await frame()
+    expect(plotOptions).toHaveBeenCalledTimes(2)
+    expect(plotOptions.mock.calls[1][0].resolved.title).toBe('Updated')
+    current.destroy()
+    x.update({ domain: [1, 9] })
+    await frame()
+    expect(options).toHaveBeenCalledTimes(2)
+  })
+
   test('releases reactive consumers and cancels queued rendering before first frame', async () => {
     const q = linearScale()
     q.domain.get()

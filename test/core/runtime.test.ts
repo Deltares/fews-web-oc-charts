@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vite-plus/test'
 import { effect, reactive, sourceOf, subscribe, withSource } from '../../src/core/runtime.js'
-import { linearScale, registerScaleExtents } from '../../src/scales/scale.js'
+import { linearScale, registerScaleExtents, timeScale } from '../../src/scales/scale.js'
+import { colorScale } from '../../src/scales/color.js'
+import { zoom } from '../../src/plot/plugins/zoom/zoom.js'
 
 let pendingFrames: FrameRequestCallback[] = []
 
@@ -117,6 +119,90 @@ describe('public reactive runtime', () => {
         [0, 100],
       ],
     ])
+  })
+
+  test('subscribes to option snapshots with previous delivered values and cleanup', () => {
+    const scale = timeScale({ domain: [0, 10] })
+    const deliveries: Array<
+      [readonly [number, number] | undefined, readonly [number, number] | undefined]
+    > = []
+    const controller = new AbortController()
+    const aborted = vi.fn()
+    const unsubscribe = subscribe(
+      scale.options,
+      (next, previous) => deliveries.push([next.explicit.domain, previous?.explicit.domain]),
+      { immediate: true },
+    )
+    subscribe(scale.options, aborted, { signal: controller.signal })
+
+    expect(deliveries).toEqual([[[0, 10], undefined]])
+    flushFrame()
+    expect(deliveries).toHaveLength(1)
+    expect(aborted).toHaveBeenCalledTimes(1)
+
+    scale.update({ domain: [1, 9] })
+    scale.update({ domain: [2, 8] })
+    flushFrame()
+    expect(deliveries).toEqual([
+      [[0, 10], undefined],
+      [
+        [2, 8],
+        [0, 10],
+      ],
+    ])
+    expect(aborted).toHaveBeenCalledTimes(2)
+
+    unsubscribe()
+    controller.abort()
+    scale.update({ domain: undefined })
+    flushFrame()
+    expect(deliveries).toHaveLength(2)
+    expect(aborted).toHaveBeenCalledTimes(2)
+  })
+
+  test('subscribes to option snapshots on other handle types', () => {
+    const colors = colorScale()
+    const interaction = zoom()
+    const colorValues = vi.fn()
+    const zoomValues = vi.fn()
+    const stopColors = subscribe(colors.options, colorValues, { immediate: true })
+    const stopZoom = subscribe(interaction.options, zoomValues, { immediate: true })
+
+    flushFrame()
+    expect(colorValues).toHaveBeenCalledTimes(1)
+    expect(zoomValues).toHaveBeenCalledTimes(1)
+    colors.update({ clamp: false })
+    interaction.update({ wheel: 'x' })
+    flushFrame()
+    expect(colorValues).toHaveBeenCalledTimes(2)
+    expect(colorValues.mock.calls[1][0].resolved.clamp).toBe(false)
+    expect(colorValues.mock.calls[1][1].resolved.clamp).toBe(true)
+    expect(zoomValues).toHaveBeenCalledTimes(2)
+    expect(zoomValues.mock.calls[1][0].resolved.wheel).toBe('x')
+    expect(zoomValues.mock.calls[1][1].resolved.wheel).toBe('none')
+
+    stopColors()
+    stopZoom()
+  })
+
+  test('notifies when a reset clears an explicit domain without changing the visible domain', () => {
+    const scale = timeScale({ domain: [0, 10], defaultDomain: [0, 10] })
+    const optionValues = vi.fn()
+    const domainValues = vi.fn()
+    const stopOptions = subscribe(scale.options, optionValues, { immediate: true })
+    const stopDomain = subscribe(scale.domain, domainValues, { immediate: true })
+    flushFrame()
+
+    withSource('reset', () => scale.update({ domain: undefined }))
+    flushFrame()
+    expect(scale.domain.get()).toEqual([0, 10])
+    expect(optionValues).toHaveBeenCalledTimes(2)
+    expect(optionValues.mock.calls[1][0].explicit.domain).toBeUndefined()
+    expect(optionValues.mock.calls[1][1].explicit.domain).toEqual([0, 10])
+    expect(domainValues).toHaveBeenCalledTimes(1)
+
+    stopOptions()
+    stopDomain()
   })
 
   test('stops subscription if its abort signal fires during immediate delivery', () => {
