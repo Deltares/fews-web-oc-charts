@@ -147,16 +147,23 @@ export function optionSignal<T extends object>(
   publish(): void
 } {
   const version = reactive.signal(0)
+  // Snapshots are newly allocated on every read; compare the revisions at which they were read.
+  const revisions = new WeakMap<OptionStateSnapshot<T>, number>()
   return {
-    snapshot: {
-      get() {
-        version.get()
-        return state.getSnapshot()
+    snapshot: reactive.register<OptionStateSnapshot<T>>(
+      {
+        get() {
+          const revision = version.get()
+          const snapshot = state.getSnapshot()
+          revisions.set(snapshot, revision)
+          return snapshot
+        },
+        get version() {
+          return version.get()
+        },
       },
-      get version() {
-        return version.get()
-      },
-    },
+      (left, right) => revisions.get(left) === revisions.get(right),
+    ),
     publish() {
       version.update((value) => value + 1)
     },
