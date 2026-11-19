@@ -78,17 +78,11 @@ describe('stacked areas', () => {
     expect(areaLayout).not.toBe(barLayout)
     expect(
       areaLayout.layers.map((layer) =>
-        Array.from({ length: data.length }, (_, row) => [
-          layer.lowerAt(row),
-          layer.upperAt(row),
-        ]),
+        Array.from({ length: data.length }, (_, row) => [layer.lowerAt(row), layer.upperAt(row)]),
       ),
     ).toEqual(
       barLayout.layers.map((layer) =>
-        Array.from({ length: data.length }, (_, row) => [
-          layer.lowerAt(row),
-          layer.upperAt(row),
-        ]),
+        Array.from({ length: data.length }, (_, row) => [layer.lowerAt(row), layer.upperAt(row)]),
       ),
     )
   })

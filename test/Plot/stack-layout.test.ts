@@ -407,9 +407,9 @@ describe('shared columnar stack layout', () => {
       missingValuePolicy: 'skip',
     })
     expect(endpoints(incremental, 0)).toEqual(endpoints(full, 0))
-    expect(
-      incremental.layers.map((layer) => [layer.positiveAt(0), layer.negativeAt(0)]),
-    ).toEqual(full.layers.map((layer) => [layer.positiveAt(0), layer.negativeAt(0)]))
+    expect(incremental.layers.map((layer) => [layer.positiveAt(0), layer.negativeAt(0)])).toEqual(
+      full.layers.map((layer) => [layer.positiveAt(0), layer.negativeAt(0)]),
+    )
     expect(endpoints(incremental, 0)).toEqual([
       [NaN, NaN],
       [0, 2],
