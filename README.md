@@ -358,6 +358,21 @@ plot.subscribe(time.domain, (domain) => {
 plot.destroy()
 ```
 
+Option snapshots are signals too. Subscribe to `time.options` to observe changes to
+its explicit and resolved options, including when a full zoom reset clears an explicit
+domain even if the visible domain stays the same:
+
+```ts
+plot.subscribe(time.options, (options, previous) => {
+  console.log('Explicit domain:', options.explicit.domain)
+  console.log('Previous explicit domain:', previous?.explicit.domain)
+})
+```
+
+`domainchange` events continue to report changes to the visible domain, not changes to
+the explicit domain option alone. Option notifications are published when resolved options
+change; changing only an explicit override to the same resolved value does not notify.
+
 Time scale domains use numeric epoch milliseconds and preserve fractional milliseconds
 through domain updates, autoscaling, live-follow windows and projection. Setting
 `nice: true` opts into UTC calendar-based domain rounding. Converting endpoints to
