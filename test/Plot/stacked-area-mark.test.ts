@@ -73,7 +73,24 @@ describe('stacked areas', () => {
     expect(stackedAreaExtent(mark, 'x')).toEqual([0, 2])
     expect(data.valueAt('b', 0)).toBe(4)
     const bars = bar(data, { ...options, layout: 'stacked', width: 10 })
-    expect(stackedAreaEndpoints(mark)).toBe(barEndpoints(bars))
+    const areaLayout = stackedAreaEndpoints(mark)
+    const barLayout = barEndpoints(bars)
+    expect(areaLayout).not.toBe(barLayout)
+    expect(
+      areaLayout.layers.map((layer) =>
+        Array.from({ length: data.length }, (_, row) => [
+          layer.lowerAt(row),
+          layer.upperAt(row),
+        ]),
+      ),
+    ).toEqual(
+      barLayout.layers.map((layer) =>
+        Array.from({ length: data.length }, (_, row) => [
+          layer.lowerAt(row),
+          layer.upperAt(row),
+        ]),
+      ),
+    )
   })
 
   test('gaps only the affected named stack, orders stacks by first appearance and preserves keyed paths', async () => {

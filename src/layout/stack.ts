@@ -10,6 +10,7 @@ export interface StackLayoutOptions {
   readonly x: string
   readonly layers: readonly StackLayer[]
   readonly layout: 'grouped' | 'stacked'
+  readonly missingValuePolicy?: 'gap' | 'skip'
 }
 export interface StackEndpoints {
   readonly id: string
@@ -182,7 +183,7 @@ function computeStackBlock(
       gap[row] = Number.isNaN(positive[row]) || Number.isNaN(negative[row]) ? 1 : 0
     }
     for (const layer of layers) {
-      if (layer.visible === false) continue
+      if (layer.visible === false || options.missingValuePolicy === 'skip') continue
       for (let row = startRow; row < data.length; row += 1) {
         if (Number.isNaN(data.valueAt(layer.y, row))) gap[row] = 1
       }
@@ -203,6 +204,7 @@ function computeStackBlock(
         for (let row = startRow; row < data.length; row += 1) {
           if (gap[row]) continue
           const value = Number(data.valueAt(layer.y, row))
+          if (Number.isNaN(value)) continue
           if (value < 0) {
             upper[row] = negative[row]
             lower[row] = negative[row] += value
@@ -461,6 +463,7 @@ export function stackLayout(data: TableStore, options: StackLayoutOptions): Stac
   const key = JSON.stringify([
     options.x,
     options.layout,
+    options.missingValuePolicy ?? 'gap',
     options.layers.map((layer) => [
       layer.id,
       layer.y,

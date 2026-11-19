@@ -190,6 +190,7 @@ describe('grouped and stacked bars', () => {
     ).toEqual([
       ['a', 0, 50, 30],
       ['b', 0, 50, 40],
+      ['c', 50, 50, 50],
     ])
     mark.update({ layers: named.map((layer) => ({ ...layer, visible: layer.id !== 'd' })) })
     expect(barRectangles(mark, scales).map(({ layerId, x, width }) => [layerId, x, width])).toEqual(
@@ -208,6 +209,74 @@ describe('grouped and stacked bars', () => {
     expect(barRectangles(mark, scales).map(({ layerId, x, width }) => [layerId, x, width])).toEqual(
       [['c', 50, 50]],
     )
+  })
+
+  test('stacked bars render valid layers around missing values', async () => {
+    const data = createTable({ t: [0], end: [1], a: [4], b: [NaN], c: [-3], d: [2] })
+    const mark = bar(data, {
+      ...options,
+      layers: [
+        { id: 'a', y: 'a' },
+        { id: 'b', y: 'b' },
+        { id: 'c', y: 'c' },
+        { id: 'd', y: 'd' },
+      ],
+      layout: 'stacked',
+      interval: { start: 't', end: 'end' },
+    })
+    const current = plot({
+      width: 100,
+      height: 100,
+      scales: { t: timeScale({ domain: [0, 1] }), q: linearScale({ domain: [-3, 6] }) },
+      marks: [mark],
+    })
+    await frame()
+
+    expect(current.element.querySelectorAll('[data-mark="bar-segment"]')).toHaveLength(3)
+    expect(barEndpoints(mark).layers.map((layer) => [layer.lowerAt(0), layer.upperAt(0)])).toEqual(
+      [
+        [0, 4],
+        [NaN, NaN],
+        [-3, 0],
+        [4, 6],
+      ],
+    )
+    expect(barExtent(mark, 'value')).toEqual([-3, 6])
+  })
+
+  test('all-missing intervals render nothing and all-missing series do not hide other intervals', async () => {
+    const data = createTable({
+      t: [0, 1, 2],
+      end: [1, 2, 3],
+      a: [4, NaN, 2],
+      missing: [NaN, NaN, NaN],
+      c: [-3, NaN, -1],
+    })
+    const mark = bar(data, {
+      ...options,
+      layers: [
+        { id: 'a', y: 'a' },
+        { id: 'missing', y: 'missing' },
+        { id: 'c', y: 'c' },
+      ],
+      layout: 'stacked',
+      interval: { start: 't', end: 'end' },
+    })
+    const current = plot({
+      width: 100,
+      height: 100,
+      scales: { t: timeScale({ domain: [0, 3] }), q: linearScale({ domain: [-3, 4] }) },
+      marks: [mark],
+    })
+    await frame()
+
+    expect(barRectangles(mark, current.scales).map(({ row, layerId }) => [row, layerId])).toEqual([
+      [0, 'a'],
+      [0, 'c'],
+      [2, 'a'],
+      [2, 'c'],
+    ])
+    expect(current.element.querySelectorAll('[data-mark="bar-segment"]')).toHaveLength(4)
   })
 
   test('renders keyed SVG rectangles, visible interval autoscale, live updates and style-only changes', async () => {
