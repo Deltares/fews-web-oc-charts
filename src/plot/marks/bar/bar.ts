@@ -80,7 +80,13 @@ export function barLayers(options: Readonly<BarOptions>): readonly BarLayer[] {
   )
 }
 export function barLayoutOptions(options: Readonly<BarOptions>): StackLayoutOptions {
-  return { x: options.x, layers: barLayers(options), layout: options.layout ?? 'grouped' }
+  const layout = options.layout ?? 'grouped'
+  return {
+    x: options.x,
+    layers: barLayers(options),
+    layout,
+    ...(layout === 'stacked' ? { missingValuePolicy: 'skip' as const } : {}),
+  }
 }
 export function validateBarUpdates(
   mark: BarMark,

@@ -113,7 +113,7 @@ describe('shared columnar stack layout', () => {
         [NaN, NaN],
         [NaN, NaN],
       ],
-      extent: undefined,
+      extent: [0, 7],
     },
   ])('computes exact diverging endpoints for $values', ({ values, expected, extent }) => {
     const data = createTable({ t: [0], a: [values[0]], b: [values[1]], c: [values[2]] })
@@ -124,6 +124,41 @@ describe('shared columnar stack layout', () => {
     expect(layers.map((layer) => data.valueAt(layer.y, 0))).toEqual(before)
     expect(stackLayout(data, options)).toBe(layout)
     expect(() => layout.layers[0].lowerAt(-1)).toThrow('outside')
+  })
+
+  test('skip-missing stacks preserve other layers and keep the default gap policy cache entry', () => {
+    const data = createTable({ t: [0], a: [4], b: [NaN], c: [-3], d: [2] })
+    const currentOptions = {
+      x: 't',
+      layers: [
+        { id: 'a', y: 'a' },
+        { id: 'b', y: 'b' },
+        { id: 'c', y: 'c' },
+        { id: 'd', y: 'd' },
+      ],
+      layout: 'stacked' as const,
+    }
+    const defaultLayout = stackLayout(data, currentOptions)
+    const skippedLayout = stackLayout(data, {
+      ...currentOptions,
+      missingValuePolicy: 'skip',
+    })
+
+    expect(endpoints(defaultLayout, 0)).toEqual([
+      [NaN, NaN],
+      [NaN, NaN],
+      [NaN, NaN],
+      [NaN, NaN],
+    ])
+    expect(endpoints(skippedLayout, 0)).toEqual([
+      [0, 4],
+      [NaN, NaN],
+      [-3, 0],
+      [4, 6],
+    ])
+    expect(skippedLayout.layers[3].positiveAt(0)).toBe(6)
+    expect(skippedLayout.layers[3].negativeAt(0)).toBe(-3)
+    expect(skippedLayout).not.toBe(defaultLayout)
   })
 
   test('grouped gaps affect only their own slot; zero and empty extents are exact', () => {
@@ -145,7 +180,7 @@ describe('shared columnar stack layout', () => {
     expect(barExtent(grouped, 'category')).toBeUndefined()
   })
 
-  test('named stacks keep independent totals, gaps, slots and union extents', () => {
+  test('named stacks keep independent totals, missing layers, slots and union extents', () => {
     const data = createTable({ t: [0, 1], a: [3, NaN], b: [4, 2], c: [5, 6], d: [-2, -3] })
     const named = [
       { id: 'a', y: 'a', stack: 'A' },
@@ -170,7 +205,7 @@ describe('shared columnar stack layout', () => {
     expect(endpoints(layout, 1)).toEqual([
       [NaN, NaN],
       [0, 6],
-      [NaN, NaN],
+      [0, 2],
       [-3, 0],
     ])
     expect(layout.layers.map((layer) => layer.slot)).toEqual([0, 1, 0, 1])
@@ -205,7 +240,7 @@ describe('shared columnar stack layout', () => {
     ])
     current.update({ layers: named.map((layer) => ({ ...layer, stack: 'B' })) })
     expect(barEndpoints(current).slots).toBe(1)
-    expect(barExtent(current, 'value')).toEqual([-2, 12])
+    expect(barExtent(current, 'value')).toEqual([-3, 12])
     current.update({ layers: named.filter((layer) => layer.stack === 'B') })
     expect(barEndpoints(current).slots).toBe(1)
     expect(barExtent(current, 'value')).toEqual([-3, 6])
@@ -357,6 +392,29 @@ describe('shared columnar stack layout', () => {
     expect(Array.from({ length: data.length }, (_, row) => endpoints(next, row))).toEqual(
       Array.from({ length: data.length }, (_, row) => endpoints(full, row)),
     )
+  })
+
+  test('incremental valid-to-missing updates match a full skip-missing rebuild', () => {
+    const data = createTable({ t: [0, 1], a: [4, 5], b: [1, 2], c: [-3, -4] })
+    const current = mark(data)
+    barEndpoints(current)
+
+    data.upsert({ from: 0, to: 1, rows: { t: [0], a: [NaN], b: [2], c: [-3] } })
+
+    const incremental = barEndpoints(current)
+    const full = computeStackLayout(data, {
+      ...options,
+      missingValuePolicy: 'skip',
+    })
+    expect(endpoints(incremental, 0)).toEqual(endpoints(full, 0))
+    expect(
+      incremental.layers.map((layer) => [layer.positiveAt(0), layer.negativeAt(0)]),
+    ).toEqual(full.layers.map((layer) => [layer.positiveAt(0), layer.negativeAt(0)]))
+    expect(endpoints(incremental, 0)).toEqual([
+      [NaN, NaN],
+      [0, 2],
+      [-3, 0],
+    ])
   })
 
   test('reports duplicate append keys before ordering errors in incremental validation', () => {
