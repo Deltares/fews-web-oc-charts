@@ -8,6 +8,9 @@ import type { ReadonlySignal } from '../../../core/reactive.js'
 import { optionSignal } from '../../../core/runtime.js'
 import { validateKeys } from '../../../core/validation.js'
 import { isEnsembleStore, type EnsembleStore } from '../../../data-store/ensemble.js'
+import { ensembleCurves, type EnsembleCurve } from './ensemble-curve.js'
+
+export type { EnsembleCurve }
 
 /** Parts keep their options while hidden, so the legend can toggle them. */
 export interface EnsemblePartVisibility {
@@ -62,6 +65,18 @@ export interface EnsembleOptions {
   visible: boolean
   /** Renderer for the member lines; statistics are always SVG. */
   renderer: 'svg' | 'canvas'
+  /**
+   * How every drawn part (members, spread bands, median, mean and control) joins its
+   * samples, with d3's meaning. `'linear'` (default) connects the points. Step curves
+   * hold each value over an interval: `'step-before'` over `(x[i-1], x[i]]`, for values
+   * that summarise the interval ending at their time (e.g. precipitation per 3 h);
+   * `'step-after'` over `[x[i], x[i+1])`; `'step'` between the midpoints to its
+   * neighbours. Unlike d3, the first `step-before` sample (and the last `step-after`
+   * sample) has no neighbour on one side and borrows the width of its other interval, so
+   * it is drawn as a full step and autoscale includes it; a lone sample has zero width.
+   * Inspection reports the sample whose interval contains the pointer.
+   */
+  curve: EnsembleCurve
   members: false | EnsembleMembersOptions
   spread: false | EnsembleSpreadOptions
   median: false | EnsembleLineOptions
@@ -93,6 +108,7 @@ const keys = [
   'legendGroup',
   'visible',
   'renderer',
+  'curve',
   'members',
   'spread',
   'median',
@@ -156,6 +172,8 @@ function validateOptions(options: Readonly<EnsembleOptions>, data: EnsembleStore
   validateLegendGroup(options.legendGroup, 'ensemble')
   if (options.renderer !== 'svg' && options.renderer !== 'canvas')
     throw new Error('ensemble.renderer must be svg or canvas.')
+  if (!ensembleCurves.includes(options.curve))
+    throw new Error('ensemble.curve must be linear, step-before, step-after or step.')
   const lineKeys = ['stroke', 'width', 'strokeDasharray', 'halo']
   if (validatePart(options.members, 'members', ['stroke', 'width', 'opacity', 'max'])) {
     const max = (options.members as EnsembleMembersOptions).max
@@ -200,6 +218,7 @@ export function ensemble(data: EnsembleStore, initial: OptionPatch<EnsembleOptio
       label: '',
       visible: true,
       renderer: 'svg',
+      curve: 'linear',
       members: {},
       spread: false,
       median: false,

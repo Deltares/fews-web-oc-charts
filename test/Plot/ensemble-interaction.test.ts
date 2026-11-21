@@ -294,6 +294,62 @@ describe('ensemble inspection', () => {
     expect(shapes.filter((shape) => shape.tagName === 'circle')).toHaveLength(1)
   })
 
+  test('step curves inspect the sample whose interval contains the pointer', async () => {
+    const mark = ensemble(data(), {
+      x: 'x',
+      y: 'y',
+      curve: 'step-before',
+      median: {},
+      exceedance: { threshold: 4 },
+    })
+    const { current } = await setup(mark, [])
+    const { x } = current.scales
+    // (0, 10] belongs to the sample at 10, although 3 is nearer to 0.
+    const [hit] = hits(current, mark, 3, 2.2, 'xy')
+    expect(hit).toMatchObject({ index: 1, x: 10, y: 2, member: { id: 'a' } })
+    expect(hit.px).toBe(x.project(3))
+    expect(hit.exceedance).toEqual({ threshold: 4, probability: 2 / 3 })
+    // On the horizontal segment of member c over (10, 20]; b is missing there.
+    const [later] = hits(current, mark, 12, 10.6, 'x')
+    expect(later).toMatchObject({ index: 2, x: 20, y: 11, member: { id: 'c' }, distance: 0 })
+    expect(hits(current, mark, 10, 6, 'x')[0]).toMatchObject({ index: 1, y: 6 })
+    // The first sample holds over (-10, 0]; the pointer at 0 stays on it.
+    expect(hits(current, mark, 0, 1, 'x')[0]).toMatchObject({ index: 0, px: x.project(0) })
+    mark.update({ curve: 'step-after' })
+    expect(hits(current, mark, 17, 6, 'x')[0]).toMatchObject({ index: 1, x: 10, y: 6 })
+    mark.update({ curve: 'step' })
+    expect(hits(current, mark, 4, 1, 'x')[0]).toMatchObject({ index: 0 })
+    expect(hits(current, mark, 6, 2, 'x')[0]).toMatchObject({ index: 1 })
+  })
+
+  test('step-before tooltip, hitTest and highlight report the interval value', async () => {
+    const mark = ensemble(data(), { id: 'fc', x: 'x', y: 'y', curve: 'step-before', median: {} })
+    const { current, move } = await setup(mark, [
+      tooltip({ marks: [mark], showX: true, digits: 1 }),
+      highlight({ marks: [mark], axis: 'xy' }),
+    ])
+    const { x, y } = current.scales
+    await move(4, 2.1)
+    const rows = [...document.querySelectorAll('[data-tooltip-entry]')].map((r) => r.textContent)
+    expect(rows[0]).toContain('Member A: 2')
+    expect(rows[1]).toContain('Median')
+    expect(rows[1]).toContain('6')
+    const shapes = [
+      ...current.element.querySelectorAll('[data-layer="highlight"] [data-highlight]'),
+    ]
+    const p = (a: number, b: number) => `${x.project(a)},${y.project(b)}`
+    expect(shapes.find((shape) => shape.tagName === 'path')!.getAttribute('d')).toBe(
+      `M${p(-10, 1)}L${p(0, 1)}L${p(0, 2)}L${p(10, 2)}L${p(10, 3)}L${p(20, 3)}`,
+    )
+    const dots = shapes.filter((shape) => shape.tagName === 'circle')
+    expect(dots.every((dot) => dot.getAttribute('cx') === String(x.project(4)))).toBe(true)
+    const [nearest] = current.hitTest(
+      { clientX: x.project(5), clientY: y.project(6.3) },
+      { axis: 'x', marks: [mark] },
+    )
+    expect(nearest.hit).toMatchObject({ index: 1, member: { id: 'b' }, distance: 0 })
+  })
+
   test('validates the exceedance option', () => {
     expect(() => ensemble(data(), { x: 'x', y: 'y', exceedance: { threshold: Infinity } })).toThrow(
       /threshold must be finite/,

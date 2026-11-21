@@ -87,6 +87,90 @@ describe('ensemble marks', () => {
     )
   })
 
+  test('draws step-before members, statistics and bands over the interval ending at each sample', async () => {
+    const mark = ensemble(store(), {
+      x: 'x',
+      y: 'y',
+      curve: 'step-before',
+      spread: { bands: [[0, 100]] },
+      median: {},
+      control: { member: 'control' },
+    })
+    const current = plot({
+      scales: { x: linearScale({ domain: [-1, 3] }), y: linearScale({ domain: [0, 10] }) },
+      marks: [mark],
+    })
+    await frame()
+    const { x, y } = current.scales
+    const p = (a: number, b: number) => `${x.project(a)},${y.project(b)}`
+    const member = current.element.querySelector('[data-part="member"]')!
+    // The first sample borrows the width of the next interval; the NaN breaks the line.
+    expect(member.getAttribute('d')).toBe(
+      `M${p(-1, 1)}L${p(0, 1)}L${p(0, 2)}L${p(1, 2)}M${p(2, 4)}L${p(3, 4)}`,
+    )
+    expect(part(current, 'control').getAttribute('d')).toBe(member.getAttribute('d'))
+    expect(part(current, 'median').getAttribute('d')).toBe(
+      `M${p(-1, 3)}L${p(0, 3)}L${p(0, 4)}L${p(1, 4)}L${p(1, 6)}L${p(2, 6)}L${p(2, 6)}L${p(3, 6)}`,
+    )
+    expect(part(current, 'band').getAttribute('d')).toBe(
+      `M${p(-1, 5)}L${p(0, 5)}L${p(0, 6)}L${p(1, 6)}L${p(1, 7)}L${p(2, 7)}L${p(2, 8)}L${p(3, 8)}` +
+        `L${p(3, 4)}L${p(2, 4)}L${p(2, 5)}L${p(1, 5)}L${p(1, 2)}L${p(0, 2)}L${p(0, 1)}L${p(-1, 1)}Z`,
+    )
+  })
+
+  test('steps after and centred, autoscales x over the outer steps and updates the curve', async () => {
+    const mark = ensemble(store(), { x: 'x', y: 'y', members: { max: 2 } })
+    const xScale = linearScale()
+    const current = plot({
+      scales: { x: xScale, y: linearScale({ domain: [0, 10] }) },
+      marks: [mark],
+    })
+    await frame()
+    const members = () =>
+      [...current.element.querySelectorAll('[data-part="member"]')].map((node) =>
+        node.getAttribute('d'),
+      )
+    const { x, y } = current.scales
+    const p = (a: number, b: number) => `${x.project(a)},${y.project(b)}`
+    expect(xScale.domain.get()).toEqual([0, 3])
+    mark.update({ curve: 'step-after' })
+    await frame()
+    expect(xScale.domain.get()).toEqual([0, 4])
+    expect(members()[1]).toBe(
+      `M${p(0, 3)}L${p(1, 3)}L${p(1, 4)}L${p(2, 4)}L${p(2, 5)}L${p(3, 5)}L${p(3, 6)}L${p(4, 6)}`,
+    )
+    mark.update({ curve: 'step' })
+    await frame()
+    expect(xScale.domain.get()).toEqual([-0.5, 3.5])
+    expect(members()[0]).toBe(
+      `M${p(-0.5, 1)}L${p(0.5, 1)}L${p(0.5, 2)}L${p(1.5, 2)}M${p(2.5, 4)}L${p(3.5, 4)}`,
+    )
+    expect(() => mark.update({ curve: 'basis' as never })).toThrow(/ensemble.curve/)
+  })
+
+  test('draws step members on canvas', async () => {
+    const calls: string[] = []
+    vi.spyOn(Path2D.prototype, 'moveTo').mockImplementation((a, b) => void calls.push(`M${a},${b}`))
+    vi.spyOn(Path2D.prototype, 'lineTo').mockImplementation((a, b) => void calls.push(`L${a},${b}`))
+    const mark = ensemble(store(), {
+      x: 'x',
+      y: 'y',
+      renderer: 'canvas',
+      curve: 'step-before',
+      members: { max: 1 },
+    })
+    const current = plot({
+      scales: { x: linearScale({ domain: [-1, 3] }), y: linearScale({ domain: [0, 10] }) },
+      marks: [mark],
+    })
+    await frame()
+    const { x, y } = current.scales
+    const p = (a: number, b: number) => `${x.project(a)},${y.project(b)}`
+    expect(calls.join('')).toBe(
+      `M${p(-1, 1)}L${p(0, 1)}L${p(0, 2)}L${p(1, 2)}M${p(2, 4)}L${p(3, 4)}`,
+    )
+  })
+
   test('autoscales over the visible parts and follows live appends', async () => {
     const data = store()
     const mark = ensemble(data, { x: 'x', y: 'y', members: false, median: {} })
