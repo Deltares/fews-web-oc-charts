@@ -42,6 +42,7 @@ export type WheelMode = (typeof WheelMode)[keyof typeof WheelMode]
 export interface ZoomHandlerOptions {
   wheelMode: WheelMode
   sharedZoomMode: ZoomMode
+  /** Shift-wheel also accepts horizontal deltas reported by the browser. */
   scrollModifierKey: ModifierKey
 }
 
@@ -194,8 +195,9 @@ export class ZoomHandler implements Visitor {
       mouseRect.on('wheel', (event: WheelEvent) => {
         if (!matchesModifierKey(event, this.options.scrollModifierKey)) return
 
+        const delta = event.deltaY || (event.shiftKey ? event.deltaX : 0)
+        if (delta === 0) return
         event.preventDefault() // prevent page scrolling
-        const delta = event.deltaY
         const factor = delta > 0 ? 1.1 : 0.9
         this.zoom(axis, factor, d3.pointer(event))
         this.axes.forEach((axis) => {
