@@ -24,6 +24,7 @@ function required<T extends HTMLElement>(selector: string): T {
 
 const events = new AbortController()
 const rendererOption = required<HTMLSelectElement>('#renderer')
+const curveOption = required<HTMLSelectElement>('#curve')
 const maxMembersOption = required<HTMLInputElement>('#max-members')
 const controlOption = required<HTMLInputElement>('#control')
 const thresholdOption = required<HTMLInputElement>('#threshold')
@@ -187,6 +188,17 @@ for (const subplot of plots) {
   subplot.element.addEventListener('pointermove', (event) => relayPointer(subplot, event), events)
   subplot.element.addEventListener('pointerleave', (event) => relayPointer(subplot, event), events)
 }
+
+const curves = ['linear', 'step-before', 'step-after', 'step'] as const
+curveOption.addEventListener(
+  'change',
+  () => {
+    const curve = curves.find((value) => value === curveOption.value)
+    if (!curve) throw new Error(`Unknown curve "${curveOption.value}".`)
+    forecast.update({ curve })
+  },
+  events,
+)
 
 rendererOption.addEventListener(
   'change',

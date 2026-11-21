@@ -209,6 +209,7 @@ export { ensemble } from './plot/marks/ensemble/ensemble-mark.js'
 export type {
   EnsembleMark,
   EnsembleOptions,
+  EnsembleCurve,
   EnsembleLineOptions,
   EnsembleMembersOptions,
   EnsembleSpreadOptions,

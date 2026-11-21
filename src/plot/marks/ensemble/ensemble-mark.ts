@@ -1,7 +1,7 @@
 import { validatePlotUpdates } from '../../../core/plot-checks.js'
 import { registerMark } from '../marks.js'
 import type { OptionPatch } from '../../../core/options.js'
-import type { EnsembleStatistic, EnsembleStore } from '../../../data-store/ensemble.js'
+import type { EnsembleStore } from '../../../data-store/ensemble.js'
 import type { ScaleBinding } from '../../../scales/scale.js'
 import type { ThemeTokens } from '../../../theme/theme.js'
 import { resolveMarkColor } from '../../../theme/color-contrast.js'
@@ -38,6 +38,13 @@ import {
   type EnsembleOptions,
   ensemble as createEnsembleMark,
 } from './ensemble.js'
+import {
+  bandPathData,
+  curveXExtent,
+  stepIndexAt,
+  traceCurve,
+  type EnsembleCurve,
+} from './ensemble-curve.js'
 import {
   drawnMemberCount,
   ensembleParts,
@@ -182,12 +189,6 @@ function projector(binding: ScaleBinding): Project {
   }
 }
 
-/** Receives path commands; `Path2D` satisfies it directly. */
-interface PathSink {
-  moveTo(x: number, y: number): void
-  lineTo(x: number, y: number): void
-}
-
 function svgPath() {
   let d = ''
   return {
@@ -201,70 +202,6 @@ function svgPath() {
       return d
     },
   }
-}
-
-function traceLine(
-  sink: PathSink,
-  length: number,
-  xAt: (index: number) => number,
-  yAt: (index: number) => number,
-  px: Project,
-  py: Project,
-  indices?: Iterable<number>,
-) {
-  let drawing = false
-  const add = (index: number) => {
-    const value = yAt(index)
-    if (!Number.isFinite(value)) {
-      drawing = false
-      return
-    }
-    if (drawing) sink.lineTo(px(xAt(index)), py(value))
-    else sink.moveTo(px(xAt(index)), py(value))
-    drawing = true
-  }
-  if (indices) for (const index of indices) add(index)
-  else for (let index = 0; index < length; index += 1) add(index)
-}
-
-function linePath(
-  length: number,
-  xAt: (index: number) => number,
-  yAt: (index: number) => number,
-  px: Project,
-  py: Project,
-) {
-  const path = svgPath()
-  traceLine(path, length, xAt, yAt, px, py)
-  return path.d
-}
-
-function bandPath(
-  store: EnsembleStore,
-  low: EnsembleStatistic,
-  high: EnsembleStatistic,
-  px: Project,
-  py: Project,
-) {
-  let data = ''
-  let runStart = 0
-  const flush = (end: number) => {
-    if (end > runStart) {
-      for (let index = runStart; index < end; index += 1) {
-        data += `${index === runStart ? 'M' : 'L'}${px(store.xAt(index))},${py(high.at(index))}`
-      }
-      for (let index = end - 1; index >= runStart; index -= 1) {
-        data += `L${px(store.xAt(index))},${py(low.at(index))}`
-      }
-      data += 'Z'
-    }
-    runStart = end + 1
-  }
-  for (let index = 0; index < store.length; index += 1) {
-    if (!Number.isFinite(low.at(index)) || !Number.isFinite(high.at(index))) flush(index)
-  }
-  flush(store.length)
-  return data
 }
 
 function createEnsembleRenderer(): MarkRenderer<EnsembleMark> {
@@ -328,10 +265,10 @@ function createEnsembleRenderer(): MarkRenderer<EnsembleMark> {
     const py = projector(yScale)
     for (let member = 0; member < count; member += 1) {
       const sink = canvas ? new Path2D() : svgPath()
-      traceLine(
+      traceCurve(
         sink,
-        store.length,
-        store.xAt,
+        store,
+        options.curve,
         (index) => store.valueAt(member, index),
         px,
         py,
@@ -346,6 +283,7 @@ function createEnsembleRenderer(): MarkRenderer<EnsembleMark> {
 
   function renderBands(
     store: EnsembleStore,
+    options: Readonly<EnsembleOptions>,
     bands: ReturnType<typeof ensembleStatistics>['bands'],
     px: Project,
     py: Project,
@@ -357,7 +295,10 @@ function createEnsembleRenderer(): MarkRenderer<EnsembleMark> {
         spreadGroup.append(node)
       }
       node.dataset.band = `${low}-${high}`
-      node.setAttribute('d', bandPath(store, lowStatistic, highStatistic, px, py))
+      node.setAttribute(
+        'd',
+        bandPathData(store, options.curve, lowStatistic.at, highStatistic.at, px, py),
+      )
     }
     while (spreadGroup.children.length > bands.length) spreadGroup.lastElementChild?.remove()
   }
@@ -378,7 +319,12 @@ function createEnsembleRenderer(): MarkRenderer<EnsembleMark> {
     }
     for (const part of lineParts) {
       const valueAt = values[part]
-      const d = valueAt ? linePath(store.length, store.xAt, valueAt, px, py) : ''
+      let d = ''
+      if (valueAt) {
+        const path = svgPath()
+        traceCurve(path, store, options.curve, valueAt, px, py)
+        d = path.d
+      }
       const settings = options[part]
       const halo = settings !== false && (settings.halo ?? 0) > 0
       lines[part].setAttribute('d', d)
@@ -411,7 +357,7 @@ function createEnsembleRenderer(): MarkRenderer<EnsembleMark> {
       const px = projector(xScale)
       const py = projector(yScale)
       const statistics = ensembleStatistics(options, mark.data)
-      renderBands(mark.data, statistics.bands, px, py)
+      renderBands(mark.data, options, statistics.bands, px, py)
       renderLines(mark.data, options, statistics, px, py)
     },
     style(mark: EnsembleMark, tokens: ThemeTokens) {
@@ -492,10 +438,10 @@ function ensembleHighlight(
   const range = xScale.range.get()
   const width = Math.max(1, Math.floor(Math.abs(range[1] - range[0])))
   const path = svgPath()
-  traceLine(
+  traceCurve(
     path,
-    store.length,
-    store.xAt,
+    store,
+    mark.options.get().resolved.curve,
     (index) => store.valueAt(member, index),
     projector(xScale),
     projector(scales[mark.y]),
@@ -528,6 +474,17 @@ function memberExtent(store: EnsembleStore, member: number, window: Window | und
   return low <= high ? ([low, high] as const) : undefined
 }
 
+/**
+ * Widens an x window to the samples of every step whose interval overlaps it, so
+ * autoscale includes a step drawn into view from a sample outside the window.
+ */
+function stepWindow(store: EnsembleStore, curve: EnsembleCurve, window: Window): Window {
+  if (curve === 'linear' || !store.length) return window
+  const from = Math.min(...window)
+  const to = Math.max(...window)
+  return [store.xAt(stepIndexAt(store, curve, from)), store.xAt(stepIndexAt(store, curve, to))]
+}
+
 function validateScales(options: Readonly<EnsembleOptions>, context: MarkValidationContext) {
   if (context.coordinateSystem !== 'cartesian')
     throw new Error('ensemble() supports cartesian plots only.')
@@ -554,13 +511,13 @@ export const ensembleDefinition: MarkDefinition<EnsembleMark> = {
     const store = mark.data
     const _version = store.version
     if (mark.x === context.scale) {
-      addExtent(context.add, store.extent('x'))
+      addExtent(context.add, curveXExtent(store, options.curve))
       return
     }
     if (mark.y !== context.scale) return
     const visible = extentWindow(context, mark.x)
     const window: Window | undefined = visible
-      ? [Number(visible[0]), Number(visible[1])]
+      ? stepWindow(store, options.curve, [Number(visible[0]), Number(visible[1])])
       : undefined
     const members = drawnMemberCount(options, store)
     if (members === store.memberCount) addExtent(context.add, store.extent('y', window))

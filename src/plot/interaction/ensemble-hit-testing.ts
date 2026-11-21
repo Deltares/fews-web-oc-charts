@@ -11,6 +11,7 @@ import {
   ensembleStatistics,
   visibleParts,
 } from '../marks/ensemble/ensemble-parts.js'
+import { stepIndexAt, stepInterval, type EnsembleCurve } from '../marks/ensemble/ensemble-curve.js'
 import { axisDistance } from './point-hit-testing.js'
 
 export interface EnsembleHitStatistic {
@@ -38,6 +39,7 @@ export interface EnsembleHitPart {
 /** Inspection of one ensemble time step. */
 export interface EnsembleHit {
   readonly index: number
+  /** x of the inspected sample; for a step curve, the sample whose interval holds the pointer. */
   readonly x: number
   /** Value of the nearest drawn member or statistic line at this step. */
   readonly y: number
@@ -79,6 +81,21 @@ function nearestStep(mark: EnsembleMark, xScale: ScaleBinding, px: number) {
     }
   }
   return best
+}
+
+/**
+ * Pixel x on the horizontal segment of step `index` nearest to `px`: the pointer itself
+ * while it is over the step, so the highlight and tooltip follow it along the step.
+ */
+function onStep(
+  store: EnsembleMark['data'],
+  curve: EnsembleCurve,
+  index: number,
+  xScale: ScaleBinding,
+  px: number,
+) {
+  const [from, to] = stepInterval(store, curve, index).map((value) => xScale.project(value))
+  return Math.min(Math.max(px, Math.min(from, to)), Math.max(from, to))
 }
 
 /** `90%` for a central band, otherwise the percentile range. */
@@ -189,10 +206,14 @@ export function ensembleHits(
   const xScale = scales[mark.x]
   const yScale = scales[mark.y]
   if (!options.visible || !xScale || !yScale || !store.length) return []
-  const index = nearestStep(mark, xScale, point.x)
+  const curve = options.curve
+  const index =
+    curve === 'linear'
+      ? nearestStep(mark, xScale, point.x)
+      : stepIndexAt(store, curve, xScale.invert(point.x))
   if (index === undefined) return []
   const x = store.xAt(index)
-  const px = xScale.project(x)
+  const px = curve === 'linear' ? xScale.project(x) : onStep(store, curve, index, xScale, point.x)
   if (px < plot.x || px > plot.x + plot.width) return []
 
   const statistics = ensembleStatistics(options, store)

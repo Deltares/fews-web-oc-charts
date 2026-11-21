@@ -25,6 +25,15 @@
           <option value="canvas">Canvas</option>
         </select>
       </label>
+      <label for="curve">
+        Curve
+        <select id="curve">
+          <option value="linear">Linear</option>
+          <option value="step-before">Step before (interval sums)</option>
+          <option value="step-after">Step after</option>
+          <option value="step">Step (centred)</option>
+        </select>
+      </label>
       <label for="max-members">
         Members drawn
         <input id="max-members" type="range" min="0" max="51" value="51" />
@@ -53,6 +62,7 @@ const fc = ensemble(store, {
   spread: { bands: [[5, 95], [25, 75]] },
   median: {}, mean: false, control: { member: 0 },
   members: { opacity: 0.25 },
+  curve: 'linear', // 'step-before' holds each value over the interval ending at its time
   exceedance: { threshold: 100 },
 })
 createPlot(host, { scales, axes, marks: [fc], plugins: [guide, tooltip({ marks: [fc] }), highlight({ marks: [fc] }), legend()] })</code></pre>
